@@ -1,0 +1,383 @@
+"""Desktop shell (ADR-0002): a pywebview window around the local UI and a tray icon.
+
+The monitor (and its server) keeps running as its own scheduled task; this process is only a
+viewer. Closing the window hides it to the tray; "Quit" ends this process, never the monitor.
+
+    pythonw -m app.desktop               open the window (and the tray icon)
+    pythonw -m app.desktop --minimized   start in the tray only
+    python  -m app.desktop --selftest    open, wait for the UI to load, print what it shows, quit
+
+Needs `pip install -r requirements.txt` (pywebview, pystray, Pillow). Nothing else in app/
+imports this module, so the monitor stays standard-library only (ADR-0001).
+"""
+from __future__ import annotations
+
+import argparse
+import ctypes
+import json
+import logging
+import re
+import sys
+import threading
+import time
+import urllib.error
+import urllib.request
+from typing import Any, Callable
+
+from . import config
+
+log = logging.getLogger("stableinternet.desktop")
+
+INSTANCE_NAME = "StableInternet.Desktop"
+SHOW_EVENT = "Local\\StableInternet.Desktop.Show"
+POLL_S = 5
+_TOKEN_RE = re.compile(r'<meta name="si-token" content="([A-Za-z0-9_\-]+)"')
+
+
+# --- talking to the monitor's server (standard library) ------------------------------------------
+
+class ServerLink:
+    """Finds the running server (server.json) and calls its API with the page token."""
+
+    def __init__(self, opener: Callable[..., Any] = urllib.request.urlopen) -> None:
+        self._open = opener
+        self.port: int | None = None
+        self._token: str | None = None
+
+    @property
+    def base(self) -> str | None:
+        return f"http://127.0.0.1:{self.port}" if self.port else None
+
+    def discover(self) -> bool:
+        try:
+            info = json.loads((config.user_dir() / "server.json").read_text(encoding="utf-8"))
+            port = int(info["port"])
+        except (OSError, ValueError, KeyError, TypeError):
+            self.port = None
+            return False
+        if port != self.port:
+            self.port, self._token = port, None
+        return True
+
+    def _fetch_token(self) -> str:
+        with self._open(f"{self.base}/", timeout=5) as resp:
+            m = _TOKEN_RE.search(resp.read().decode("utf-8", "replace"))
+        if not m:
+            raise ValueError("no token in the page")
+        return m.group(1)
+
+    def call(self, method: str, path: str, body: Any = None) -> Any:
+        """JSON API call. A 401 means the server restarted with a new token: fetch it and retry once."""
+        if not self.base and not self.discover():
+            raise ConnectionError("monitor not running")
+        for attempt in (0, 1):
+            if self._token is None:
+                self._token = self._fetch_token()
+            data = json.dumps(body).encode() if body is not None else None
+            req = urllib.request.Request(f"{self.base}{path}", data=data, method=method,
+                                         headers={"X-Token": self._token, "Content-Type": "application/json"})
+            try:
+                with self._open(req, timeout=10) as resp:
+                    return json.loads(resp.read())
+            except urllib.error.HTTPError as exc:
+                if exc.code == 401 and attempt == 0:
+                    self._token = None
+                    self.discover()
+                    continue
+                raise
+        raise ConnectionError("unauthorized")
+
+
+def tray_state(live: dict | None) -> str:
+    """'ok' / 'bad' (an outage is open) / 'unknown' (no monitor)."""
+    if not live:
+        return "unknown"
+    outages = live.get("outages") or {}
+    return "bad" if outages.get("router") or outages.get("internet") else "ok"
+
+
+def state_key(live: dict | None) -> str:
+    if not live:
+        return "ui.error.offline"
+    outages = live.get("outages") or {}
+    return ("ui.state.router_down" if outages.get("router") else "ui.state.internet_down" if outages.get("internet")
+            else "ui.state.online")
+
+
+COLORS = {"ok": (40, 167, 69), "bad": (229, 53, 43), "unknown": (142, 142, 147)}
+
+
+def draw_icon(state: str, size: int = 64) -> Any:
+    """Tray icon: a rounded square in the state color with white Wi-Fi arcs (Pillow)."""
+    from PIL import Image, ImageDraw
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((2, 2, size - 3, size - 3), radius=size // 4, fill=COLORS.get(state, COLORS["unknown"]))
+    cx, cy, w = size / 2, size * 0.74, max(2, size // 12)
+    for r in (size * 0.42, size * 0.29, size * 0.16):
+        d.arc((cx - r, cy - r, cx + r, cy + r), start=225, end=315, fill="white", width=w)
+    d.ellipse((cx - w, cy - w, cx + w, cy + w), fill="white")
+    return img
+
+
+# --- single instance: a second launch brings the first window forward ----------------------------
+
+def _k32() -> Any:
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.CreateEventW.restype = k.OpenEventW.restype = ctypes.c_void_p
+    k.CreateEventW.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_wchar_p]
+    k.OpenEventW.argtypes = [ctypes.c_uint32, ctypes.c_int, ctypes.c_wchar_p]
+    k.SetEvent.argtypes = k.CloseHandle.argtypes = [ctypes.c_void_p]
+    k.WaitForSingleObject.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    return k
+
+
+def signal_running_instance(name: str = SHOW_EVENT) -> bool:
+    """Ask the instance already running to show its window. True if there was one."""
+    k = _k32()
+    handle = k.OpenEventW(0x0002, False, name)   # EVENT_MODIFY_STATE
+    if not handle:
+        return False
+    k.SetEvent(handle)
+    k.CloseHandle(handle)
+    return True
+
+
+def watch_show_requests(on_show: Callable[[], None], stop: threading.Event, name: str = SHOW_EVENT) -> None:
+    k = _k32()
+    handle = k.CreateEventW(None, False, False, name)   # auto-reset
+    try:
+        while not stop.is_set():
+            if k.WaitForSingleObject(handle, 500) == 0:
+                on_show()
+    finally:
+        k.CloseHandle(handle)
+
+
+# --- the shell -------------------------------------------------------------------------------
+
+# Windows' own frame (not a frameless window with a drawn title bar): resizing from every edge,
+# Snap Layouts, Win+arrows and the maximize button behave like in any other app. Only its colour
+# is set, to the page background, so the title bar and the page read as one surface.
+CAPTION_COLORS = {"light": 0xF7F5F5, "dark": 0x1F1E1E}     # COLORREF (0x00BBGGRR) of --window
+DWMWA_CAPTION_COLOR = 35
+
+
+def system_theme() -> str:
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as k:
+            return "light" if winreg.QueryValueEx(k, "AppsUseLightTheme")[0] else "dark"
+    except OSError:
+        return "light"
+
+
+def paint_caption(hwnd: int, theme: str) -> bool:
+    """Title bar colour (Windows 11; older versions ignore it and keep their default)."""
+    colour = ctypes.c_uint32(CAPTION_COLORS[theme])
+    return ctypes.windll.dwmapi.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), DWMWA_CAPTION_COLOR, ctypes.byref(colour),
+                                                      ctypes.sizeof(colour)) == 0
+
+
+MIN_SIZE = (420, 560)
+SELFTEST_SIZE = (600, 760)
+
+
+class Desktop:
+    def __init__(self, link: ServerLink | None = None, minimized: bool = False) -> None:
+        self.link = link or ServerLink()
+        self.minimized = minimized
+        self.window: Any = None
+        self.icon: Any = None
+        self.messages: dict[str, Any] = {}
+        self.live: dict | None = None
+        self.reachable = False         # last poll reached the monitor
+        self._caption: str | None = None
+        self.quitting = False
+        self.stop = threading.Event()
+        self.selftest_result: dict[str, Any] = {}
+
+    # text for the tray menu comes from the same catalogs as the UI
+    def text(self, key: str) -> str:
+        value = self.messages.get(key)
+        return value if isinstance(value, str) else key.rsplit(".", 1)[-1]
+
+    def title(self) -> str:
+        return f"{self.text('app.name')} · {self.text(state_key(self.live))}"
+
+    # -- window ---------------------------------------------------------------------------
+    def show(self) -> None:
+        if self.window is not None:
+            self.window.show()
+            self.window.restore()
+
+    def hide(self) -> None:
+        if self.window is not None:
+            self.window.hide()
+
+    def paint_title_bar(self) -> None:
+        """Match the title bar to the page; re-checked every poll so it follows a theme switch."""
+        theme = system_theme()
+        if self.window is None or theme == self._caption:
+            return
+        try:
+            hwnd = int(self.window.native.Handle.ToInt64())
+        except Exception:
+            return              # not shown yet
+        if paint_caption(hwnd, theme):
+            self._caption = theme
+
+    def _on_closing(self) -> bool:
+        if self.quitting:
+            return True
+        self.hide()            # the window's own close (Alt+F4, taskbar) also just hides it
+        return False
+
+    def quit(self) -> None:
+        self.quitting = True
+        self.stop.set()
+        if self.icon is not None:
+            self.icon.stop()
+        if self.window is not None:
+            self.window.destroy()
+
+    # -- tray -----------------------------------------------------------------------------
+    def _reconnect(self) -> None:
+        try:
+            self.link.call("POST", "/api/actions/reconnect", {})
+        except Exception as exc:
+            log.warning("reconnect failed: %r", exc)
+
+    def build_tray(self) -> Any:
+        import pystray
+        menu = pystray.Menu(
+            pystray.MenuItem(lambda _: self.title(), None, enabled=False),
+            pystray.MenuItem(lambda _: self.text("ui.tray.open"), lambda: self.show(), default=True),
+            pystray.MenuItem(lambda _: self.text("ui.action.reconnect"), lambda: self._reconnect()),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(lambda _: self.text("ui.tray.quit"), lambda: self.quit()),
+        )
+        self.icon = pystray.Icon(INSTANCE_NAME, draw_icon("unknown"), self.title(), menu)
+        return self.icon
+
+    def refresh(self) -> None:
+        """One poll: catalog (once), live state -> tray icon, tooltip, window URL."""
+        try:
+            self.link.discover()
+            if not self.messages:
+                self.messages = self.link.call("GET", "/api/i18n").get("messages", {})
+            self.live = self.link.call("GET", "/api/live?window=1")
+        except Exception as exc:
+            log.debug("monitor not reachable: %r", exc)
+            self.live = None
+        if self.icon is not None:
+            self.icon.icon = draw_icon(tray_state(self.live))
+            self.icon.title = self.title()
+            self.icon.update_menu()
+        self.paint_title_bar()
+        was, self.reachable = self.reachable, self.live is not None
+        # Load the UI only from a monitor that answered: server.json can name a port nothing listens
+        # on yet (monitor just restarted), and the browser's error page would never reload by itself.
+        if self.window is not None and self.reachable and (
+                not was or not (self.window.get_current_url() or "").startswith(self.link.base)):
+            self.window.load_url(f"{self.link.base}/")    # the monitor came up (or moved to another port)
+
+    def _poll(self) -> None:
+        while not self.stop.is_set():
+            self.refresh()
+            self.stop.wait(POLL_S)
+
+    # -- run ------------------------------------------------------------------------------
+    def run(self, selftest: bool = False, screenshot: str | None = None) -> int:
+        import webview
+        self.refresh()
+        url = f"{self.link.base}/" if self.reachable else None
+        html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline"))
+        self.window = webview.create_window(self.text("app.name") if self.messages else "Ambysto Steady",
+                                            url=url, html=html, width=1100, height=740, min_size=MIN_SIZE,
+                                            hidden=self.minimized and not selftest, background_color="#F5F5F7")
+        self.window.events.closing += self._on_closing
+        self.window.events.shown += self.paint_title_bar
+        result: dict[str, Any] = {}
+        if selftest:
+            return self._run_selftest(webview, result, screenshot)
+        self.build_tray().run_detached()
+        threading.Thread(target=self._poll, name="desktop-poll", daemon=True).start()
+        threading.Thread(target=watch_show_requests, args=(self.show, self.stop), name="desktop-show", daemon=True).start()
+        webview.start(private_mode=False, storage_path=str(config.user_dir() / "webview"))
+        self.quit()
+        return 0
+
+    def _run_selftest(self, webview: Any, result: dict, screenshot: str | None) -> int:
+        def probe() -> None:
+            try:
+                for _ in range(60):     # wait for the app to render a screen
+                    time.sleep(0.5)
+                    ready = self.window.evaluate_js("document.querySelector('.screen.active h1')?.textContent || ''")
+                    if ready:
+                        break
+                result.update(
+                    url=self.window.get_current_url(), heading=ready,
+                    nav=self.window.evaluate_js("[...document.querySelectorAll('.nav-item span[data-t]')].map(n => n.textContent).join('|')"))
+                self.paint_title_bar()
+                result["caption"] = self._caption
+                self.window.maximize()
+                time.sleep(1)
+                result["maximized_width"] = self.window.width
+                result["maximized_page"] = self.window.evaluate_js("window.innerWidth")
+                self.window.restore()
+                time.sleep(1)
+                result["restored_width"] = self.window.width
+                # Resizing must re-lay the page out, not just change the frame around it.
+                self.window.resize(*SELFTEST_SIZE)
+                time.sleep(1.5)
+                result["resized"] = {"window": [self.window.width, self.window.height],
+                                     "page": self.window.evaluate_js("[window.innerWidth, window.innerHeight]")}
+                if screenshot:      # what the frameless window looks like on screen
+                    time.sleep(1.5)
+                    from PIL import ImageGrab
+                    x, y, w, h = self.window.x, self.window.y, self.window.width, self.window.height
+                    ImageGrab.grab(bbox=(x, y, x + w, y + h), all_screens=True).save(screenshot)
+                    result["screenshot"] = screenshot
+            except Exception as exc:
+                result["error"] = repr(exc)
+            finally:
+                self.quitting = True
+                self.window.destroy()
+        webview.start(probe, private_mode=True)
+        self.selftest_result = result
+        print(json.dumps(result, ensure_ascii=False))
+        resized = result.get("resized") or {}
+        relaid = bool(resized.get("page")) and abs(resized["page"][0] - resized["window"][0]) <= 40   # the native frame takes a few px
+        return 0 if result.get("heading") and result.get("caption") and relaid and not result.get("error") else 1
+
+
+_OFFLINE_HTML = """<!doctype html><meta charset="utf-8"><body style="font:13px system-ui;display:grid;place-items:center;
+height:100vh;margin:0;background:#f5f5f7;color:#444"><p class="pywebview-drag-region">{text}</p></body>"""
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="python -m app.desktop", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--minimized", action="store_true", help="start in the tray, window hidden")
+    ap.add_argument("--selftest", action="store_true", help="open the window, check the UI loads, quit")
+    ap.add_argument("--screenshot", help="with --selftest: save a picture of the window here")
+    ap.add_argument("--result-file", help="with --selftest: also write the result here (the packaged exe has no console)")
+    args = ap.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    if not args.selftest:
+        from .singleton import SingleInstance
+        guard = SingleInstance(INSTANCE_NAME)
+        if not guard.acquire():
+            signal_running_instance()     # show the window that is already open
+            return 0
+    shell = Desktop(minimized=args.minimized)
+    code = shell.run(selftest=args.selftest, screenshot=args.screenshot)
+    if args.selftest and args.result_file:
+        with open(args.result_file, "w", encoding="utf-8") as fh:
+            json.dump(shell.selftest_result, fh, ensure_ascii=False)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

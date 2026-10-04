@@ -1,0 +1,24 @@
+# Runtime data (settings, backup of original system values, metrics DB, logs)
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Build outputs
+dist/
+build/
+
+# Local tool settings (machine paths)
+.claude/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store

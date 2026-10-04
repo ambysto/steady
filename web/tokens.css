@@ -1,0 +1,153 @@
+/* StableInternet design tokens (SIC-27, ADR-0002).
+   macOS System Settings look on Windows: grouped inset lists, a translucent sidebar, few colors.
+   Light is the default; dark follows the system unless data-theme pins one.
+   Use the semantic tokens (--text, --surface, --ok ...) in components, never the raw values. */
+
+:root {
+  /* type: Inter when bundled, otherwise the Windows system font (Segoe UI Variable) */
+  --font-ui: "Inter", system-ui, "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  --text-caption: 11px;
+  --text-footnote: 12px;
+  --text-body: 13px;
+  --text-headline: 15px;
+  --text-title: 22px;
+  --text-display: 28px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --leading: 1.38;
+
+  /* 4-pt spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* shape */
+  --radius-window: 10px;
+  --radius-group: 10px;
+  --radius-control: 6px;
+  --radius-pill: 999px;
+  --row-height: 44px;
+  --sidebar-width: 220px;
+  --titlebar-height: 52px;
+
+  /* motion: short and soft; no motion when the user asks for none */
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.4, .64, 1);
+  --duration-fast: 120ms;
+  --duration: 200ms;
+  --duration-slow: 320ms;
+
+  /* light palette */
+  --window: #f5f5f7;
+  --sidebar: rgba(234, 234, 236, .82);
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: rgba(0, 0, 0, .04);
+  --surface-pressed: rgba(0, 0, 0, .08);
+  --separator: rgba(0, 0, 0, .09);
+  --border: rgba(0, 0, 0, .12);
+  --text: rgba(0, 0, 0, .86);
+  --text-secondary: rgba(0, 0, 0, .54);
+  --text-tertiary: rgba(0, 0, 0, .32);
+  --accent: #007aff;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(0, 122, 255, .12);
+  --ok: #28a745;
+  --warn: #e08600;
+  --bad: #e5352b;
+  --info: #6e6e73;
+  --ok-soft: rgba(40, 167, 69, .12);
+  --warn-soft: rgba(255, 159, 10, .16);
+  --bad-soft: rgba(255, 59, 48, .12);
+  --info-soft: rgba(110, 110, 115, .12);
+  --switch-off: rgba(0, 0, 0, .1);
+  --knob: #ffffff;
+  --shadow-window: 0 24px 64px rgba(0, 0, 0, .22), 0 0 0 .5px rgba(0, 0, 0, .18);
+  --shadow-popover: 0 12px 36px rgba(0, 0, 0, .2), 0 0 0 .5px rgba(0, 0, 0, .12);
+  --shadow-control: 0 1px 2px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .08);
+  --chart-router: #007aff;
+  --chart-internet: #af52de;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --window: #1e1e1f;
+    --sidebar: rgba(40, 40, 42, .82);
+    --surface: #2a2a2c;
+    --surface-raised: #323234;
+    --surface-hover: rgba(255, 255, 255, .06);
+    --surface-pressed: rgba(255, 255, 255, .1);
+    --separator: rgba(255, 255, 255, .08);
+    --border: rgba(255, 255, 255, .14);
+    --text: rgba(255, 255, 255, .88);
+    --text-secondary: rgba(255, 255, 255, .55);
+    --text-tertiary: rgba(255, 255, 255, .3);
+    --accent: #0a84ff;
+    --accent-soft: rgba(10, 132, 255, .2);
+    --ok: #30d158;
+    --warn: #ff9f0a;
+    --bad: #ff453a;
+    --info: #98989d;
+    --ok-soft: rgba(48, 209, 88, .16);
+    --warn-soft: rgba(255, 159, 10, .18);
+    --bad-soft: rgba(255, 69, 58, .18);
+    --info-soft: rgba(152, 152, 157, .18);
+    --switch-off: rgba(255, 255, 255, .16);
+    --knob: #f2f2f2;
+    --shadow-window: 0 24px 64px rgba(0, 0, 0, .55), 0 0 0 .5px rgba(255, 255, 255, .12);
+    --shadow-popover: 0 12px 36px rgba(0, 0, 0, .5), 0 0 0 .5px rgba(255, 255, 255, .12);
+    --shadow-control: 0 1px 2px rgba(0, 0, 0, .4), 0 0 0 .5px rgba(255, 255, 255, .1);
+    --chart-router: #0a84ff;
+    --chart-internet: #bf5af2;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --window: #1e1e1f;
+  --sidebar: rgba(40, 40, 42, .82);
+  --surface: #2a2a2c;
+  --surface-raised: #323234;
+  --surface-hover: rgba(255, 255, 255, .06);
+  --surface-pressed: rgba(255, 255, 255, .1);
+  --separator: rgba(255, 255, 255, .08);
+  --border: rgba(255, 255, 255, .14);
+  --text: rgba(255, 255, 255, .88);
+  --text-secondary: rgba(255, 255, 255, .55);
+  --text-tertiary: rgba(255, 255, 255, .3);
+  --accent: #0a84ff;
+  --accent-soft: rgba(10, 132, 255, .2);
+  --ok: #30d158;
+  --warn: #ff9f0a;
+  --bad: #ff453a;
+  --info: #98989d;
+  --ok-soft: rgba(48, 209, 88, .16);
+  --warn-soft: rgba(255, 159, 10, .18);
+  --bad-soft: rgba(255, 69, 58, .18);
+  --info-soft: rgba(152, 152, 157, .18);
+  --switch-off: rgba(255, 255, 255, .16);
+  --knob: #f2f2f2;
+  --shadow-window: 0 24px 64px rgba(0, 0, 0, .55), 0 0 0 .5px rgba(255, 255, 255, .12);
+  --shadow-popover: 0 12px 36px rgba(0, 0, 0, .5), 0 0 0 .5px rgba(255, 255, 255, .12);
+  --shadow-control: 0 1px 2px rgba(0, 0, 0, .4), 0 0 0 .5px rgba(255, 255, 255, .1);
+  --chart-router: #0a84ff;
+  --chart-internet: #bf5af2;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration: 0ms;
+    --duration-slow: 0ms;
+  }
+}

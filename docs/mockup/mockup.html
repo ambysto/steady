@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stable Internet Connection — mockup</title>
+<link rel="stylesheet" href="../../web/tokens.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<!-- SIC-27 mockup: static, sample data only. Text comes from app/locales via locales.js
+     (python scripts/build_mockup.py regenerates it). Nothing here talks to the backend. -->
+
+<div class="review">
+  <span class="banner" data-t="ui.mockup.banner"></span>
+  <label><span data-t="ui.mockup.simulate"></span>
+    <select class="select" id="simulate">
+      <option value="online" data-t="ui.state.online"></option>
+      <option value="internet_down" data-t="ui.state.internet_down"></option>
+      <option value="router_down" data-t="ui.state.router_down"></option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="tray-toggle" checked> <span data-t="ui.mockup.tray"></span></label>
+</div>
+
+<div class="window" id="window">
+  <nav class="sidebar">
+    <div class="titlebar">
+      <div class="traffic"><span class="close"></span><span class="minimize"></span><span class="zoom"></span></div>
+    </div>
+    <div class="app-name"><svg class="icon"><use href="#i-wifi"/></svg><span data-t="app.name"></span></div>
+    <button class="nav-item" data-screen="overview" aria-current="page"><svg class="icon"><use href="#i-gauge"/></svg><span data-t="ui.nav.overview"></span></button>
+    <button class="nav-item" data-screen="optimize"><svg class="icon"><use href="#i-sliders"/></svg><span data-t="ui.nav.optimize"></span></button>
+    <button class="nav-item" data-screen="diagnostics"><svg class="icon"><use href="#i-stethoscope"/></svg><span data-t="ui.nav.diagnostics"></span><span class="badge pill warn" id="diag-badge"></span></button>
+    <button class="nav-item" data-screen="log"><svg class="icon"><use href="#i-list"/></svg><span data-t="ui.nav.log"></span></button>
+    <div class="spacer"></div>
+    <button class="nav-item" data-screen="settings"><svg class="icon"><use href="#i-gear"/></svg><span data-t="ui.nav.settings"></span></button>
+    <div class="conn" id="sidebar-conn"><span class="dot"></span><span id="sidebar-conn-text"></span></div>
+  </nav>
+
+  <main class="content" id="content">
+    <!-- Overview -->
+    <section class="screen active" id="screen-overview">
+      <header class="content-header"><h1 data-t="ui.nav.overview"></h1></header>
+      <div class="group hero" id="hero">
+        <div class="status-icon"><svg class="icon"><use href="#i-wifi"/></svg></div>
+        <div><h2 id="hero-title"></h2><p id="hero-detail"></p></div>
+        <div class="ssid"><strong>HomeNet_5G</strong>802.11ax · 5 GHz · ch 40</div>
+      </div>
+
+      <div class="section-title" data-t="ui.suggest.title"></div>
+      <div class="group" id="suggestions"></div>
+
+      <div class="section-title" data-t="ui.overview.latency"></div>
+      <div class="group chart-card">
+        <div class="chart-head">
+          <span class="secondary" id="chart-window"></span>
+          <div class="legend"><span><i style="background:var(--chart-router)"></i><span data-t="ui.overview.router"></span></span>
+            <span><i style="background:var(--chart-internet)"></i><span data-t="ui.overview.internet"></span></span></div>
+        </div>
+        <svg class="chart" id="chart" viewBox="0 0 600 120" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="group stats" style="margin-top:var(--space-3)" id="stats"></div>
+
+      <div class="two-col">
+        <div>
+          <div class="section-title" data-t="ui.overview.recent"></div>
+          <div class="group" id="recent"></div>
+        </div>
+        <div>
+          <div class="section-title" data-t="ui.overview.quick_actions"></div>
+          <div class="group actions-grid" id="quick-actions"></div>
+          <div class="section-title" data-t="ui.watchdog.title"></div>
+          <div class="group">
+            <div class="row"><div class="icon-tile accent"><svg class="icon"><use href="#i-shield"/></svg></div>
+              <div class="main"><div class="label" data-t="ui.watchdog.title"></div><div class="secondary" data-t="ui.watchdog.description"></div></div>
+              <span class="pill accent" data-t="ui.watchdog.state.dry_run"></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Optimize -->
+    <section class="screen" id="screen-optimize">
+      <header class="content-header"><h1 data-t="ui.nav.optimize"></h1><div class="actions"><span class="pill" id="tweak-count"></span></div></header>
+      <p class="subtitle" data-t="ui.optimize.subtitle"></p>
+      <div class="section-title" data-t="ui.suggest.manual_group"></div>
+      <p class="subtitle" style="margin:0 0 var(--space-2) var(--space-2)" data-t="ui.suggest.manual_hint"></p>
+      <div class="group" id="manual-steps"></div>
+      <div id="tweak-groups"></div>
+    </section>
+
+    <!-- Diagnostics -->
+    <section class="screen" id="screen-diagnostics">
+      <header class="content-header"><h1 data-t="ui.nav.diagnostics"></h1>
+        <div class="actions"><button class="button primary" id="run-diag"><svg class="icon"><use href="#i-play"/></svg><span data-t="ui.diag.run"></span></button></div></header>
+      <div class="diag-summary" id="diag-summary"></div>
+      <div class="group" id="checks"></div>
+      <div class="section-title" data-t="ui.diag.on_demand"></div>
+      <div class="group"><div class="row"><div class="icon-tile"><svg class="icon"><use href="#i-gauge"/></svg></div>
+        <div class="main"><div class="label" data-t="diag.bufferbloat.title"></div><div class="secondary" data-t="ui.diag.bufferbloat_run"></div></div>
+        <button class="button"><svg class="icon"><use href="#i-play"/></svg></button></div></div>
+    </section>
+
+    <!-- Log -->
+    <section class="screen" id="screen-log">
+      <header class="content-header"><h1 data-t="ui.nav.log"></h1>
+        <div class="actions"><div class="segmented" id="log-filter">
+          <button aria-pressed="true" data-filter="all" data-t="ui.log.filter.all"></button>
+          <button data-filter="outages" data-t="ui.log.filter.outages"></button>
+          <button data-filter="watchdog" data-t="ui.log.filter.watchdog"></button>
+          <button data-filter="changes" data-t="ui.log.filter.changes"></button>
+        </div></div></header>
+      <div id="log-days"></div>
+    </section>
+
+    <!-- Settings -->
+    <section class="screen" id="screen-settings">
+      <header class="content-header"><h1 data-t="ui.nav.settings"></h1></header>
+      <div class="section-title" data-t="ui.settings.general"></div>
+      <div class="group">
+        <div class="row"><div class="icon-tile accent"><svg class="icon"><use href="#i-globe"/></svg></div>
+          <div class="main"><div class="label" data-t="ui.language.label"></div><div class="secondary" data-t="ui.language.hint"></div></div>
+          <select class="select" id="language"></select></div>
+        <div class="row"><div class="icon-tile"><svg class="icon"><use href="#i-sun"/></svg></div>
+          <div class="main"><div class="label" data-t="ui.settings.appearance"></div></div>
+          <div class="segmented" id="theme">
+            <button aria-pressed="true" data-theme-value="system" data-t="ui.settings.theme.system"></button>
+            <button data-theme-value="light" data-t="ui.settings.theme.light"></button>
+            <button data-theme-value="dark" data-t="ui.settings.theme.dark"></button></div></div>
+        <div class="row"><div class="icon-tile"><svg class="icon"><use href="#i-power"/></svg></div>
+          <div class="main"><div class="label" data-t="ui.settings.startup"></div></div>
+          <button class="switch" role="switch" aria-checked="true"></button></div>
+      </div>
+      <div class="section-title" data-t="ui.settings.notifications"></div>
+      <div class="group">
+        <div class="row"><div class="icon-tile bad"><svg class="icon"><use href="#i-bell"/></svg></div>
+          <div class="main"><div class="label" data-t="ui.settings.notify_outages"></div><div class="secondary" id="notify-after"></div></div>
+          <button class="switch" role="switch" aria-checked="true"></button></div>
+      </div>
+      <div class="section-title" data-t="ui.watchdog.title"></div>
+      <div class="group">
+        <div class="row"><div class="icon-tile accent"><svg class="icon"><use href="#i-shield"/></svg></div>
+          <div class="main"><div class="label" data-t="ui.settings.watchdog_enabled"></div><div class="secondary" data-t="ui.watchdog.description"></div></div>
+          <button class="switch" role="switch" aria-checked="true"></button></div>
+        <div class="row"><div class="icon-tile"><svg class="icon"><use href="#i-flask"/></svg></div>
+          <div class="main"><div class="label" data-t="ui.settings.watchdog_dry_run"></div></div>
+          <button class="switch" role="switch" aria-checked="true"></button></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="scrim" id="scrim">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="icon-tile warn"><svg class="icon"><use href="#i-flask"/></svg></div>
+      <h3 data-t="ui.sheet.experimental.title"></h3>
+      <p id="sheet-body"></p>
+      <div class="buttons"><button class="button" id="sheet-cancel" data-t="ui.sheet.cancel"></button>
+        <button class="button primary" id="sheet-confirm" data-t="ui.sheet.confirm"></button></div>
+    </div>
+  </div>
+</div>
+
+<div class="tray-area"><div class="tray open" id="tray">
+  <div class="head"><span class="dot" id="tray-dot"></span><strong id="tray-title"></strong></div>
+  <div class="nums" id="tray-nums"></div>
+  <button class="button wide" data-t="ui.action.reconnect"></button>
+  <div class="menu"><button data-t="ui.tray.open"></button><button data-t="ui.tray.quit"></button></div>
+</div></div>
+
+<!-- Icons: simple strokes in the style of Lucide (MIT) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 3v6a4 4 0 0 0 8 0V3"/><path d="M10 13v2a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="11" r="2"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r=".5"/><circle cx="4" cy="12" r=".5"/><circle cx="4" cy="18" r=".5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r=".8"/></symbol>
+  <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2 9a15 15 0 0 1 20 0M8.5 16a5 5 0 0 1 7 0M3 3l18 18"/><circle cx="12" cy="19.5" r=".8"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+  <symbol id="i-network" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
+  <symbol id="i-power" viewBox="0 0 24 24"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5 10a1.5 1.5 0 0 0 1.3 2h11.4a1.5 1.5 0 0 0 1.3-2l-5-10V3"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<script src="locales.js"></script>
+<script src="mockup.js"></script>
+</body>
+</html>

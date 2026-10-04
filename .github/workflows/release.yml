@@ -1,0 +1,45 @@
+# Builds the packaged app on every pushed version tag (v0.1.0, v0.2.0-beta.1, ...) and attaches the
+# zip to a GitHub Release. The build runs from the tagged source only, as SignPath requires.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:          # manual run: build and keep the zip as an artifact, no release
+
+permissions:
+  contents: write             # create the release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build dependencies
+        run: python -m pip install -r requirements.txt pyinstaller==6.22.3
+
+      - name: Tests
+        run: python -m unittest discover -s tests -t .
+
+      - name: Build and smoke-test the packaged app
+        run: python scripts/build.py --smoke
+
+      # Code signing (SIC-50): once SignPath Foundation accepts the project, submit the zip here
+      # with signpath/github-action-submit-signing-request and release the signed artifact instead.
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AmbystoSteady-win64
+          path: dist/AmbystoSteady-*-win64.zip
+
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/AmbystoSteady-*-win64.zip --title "Ambysto Steady $GITHUB_REF_NAME" --generate-notes
