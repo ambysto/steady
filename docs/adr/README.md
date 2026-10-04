@@ -12,3 +12,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0006](0006-i18n.md) | Internationalization: JSON catalogs, English by default, store messages rather than text | Accepted |
 | [0007](0007-measured-impact.md) | Measuring the impact of a change with before/after monitor data | Accepted |
 | [0008](0008-failover.md) | Failover to a backup path using interface metrics | Accepted |
+| [0009](0009-native-apple-and-android-apps.md) | Native apps: SwiftUI for Apple platforms, Kotlin for Android, sharing data rather than code | Accepted |
