@@ -1,73 +1,73 @@
-# Danh mục tối ưu (Tweaks)
+# Optimization catalog (Tweaks)
 
-Mỗi tweak là một toggle có 4 thao tác: **read** (đọc trạng thái) · **capture** (lưu giá trị gốc) · **apply** (bật) · **restore** (tắt, trả về giá trị gốc).
+Each tweak is a toggle with 4 operations: **read** (read the state) · **capture** (save the original value) · **apply** (turn on) · **restore** (turn off, return to the original value).
 
-Chú thích: 🔌 = ngắt mạng vài giây khi áp dụng · 🔁 = cần khởi động lại máy · 🛡 = cần quyền Admin
+Legend: 🔌 = network drops for a few seconds when applied · 🔁 = requires a restart · 🛡 = requires Admin rights
 
-Cơ chế chung (sao lưu trước, kiểm chứng, hoàn tác, khôi phục khi không có bản sao lưu): xem [ADR-0003](adr/0003-tweak-framework.md). Riêng nhóm powercfg **không** tắt được nếu không có bản sao lưu, vì không có giá trị mặc định đã biết cho từng chỉ số.
+Common mechanism (back up first, verify, undo, restore when there is no backup): see [ADR-0003](adr/0003-tweak-framework.md). The powercfg group in particular **cannot** be turned off without a backup, because there is no known default value for each index.
 
-## 1. Card Wi‑Fi (thuộc tính nâng cao của driver)
+## 1. Wi‑Fi card (driver advanced properties)
 
-Áp dụng qua `Set-NetAdapterAdvancedProperty`; khôi phục không có backup bằng `Reset-NetAdapterAdvancedProperty`. Tên thuộc tính khác nhau theo hãng chip → khớp bằng `DisplayName` (regex), tweak không có thuộc tính tương ứng sẽ hiển thị "không hỗ trợ".
+Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Reset-NetAdapterAdvancedProperty`. Property names differ by chip vendor → matched by `DisplayName` (regex); a tweak with no matching property is shown as "not supported".
 
-| ID | Tên | Giá trị đích | Rủi ro | Ghi chú |
+| ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
-| `wifi_power_saving` | Tắt tiết kiệm điện của card | `Power Saving` = Disabled (MediaTek) · `MIMO Power Save Mode` = No SMPS (Intel/Realtek) | low | 🔌🛡 Nguyên nhân phổ biến gây rớt mạng ngắt quãng |
-| `wifi_wake_magic` | Tắt Wake on Magic Packet | Disabled | low | 🔌🛡 Tránh card bị đánh thức/treo khi sleep |
-| `wifi_wake_pattern` | Tắt Wake on Pattern Match | Disabled | low | 🔌🛡 |
-| `wifi_roaming` | Giảm roaming | `Roaming Aggressiveness` = Lowest (Intel) | low | 🔌🛡 Hạn chế nhảy AP khi dùng mesh |
-| `wifi_bw20_5g` | Băng thông 5GHz chỉ 20MHz | `5GHz channel bandwidth` = 20MHz only | experimental | 🔌🛡 Giảm tốc độ tối đa, đổi lấy ổn định nơi nhiễu |
-| `wifi_mode_ac` | Ép chuẩn Wi‑Fi 5 (802.11ac) | `802.11ax/ac/n/abg` = 802.11ac | experimental | 🔌🛡 Thử khi nghi lỗi tương thích Wi‑Fi 6 giữa card và router |
+| `wifi_power_saving` | Turn off card power saving | `Power Saving` = Disabled (MediaTek) · `MIMO Power Save Mode` = No SMPS (Intel/Realtek) | low | 🔌🛡 Common cause of intermittent disconnects |
+| `wifi_wake_magic` | Turn off Wake on Magic Packet | Disabled | low | 🔌🛡 Prevents the card from being woken/hanging during sleep |
+| `wifi_wake_pattern` | Turn off Wake on Pattern Match | Disabled | low | 🔌🛡 |
+| `wifi_roaming` | Reduce roaming | `Roaming Aggressiveness` = Lowest (Intel) | low | 🔌🛡 Limits AP hopping when using mesh |
+| `wifi_bw20_5g` | 5GHz bandwidth 20MHz only | `5GHz channel bandwidth` = 20MHz only | experimental | 🔌🛡 Lowers maximum speed in exchange for stability in noisy environments |
+| `wifi_mode_ac` | Force Wi‑Fi 5 (802.11ac) | `802.11ax/ac/n/abg` = 802.11ac | experimental | 🔌🛡 Try when a Wi‑Fi 6 compatibility bug between card and router is suspected |
 
-## 2. Nguồn điện Windows
+## 2. Windows power
 
-| ID | Tên | Giá trị đích | Rủi ro | Ghi chú |
+| ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
-| `device_power_off` | Không cho Windows tắt card | Registry `PnPCapabilities` \|= `0x18` tại class key của card | low | 🔌🛡 Tương đương bỏ chọn "Allow the computer to turn off this device…" |
-| `power_wireless_max` | Wireless Adapter: Maximum Performance | `powercfg` sub `19cbb8fa-…` / setting `12bbebe6-…` = 0 (AC & DC) | low | 🛡 Chỉ áp dụng cho power plan hiện tại |
-| `power_pcie_aspm_off` | Tắt PCIe ASPM | `powercfg` sub `501a4d13-…` / setting `ee12f906-…` = 0 (AC & DC) | low | 🛡 Quan trọng với card PCIe (MediaTek MT7921/7922). Tăng nhẹ điện năng |
+| `device_power_off` | Do not let Windows turn off the card | Registry `PnPCapabilities` \|= `0x18` at the card's class key | low | 🔌🛡 Equivalent to unchecking "Allow the computer to turn off this device…" |
+| `power_wireless_max` | Wireless Adapter: Maximum Performance | `powercfg` sub `19cbb8fa-…` / setting `12bbebe6-…` = 0 (AC & DC) | low | 🛡 Applies only to the current power plan |
+| `power_pcie_aspm_off` | Turn off PCIe ASPM | `powercfg` sub `501a4d13-…` / setting `ee12f906-…` = 0 (AC & DC) | low | 🛡 Important for PCIe cards (MediaTek MT7921/7922). Slightly increases power consumption |
 
-## 3. Ngăn xếp mạng
+## 3. Network stack
 
-| ID | Tên | Giá trị đích | Rủi ro | Ghi chú |
+| ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
-| `tcp_timedwait` | Rút ngắn TIME_WAIT | `HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\TcpTimedWaitDelay` = 30 | medium | 🔁🛡 Giảm lỗi hết port (Tcpip event 4227). Gốc không tồn tại ⇒ khôi phục bằng cách xóa giá trị |
-| `ipv6_off` | Tắt IPv6 trên Wi‑Fi | `Disable-NetAdapterBinding -ComponentID ms_tcpip6` | experimental | 🔌🛡 Chỉ thử khi nghi IPv6/DNS IPv6 của router gây chậm |
+| `tcp_timedwait` | Shorten TIME_WAIT | `HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\TcpTimedWaitDelay` = 30 | medium | 🔁🛡 Reduces port exhaustion errors (Tcpip event 4227). Original does not exist ⇒ restored by deleting the value |
+| `ipv6_off` | Turn off IPv6 on Wi‑Fi | `Disable-NetAdapterBinding -ComponentID ms_tcpip6` | experimental | 🔌🛡 Only try when the router's IPv6/IPv6 DNS is suspected of causing slowness |
 
-## 4. Tính năng của tool
+## 4. Tool features
 
-| ID | Tên | Cơ chế | Ghi chú |
+| ID | Name | Mechanism | Notes |
 |---|---|---|---|
-| `watchdog` | Watchdog tự khôi phục | `settings.json` | Xem [WATCHDOG.md](WATCHDOG.md). Thao tác khôi phục cần 🛡 |
-| `failover` | Chuyển sang đường mạng dự phòng ([ADR-0008](adr/0008-failover.md)) | `settings.json` → `failover` (mặc định tắt). Khi chuyển: `Set-NetIPInterface -InterfaceIndex <dự phòng> -AddressFamily IPv4 -InterfaceMetric <thấp hơn đường chính>`; sao lưu `AutomaticMetric` + `InterfaceMetric` gốc vào `backup.json` khóa `failover:<ifIndex>` trước khi ghi, đọc lại để kiểm chứng. Khôi phục (`-AutomaticMetric Enabled` hoặc metric gốc) khi đường chính ổn định 120s, khi tắt tính năng, khi monitor khởi động thấy bản sao lưu còn sót, khi gỡ cài đặt | 🛡 Không Admin ⇒ chỉ báo, chuyển khi người dùng bấm (UAC) |
-| `autostart` | Khởi động cùng Windows | Task Scheduler, tạo từ XML (không dùng `schtasks /SC ONLOGON` vì mặc định của nó dừng task sau 72 giờ và không chạy khi dùng pin): trigger đăng nhập (trễ 20s), không giới hạn thời gian chạy, chạy cả khi dùng pin, tự khởi động lại tối đa 3 lần nếu crash, chạy ẩn bằng `pythonw.exe` qua `scripts/monitor/run_monitor.pyw`, không mở trình duyệt. Mặc định `/RL LIMITED` vì monitor chỉ đọc; dùng `--highest` (`/RL HIGHEST`) khi watchdog/tweak cần quyền Admin. Gỡ: `python -m app.autostart uninstall --apply` | 🛡 chỉ khi `--highest` |
+| `watchdog` | Self-healing watchdog | `settings.json` | See [WATCHDOG.md](WATCHDOG.md). Recovery actions need 🛡 |
+| `failover` | Switch to a backup network path ([ADR-0008](adr/0008-failover.md)) | `settings.json` → `failover` (off by default). When switching: `Set-NetIPInterface -InterfaceIndex <backup> -AddressFamily IPv4 -InterfaceMetric <lower than the main path>`; back up the original `AutomaticMetric` + `InterfaceMetric` into `backup.json` under key `failover:<ifIndex>` before writing, read back to verify. Restore (`-AutomaticMetric Enabled` or the original metric) when the main path has been stable for 120s, when the feature is turned off, when the monitor starts and finds a leftover backup, on uninstall | 🛡 Without Admin ⇒ only notifies, switches when the user clicks (UAC) |
+| `autostart` | Start with Windows | Task Scheduler, created from XML (not `schtasks /SC ONLOGON`, because its defaults stop the task after 72 hours and do not run it on battery): logon trigger (20s delay), no run-time limit, runs on battery too, restarts automatically up to 3 times if it crashes, runs hidden with `pythonw.exe` via `scripts/monitor/run_monitor.pyw`, does not open a browser. Defaults to `/RL LIMITED` because the monitor only reads; use `--highest` (`/RL HIGHEST`) when watchdog/tweaks need Admin rights. Remove: `python -m app.autostart uninstall --apply` | 🛡 only with `--highest` |
 
-## Ứng viên chưa đưa vào (cần đánh giá)
+## Candidates not yet included (need evaluation)
 
-- Đổi DNS server theo kết quả benchmark (tạm thời chỉ hiển thị trong Chẩn đoán).
-- Giới hạn băng thông Delivery Optimization / Windows Update chạy nền.
-- Tắt QoS Packet Scheduler, Network Throttling Index — hiệu quả không rõ ràng, dễ thành "tweak placebo".
-- Đổi driver (rollback) ngay trong tool — rủi ro cao, hiện chỉ hướng dẫn qua Device Manager.
+- Change the DNS server based on benchmark results (for now only shown in Diagnostics).
+- Limit Delivery Optimization / Windows Update background bandwidth.
+- Turn off QoS Packet Scheduler, Network Throttling Index — unclear effect, easily becomes a "placebo tweak".
+- Change driver (rollback) directly in the tool — high risk, currently only guided via Device Manager.
 
-## Giá trị trên máy phát triển (2026-10-03)
+## Values on the development machine (2026-10-03)
 
-| ID | Hiện tại | Đề xuất |
+| ID | Current | Recommendation |
 |---|---|---|
-| `wifi_power_saving` | Auto | Bật tweak |
-| `wifi_wake_magic` / `wifi_wake_pattern` | Enabled | Bật tweak |
-| `wifi_roaming` | — (card không hỗ trợ) | — |
-| `device_power_off` | `PnPCapabilities` = 16 (cho phép tắt) | Bật tweak |
-| `power_wireless_max` | AC 0 / DC 2 | Bật tweak (máy bàn, ảnh hưởng nhỏ) |
-| `power_pcie_aspm_off` | AC **1 (Moderate)** / DC 2 | Bật tweak — ưu tiên cao |
-| `tcp_timedwait` | không đặt (mặc định 120s) | Tùy chọn — đã có 1 sự kiện 4227 |
+| `wifi_power_saving` | Auto | Enable tweak |
+| `wifi_wake_magic` / `wifi_wake_pattern` | Enabled | Enable tweak |
+| `wifi_roaming` | — (card not supported) | — |
+| `device_power_off` | `PnPCapabilities` = 16 (turning off allowed) | Enable tweak |
+| `power_wireless_max` | AC 0 / DC 2 | Enable tweak (desktop, small impact) |
+| `power_pcie_aspm_off` | AC **1 (Moderate)** / DC 2 | Enable tweak — high priority |
+| `tcp_timedwait` | not set (default 120s) | Optional — 1 event 4227 already seen |
 
-**Đọc lại bằng tool ngày 2026-10-04** (`python -m app.tweaks list`, chỉ đọc): chỉ `wifi_power_saving` đang bật; mọi mục còn lại ở giá trị gốc (Wake on = Enabled, `PnPCapabilities` = 16, ASPM AC 1 / DC 2, wireless AC 0 / DC 2); `wifi_roaming` không hỗ trợ (card không có thuộc tính). Xem EXPERIMENT-LOG, EXP-001.
+**Re-read with the tool on 2026-10-04** (`python -m app.tweaks list`, read-only): only `wifi_power_saving` is on; every other item is at its original value (Wake on = Enabled, `PnPCapabilities` = 16, ASPM AC 1 / DC 2, wireless AC 0 / DC 2); `wifi_roaming` not supported (the card has no such property). See EXPERIMENT-LOG, EXP-001.
 
-Bật/tắt từ dòng lệnh (mặc định chỉ in kế hoạch, cần Admin khi `--apply`):
+Enable/disable from the command line (by default only prints the plan; Admin is required with `--apply`):
 
 ```powershell
 python -m app.tweaks list
-python -m app.tweaks enable power_pcie_aspm_off            # xem kế hoạch
-python -m app.tweaks enable power_pcie_aspm_off --apply    # thực hiện (PowerShell chạy Admin)
-python -m app.tweaks disable power_pcie_aspm_off --apply   # khôi phục từ data/backup.json
+python -m app.tweaks enable power_pcie_aspm_off            # show the plan
+python -m app.tweaks enable power_pcie_aspm_off --apply    # execute (PowerShell running as Admin)
+python -m app.tweaks disable power_pcie_aspm_off --apply   # restore from data/backup.json
 ```

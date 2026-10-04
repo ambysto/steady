@@ -1,88 +1,87 @@
 # Ambysto Steady
 
-*Stable Internet Connection* — sản phẩm của Ambysto ([ambysto.com](https://ambysto.com)). Tên nội bộ của repo, thư mục dữ liệu và package vẫn là `StableInternet`.
+*Stable Internet Connection* — a product of Ambysto ([ambysto.com](https://ambysto.com)). The internal name of the repo, data folder and package is still `StableInternet`.
 
-Công cụ chạy trên Windows giúp **giữ kết nối Internet ổn định**: theo dõi chất lượng đường truyền liên tục, tự khôi phục khi rớt mạng, và cung cấp các tối ưu hệ thống dạng **toggle bật/tắt có khôi phục** để thử nghiệm an toàn.
+A Windows tool that helps **keep your Internet connection stable**: it continuously monitors link quality, automatically recovers when the connection drops, and provides system optimizations as **on/off toggles with restore** for safe experimentation.
 
-> Trạng thái: **bản Windows đang hoàn thiện** (monitor, chẩn đoán, tối ưu có khôi phục, watchdog, failover, giao diện desktop, bản đóng gói). Xem [docs/ROADMAP.md](docs/ROADMAP.md), [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md) và [CHANGELOG.md](CHANGELOG.md).
+> Status: **Windows version nearing completion** (monitor, diagnostics, optimizations with restore, watchdog, failover, desktop UI, packaged build). See [docs/ROADMAP.md](docs/ROADMAP.md), [docs/OPEN-QUESTIONS.md](docs/OPEN-QUESTIONS.md) and [CHANGELOG.md](CHANGELOG.md).
 
-## Vì sao cần tool này?
+## Why this tool?
 
-Phần mềm không làm sóng Wi‑Fi mạnh hơn, nhưng làm tốt 3 việc:
+Software cannot make the Wi‑Fi signal stronger, but it does 3 things well:
 
-1. **Đo và ghi lại** — biết chính xác lỗi nằm ở PC, router hay nhà mạng (ISP), có số liệu để so sánh trước/sau mỗi thay đổi.
-2. **Tự khôi phục** — phát hiện driver treo / mất kết nối và xử lý trong vài giây thay vì chờ Windows hoặc thao tác tay.
-3. **Tối ưu có kiểm soát** — mỗi tinh chỉnh là một toggle, lưu giá trị gốc trước khi áp dụng, tắt là trả về như cũ.
+1. **Measure and record** — know exactly whether the fault lies with the PC, the router or the Internet service provider (ISP), with data to compare before/after each change.
+2. **Self-recovery** — detect a hung driver / lost connection and handle it within seconds instead of waiting for Windows or acting manually.
+3. **Controlled optimization** — each tweak is a toggle, the original value is saved before applying, and turning it off puts everything back as it was.
 
-## Tính năng dự kiến
+## Planned features
 
-| Nhóm | Mô tả |
+| Group | Description |
 |---|---|
-| Tổng quan | Ping / mất gói / jitter realtime tới router và Internet, tín hiệu Wi‑Fi, lịch sử 24h |
-| Tối ưu | Các toggle: power saving của card, PCIe ASPM, wake-on-LAN, TCP, IPv6… — xem [docs/TWEAKS.md](docs/TWEAKS.md) |
-| Chẩn đoán | Driver & bản có thể rollback, nhiễu kênh, lịch sử rớt mạng, benchmark DNS… — xem [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) |
-| Watchdog | Tự kết nối lại / khởi động lại card mạng khi phát hiện sự cố — xem [docs/WATCHDOG.md](docs/WATCHDOG.md) |
-| Nhật ký | Mọi sự cố, thay đổi tối ưu và hành động của watchdog |
+| Overview | Realtime ping / packet loss / jitter to the router and the Internet, Wi‑Fi signal, 24h history |
+| Optimize | Toggles: adapter power saving, PCIe ASPM, wake-on-LAN, TCP, IPv6… — see [docs/TWEAKS.md](docs/TWEAKS.md) |
+| Diagnostics | Drivers & versions available for rollback, channel interference, connection drop history, DNS benchmark… — see [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) |
+| Watchdog | Automatically reconnects / restarts the network adapter when a problem is detected — see [docs/WATCHDOG.md](docs/WATCHDOG.md) |
+| Log | Every incident, optimization change and watchdog action |
 
-## Yêu cầu
+## Requirements
 
 - Windows 10/11
 - Python 3.11+
-- Quyền Administrator để áp dụng tối ưu (chế độ chỉ-đọc vẫn theo dõi được)
+- Administrator rights to apply optimizations (read-only mode can still monitor)
 
-## Cấu trúc thư mục
+## Directory structure
 
 ```
 StableInternet/
-├── README.md             Tổng quan dự án (file này)
-├── CHANGELOG.md          Lịch sử thay đổi theo phiên bản
-├── CONTRIBUTING.md       Quy ước code, commit, thêm tweak mới
-├── CLAUDE.md             Hướng dẫn cho AI agent làm việc trong repo
+├── README.md             Project overview (this file)
+├── CHANGELOG.md          Change history by version
+├── CONTRIBUTING.md       Code and commit conventions, adding new tweaks
+├── CLAUDE.md             Guidance for AI agents working in the repo
 ├── docs/
-│   ├── ARCHITECTURE.md   Kiến trúc, module, API, luồng dữ liệu
-│   ├── UI-DESIGN.md      Định hướng giao diện (bản nháp)
-│   ├── TWEAKS.md         Danh mục toggle: giá trị, rủi ro, cách khôi phục
-│   ├── DIAGNOSTICS.md    Danh mục kiểm tra chẩn đoán và ngưỡng đánh giá
-│   ├── WATCHDOG.md       Logic tự khôi phục và các giới hạn an toàn
-│   ├── SECURITY.md       Mô hình bảo mật (server chạy quyền Admin)
-│   ├── BASELINE.md       Kết quả đo hiện trạng PC trước khi tối ưu
-│   ├── EXPERIMENT-LOG.md Nhật ký các thay đổi cấu hình và kết quả quan sát
-│   ├── ROADMAP.md        Kế hoạch theo giai đoạn
-│   ├── OPEN-QUESTIONS.md Các điểm cần trao đổi / quyết định
+│   ├── ARCHITECTURE.md   Architecture, modules, API, data flow
+│   ├── UI-DESIGN.md      UI direction (draft)
+│   ├── TWEAKS.md         Toggle catalog: values, risks, how to restore
+│   ├── DIAGNOSTICS.md    Diagnostic check catalog and evaluation thresholds
+│   ├── WATCHDOG.md       Self-recovery logic and safety limits
+│   ├── SECURITY.md       Security model (server running with Admin rights)
+│   ├── BASELINE.md       Measurements of the PC's current state before optimizing
+│   ├── EXPERIMENT-LOG.md Log of configuration changes and observed results
+│   ├── ROADMAP.md        Phased plan
+│   ├── OPEN-QUESTIONS.md Points to discuss / decide
 │   └── adr/              Architecture Decision Records
-├── app/                  Mã nguồn Python (backend)
-├── web/                  Giao diện (HTML/CSS/JS)
-├── scripts/              Script tiện ích (launcher, cài đặt)
-├── tests/                Kiểm thử
-└── data/                 Dữ liệu runtime (không commit): settings, backup, metrics
+├── app/                  Python source code (backend)
+├── web/                  UI (HTML/CSS/JS)
+├── scripts/              Utility scripts (launcher, installation)
+├── tests/                Tests
+└── data/                 Runtime data (not committed): settings, backup, metrics
 ```
 
-## Cách chạy
+## How to run
 
-Mới có phần theo dõi (chỉ đọc, không cần Admin). Chạy monitor ở foreground, dừng bằng Ctrl+C:
+Only the monitoring part exists so far (read-only, no Admin needed). Run the monitor in the foreground and stop it with Ctrl+C:
 
 ```powershell
 python -m app.monitor
 ```
 
-**Bản đóng gói (không cần cài Python):** `pip install -r requirements.txt pyinstaller==6.22.3` rồi `python scripts/build.py [--smoke]` → `dist/Ambysto Steady/` và `dist/StableInternetConnection-<version>-win64.zip`. Người dùng giải nén, bấm đúp `Ambysto Steady.exe` → app hỏi cài cho người dùng hiện tại (không cần Admin): chép vào `%LOCALAPPDATA%\Programs`, monitor chạy cùng Windows, lối tắt Start menu + icon khay khi đăng nhập, có trong Apps & features. Gỡ từ Apps & features: khôi phục mọi tối ưu về giá trị gốc (UAC một lần) rồi xóa task, lối tắt, thư mục; hỏi có xóa số liệu không. Chưa ký số nên SmartScreen sẽ cảnh báo.
+**Packaged build (no Python installation needed):** `pip install -r requirements.txt pyinstaller==6.22.3` then `python scripts/build.py [--smoke]` → `dist/Ambysto Steady/` and `dist/StableInternetConnection-<version>-win64.zip`. Users unzip it and double-click `Ambysto Steady.exe` → the app offers to install for the current user (no Admin needed): it copies itself to `%LOCALAPPDATA%\Programs`, the monitor runs with Windows, a Start menu shortcut + tray icon at sign-in, and it is listed in Apps & features. Uninstall from Apps & features: restores every optimization to its original value (one UAC prompt), then removes the task, shortcuts and folder; asks whether to delete the data. Not yet code-signed, so SmartScreen will show a warning.
 
-**Cửa sổ ứng dụng + icon khay:** `pip install -r requirements.txt` (pywebview, pystray, Pillow) rồi bấm đúp `scripts\desktop
-un_desktop.pyw` (hoặc `pythonw -m app.desktop`, thêm `--minimized` để chỉ hiện ở khay). Đóng cửa sổ chỉ ẩn xuống khay; monitor chạy riêng và không bị tắt.
+**App window + tray icon:** `pip install -r requirements.txt` (pywebview, pystray, Pillow) then double-click `scripts\desktop\run_desktop.pyw` (or `pythonw -m app.desktop`, add `--minimized` to show it only in the tray). Closing the window only hides it to the tray; the monitor runs separately and is not stopped.
 
-Số liệu ghi vào `data/metrics.db`. Monitor cũng mở **giao diện** tại `http://127.0.0.1:47613/` (chỉ máy này truy cập được; xem `docs/SECURITY.md`): Tổng quan, Tối ưu, Chẩn đoán, Nhật ký, Cài đặt — 9 ngôn ngữ, sáng/tối, co giãn tới khổ điện thoại. Chưa có chặn chạy hai bản cùng lúc (xem SIC-12), nên đừng chạy song song với `scripts/monitor/ping-logger.ps1` lâu dài vì sẽ ping gấp đôi.
+Data is written to `data/metrics.db`. The monitor also serves the **UI** at `http://127.0.0.1:47613/` (accessible only from this machine; see `docs/SECURITY.md`): Overview, Optimize, Diagnostics, Log, Settings — 9 languages, light/dark, responsive down to phone size. There is no protection yet against running two instances at once (see SIC-12), so do not run it in parallel with `scripts/monitor/ping-logger.ps1` for long, as that would double the pings.
 
-Chạy test: `python -m unittest discover -s tests -t .`
+Run tests: `python -m unittest discover -s tests -t .`
 
-## Tài liệu
+## Documentation
 
-Bắt đầu từ [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Mọi quyết định kiến trúc được ghi tại [docs/adr/](docs/adr/).
+Start from [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). All architectural decisions are recorded in [docs/adr/](docs/adr/).
 
-## Ký số và quyền riêng tư
+## Code signing and privacy
 
-- [Code signing policy](CODE_SIGNING.md) — ký số qua SignPath Foundation (đang chờ duyệt).
-- [Privacy policy](PRIVACY.md) — không thu thập dữ liệu; liệt kê mọi kết nối app tạo ra.
+- [Code signing policy](CODE_SIGNING.md) — code signing via SignPath Foundation (pending approval).
+- [Privacy policy](PRIVACY.md) — no data collection; lists every connection the app makes.
 
-## Giấy phép
+## License
 
-Copyright (C) 2026 Ambysto. Phát hành theo **GNU General Public License v3.0**, xem [LICENSE](LICENSE). Đóng góp: xem [CONTRIBUTING.md](CONTRIBUTING.md) và [CLA.md](CLA.md).
+Copyright (C) 2026 Ambysto. Released under the **GNU General Public License v3.0**, see [LICENSE](LICENSE). Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md).

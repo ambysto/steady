@@ -1,35 +1,35 @@
-# Đóng góp & quy ước
+# Contributing & conventions
 
-## Nguyên tắc cốt lõi
+## Core principles
 
-1. **Không thay đổi hệ thống mà không thể khôi phục.** Mọi tweak phải lưu giá trị gốc vào `data/backup.json` *trước* khi áp dụng, và có đường khôi phục khi không có bản sao lưu (về mặc định của Windows/driver).
-2. **Đọc trước, ghi sau.** Mọi tweak phải có hàm đọc trạng thái độc lập, không có tác dụng phụ.
-3. **Minh bạch.** Mọi thay đổi hệ thống và mọi hành động của watchdog đều được ghi vào nhật ký.
-4. **Chạy được ở chế độ chỉ-đọc.** Thiếu quyền Admin thì tool vẫn theo dõi và chẩn đoán được, chỉ khóa các thao tác ghi.
+1. **Never make a system change that cannot be restored.** Every tweak must save the original value to `data/backup.json` *before* applying it, and must have a restore path for when there is no backup (back to the Windows/driver default).
+2. **Read first, write later.** Every tweak must have an independent state-reading function with no side effects.
+3. **Transparency.** Every system change and every watchdog action is recorded in the log.
+4. **Works in read-only mode.** Without Admin rights the tool can still monitor and diagnose; only write operations are locked.
 
-## Thêm một tweak mới
+## Adding a new tweak
 
-1. Thêm mục vào [docs/TWEAKS.md](docs/TWEAKS.md) trước: mục đích, giá trị đích, giá trị mặc định, rủi ro, có ngắt mạng / cần khởi động lại không, nguồn tham khảo.
-2. Cài đặt class trong `app/tweaks.py` với đủ 4 thao tác: `read`, `capture`, `apply`, `restore`.
-3. Tweak không áp dụng được cho phần cứng hiện tại phải trả về `supported: false` kèm lý do, không được ném lỗi.
-4. Phân loại rủi ro:
-   - `low` — khuyến nghị rộng rãi, hầu như không có tác dụng phụ.
-   - `medium` — có đánh đổi (hiệu năng, pin) hoặc cần khởi động lại.
-   - `experimental` — chỉ nên bật để thử, theo dõi số liệu trước/sau.
+1. Add an entry to [docs/TWEAKS.md](docs/TWEAKS.md) first: purpose, target value, default value, risk, whether it interrupts the network / requires a restart, references.
+2. Implement the class in `app/tweaks.py` with all 4 operations: `read`, `capture`, `apply`, `restore`.
+3. A tweak that cannot be applied to the current hardware must return `supported: false` with a reason; it must not raise an error.
+4. Risk classification:
+   - `low` — widely recommended, practically no side effects.
+   - `medium` — has trade-offs (performance, battery) or requires a restart.
+   - `experimental` — should only be enabled to try it out, while tracking before/after metrics.
 
-## Quy ước code
+## Code conventions
 
-- Python 3.11+, ưu tiên thư viện chuẩn (xem [ADR-0001](docs/adr/0001-python-stdlib-web-ui.md)).
-- Gọi PowerShell qua helper chung (`-EncodedCommand`, bắt lỗi thống nhất), không tự ghép chuỗi lệnh.
-- Tên biến, hàm, lớp, tham số, khóa cấu hình, khóa dịch và comment trong code **bằng tiếng Anh** — không dùng tiếng Việt, kể cả không dấu. `tests/test_naming.py` kiểm tra tự động.
-- Chữ hiển thị cho người dùng (giao diện, chẩn đoán, toast, nhật ký) đi qua catalog dịch `app/locales/<mã>.json`, mặc định tiếng Anh ([ADR-0006](docs/adr/0006-i18n.md)). Tài liệu trong `docs/` vẫn viết tiếng Việt.
+- Python 3.11+, prefer the standard library (see [ADR-0001](docs/adr/0001-python-stdlib-web-ui.md)).
+- Call PowerShell through the shared helper (`-EncodedCommand`, uniform error handling); do not build command strings yourself.
+- Names of variables, functions, classes, parameters, config keys and translation keys, and comments in code, are **in English** — no Vietnamese, not even without diacritics. `tests/test_naming.py` checks this automatically.
+- Text displayed to users (UI, diagnostics, toasts, log) goes through the translation catalogs `app/locales/<code>.json`, English by default ([ADR-0006](docs/adr/0006-i18n.md)). All documentation (README, CHANGELOG, `docs/`, ADRs, CLAUDE.md) is written in English; only the user-facing UI catalogs in `app/locales` are translated.
 
-## Commit
+## Commits
 
-Theo [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
+Follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
 
-Cập nhật `CHANGELOG.md` mục `[Unreleased]` trong cùng commit với thay đổi.
+Update the `[Unreleased]` section of `CHANGELOG.md` in the same commit as the change.
 
-## Giấy phép và CLA
+## License and CLA
 
-Mã nguồn phát hành theo [GPL-3.0](LICENSE). Người đóng góp ký [CLA](CLA.md) một lần qua CLA Assistant ở pull request đầu tiên: bạn vẫn giữ bản quyền, và cho phép Ambysto quản lý giấy phép của dự án về sau. Thư viện bên thứ ba và giấy phép của chúng được liệt kê trong `THIRD-PARTY-NOTICES.txt`, sinh ra khi build.
+The source code is released under [GPL-3.0](LICENSE). Contributors sign the [CLA](CLA.md) once via CLA Assistant on their first pull request: you keep your copyright, and you allow Ambysto to manage the project's licensing in the future. Third-party libraries and their licenses are listed in `THIRD-PARTY-NOTICES.txt`, generated at build time.

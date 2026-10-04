@@ -1,20 +1,20 @@
-# ADR-0001: Backend Python và giao diện web chạy cục bộ
+# ADR-0001: Python backend and a locally served web UI
 
-- **Trạng thái:** Accepted — sửa đổi bởi [ADR-0002](0002-macos-style-ui-pywebview.md) (cho phép thêm pywebview và thư viện nhỏ)
-- **Ngày:** 2026-10-03
+- **Status:** Accepted — amended by [ADR-0002](0002-macos-style-ui-pywebview.md) (allows adding pywebview and small libraries)
+- **Date:** 2026-10-03
 
-## Bối cảnh
+## Context
 
-Tool cần: đọc/ghi cấu hình mạng Windows (PowerShell, netsh, powercfg, registry), theo dõi ping liên tục, hiển thị biểu đồ realtime, và vẫn dùng được khi mất Internet. Máy phát triển có sẵn Python 3.11 và Node 26; PowerShell chỉ có bản 5.1.
+The tool needs to: read/write Windows network configuration (PowerShell, netsh, powercfg, registry), monitor ping continuously, display realtime charts, and remain usable when the Internet is down. The development machine already has Python 3.11 and Node 26; PowerShell is only available as version 5.1.
 
-## Quyết định
+## Decision
 
-- Backend **Python 3.11+**, ưu tiên thư viện chuẩn: `http.server`, `sqlite3`, `ctypes` (ICMP, kiểm tra Admin), `winreg`, `subprocess`.
-- Giao diện **HTML/CSS/JS thuần**, không tải tài nguyên từ CDN (phải chạy được khi mất mạng).
-- Server chỉ bind `127.0.0.1`, bảo vệ bằng token (xem [SECURITY.md](../SECURITY.md)).
+- **Python 3.11+** backend, preferring the standard library: `http.server`, `sqlite3`, `ctypes` (ICMP, Admin check), `winreg`, `subprocess`.
+- **Plain HTML/CSS/JS** UI, loading no resources from a CDN (it must work while offline).
+- The server binds only to `127.0.0.1` and is protected by a token (see [SECURITY.md](../SECURITY.md)).
 
-## Hệ quả
+## Consequences
 
-- ✅ Không cần cài đặt thêm, dễ đọc và sửa.
-- ✅ Giao diện có thể tái sử dụng nếu sau này bọc trong cửa sổ desktop.
-- ⚠️ Giao diện trong tab trình duyệt không cho cảm giác ứng dụng native — đang xem xét lại tại [OPEN-QUESTIONS.md](../OPEN-QUESTIONS.md) Q2/Q3; quyết định đó có thể sửa đổi ADR này.
+- ✅ Nothing extra to install; easy to read and modify.
+- ✅ The UI can be reused if it is later wrapped in a desktop window.
+- ⚠️ A UI in a browser tab does not feel like a native application — being reconsidered in [OPEN-QUESTIONS.md](../OPEN-QUESTIONS.md) Q2/Q3; that decision may amend this ADR.

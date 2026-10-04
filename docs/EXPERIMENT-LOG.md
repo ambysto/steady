@@ -1,28 +1,28 @@
-# Nhật ký thử nghiệm
+# Experiment log
 
-Ghi lại mọi thay đổi cấu hình thực hiện **bằng tay** trên máy (trước khi có tool), kèm giá trị trước/sau, cách khôi phục và kết quả quan sát. Mỗi mục là một thử nghiệm; chỉ thay đổi một nhóm yếu tố mỗi lần để biết cái gì có tác dụng.
+Records every configuration change made **by hand** on the machine (before the tool existed), with before/after values, how to restore, and observed results. Each entry is one experiment; only one group of factors is changed at a time so we know what has an effect.
 
-**Chỉ số chính để đánh giá** (so với [BASELINE.md](BASELINE.md)):
+**Main metrics for evaluation** (compared with [BASELINE.md](BASELINE.md)):
 
-| Chỉ số | Nguồn | Baseline (7 ngày trước 2026-10-03) |
+| Metric | Source | Baseline (7 days before 2026-10-03) |
 |---|---|---|
-| Số lần "disconnected by the driver" / 24h | Event 8003 | 4.0 (28 lần / 7 ngày; riêng 10-02: hơn 20) |
-| Số lần IHV module MediaTek dừng / 24h | Event 10002 | 2.3 (16 / 7 ngày) |
-| Mất gói tới router | `ping-logger` | 0% (mẫu ngắn 60 gói) |
-| Số lần mất kết nối router (≥ 3s) | `ping-logger` | chưa có số liệu |
+| Number of "disconnected by the driver" / 24h | Event 8003 | 4.0 (28 times / 7 days; 10-02 alone: more than 20) |
+| Number of MediaTek IHV module stops / 24h | Event 10002 | 2.3 (16 / 7 days) |
+| Packet loss to router | `ping-logger` | 0% (short sample of 60 packets) |
+| Number of router connection losses (≥ 3s) | `ping-logger` | no data yet |
 
-Xem nhanh: `powershell -ExecutionPolicy Bypass -File scripts\monitor\report.ps1`
+Quick view: `powershell -ExecutionPolicy Bypass -File scripts\monitor\report.ps1`
 
 ---
 
-## EXP-001 — Tắt các cơ chế tiết kiệm điện của card Wi‑Fi và PCIe
+## EXP-001 — Disable the power-saving mechanisms of the Wi‑Fi card and PCIe
 
-- **Thời điểm áp dụng:** 2026-10-03 10:59:52 (+07)
-- **Thực hiện bằng:** [scripts/manual/apply-lowrisk.ps1](../scripts/manual/apply-lowrisk.ps1) (quyền Admin)
-- **Bản sao lưu:** `data/manual/backup-20261003-105949.json` · log: `data/manual/apply-20261003-105949.log`
-- **Giả thuyết:** driver MediaTek MT7922 bị treo/crash khi card hoặc khe PCIe vào trạng thái tiết kiệm điện ⇒ tắt các cơ chế này sẽ giảm mạnh số lần "disconnected by the driver" và event 10002.
+- **Applied at:** 2026-10-03 10:59:52 (+07)
+- **Done with:** [scripts/manual/apply-lowrisk.ps1](../scripts/manual/apply-lowrisk.ps1) (Admin rights)
+- **Backup:** `data/manual/backup-20261003-105949.json` · log: `data/manual/apply-20261003-105949.log`
+- **Hypothesis:** the MediaTek MT7922 driver hangs/crashes when the card or the PCIe slot enters a power-saving state ⇒ disabling these mechanisms will sharply reduce the number of "disconnected by the driver" and event 10002 occurrences.
 
-| Tweak ID | Thiết lập | Trước | Sau |
+| Tweak ID | Setting | Before | After |
 |---|---|---|---|
 | `wifi_power_saving` | Driver: Power Saving | Auto | **Disabled** |
 | `wifi_wake_magic` | Driver: Wake on Magic Packet | Enabled | **Disabled** |
@@ -31,275 +31,275 @@ Xem nhanh: `powershell -ExecutionPolicy Bypass -File scripts\monitor\report.ps1`
 | `power_wireless_max` | Power plan: Wireless Adapter Power Saving (AC / DC) | 0 / 2 | **0 / 0** |
 | `power_pcie_aspm_off` | Power plan: PCIe Link State Power Management (AC / DC) | **1 (Moderate)** / 2 | **0 / 0** (Off) |
 
-Power plan: Balanced (`381b4222-…`). Thay đổi power plan chỉ có hiệu lực với plan này.
+Power plan: Balanced (`381b4222-…`). Power plan changes only take effect for this plan.
 
-**Không áp dụng lần này** (để tách biệt tác động): `wifi_bw20_5g`, `wifi_mode_ac`, `ipv6_off` (experimental), `tcp_timedwait` (medium, cần reboot), đổi kênh router, rollback driver.
+**Not applied this time** (to isolate the impact): `wifi_bw20_5g`, `wifi_mode_ac`, `ipv6_off` (experimental), `tcp_timedwait` (medium, needs reboot), changing the router channel, driver rollback.
 
-**Kết quả ngay sau khi áp dụng** (11:00, 60 gói / mục tiêu):
+**Results right after applying** (11:00, 60 packets / target):
 
-| Mục tiêu | Mất gói | Avg | Max | Jitter |
+| Target | Packet loss | Avg | Max | Jitter |
 |---|---|---|---|---|
 | Router | 0/60 | 5.0 ms | 48 | 2.0 ms |
 | 1.1.1.1 | 0/60 | 68.2 ms | 231 | 11.7 ms |
 | 8.8.8.8 | 0/60 | 44.0 ms | 98 | 4.2 ms |
 
-Wi‑Fi kết nối lại sau ~9s khởi động lại card; tín hiệu 72% / −65 dBm, kênh 36, Rx 204 / Tx 360 Mbps. Kết quả tức thời không khác baseline — đúng dự kiến, vì vấn đề là rớt **ngắt quãng**; cần theo dõi nhiều ngày.
+Wi‑Fi reconnected ~9s after the card restarted; signal 72% / −65 dBm, channel 36, Rx 204 / Tx 360 Mbps. The immediate results are no different from the baseline — as expected, since the problem is **intermittent** drops; multiple days of monitoring are needed.
 
-**Theo dõi:** `ping-logger` chạy nền từ 2026-10-03 ~11:02 (không có quyền Admin, dừng khi đăng xuất/khởi động lại máy).
+**Monitoring:** `ping-logger` running in the background since 2026-10-03 ~11:02 (no Admin rights, stops on sign-out/restart).
 
-> **Từ 2026-10-04 10:05:** logger PowerShell đã dừng và gỡ khỏi Startup; thay bằng monitor Python (`python -m app.monitor`, chạy qua Task Scheduler "StableInternet Monitor", từ 09:59). Số liệu mới nằm trong `data/metrics.db` (SQLite), không còn ở `data/monitor/*.csv`. CSV cũ giữ nguyên và nhập được bằng `Storage.import_csv_dir()`. `report.ps1` chỉ đọc CSV nên không còn thấy số liệu mới — dùng `python -m app.diagnostics` hoặc truy vấn `metrics.db`.
+> **From 2026-10-04 10:05:** the PowerShell logger has been stopped and removed from Startup; replaced by the Python monitor (`python -m app.monitor`, run via Task Scheduler "StableInternet Monitor", since 09:59). New data lives in `data/metrics.db` (SQLite), no longer in `data/monitor/*.csv`. The old CSVs are kept as is and can be imported with `Storage.import_csv_dir()`. `report.ps1` only reads CSV, so it no longer sees new data — use `python -m app.diagnostics` or query `metrics.db`.
 
-**Mốc đánh giá:**
-- [ ] 2026-10-04 (24h) — chạy `report.ps1`, ghi kết quả bên dưới
-- [ ] 2026-10-06 (72h) — kết luận: giữ / khôi phục / chuyển sang EXP-002
+**Evaluation milestones:**
+- [ ] 2026-10-04 (24h) — run `report.ps1`, record the results below
+- [ ] 2026-10-06 (72h) — conclusion: keep / restore / move to EXP-002
 
-**Khôi phục:** chạy với quyền Admin
+**Restore:** run with Admin rights
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data\manual\backup-20261003-105949.json
 ```
 
-> ⚠️ **Kiểm tra lại 2026-10-04 ~09:55 (chỉ đọc):** phần lớn EXP-001 **không còn áp dụng**. Chỉ `Power Saving` còn `Disabled`; `Wake on Magic Packet` / `Wake on Pattern Match` = `Enabled`, `PnPCapabilities` = 16, Wireless Adapter AC 0 / **DC 2**, PCIe ASPM **AC 1 / DC 2** — đúng các giá trị *trước* khi áp dụng. Xác nhận bằng hai cách độc lập (`apply-lowrisk.ps1 -ShowState` và khung tweak mới); card vẫn ở khóa class `0011` nên không phải driver bị cài lại. `data/manual/` không có log khôi phục nào ⇒ **không rõ bị hoàn tác lúc nào và do đâu**. Hệ quả: các kết quả tốt sau EXP-014 (xoay thùng máy) đạt được khi phần lớn EXP-001 đã không còn — càng củng cố kết luận nguyên nhân chính là ăng-ten bị che.
+> ⚠️ **Re-checked 2026-10-04 ~09:55 (read-only):** most of EXP-001 is **no longer applied**. Only `Power Saving` is still `Disabled`; `Wake on Magic Packet` / `Wake on Pattern Match` = `Enabled`, `PnPCapabilities` = 16, Wireless Adapter AC 0 / **DC 2**, PCIe ASPM **AC 1 / DC 2** — exactly the values from *before* applying. Confirmed in two independent ways (`apply-lowrisk.ps1 -ShowState` and the new tweak framework); the card is still under class key `0011`, so the driver was not reinstalled. `data/manual/` has no restore log ⇒ **unknown when and why it was reverted**. Consequence: the good results after EXP-014 (rotating the PC case) were achieved when most of EXP-001 was already gone — further reinforcing the conclusion that the main cause was the blocked antennas.
 
-**Quan sát:**
-- **10:59:51** — Windows ghi 1 event 8003 + 1 event 10002 + event `mtkwlex` 1033/8001/8000: đây là do **chủ động** khởi động lại card khi áp dụng, *không tính* là sự cố. Lưu ý khi đọc `report.ps1` (mốc mặc định 10:59:49 nên sẽ đếm cả 2 event này).
-- **11:03:59 → 11:04:56 — mất kết nối tới router 57 giây** (logger: router mất 37/42 gói trong phút 11:04) nhưng **Wi‑Fi vẫn báo `connected`**, cùng BSSID, không có event 8003/10002/4003 nào trong Windows. ⇒ **"treo im lặng"**: liên kết vẫn giữ nhưng đường dữ liệu đứng. Windows không tự phát hiện/khôi phục ⇒ củng cố nhu cầu watchdog dựa trên ping router (đúng kịch bản `router_unreachable` trong [WATCHDOG.md](WATCHDOG.md)).
-  - Ngay trước đó tốc độ Rx tụt mạnh: 6 Mbps (11:03), 34 Mbps (11:04), rồi hồi lại 122 → 360 Mbps. ⇒ Rx rate tụt đột ngột có thể là **tín hiệu cảnh báo sớm** — cân nhắc đưa vào chẩn đoán / watchdog.
-  - Xảy ra chỉ ~4 phút sau khi áp dụng ⇒ EXP-001 **chưa** loại bỏ được lỗi treo; cần thêm dữ liệu để biết tần suất có giảm không.
-- **Báo cáo 15 phút đầu (10:59 → 11:18):** router mất **10%** gói (82/817), 7/15 phút có mất gói; **4 lần mất kết nối router**: 57s (11:04), 25s (11:11), 3s (11:15), 27s (11:17). Wi‑Fi luôn `connected`, không roaming, không có event Windows nào.
-- **Quy luật:** mọi lần mất kết nối đều trùng phút mà **Rx rate sụp về 6 Mbps** (mức MCS thấp nhất) — 11:03, 11:10, 11:17 — trong khi **tín hiệu vẫn 71–75% / −67 dBm**. Tín hiệu đủ mạnh mà tốc độ sụp ⇒ nghiêng về **nhiễu / xung đột trên kênh 36** (2 mạng hàng xóm cùng kênh), hoặc lỗi phía AP (BSSID `02:79:…` là địa chỉ locally-administered — có thể là node mesh/AP ảo), hơn là do tiết kiệm điện.
-- ⚠️ **Hạn chế phương pháp:** logger chỉ bắt đầu chạy *sau* khi áp dụng EXP-001, nên **không có số liệu ping cùng phương pháp cho giai đoạn trước** ⇒ chưa thể nói EXP-001 làm tốt hơn hay tệ hơn. Bài học: luôn chạy logger trước khi thay đổi để có baseline cùng thước đo.
-- 11:25 — logger **tự chạy khi đăng nhập**: shortcut trong Startup folder → `scripts/monitor/start-logger-hidden.vbs` (cài/gỡ: `scripts/monitor/install-autostart.ps1 [-Remove]`).
-- 11:21–11:30 — logger PID 27080 bị dừng ngoài ý muốn (không có `logger_stop` ⇒ bị kill từ bên ngoài, nghi do process con của phiên Claude bị dọn) ⇒ **mất số liệu 11:21–11:24 và 11:26–11:29**. Đã khởi chạy lại tách khỏi phiên qua WMI (PID 28344, 11:30).
-- 11:20 — sửa lỗi phân loại `internet_down` trong logger (trước đó có thể ghi nhầm "router reachable" khi router cũng mất trong cùng sự cố); khởi động lại logger.
-- **11:05 → 11:08** — router 0% mất gói, nhưng 1.1.1.1 và 8.8.8.8 mất **3–17%** mỗi phút (2–10 / 60 gói) dù độ trễ bình thường. Khác với mẫu đo 60 gói lúc 11:00 (0%). Giả thuyết cần kiểm chứng: mất gói phía WAN của router/ISP, hoặc router/ISP giới hạn ICMP. ⇒ Logger nên ghi theo giây (hoặc thêm kiểm tra TCP/DNS) để phân biệt mất gói thật với ICMP bị giới hạn.
+**Observations:**
+- **10:59:51** — Windows logged 1 event 8003 + 1 event 10002 + `mtkwlex` events 1033/8001/8000: this is due to **deliberately** restarting the card when applying, *not counted* as an incident. Keep in mind when reading `report.ps1` (the default start mark is 10:59:49, so it will count these 2 events).
+- **11:03:59 → 11:04:56 — lost connection to the router for 57 seconds** (logger: router lost 37/42 packets in minute 11:04) but **Wi‑Fi still reported `connected`**, same BSSID, no 8003/10002/4003 events in Windows. ⇒ **"silent hang"**: the link is kept but the data path stalls. Windows does not detect/recover on its own ⇒ reinforces the need for a watchdog based on pinging the router (exactly the `router_unreachable` scenario in [WATCHDOG.md](WATCHDOG.md)).
+  - Right before that, the Rx rate dropped sharply: 6 Mbps (11:03), 34 Mbps (11:04), then recovered 122 → 360 Mbps. ⇒ A sudden Rx rate drop may be an **early warning signal** — consider adding it to diagnostics / the watchdog.
+  - Happened only ~4 minutes after applying ⇒ EXP-001 has **not** eliminated the hang; more data is needed to know whether the frequency has decreased.
+- **Report for the first 15 minutes (10:59 → 11:18):** router lost **10%** of packets (82/817), 7/15 minutes had packet loss; **4 router connection losses**: 57s (11:04), 25s (11:11), 3s (11:15), 27s (11:17). Wi‑Fi always `connected`, no roaming, no Windows events.
+- **Pattern:** every connection loss coincided with a minute where the **Rx rate collapsed to 6 Mbps** (the lowest MCS level) — 11:03, 11:10, 11:17 — while the **signal was still 71–75% / −67 dBm**. Strong enough signal yet collapsed rate ⇒ leans toward **interference / contention on channel 36** (2 neighbor networks on the same channel), or a fault on the AP side (BSSID `02:79:…` is a locally-administered address — possibly a mesh node/virtual AP), rather than power saving.
+- ⚠️ **Methodological limitation:** the logger only started running *after* EXP-001 was applied, so **there is no ping data with the same method for the earlier period** ⇒ we cannot yet say whether EXP-001 made things better or worse. Lesson: always run the logger before making a change to get a baseline with the same yardstick.
+- 11:25 — logger **runs automatically at sign-in**: shortcut in the Startup folder → `scripts/monitor/start-logger-hidden.vbs` (install/remove: `scripts/monitor/install-autostart.ps1 [-Remove]`).
+- 11:21–11:30 — logger PID 27080 was stopped unexpectedly (no `logger_stop` ⇒ killed from outside, suspected to be a child process of the Claude session getting cleaned up) ⇒ **lost data for 11:21–11:24 and 11:26–11:29**. Restarted detached from the session via WMI (PID 28344, 11:30).
+- 11:20 — fixed the `internet_down` classification bug in the logger (previously it could wrongly record "router reachable" when the router was also lost in the same incident); restarted the logger.
+- **11:05 → 11:08** — router 0% packet loss, but 1.1.1.1 and 8.8.8.8 lost **3–17%** per minute (2–10 / 60 packets) despite normal latency. Different from the 60-packet sample at 11:00 (0%). Hypothesis to verify: packet loss on the router's WAN side/ISP, or the router/ISP rate-limiting ICMP. ⇒ The logger should record per second (or add TCP/DNS checks) to distinguish real packet loss from rate-limited ICMP.
 
 ---
 
-### Diễn biến EXP-001: 11:30 → 13:14 (trước khi đổi kênh)
+### EXP-001 progress: 11:30 → 13:14 (before changing the channel)
 
-`report.ps1 -Since '2026-10-03 11:30'` (107 phút):
+`report.ps1 -Since '2026-10-03 11:30'` (107 minutes):
 
-| Mục tiêu | Mất gói | Avg | Jitter | Phút có mất gói |
+| Target | Packet loss | Avg | Jitter | Minutes with packet loss |
 |---|---|---|---|---|
 | Router | **34.9%** (1920/5503) | 25.7 ms | 31.7 ms | **101/107** |
 | 1.1.1.1 | 43.3% | 80.6 ms | 36.6 ms | 107/107 |
 | 8.8.8.8 | 42.3% | 72.9 ms | 41.7 ms | 107/107 |
 
-- **64 lần mất kết nối router**, tổng **2519s (~42 phút / 107 phút)**. Windows chỉ ghi 1 lần "disconnected by the driver" ⇒ gần như toàn bộ là **treo im lặng**.
-- Rx rate sụp về **6 Mbps** trong hầu hết các phút (8–14 phút mỗi khung 15 phút).
-- Tín hiệu giảm dần: 71% / −69 dBm (11:30–12:30) → 63% / −73 (12:45) → 57% / −76 (13:00). Nguyên nhân chưa rõ (cần hỏi: có thay đổi gì ở router/vị trí lúc ~12:45?).
-- ⚠️ Tình trạng **tệ hơn rõ rệt** so với 15 phút đầu (10% mất gói). Chưa loại trừ khả năng EXP-001 (tắt power saving trên MediaTek) làm xấu đi ⇒ A/B (EXP-001b) càng cần thiết.
+- **64 router connection losses**, total **2519s (~42 minutes / 107 minutes)**. Windows logged only 1 "disconnected by the driver" ⇒ almost all are **silent hangs**.
+- Rx rate collapsed to **6 Mbps** in most minutes (8–14 minutes in each 15-minute window).
+- Signal gradually decreasing: 71% / −69 dBm (11:30–12:30) → 63% / −73 (12:45) → 57% / −76 (13:00). Cause unclear (need to ask: was anything changed at the router/location around ~12:45?).
+- ⚠️ The situation is **clearly worse** than in the first 15 minutes (10% packet loss). We have not ruled out that EXP-001 (disabling power saving on the MediaTek) made things worse ⇒ an A/B (EXP-001b) is all the more necessary.
 
-## EXP-002 — Đổi kênh 5GHz của BE3: 36 → 157
+## EXP-002 — Change the BE3's 5GHz channel: 36 → 157
 
-- **Thời điểm:** ~13:14–13:16 (+07) — người dùng đổi trên trang quản trị BE3 (tắt 自动优化信道, đặt 组网信道模式, chọn kênh thủ công). Logger thấy PC tạm roam sang 2.4G ch1 (13:14:33), sang 5G ch44 (13:15:57), cuối cùng ch157.
-- **Giữ nguyên:** EXP-001 vẫn đang áp dụng; băng thông 5G 20/40/80 MHz.
-- **Giả thuyết:** rời kênh 36 (chung với 2 mạng hàng xóm) sẽ hết hiện tượng Rx sụp về 6 Mbps và mất kết nối.
-- **Ngay sau khi đổi (13:17):** kênh 157, **tín hiệu 48% / −76 dBm** (yếu), Rx 367 / Tx 432 Mbps. Kênh 157 không có mạng hàng xóm nào; kênh 36 còn 2 mạng (c4/c6:2c:7b…), kênh 48 có 2 mạng.
-- **Lưu ý:** kênh cao (UNII‑3) suy hao qua tường nhiều hơn một chút; nếu RSSI ổn định dưới −72 dBm, cân nhắc kênh 149 hoặc chế độ công suất 穿墙 (xuyên tường).
-- **Mốc đánh giá:** 13:45 và 15:00 — so sánh mất gói tới router, số lần mất kết nối, số phút Rx ≤ 6 Mbps với khung 11:30–13:14 ở trên.
+- **When:** ~13:14–13:16 (+07) — the user changed it on the BE3 admin page (disabled 自动优化信道, set 组网信道模式, chose the channel manually). The logger saw the PC temporarily roam to 2.4G ch1 (13:14:33), to 5G ch44 (13:15:57), and finally ch157.
+- **Kept unchanged:** EXP-001 still applied; 5G bandwidth 20/40/80 MHz.
+- **Hypothesis:** leaving channel 36 (shared with 2 neighbor networks) will end the Rx-collapsing-to-6-Mbps phenomenon and the connection losses.
+- **Right after the change (13:17):** channel 157, **signal 48% / −76 dBm** (weak), Rx 367 / Tx 432 Mbps. Channel 157 has no neighbor networks; channel 36 still has 2 networks (c4/c6:2c:7b…), channel 48 has 2 networks.
+- **Note:** high channels (UNII‑3) attenuate a bit more through walls; if RSSI stays below −72 dBm, consider channel 149 or the 穿墙 (wall penetration) transmit power mode.
+- **Evaluation milestones:** 13:45 and 15:00 — compare packet loss to the router, number of connection losses, and number of minutes with Rx ≤ 6 Mbps against the 11:30–13:14 window above.
 
-**Quan sát:**
-- **13:17 → 13:33 (16 phút):** router mất **19.7%** gói (12/16 phút có mất gói), 6 lần mất kết nối router (235s); Internet mất ~65%. Lần đầu xuất hiện **ngắt kết nối thật** (Wi‑Fi `disconnected` 13:29:41, 13:31:51; 5 event 8003, 1 event 10002, 1 event 4003). RSSI **−75 → −79 dBm**; Rx vẫn sụp 6 Mbps lúc 13:20–13:21. Có 1 phút PC ở kênh 36 (13:22).
-- Đánh giá sơ bộ: rời kênh 36 **chưa** giải quyết được; vấn đề nổi bật hiện tại là **tín hiệu yếu** (−76…−79), vốn đã giảm từ ~12:45 khi còn ở kênh 36 ⇒ không do đổi kênh. Cần hỏi người dùng có đang thao tác trên router lúc 13:29–13:33 không.
+**Observations:**
+- **13:17 → 13:33 (16 minutes):** router lost **19.7%** of packets (12/16 minutes had packet loss), 6 router connection losses (235s); Internet lost ~65%. First appearance of **real disconnects** (Wi‑Fi `disconnected` 13:29:41, 13:31:51; 5 events 8003, 1 event 10002, 1 event 4003). RSSI **−75 → −79 dBm**; Rx still collapsed to 6 Mbps at 13:20–13:21. For 1 minute the PC was on channel 36 (13:22).
+- Preliminary assessment: leaving channel 36 has **not** solved it; the prominent problem right now is **weak signal** (−76…−79), which had already been dropping since ~12:45 while still on channel 36 ⇒ not caused by the channel change. Need to ask the user whether they were working on the router at 13:29–13:33.
 
-## Phát hiện: modem nhà mạng vẫn phát Wi‑Fi dù đã bridge (13:40)
+## Finding: the ISP modem still broadcasts Wi‑Fi even though it is bridged (13:40)
 
-- Người dùng: modem nhà mạng đã chuyển **bridge**, "OldModemNet" là mạng cũ; **modem và BE3 đặt sát cạnh nhau**.
-- Các SSID OldModemNet / CNBN / NeighborNet / SSID ẩn cùng họ MAC `c4/c6:2c:7b:…` ⇒ nhiều khả năng **đều do modem cũ phát** (bridge chỉ tắt chức năng định tuyến, không tắt radio Wi‑Fi). Chúng chiếm **5G kênh 36** và **2.4G kênh 4**.
-- Hai thiết bị phát đặt sát nhau ⇒ (a) tranh chấp kênh khi cùng kênh; (b) **chặn/giảm độ nhạy máy thu** của BE3 ngay cả khi khác kênh, do sóng của modem quá mạnh ở cự ly vài cm.
-- Đề xuất: tắt Wi‑Fi trên modem (nút WLAN / trang quản trị qua SSID OldModemNet / nhờ tổng đài) + đặt BE3 cách modem ≥ 1–2 m, chỗ cao, thoáng, hướng về PC. ⇒ **EXP-008**.
+- User: the ISP modem has been switched to **bridge**, "OldModemNet" is the old network; **the modem and the BE3 are placed right next to each other**.
+- The SSIDs OldModemNet / CNBN / NeighborNet / a hidden SSID share the MAC family `c4/c6:2c:7b:…` ⇒ most likely **all broadcast by the old modem** (bridge only disables the routing function, not the Wi‑Fi radio). They occupy **5G channel 36** and **2.4G channel 4**.
+- Two transmitters placed right next to each other ⇒ (a) channel contention when on the same channel; (b) **blocking/desensitizing the BE3's receiver** even on different channels, because the modem's signal is too strong at a distance of a few cm.
+- Proposal: turn off Wi‑Fi on the modem (WLAN button / admin page via the OldModemNet SSID / ask the ISP hotline) + place the BE3 ≥ 1–2 m away from the modem, in a high, open spot, facing the PC. ⇒ **EXP-008**.
 
-## EXP-008 — Tắt Wi‑Fi modem cũ + dời BE3 cách modem > 1 m
+## EXP-008 — Turn off the old modem's Wi‑Fi + move the BE3 > 1 m away from the modem
 
-- **Thời điểm:** trước 13:54 (+07), người dùng thực hiện; ăng-ten **chưa** nghiêng.
-- **Quét lúc 13:54:** OldModemNet, CNBN và SSID ẩn `c6:2c:7b:d8:ea:99` **đã biến mất** ⇒ xác nhận chúng do modem phát. **NeighborNet** (`c4:2c:7b:d4:ea:9a`, kênh 36, 63%) **vẫn còn** ⇒ hoặc radio 5G của modem chưa tắt hết, hoặc NeighborNet là thiết bị khác.
-- **Xuất hiện SSID mới của BE3:** `HomeNet_5G` (02:5e:00:9a:40:24, ch157), `HomeNet_Wi-Fi5` (…:40:31, ch11), `HomeNet_5G_Wi-Fi5` (…:40:32, ch157) ⇒ người dùng đã tách băng tần và/hoặc bật mạng tương thích Wi‑Fi 5 trên BE3 (cần xác nhận). PC hiện ở `HomeNet_5G`.
-- **Tín hiệu xấu hơn sau khi dời:** **−78 … −80 dBm (39–45%)**, so với −76 trước khi dời và −66 sáng nay. Rx vẫn 6 Mbps ở 8/10 phút (13:40–13:50).
-- **Sự cố:** router_down 154s (13:49), 152s (13:51), và 3 lần 5s (13:52–13:54); PC roam qua 2.4G ch11 rồi về 5G.
-- Logger khởi động lại lúc 13:45:50 (PID 19984) không có `logger_stop` trước đó ⇒ mất số liệu 13:43–13:44.
-- **Đánh giá:** dọn nhiễu của modem đã xong, nhưng **vị trí mới làm tín hiệu tới PC yếu đi** ⇒ hiện tại tín hiệu yếu (≤ −78 dBm) là yếu tố chi phối. Cần đặt lại BE3 ở vị trí nhìn thẳng/ít tường tới PC (vẫn cách modem ≥ 1 m, nối dài dây WAN nếu cần), chỉnh ăng-ten, và/hoặc bật chế độ 穿墙.
+- **When:** before 13:54 (+07), done by the user; antennas **not yet** tilted.
+- **Scan at 13:54:** OldModemNet, CNBN and the hidden SSID `c6:2c:7b:d8:ea:99` **have disappeared** ⇒ confirms they were broadcast by the modem. **NeighborNet** (`c4:2c:7b:d4:ea:9a`, channel 36, 63%) **is still there** ⇒ either the modem's 5G radio is not fully off, or NeighborNet is a different device.
+- **New BE3 SSIDs appeared:** `HomeNet_5G` (02:5e:00:9a:40:24, ch157), `HomeNet_Wi-Fi5` (…:40:31, ch11), `HomeNet_5G_Wi-Fi5` (…:40:32, ch157) ⇒ the user has split the bands and/or enabled the Wi‑Fi 5 compatibility network on the BE3 (needs confirmation). The PC is currently on `HomeNet_5G`.
+- **Signal worse after moving:** **−78 … −80 dBm (39–45%)**, compared with −76 before moving and −66 this morning. Rx still 6 Mbps in 8/10 minutes (13:40–13:50).
+- **Incidents:** router_down 154s (13:49), 152s (13:51), and 3 times 5s (13:52–13:54); the PC roamed via 2.4G ch11 and then back to 5G.
+- Logger restarted at 13:45:50 (PID 19984) without a preceding `logger_stop` ⇒ lost data for 13:43–13:44.
+- **Assessment:** the modem interference cleanup is done, but **the new location has weakened the signal to the PC** ⇒ right now weak signal (≤ −78 dBm) is the dominant factor. Need to reposition the BE3 at a spot with line of sight/fewer walls to the PC (still ≥ 1 m from the modem, extending the WAN cable if needed), adjust the antennas, and/or enable 穿墙 mode.
 
-## EXP-009 — Tắt MLO trên BE3 (người dùng thực hiện)
+## EXP-009 — Disable MLO on the BE3 (done by the user)
 
-- **Thời điểm:** khoảng 13:52–14:01 (+07), cần người dùng xác nhận giờ chính xác.
-- **Người dùng nhận xét:** "tắt MLO thì kết nối không còn rớt như trước".
-- **Người dùng xác nhận thứ tự:** (1) tắt MLO → (2) đổi kênh 5G sang **48** → (3) bật chế độ **Wi‑Fi 5** (mạng tương thích) trên router.
-- **Các thay đổi đi kèm, quan sát được trong cùng khoảng thời gian** (⇒ **không tách riêng được tác động của MLO**):
-  - BE3 tách SSID theo băng tần: `HomeNet_5G` và các SSID tương thích Wi‑Fi 5 `HomeNet_Wi-Fi5` (2.4G ch11), `HomeNet_5G_Wi-Fi5`.
-  - PC đang kết nối `HomeNet_5G_Wi-Fi5` ⇒ **chuẩn 802.11ac** (không còn ax/be) — tương đương thử nghiệm "ép Wi‑Fi 5" phía router.
-  - Kênh 5G đổi từ **157 → 48** (14:02).
-  - Tín hiệu tốt lên: −78/−80 dBm → **−73/−74 dBm (60%)** — có thể do kênh thấp hơn hoặc router/ăng-ten được chỉnh tiếp.
-- **Số liệu theo phút (router):** 13:57–14:01 vẫn mất 8–30 gói/phút trong lúc chuyển SSID; **14:02: 0/60 mất gói, avg 6 ms, max 32 ms**, Rx 234 Mbps.
-- **Kết quả 14:02 → 14:21 (19 phút):** router mất **3.1%** (35/1124) so với **34.9%** khung 11:30–13:14 và 19.7% trên kênh 157; chỉ **1 lần** mất kết nối router (3s); **0** event Windows (8003/10002/4003). RSSI −72…−76. Rx hiển thị 6 Mbps ở nhiều phút nhưng không đi kèm mất gói ⇒ chỉ số Rx rate của netsh (tốc độ khung gần nhất) không đáng tin khi lưu lượng thấp — **không dùng làm chỉ báo sự cố một mình**.
-- Internet (1.1.1.1 / 8.8.8.8) vẫn mất 13–15% trong khi router chỉ 3% ⇒ vấn đề riêng phía WAN/ISP hoặc ICMP bị giới hạn — theo dõi tiếp, tách khỏi vấn đề Wi‑Fi.
-- **Thông tin router (trang 路由器信息):** thực tế là **华为路由 BE3 Pro 雷电版** (BE3 Pro, bản "Thunder"), phần mềm 6.1.0.11 (V6R1), HarmonyOS 6.1.0, phần cứng VER.A; thời gian chạy 40 phút lúc ~14:20 ⇒ **router đã khởi động lại ~13:40** khi áp dụng thay đổi. WAN IP 203.0.113.10, DNS ISP 123.23.23.23 / 123.26.26.26 (VNPT). Wi‑Fi 定时 (hẹn giờ tắt Wi‑Fi): trống. Wi‑Fi 中继 (repeater): tắt. Trang kênh ghi chú: kênh dưới 149 là kênh mới mở tại TQ, một số thiết bị cũ có thể không kết nối được.
-- **Đánh giá sơ bộ (14:04):** hướng đúng, khớp giả thuyết "tương thích Wi‑Fi 7 ↔ MediaTek MT7922" (MLO là tính năng Wi‑Fi 7 mà card không hỗ trợ). Nhưng mới có ~2 phút dữ liệu sạch ⇒ **chưa kết luận**. Mốc đánh giá: 15:00 và cuối ngày.
+- **When:** around 13:52–14:01 (+07), the user needs to confirm the exact time.
+- **User's remark:** "with MLO off, the connection no longer drops like before".
+- **User confirmed the order:** (1) disable MLO → (2) change the 5G channel to **48** → (3) enable **Wi‑Fi 5** mode (compatibility network) on the router.
+- **Accompanying changes, observed in the same time window** (⇒ **the impact of MLO cannot be isolated**):
+  - The BE3 split SSIDs by band: `HomeNet_5G` and the Wi‑Fi 5 compatibility SSIDs `HomeNet_Wi-Fi5` (2.4G ch11), `HomeNet_5G_Wi-Fi5`.
+  - The PC is connected to `HomeNet_5G_Wi-Fi5` ⇒ **802.11ac standard** (no more ax/be) — equivalent to a "force Wi‑Fi 5" experiment on the router side.
+  - 5G channel changed from **157 → 48** (14:02).
+  - Signal improved: −78/−80 dBm → **−73/−74 dBm (60%)** — possibly due to the lower channel or further adjustments to the router/antennas.
+- **Per-minute data (router):** 13:57–14:01 still lost 8–30 packets/minute while switching SSID; **14:02: 0/60 packet loss, avg 6 ms, max 32 ms**, Rx 234 Mbps.
+- **Results 14:02 → 14:21 (19 minutes):** router lost **3.1%** (35/1124) compared with **34.9%** in the 11:30–13:14 window and 19.7% on channel 157; only **1** router connection loss (3s); **0** Windows events (8003/10002/4003). RSSI −72…−76. Rx showed 6 Mbps in many minutes but without accompanying packet loss ⇒ netsh's Rx rate figure (rate of the most recent frame) is unreliable when traffic is low — **do not use it on its own as an incident indicator**.
+- Internet (1.1.1.1 / 8.8.8.8) still lost 13–15% while the router only lost 3% ⇒ a separate problem on the WAN/ISP side or ICMP rate limiting — keep monitoring, separate from the Wi‑Fi problem.
+- **Router information (路由器信息 page):** it is actually a **华为路由 BE3 Pro 雷电版** (BE3 Pro, "Thunder" edition), software 6.1.0.11 (V6R1), HarmonyOS 6.1.0, hardware VER.A; uptime 40 minutes at ~14:20 ⇒ **the router restarted at ~13:40** when the changes were applied. WAN IP 203.0.113.10, ISP DNS 123.23.23.23 / 123.26.26.26 (VNPT). Wi‑Fi 定时 (Wi‑Fi off schedule): empty. Wi‑Fi 中继 (repeater): off. The channel page notes: channels below 149 are newly opened channels in China, some older devices may not be able to connect.
+- **Preliminary assessment (14:04):** right direction, consistent with the "Wi‑Fi 7 ↔ MediaTek MT7922 compatibility" hypothesis (MLO is a Wi‑Fi 7 feature the card does not support). But there are only ~2 minutes of clean data ⇒ **no conclusion yet**. Evaluation milestones: 15:00 and end of day.
 
-### Diễn biến EXP-009 tiếp theo: 14:21 → 14:41 (vẫn 5G ch48, SSID `HomeNet_5G_Wi-Fi5`, 802.11ac)
+### EXP-009 continued: 14:21 → 14:41 (still 5G ch48, SSID `HomeNet_5G_Wi-Fi5`, 802.11ac)
 
-- Router mất **0–7 gói/phút** (~5%), mất kết nối ngắn 3–4s khoảng 5 phút/lần, không có sự cố dài. RSSI cải thiện dần −76 → −70 dBm. ⇒ **Khung tốt nhất trong ngày**, nhưng chưa hoàn hảo.
+- Router lost **0–7 packets/minute** (~5%), short 3–4s connection losses roughly every 5 minutes, no long incidents. RSSI gradually improved −76 → −70 dBm. ⇒ **Best window of the day**, but not yet perfect.
 
-## EXP-010 — Chuyển PC sang 2.4GHz ("đổi tốc độ lấy ổn định")
+## EXP-010 — Move the PC to 2.4GHz ("trade speed for stability")
 
-- **Thời điểm:** 14:42 PC sang `HomeNet_Wi-Fi5` (2.4G, ch11); khoảng 15:20 sang `HomeNet` (2.4G ch11, 802.11ax). Logger khởi động lại 15:20:32 (nghi PC khởi động lại/đăng nhập lại).
-- **Kết quả: tệ hơn rõ rệt so với 5G ch48:**
-  - 14:42–14:51: 1–10 gói/phút (tương đương 5G).
-  - **14:52–15:17:** 9–36 gói/phút (**~30%**), ping trung bình 70–180 ms, Rx/Tx tụt về **1 Mbps** (mức thấp nhất của 2.4G), RSSI có lúc −90…−93.
-  - **15:27–15:37: mất hoàn toàn ~10.7 phút** (router_down 641s) trong khi Wi‑Fi vẫn `connected` ⇒ treo im lặng kéo dài; 15:39–15:41 lại mất 150s.
-- **Nguyên nhân khả dĩ:** 2.4G kênh 11 đông (nhiều mạng hàng xóm ở kênh 4/7/11, utilization 35%), băng 2.4G dễ bị nhiễu (lò vi sóng, Bluetooth, thiết bị không dây); driver MediaTek vẫn treo.
-- **Kết luận:** 2.4G **không** ổn định hơn ⇒ quay lại 5G ch48 (`HomeNet_5G_Wi-Fi5`), cấu hình tốt nhất đã đo được.
-- **Nhận định tổng thể sau EXP-001 → EXP-010:** các thay đổi phía router (tắt Wi‑Fi modem, tắt MLO, kênh 48, chế độ Wi‑Fi 5) giảm mất gói từ ~35% xuống ~3–5%, nhưng **vẫn còn treo ngắn định kỳ** ở mọi băng/kênh ⇒ phần còn lại nhiều khả năng do **card/driver MediaTek + tín hiệu chỉ ở mức −70…−76 dBm**. Bước tiếp theo có giá trị nhất: **EXP-005 (cắm dây)** hoặc **đổi card Intel**.
+- **When:** 14:42 PC moved to `HomeNet_Wi-Fi5` (2.4G, ch11); around 15:20 moved to `HomeNet` (2.4G ch11, 802.11ax). Logger restarted at 15:20:32 (suspected PC restart/re-sign-in).
+- **Result: clearly worse than 5G ch48:**
+  - 14:42–14:51: 1–10 packets/minute (equivalent to 5G).
+  - **14:52–15:17:** 9–36 packets/minute (**~30%**), average ping 70–180 ms, Rx/Tx dropped to **1 Mbps** (the lowest 2.4G rate), RSSI at times −90…−93.
+  - **15:27–15:37: total loss for ~10.7 minutes** (router_down 641s) while Wi‑Fi was still `connected` ⇒ prolonged silent hang; 15:39–15:41 lost another 150s.
+- **Possible causes:** 2.4G channel 11 is crowded (many neighbor networks on channels 4/7/11, utilization 35%), the 2.4G band is prone to interference (microwave ovens, Bluetooth, wireless devices); the MediaTek driver still hangs.
+- **Conclusion:** 2.4G is **not** more stable ⇒ go back to 5G ch48 (`HomeNet_5G_Wi-Fi5`), the best configuration measured so far.
+- **Overall assessment after EXP-001 → EXP-010:** the router-side changes (turning off the modem's Wi‑Fi, disabling MLO, channel 48, Wi‑Fi 5 mode) reduced packet loss from ~35% to ~3–5%, but **periodic short hangs remain** on every band/channel ⇒ the remainder is most likely due to the **MediaTek card/driver + a signal of only −70…−76 dBm**. Most valuable next step: **EXP-005 (wired connection)** or **switching to an Intel card**.
 
-## EXP-013 — Tắt Wi‑Fi 7 trên router, PC về `HomeNet_5G` (Wi‑Fi 6, kênh 40)
+## EXP-013 — Disable Wi‑Fi 7 on the router, PC back on `HomeNet_5G` (Wi‑Fi 6, channel 40)
 
-- **Thời điểm:** ~15:43 (+07). Người dùng: "đã tắt Wi‑Fi 7 và đổi về 5G". PC: `HomeNet_5G`, **802.11ax**, **kênh 40**, RSSI **−67…−68 dBm** (tốt hơn −72…−76 của ch48).
-- **Kết quả 15:43 → 16:22 (39 phút):** router mất **12.7%**, **31 lần** mất kết nối (tổng 249s), 29/39 phút có mất gói; Windows chỉ 1 disconnect. Sự cố dồn nhiều quanh 16:08–16:12; từ 16:13 → 16:22 không có sự cố.
-- **So sánh:** tín hiệu tốt hơn nhưng mất gói **cao hơn** khung `HomeNet_5G_Wi-Fi5` ch48 (802.11ac, ~3–5%). ⇒ Gợi ý: card MediaTek ổn định hơn ở **chế độ Wi‑Fi 5 (ac)** so với Wi‑Fi 6 (ax) — khớp hướng EXP-004 (`wifi_mode_ac`). Chưa chắc chắn vì kênh cũng đổi (48 → 40) và thời gian quan sát ngắn.
-- **Mốc tín hiệu trước khi lắp ăng-ten cửa sổ:** −67 dBm.
+- **When:** ~15:43 (+07). User: "turned off Wi‑Fi 7 and switched back to 5G". PC: `HomeNet_5G`, **802.11ax**, **channel 40**, RSSI **−67…−68 dBm** (better than the −72…−76 of ch48).
+- **Results 15:43 → 16:22 (39 minutes):** router lost **12.7%**, **31** connection losses (total 249s), 29/39 minutes had packet loss; Windows only 1 disconnect. Incidents clustered around 16:08–16:12; from 16:13 → 16:22 no incidents.
+- **Comparison:** better signal but **higher** packet loss than the `HomeNet_5G_Wi-Fi5` ch48 window (802.11ac, ~3–5%). ⇒ Suggests: the MediaTek card is more stable in **Wi‑Fi 5 (ac) mode** than in Wi‑Fi 6 (ax) — consistent with the EXP-004 direction (`wifi_mode_ac`). Not certain, since the channel also changed (48 → 40) and the observation time was short.
+- **Signal reference before installing the window antenna:** −67 dBm.
 
-## EXP-004 — Ép card chạy Wi‑Fi 5 (`wifi_mode_ac`)
+## EXP-004 — Force the card to run Wi‑Fi 5 (`wifi_mode_ac`)
 
-- **Thời điểm:** ~16:26 (+07), người dùng đồng ý; chạy [scripts/manual/set-phymode.ps1](../scripts/manual/set-phymode.ps1) `-Mode ac` (Admin). Log: `data/manual/phymode-*.log`.
-- **Thay đổi:** driver `802.11ax/ac/n/abg`: **1. 802.11ax → 2. 802.11ac**. Card tự khởi động lại, kết nối lại ngay.
-- **Giữ nguyên (chỉ đổi một yếu tố so với EXP-013):** SSID `HomeNet_5G`, kênh 40, router ở chế độ đã tắt Wi‑Fi 7 / MLO, EXP-001 vẫn áp dụng.
-- **Ngay sau khi đổi:** Radio type **802.11ac**, RSSI −69 dBm.
-- **So sánh với:** EXP-013 (cùng SSID, cùng kênh, 802.11ax): router mất 12.7%, 31 lần mất kết nối / 39 phút.
-- **Khôi phục:** `scripts\manual\set-phymode.ps1 -Mode ax` (Admin).
+- **When:** ~16:26 (+07), with the user's consent; ran [scripts/manual/set-phymode.ps1](../scripts/manual/set-phymode.ps1) `-Mode ac` (Admin). Log: `data/manual/phymode-*.log`.
+- **Change:** driver `802.11ax/ac/n/abg`: **1. 802.11ax → 2. 802.11ac**. The card restarted itself and reconnected immediately.
+- **Kept unchanged (only one factor changed compared with EXP-013):** SSID `HomeNet_5G`, channel 40, router in the mode with Wi‑Fi 7 / MLO disabled, EXP-001 still applied.
+- **Right after the change:** Radio type **802.11ac**, RSSI −69 dBm.
+- **Compared with:** EXP-013 (same SSID, same channel, 802.11ax): router lost 12.7%, 31 connection losses / 39 minutes.
+- **Restore:** `scripts\manual\set-phymode.ps1 -Mode ax` (Admin).
 
-**Quan sát:**
-- **16:27 → 17:26 (59 phút):** router mất **17.7%** (594/3352), **57 lần** mất kết nối (593s), 42/59 phút có mất gói; Windows 0 disconnect (toàn treo im lặng). RSSI tụt về **−73 dBm (48%)** lúc 17:26 (từ −67…−69).
-- **Kết luận:** ép 802.11ac **không cải thiện**, thậm chí tệ hơn EXP-013 (12.7%) — dù tín hiệu cũng yếu đi nên không hoàn toàn công bằng. Giả thuyết "card ổn định hơn ở Wi‑Fi 5" **không được xác nhận**; khung tốt lúc 14:02–14:41 nhiều khả năng do điều kiện lúc đó (tín hiệu / nhiễu theo giờ), không phải do chuẩn Wi‑Fi.
-- **17:29:50 — đã khôi phục** về `1. 802.11ax` (`set-phymode.ps1 -Mode ax`, người dùng đồng ý). PC kết nối lại `HomeNet_5G` ch40, 802.11ax, −72 dBm.
-- **Nhận định:** sau 10+ thay đổi cấu hình trong ngày, mất gói dao động 3–35% theo giờ bất kể cấu hình ⇒ **chỉnh cấu hình đã hết hiệu quả**; nút thắt là **đường truyền vật lý** (xuyên sàn + mặt bàn, ăng-ten sau thùng máy) và/hoặc card MediaTek ⇒ EXP-011 (ăng-ten cửa sổ) / EXP-012 (AX3 + cable) là bước đúng.
+**Observations:**
+- **16:27 → 17:26 (59 minutes):** router lost **17.7%** (594/3352), **57** connection losses (593s), 42/59 minutes had packet loss; Windows 0 disconnects (all silent hangs). RSSI dropped to **−73 dBm (48%)** at 17:26 (from −67…−69).
+- **Conclusion:** forcing 802.11ac **did not improve** things, it was even worse than EXP-013 (12.7%) — although the signal also weakened, so the comparison is not entirely fair. The hypothesis "the card is more stable on Wi‑Fi 5" is **not confirmed**; the good window at 14:02–14:41 was most likely due to the conditions at that time (signal / interference by time of day), not the Wi‑Fi standard.
+- **17:29:50 — restored** to `1. 802.11ax` (`set-phymode.ps1 -Mode ax`, with the user's consent). PC reconnected to `HomeNet_5G` ch40, 802.11ax, −72 dBm.
+- **Assessment:** after 10+ configuration changes during the day, packet loss fluctuated between 3–35% by time of day regardless of configuration ⇒ **configuration tuning has run out of effect**; the bottleneck is the **physical path** (through the floor + desktop, antennas behind the PC case) and/or the MediaTek card ⇒ EXP-011 (window antenna) / EXP-012 (AX3 + cable) is the right next step.
 
-## EXP-014 — Xoay thùng máy để ăng-ten card hướng ra ngoài
+## EXP-014 — Rotate the PC case so the card's antennas face outward
 
-- **Thời điểm:** trong khoảng 17:32 → 18:44 (+07). Logger không có số liệu khoảng này (nghi PC tắt/khởi động lại khi xoay case; logger tự chạy lại, PID 12676). Ăng-ten nối dài **chưa** dùng.
-- **Trước:** ăng-ten ở mặt sau thùng máy, quay vào trong gầm bàn, sát khung bàn kim loại và bó dây cáp (ảnh người dùng gửi).
-- **Giữ nguyên:** `HomeNet_5G`, kênh 40, 802.11ax (đã khôi phục 17:29), router: Wi‑Fi modem tắt, MLO tắt, Wi‑Fi 7 tắt.
-- **Kết quả 18:44 → 19:08 (25 phút):**
+- **When:** sometime between 17:32 → 18:44 (+07). The logger has no data for this period (suspected PC shutdown/restart while rotating the case; the logger restarted itself, PID 12676). The extension antenna is **not yet** in use.
+- **Before:** antennas at the back of the PC case, facing into the space under the desk, right next to the metal desk frame and a bundle of cables (photo sent by the user).
+- **Kept unchanged:** `HomeNet_5G`, channel 40, 802.11ax (restored 17:29), router: modem Wi‑Fi off, MLO off, Wi‑Fi 7 off.
+- **Results 18:44 → 19:08 (25 minutes):**
 
-  | Chỉ số | 17:20–17:31 (trước) | **18:44–19:08 (sau)** |
+  | Metric | 17:20–17:31 (before) | **18:44–19:08 (after)** |
   |---|---|---|
-  | Router mất gói | 2–32 gói/phút, ~25% | **3 / 1475 gói (~0.2%)** |
-  | Ping router trung bình | 5–200 ms | **3–5 ms** |
-  | Rx rate | thường 6–27 Mbps | **459–600 Mbps ổn định** |
+  | Router packet loss | 2–32 packets/minute, ~25% | **3 / 1475 packets (~0.2%)** |
+  | Average router ping | 5–200 ms | **3–5 ms** |
+  | Rx rate | usually 6–27 Mbps | **459–600 Mbps stable** |
   | RSSI | −71…−76 dBm | −67…−74 dBm |
 
-- **Nhận định:** RSSI chỉ tốt lên chút ít nhưng Rx ổn định ở mức cao và gần như hết mất gói ⇒ trước đây **một hoặc cả hai ăng-ten (2×2 MIMO) bị khung bàn kim loại / thùng máy che**, gây sụp tốc độ và treo. Đây là cải thiện lớn nhất trong ngày. Cần thêm thời gian (qua đêm, giờ cao điểm) để xác nhận.
-- Ăng-ten nối dài (EXP-011) và AX3 (EXP-012) chuyển thành **có điều kiện**: chỉ cần nếu sự cố quay lại.
+- **Assessment:** RSSI only improved slightly, but Rx is stable at a high level and packet loss is almost gone ⇒ previously **one or both antennas (2×2 MIMO) were blocked by the metal desk frame / PC case**, causing rate collapse and hangs. This is the biggest improvement of the day. More time (overnight, peak hours) is needed to confirm.
+- The extension antenna (EXP-011) and the AX3 (EXP-012) become **conditional**: only needed if the incidents come back.
 
-### Kiểm tra lúc 23:07 (sau EXP-014)
+### Check at 23:07 (after EXP-014)
 
-- **Số liệu 18:44 → 20:40:** router mất **0.81%** (55/6793), tổng mất kết nối 14s. RSSI 5G ch40: −63…−67 dBm, tốc độ 1201 Mbps.
-- **Lỗ hổng dữ liệu 20:41 → 23:07 (2.5 giờ):** logger không chạy. Windows ghi nhiều lần OS stop/start (Kernel-General 12/13) lúc 19:48, 20:57, 20:58, 21:28 và sleep/resume lúc 17:32, 21:32 — nghi PC khởi động lại/ngủ nhiều lần (nguyên nhân chưa rõ; có thể do thao tác của người dùng quanh thùng máy).
-- **Lối tắt Startup `StableInternet ping-logger.lnk` đã biến mất** (thư mục chỉ còn `Hermes_Gateway.vbs`) — không rõ ai xóa ⇒ logger không tự chạy lại sau khi PC khởi động. Đã **cài lại lúc 23:08** và khởi động logger (PID 22028).
-- **Thiếu sót của logger:** kiểm tra "đã chạy" bằng `logger.pid` có thể nhầm khi PID cũ bị tái sử dụng sau khi khởi động lại ⇒ cần sửa (so khớp tên/command line của tiến trình). Ghi vào việc cần làm khi viết tool thật.
-- 23:07: PC trên `HomeNet` 2.4G ch11 (−69 dBm) → người dùng chủ động chuyển về `HomeNet_5G` ch40 (−64 dBm, 802.11ax, 1201 Mbps).
+- **Data 18:44 → 20:40:** router lost **0.81%** (55/6793), total connection loss 14s. RSSI 5G ch40: −63…−67 dBm, rate 1201 Mbps.
+- **Data gap 20:41 → 23:07 (2.5 hours):** the logger was not running. Windows logged multiple OS stop/start events (Kernel-General 12/13) at 19:48, 20:57, 20:58, 21:28 and sleep/resume at 17:32, 21:32 — suspected that the PC restarted/slept several times (cause unclear; possibly due to the user's handling around the PC case).
+- **The Startup shortcut `StableInternet ping-logger.lnk` has disappeared** (the folder only contains `Hermes_Gateway.vbs`) — unclear who deleted it ⇒ the logger did not restart itself after the PC booted. **Reinstalled at 23:08** and started the logger (PID 22028).
+- **Logger shortcoming:** the "already running" check via `logger.pid` can be wrong when the old PID is reused after a restart ⇒ needs fixing (match the process name/command line). Noted as a to-do for when the real tool is written.
+- 23:07: PC on `HomeNet` 2.4G ch11 (−69 dBm) → the user deliberately switched back to `HomeNet_5G` ch40 (−64 dBm, 802.11ax, 1201 Mbps).
 
-### Kết quả qua đêm EXP-014: 2026-10-03 23:08 → 2026-10-04 08:41 (9.6 giờ, 573 phút)
+### Overnight results for EXP-014: 2026-10-03 23:08 → 2026-10-04 08:41 (9.6 hours, 573 minutes)
 
-| Mục tiêu | Mất gói | Avg | Jitter |
+| Target | Packet loss | Avg | Jitter |
 |---|---|---|---|
 | Router | **0.39%** (133/33972) | 5.0 ms | 3.6 ms |
 | 1.1.1.1 | 8.08% | 44.5 ms | 3.8 ms |
 | 8.8.8.8 | 9.16% | 51.6 ms | 3.6 ms |
 
-- **Chỉ 1 lần mất kết nối router (3s)**; Windows: 0 disconnect, 0 event IHV 10002, 0 limited connectivity. So với baseline 7 ngày trước: ~5.4 disconnect/24h và 4.1 IHV crash/24h.
-- **Phần Wi‑Fi đã ổn định.** Mất gói ~8–9% ra Internet nhưng chỉ 0.39% tới router, đồng đều cả đêm (572/573 phút) và jitter thấp ⇒ nghi **ICMP bị giới hạn/ưu tiên thấp phía ISP hoặc WAN của router**, không phải Wi‑Fi. Cần kiểm tra bằng TCP/DNS (xem mục cải tiến logger).
-- ⚠️ **Cập nhật 2026-10-04 (SIC-36): nghi vấn trên chưa được ủng hộ.** Monitor Python (ping song song, mỗi mục tiêu một luồng) đo mất gói ra Internet chỉ **0,3%** trong 35 phút đầu, và ở lần đo song song 09:12 logger PowerShell báo mất 8/59 trên 1.1.1.1 trong khi Python đo 0/40 cùng lúc. Con số 8–9% có thể là **sai số đo của logger PowerShell** (ping tuần tự, trễ khi gọi `netsh`) chứ không phải nhà mạng hạn chế ICMP. Chưa kết luận: mới có số liệu ban ngày. Cách phân định: so `cloudflare`/`google` (ping) với `tcp_*`/`http_*` (probe) trong `metrics.db` sau một đêm; chẩn đoán #5 đã phân biệt hai trường hợp này.
-- ✅ **Phân định xong 2026-10-04 15:11 (SIC-36): mất gói ICMP là thật, nhưng chỉ ICMP bị mất, kết nối thật vẫn ổn.** Số liệu `metrics.db` 10:40 → 15:11 (4,5 giờ, 265 phút, monitor Python):
+- **Only 1 router connection loss (3s)**; Windows: 0 disconnects, 0 IHV 10002 events, 0 limited connectivity. Compared with the baseline of the previous 7 days: ~5.4 disconnects/24h and 4.1 IHV crashes/24h.
+- **The Wi‑Fi part is now stable.** Packet loss of ~8–9% to the Internet but only 0.39% to the router, uniform throughout the night (572/573 minutes) and low jitter ⇒ suspect **ICMP rate-limited/deprioritized on the ISP side or the router's WAN**, not Wi‑Fi. Needs checking via TCP/DNS (see the logger improvements section).
+- ⚠️ **Update 2026-10-04 (SIC-36): the suspicion above is not yet supported.** The Python monitor (parallel ping, one thread per target) measured Internet packet loss of only **0.3%** in the first 35 minutes, and in the parallel measurement at 09:12 the PowerShell logger reported 8/59 lost on 1.1.1.1 while Python measured 0/40 at the same time. The 8–9% figure may be a **measurement error of the PowerShell logger** (sequential pings, delays when calling `netsh`) rather than the ISP limiting ICMP. No conclusion yet: only daytime data so far. How to tell them apart: compare `cloudflare`/`google` (ping) with `tcp_*`/`http_*` (probe) in `metrics.db` after one night; diagnostic #5 already distinguishes these two cases.
+- ✅ **Resolved 2026-10-04 15:11 (SIC-36): the ICMP packet loss is real, but only ICMP is lost, real connections are fine.** `metrics.db` data 10:40 → 15:11 (4.5 hours, 265 minutes, Python monitor):
 
-  | Mục tiêu | Gửi | Mất | Tỉ lệ |
+  | Target | Sent | Lost | Rate |
   |---|---|---|---|
-  | ping `cloudflare` 1.1.1.1 | 15 426 | 879 | **5,70%** |
-  | ping `google` 8.8.8.8 | 15 426 | 1 183 | **7,67%** |
-  | ping `router` | 15 426 | 123 | 0,80% |
-  | `tcp_cloudflare` 1.1.1.1:443 | 1 549 | 1 | 0,06% |
-  | `tcp_google` 8.8.8.8:443 | 1 549 | 2 | 0,13% |
-  | `http_cloudflare` generate_204 | 1 549 | 1 | 0,06% |
+  | ping `cloudflare` 1.1.1.1 | 15,426 | 879 | **5.70%** |
+  | ping `google` 8.8.8.8 | 15,426 | 1,183 | **7.67%** |
+  | ping `router` | 15,426 | 123 | 0.80% |
+  | `tcp_cloudflare` 1.1.1.1:443 | 1,549 | 1 | 0.06% |
+  | `tcp_google` 8.8.8.8:443 | 1,549 | 2 | 0.13% |
+  | `http_cloudflare` generate_204 | 1,549 | 1 | 0.06% |
 
-  - 91/265 phút có mất ICMP, chỉ 2 phút có probe lỗi; **0 phút** mà toàn bộ ping ra Internet mất trọn và **0** sự kiện `internet_down` sinh ra từ việc chỉ ICMP mất. Giờ tệ nhất (13h) ICMP mất 19% trong khi TCP mất 0,28%.
-  - Mất theo **đợt** (một phút có thể mất tới 27/58 gói), 1.1.1.1 và 8.8.8.8 mất **cùng phút** (86/89 phút), 53 trong số đó router cũng mất vài gói ⇒ không phải từng nhà cung cấp DNS giới hạn riêng; điểm nghẽn ICMP nằm chung trên đường đi (router/WAN/ISP), chưa xác định chính xác. Không ảnh hưởng tới TCP/HTTP nên không phải sự cố người dùng cảm nhận được.
-  - Vậy nhận định "sai số logger PowerShell" ở trên **sai**: monitor Python cũng đo được 5–8%. Con số 0,3% lúc đầu là do đợt mất chưa xảy ra trong 35 phút đó.
-  - Ghi chú phụ: thời gian bắt tay TCP tới 1.1.1.1:443 (trung vị 105 ms) cao gấp đôi ping (47 ms), còn 8.8.8.8 thì gần bằng (66 so với 54 ms). Có thể Anycast của Cloudflare đi tuyến khác cho TCP. Vì vậy chỉ dùng probe để biết "còn Internet hay không", không dùng làm số đo độ trễ.
-- **Kết luận:** nguyên nhân chính gây rớt mạng là **ăng-ten card bị che bởi khung bàn kim loại/thùng máy** + các yếu tố cấu hình đã xử lý (modem phát Wi‑Fi, MLO). **Chưa cần mua AX3.** EXP-011/012 chuyển sang dự phòng.
+  - 91/265 minutes had ICMP loss, only 2 minutes had probe failures; **0 minutes** in which all Internet pings were completely lost and **0** `internet_down` events generated from ICMP-only loss. In the worst hour (13h) ICMP lost 19% while TCP lost 0.28%.
+  - Losses come in **bursts** (one minute can lose up to 27/58 packets), 1.1.1.1 and 8.8.8.8 lose packets **in the same minutes** (86/89 minutes), in 53 of which the router also lost a few packets ⇒ not each DNS provider rate-limiting separately; the ICMP bottleneck lies on the shared path (router/WAN/ISP), not yet precisely identified. It does not affect TCP/HTTP, so it is not an incident the user can perceive.
+  - So the "PowerShell logger measurement error" assessment above is **wrong**: the Python monitor also measured 5–8%. The initial 0.3% figure was because the loss bursts had not yet occurred during those 35 minutes.
+  - Side note: the TCP handshake time to 1.1.1.1:443 (median 105 ms) is twice the ping (47 ms), whereas for 8.8.8.8 they are nearly equal (66 vs. 54 ms). Cloudflare's Anycast may route TCP differently. Therefore probes are only used to know "is the Internet still up or not", not as a latency measurement.
+- **Conclusion:** the main cause of the dropouts was **the card's antennas being blocked by the metal desk frame/PC case** + the configuration factors already dealt with (modem broadcasting Wi‑Fi, MLO). **No need to buy the AX3 yet.** EXP-011/012 become fallbacks.
 
-## EXP-011 — Ăng-ten Wi‑Fi có dây nối dài cho card PCIe (dự kiến)
+## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 
-- **Bối cảnh:** PC ở **lầu trên**, router BE3 ở **lầu dưới**, không đi dây LAN được ⇒ giải thích tín hiệu chỉ −66…−80 dBm.
-- **Đã đặt mua:** ăng-ten Wi‑Fi đế rời có dây nối dài, gắn vào card TP-Link (MT7922).
-- **Yêu cầu khi mua/lắp:** đầu nối **RP-SMA** (đúng chuẩn card TP-Link); **2 ăng-ten** (card 2×2); băng tần **2.4 + 5 GHz**; dây **1–1.5 m** (dây mảnh suy hao ~1–2 dB/m ở 5 GHz, không nên dài quá); đặt đế cao, xa thùng máy/màn hình/kim loại.
-- **Hướng ăng-ten khi router ở ngay tầng dưới:** ăng-ten đa hướng dựng đứng có "điểm mù" ngay phía trên/dưới ⇒ nghiêng ăng-ten ~45° hoặc nằm ngang ở cả hai đầu (PC và một ăng-ten của BE3).
-- **Kỳ vọng:** cải thiện tín hiệu vài dB tới ~10 dB nếu ăng-ten hiện đang nằm sau thùng máy sát sàn. **Không** sửa được lỗi treo của driver MediaTek.
-- **Đo:** so sánh RSSI và mất gói tới router trước/sau, cùng SSID `HomeNet_5G_Wi-Fi5` ch48.
+- **Context:** the PC is **upstairs**, the BE3 router is **downstairs**, a LAN cable cannot be run ⇒ explains the signal of only −66…−80 dBm.
+- **Ordered:** a Wi‑Fi antenna with a separate base and an extension cable, attached to the TP-Link card (MT7922).
+- **Requirements when buying/installing:** **RP-SMA** connector (the TP-Link card's standard); **2 antennas** (2×2 card); **2.4 + 5 GHz** bands; **1–1.5 m** cable (thin cable loses ~1–2 dB/m at 5 GHz, should not be too long); place the base high, away from the PC case/monitor/metal.
+- **Antenna orientation when the router is directly on the floor below:** vertical omnidirectional antennas have a "blind spot" directly above/below ⇒ tilt the antennas ~45° or lay them horizontally at both ends (the PC and one of the BE3's antennas).
+- **Expectation:** a few dB up to ~10 dB signal improvement if the antennas currently sit behind the PC case near the floor. Does **not** fix the MediaTek driver hang.
+- **Measurement:** compare RSSI and packet loss to the router before/after, on the same SSID `HomeNet_5G_Wi-Fi5` ch48.
 
-## EXP-012 — Giải pháp chốt: thêm Huawei WiFi AX3 ở lầu trên, cable vào PC (dự kiến)
+## EXP-012 — Final solution: add a Huawei WiFi AX3 upstairs, cable to the PC (planned)
 
-- **Quyết định của người dùng (2026-10-03):** mua thêm **Huawei WiFi AX3**, ghép mạng với BE3 Pro (HarmonyOS Mesh+), AX3 đặt ở lầu trên, **PC cắm dây LAN vào AX3** ⇒ loại bỏ hoàn toàn card MediaTek khỏi đường truyền.
-- **Sơ đồ đích:**
+- **User's decision (2026-10-03):** buy an additional **Huawei WiFi AX3**, pair it with the BE3 Pro (HarmonyOS Mesh+), place the AX3 upstairs, **PC wired via LAN to the AX3** ⇒ completely removes the MediaTek card from the path.
+- **Target diagram:**
   ```
-  Modem (bridge, Wi‑Fi tắt) ── BE3 Pro (router chính, lầu dưới) ~~ backhaul 5G ~~ AX3 (node Mesh+, lầu trên) ── LAN ── PC
+  Modem (bridge, Wi‑Fi off) ── BE3 Pro (main router, downstairs) ~~ backhaul 5G ~~ AX3 (node Mesh+, upstairs) ── LAN ── PC
   ```
-- **Lưu ý khi mua/lắp:**
-  - BE3 Pro là **bản nội địa Trung Quốc** ⇒ ưu tiên AX3 **cũng bản nội địa** để chắc chắn ghép Mesh+ được (trộn bản quốc tế và nội địa có thể không ghép được — chưa kiểm chứng). Có người dùng báo AX3 ghép mesh được với BE3.
-  - Phân biệt các biến thể AX3 (AX3 / AX3 Pro / AX3 New…); chọn bản có Mesh+ / 鸿蒙组网.
-  - Ghép: đặt AX3 gần BE3 khi ghép lần đầu (nút H / app 智慧生活), xong mới mang lên lầu.
-  - Vị trí AX3: nơi **nhận sóng BE3 tốt nhất ở lầu trên** (đầu cầu thang, ngay phía trên router), mục tiêu ≥ −65 dBm tại AX3; không nhất thiết đặt sát PC vì đã có dây.
-  - **Cập nhật:** cửa sổ phòng làm việc là **cửa sổ trong nhà nhìn thẳng xuống phòng khách**, nơi đặt BE3 ⇒ có **đường nhìn thẳng (line-of-sight)** BE3 ↔ cửa sổ, không xuyên bê tông. Đường hiện tại tới PC phải xuyên **1 sàn + 1 mặt bàn**. ⇒ **Vị trí khuyến nghị: AX3 đặt ngay ở cửa sổ, bên trong phòng**, ăng-ten hướng vuông góc với đường thẳng tới BE3; BE3 đặt chỗ thoáng, nhìn thấy cửa sổ. Tránh khung/song cửa kim loại chắn ngay trước ăng-ten; kính dán phim/low‑E thì mở hé cửa.
-  - Người dùng cân nhắc: (a) đặt **dưới sàn** phòng làm việc, hoặc (b) **treo ở cửa sổ**, thò ăng-ten ra ngoài. Khuyến nghị: **đo bằng điện thoại** tại các vị trí ứng viên (sàn ngay trên BE3, đầu cầu thang, cửa sổ) và chọn chỗ mạnh nhất. Sàn chỉ tốt khi **BE3 nằm gần như ngay bên dưới** (và BE3 nên đặt cao, gần trần lầu dưới). Cửa sổ chỉ đáng thử khi BE3 cũng ở sát cửa sổ cùng phía nhà; tránh để thiết bị ngoài trời (nắng, mưa, nóng).
-  - "组网信道模式": với mesh không dây nên để **同信道部署** (cùng kênh) để backhaul hoạt động; giữ kênh 5G cố định (48) hoặc để router tự chọn sau khi mesh ổn định.
-  - MLO vẫn **tắt** (đã thấy liên quan sự cố); mạng tương thích Wi‑Fi 5 có thể tắt sau khi PC dùng dây, nếu không còn thiết bị nào cần.
-- **Đo:** logger tự chuyển theo gateway; kỳ vọng router mất gói ≈ 0%, không còn treo im lặng. Khi ổn định, có thể **tắt card Wi‑Fi MediaTek** (hoặc để làm dự phòng) và cân nhắc khôi phục EXP-001.
-- **Ăng-ten nối dài (EXP-011):** trở thành phương án dự phòng; không còn cần thiết nếu EXP-012 thành công.
+- **Notes when buying/installing:**
+  - The BE3 Pro is a **Chinese domestic version** ⇒ prefer an AX3 that is **also the domestic version** to be sure Mesh+ pairing works (mixing international and domestic versions may fail to pair — not verified). Some users report the AX3 pairs in mesh with the BE3.
+  - Distinguish the AX3 variants (AX3 / AX3 Pro / AX3 New…); choose one with Mesh+ / 鸿蒙组网.
+  - Pairing: place the AX3 near the BE3 for the first pairing (H button / 智慧生活 app), then take it upstairs.
+  - AX3 location: where it **receives the BE3 signal best upstairs** (top of the stairs, directly above the router), target ≥ −65 dBm at the AX3; it does not have to be next to the PC since it is wired.
+  - **Update:** the study's window is an **indoor window looking straight down into the living room**, where the BE3 is placed ⇒ there is a **line of sight** BE3 ↔ window, without going through concrete. The current path to the PC must go through **1 floor + 1 desktop**. ⇒ **Recommended location: the AX3 right at the window, inside the room**, antennas oriented perpendicular to the straight line to the BE3; place the BE3 in an open spot with a view of the window. Avoid metal window frames/bars right in front of the antennas; with film-coated/low‑E glass, keep the window slightly open.
+  - The user is considering: (a) placing it **on the floor** of the study, or (b) **hanging it at the window**, with the antennas sticking outside. Recommendation: **measure with a phone** at the candidate locations (the floor directly above the BE3, the top of the stairs, the window) and pick the strongest spot. The floor is only good when **the BE3 is almost directly below** (and the BE3 should be placed high, near the ceiling of the floor below). The window is only worth trying when the BE3 is also next to a window on the same side of the house; avoid leaving the device outdoors (sun, rain, heat).
+  - "组网信道模式": with wireless mesh, set it to **同信道部署** (same channel) so the backhaul works; keep the 5G channel fixed (48) or let the router choose automatically once the mesh is stable.
+  - MLO stays **off** (already seen to be linked to the incidents); the Wi‑Fi 5 compatibility network can be turned off once the PC is wired, if no other device needs it.
+- **Measurement:** the logger follows the gateway automatically; expect router packet loss ≈ 0%, no more silent hangs. Once stable, the **MediaTek Wi‑Fi card can be disabled** (or kept as a fallback) and restoring EXP-001 can be considered.
+- **Extension antenna (EXP-011):** becomes a fallback option; no longer needed if EXP-012 succeeds.
 
-## Phát hiện: tình trạng xấu đi sau khi thay router (13:30)
+## Finding: things got worse after replacing the router (13:30)
 
-Người dùng cho biết rớt mạng **nhiều hơn so với trước khi thay router**. Lịch sử event 8001 (log Windows từ 2026-09-08):
+The user reports dropping **more often than before replacing the router**. History of event 8001 (Windows log since 2026-09-08):
 
-| Mạng | Số lần kết nối | Từ | Đến |
+| Network | Number of connections | From | To |
 |---|---|---|---|
 | OldModemNet 5G | 53 | 09-08 | 10-02 13:58 |
 | OldModemNet (2.4G) | 7 | 09-21 | 10-02 13:59 |
 | CNBN | 4 | 10-02 13:47 | 10-02 13:54 |
 | NeighborNet | 8 | 10-02 13:57 | 10-02 15:35 |
-| **HomeNet (BE3)** | 10 | **10-02 15:26** | nay |
+| **HomeNet (BE3)** | 10 | **10-02 15:26** | now |
 
-Disconnect (8003) theo ngày: 09-08: 1 · 09-10: 8 · 09-11: 1 · 09-21: 5 · 09-26: 3 · 09-27: 3 · 09-28: 1 · 10-01: 6 · **10-02: 36** (phần lớn do chuyển qua lại giữa 4 mạng khi lắp router mới) · 10-03: 2.
+Disconnects (8003) per day: 09-08: 1 · 09-10: 8 · 09-11: 1 · 09-21: 5 · 09-26: 3 · 09-27: 3 · 09-28: 1 · 10-01: 6 · **10-02: 36** (mostly from switching back and forth between 4 networks while installing the new router) · 10-03: 2.
 
-⇒ **BE3 đưa vào dùng chiều 2026-10-02.** Trước đó PC dùng "OldModemNet 5G". Các mạng OldModemNet / CNBN / NeighborNet cùng họ MAC `c4/c6:2c:7b:…` (cùng một thiết bị/hãng) và **NeighborNet + một SSID ẩn đang ở kênh 36** — đúng kênh BE3 tự chọn.
+⇒ **The BE3 was put into use on the afternoon of 2026-10-02.** Before that the PC used "OldModemNet 5G". The OldModemNet / CNBN / NeighborNet networks share the MAC family `c4/c6:2c:7b:…` (same device/vendor) and **NeighborNet + a hidden SSID are on channel 36** — exactly the channel the BE3 picked automatically.
 
-Giả thuyết vì sao xấu hơn router cũ (xếp theo khả năng):
-1. **Tương thích Wi‑Fi 7 (BE3) ↔ card MediaTek MT7922 (Wi‑Fi 6E)**: Rx sụp về 6 Mbps khi tín hiệu vẫn tốt là dấu hiệu điển hình của lỗi điều khiển tốc độ / tính năng mới (11be, OFDMA, TWT…) giữa router và driver. ⇒ thử tắt `be` trên 5G của BE3 (EXP-003b).
-2. **Nhiễu cùng kênh 36** với thiết bị cũ còn đang phát gần đó ⇒ đang thử bằng EXP-002 (kênh 157).
-3. **Vị trí BE3** xa/khuất hơn điểm phát cũ (RSSI −66 → −76 dBm).
-4. EXP-001 (tắt power saving) — chưa loại trừ.
+Hypotheses for why it is worse than the old router (ordered by likelihood):
+1. **Wi‑Fi 7 (BE3) ↔ MediaTek MT7922 card (Wi‑Fi 6E) compatibility**: Rx collapsing to 6 Mbps while the signal is still good is a typical sign of a rate-control / new-feature bug (11be, OFDMA, TWT…) between router and driver. ⇒ try disabling `be` on the BE3's 5G (EXP-003b).
+2. **Co-channel interference on channel 36** with the old device still broadcasting nearby ⇒ being tested with EXP-002 (channel 157).
+3. **BE3 location** farther/more obstructed than the old transmitter (RSSI −66 → −76 dBm).
+4. EXP-001 (disabling power saving) — not ruled out.
 
-Lưu ý: Windows không ghi lại các lần "treo im lặng", nên không có số liệu so sánh tương đương cho giai đoạn router cũ.
+Note: Windows does not log the "silent hangs", so there is no equivalent comparison data for the old-router period.
 
-## Cấu hình Wi‑Fi của router BE3 (ảnh chụp trang quản trị, 2026-10-03 ~11:50, firmware giao diện tiếng Trung)
+## BE3 router Wi‑Fi configuration (screenshot of the admin page, 2026-10-03 ~11:50, firmware with Chinese UI)
 
-| Thiết lập | 2.4G | 5G |
+| Setting | 2.4G | 5G |
 |---|---|---|
-| Kênh (信道) | 自适应 — Tự động | 自适应 — Tự động (thực tế đang ở **kênh 36**) |
-| Chuẩn (模式) | 802.11b/g/n/ax/be | 802.11a/n/ac/ax/be |
-| Băng thông (频宽) | 20/40 MHz | 20/40/80 MHz (không dùng 160MHz ⇒ không có DFS) |
-| 11be guard interval (前导间隔) | 短间隔 — ngắn | 短间隔 — ngắn |
-| Ẩn SSID (隐身) | Tắt | Tắt |
-| WMM | Bật | Bật |
+| Channel (信道) | 自适应 — Auto | 自适应 — Auto (actually on **channel 36**) |
+| Standard (模式) | 802.11b/g/n/ax/be | 802.11a/n/ac/ax/be |
+| Bandwidth (频宽) | 20/40 MHz | 20/40/80 MHz (160MHz not used ⇒ no DFS) |
+| 11be guard interval (前导间隔) | 短间隔 — short | 短间隔 — short |
+| Hide SSID (隐身) | Off | Off |
+| WMM | On | On |
 
-Ghi chú của firmware: muốn chọn kênh thủ công phải tắt "自动优化信道" (tự động tối ưu kênh) và đặt "组网信道模式" (chế độ kênh khi ghép mạng) thành 同信道 (cùng kênh) / 异信道 (khác kênh). Có nút "一键优化信道" (tối ưu kênh một chạm). Chưa thấy mục công suất phát / xuyên tường trên trang này.
+Firmware note: to choose a channel manually you must turn off "自动优化信道" (automatic channel optimization) and set "组网信道模式" (channel mode when networking/pairing) to 同信道 (same channel) / 异信道 (different channel). There is a "一键优化信道" button (one-tap channel optimization). No transmit power / wall-penetration setting seen on this page yet.
 
-## Các thử nghiệm dự kiến
+## Planned experiments
 
-| ID | Nội dung | Điều kiện thực hiện |
+| ID | Description | Condition for running |
 |---|---|---|
-| EXP-002 | Đổi kênh 5GHz trên router (36 → nhóm 149–161) | **Ưu tiên tăng** (11:20): mất kết nối trùng với Rx rate sụp dù tín hiệu tốt ⇒ nghi nhiễu kênh |
-| EXP-001b | A/B: khôi phục EXP-001 trong 1–2 giờ, logger vẫn chạy | Để có baseline cùng thước đo, xác định EXP-001 tốt hơn hay tệ hơn |
-| EXP-003b | Tắt Wi‑Fi 7 (`be`) trên 5G của BE3: 模式 → 802.11a/n/ac/ax | **Ưu tiên cao** nếu kênh 157 không cải thiện — nghi tương thích Wi‑Fi 7 ↔ MediaTek |
-| EXP-003 | Rollback driver MediaTek 3.6.0.1434 → 25.40.2.585 (`oem18.inf`) | Nếu EXP-001 không giảm event 10002 |
-| EXP-004 | `wifi_mode_ac` (ép 802.11ac) | Nếu vẫn crash sau EXP-003 |
-| EXP-005a | **iGate 302S (chưa dùng) đặt gần PC ở chế độ repeater/wireless client của BE3, cable iGate → PC** (chi phí 0) | Trước tiên kiểm tra iGate có chế độ Repeater/Client hay chỉ có EasyMesh agent (cần controller VNPT). Loại bỏ driver MediaTek; còn chặng không dây iGate↔BE3 |
-| EXP-005 | **Cắm dây tạm thời PC ↔ BE3** (Intel I219-V), vài giờ, logger vẫn chạy | **Nên làm sớm** — phép thử phân định: hết sự cố ⇒ lỗi ở chặng Wi‑Fi/card (mesh + cable sẽ giải quyết); còn sự cố ⇒ lỗi ở BE3/modem/ISP (mesh không giúp) |
-| EXP-006 | Mesh: node thứ hai cạnh PC, cắm cable node → PC | Sau EXP-005 nếu xác nhận lỗi ở chặng Wi‑Fi. Node phải chạy **AP/bridge mode** (hoặc mesh Huawei Mesh+), không để router mode (tránh double NAT) |
+| EXP-002 | Change the 5GHz channel on the router (36 → the 149–161 group) | **Priority raised** (11:20): connection losses coincide with Rx rate collapse despite good signal ⇒ suspected channel interference |
+| EXP-001b | A/B: restore EXP-001 for 1–2 hours, logger still running | To get a baseline with the same yardstick, determine whether EXP-001 is better or worse |
+| EXP-003b | Disable Wi‑Fi 7 (`be`) on the BE3's 5G: 模式 → 802.11a/n/ac/ax | **High priority** if channel 157 does not improve things — suspected Wi‑Fi 7 ↔ MediaTek compatibility |
+| EXP-003 | Roll back the MediaTek driver 3.6.0.1434 → 25.40.2.585 (`oem18.inf`) | If EXP-001 does not reduce event 10002 |
+| EXP-004 | `wifi_mode_ac` (force 802.11ac) | If still crashing after EXP-003 |
+| EXP-005a | **iGate 302S (unused) placed near the PC in repeater/wireless client mode of the BE3, cable iGate → PC** (zero cost) | First check whether the iGate has a Repeater/Client mode or only an EasyMesh agent (requires the VNPT controller). Removes the MediaTek driver; the wireless iGate↔BE3 hop remains |
+| EXP-005 | **Temporary wired connection PC ↔ BE3** (Intel I219-V), a few hours, logger still running | **Should be done soon** — a discriminating test: incidents gone ⇒ fault is in the Wi‑Fi/card hop (mesh + cable will fix it); incidents remain ⇒ fault is in the BE3/modem/ISP (mesh won't help) |
+| EXP-006 | Mesh: a second node next to the PC, cable node → PC | After EXP-005 if the fault is confirmed to be in the Wi‑Fi hop. The node must run in **AP/bridge mode** (or Huawei Mesh+ mesh), not router mode (avoid double NAT) |

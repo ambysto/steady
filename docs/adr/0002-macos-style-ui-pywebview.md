@@ -1,33 +1,33 @@
-# ADR-0002: Giao diện phong cách macOS trong cửa sổ pywebview
+# ADR-0002: macOS-style UI in a pywebview window
 
-- **Trạng thái:** Accepted
-- **Ngày:** 2026-10-03
-- **Sửa đổi:** [ADR-0001](0001-python-stdlib-web-ui.md) (nới lỏng chính sách "chỉ thư viện chuẩn")
+- **Status:** Accepted
+- **Date:** 2026-10-03
+- **Amends:** [ADR-0001](0001-python-stdlib-web-ui.md) (relaxes the "standard library only" policy)
 
-## Bối cảnh
+## Context
 
-Người dùng muốn giao diện mang cảm giác ứng dụng macOS native. Tool vẫn chạy trên Windows và giữ backend Python + PowerShell (xem [UI-DESIGN.md](../UI-DESIGN.md)).
+The user wants a UI that feels like a native macOS application. The tool still runs on Windows and keeps the Python + PowerShell backend (see [UI-DESIGN.md](../UI-DESIGN.md)).
 
-## Quyết định
+## Decision
 
-1. **Hướng A**: ngôn ngữ thiết kế macOS (System Settings / HIG) cho ứng dụng Windows. Không làm app macOS thật.
-2. **Vỏ ứng dụng: pywebview** (WebView2), cửa sổ frameless, title bar tự vẽ.
-3. **Nút điều khiển cửa sổ kiểu Mac**: 3 nút "đèn giao thông" (đóng / thu nhỏ / phóng to) ở **góc trái** title bar.
-4. Cho phép thêm **thư viện nhỏ, có mục đích rõ ràng** (pywebview; ứng viên: pystray, Pillow cho icon khay). Backend lõi vẫn ưu tiên thư viện chuẩn.
-5. Font **Inter** (OFL) và icon **Lucide/Phosphor** (MIT) đóng gói cục bộ; không dùng SF Pro / SF Symbols vì giới hạn bản quyền.
-6. Giao diện vẫn là HTML/CSS/JS phục vụ từ backend cục bộ ⇒ mở được cả trong trình duyệt khi cần gỡ lỗi.
+1. **Direction A**: macOS design language (System Settings / HIG) for a Windows application. No actual macOS app is built.
+2. **Application shell: pywebview** (WebView2), frameless window, custom-drawn title bar.
+3. **Mac-style window controls**: 3 "traffic light" buttons (close / minimize / zoom) in the **left corner** of the title bar.
+4. **Small libraries with a clear purpose** may be added (pywebview; candidates: pystray, Pillow for the tray icon). The core backend still prefers the standard library.
+5. **Inter** font (OFL) and **Lucide/Phosphor** icons (MIT) bundled locally; SF Pro / SF Symbols are not used because of licensing restrictions.
+6. The UI is still HTML/CSS/JS served from the local backend ⇒ it can also be opened in a browser when debugging is needed.
 
-## Hệ quả
+## Consequences
 
-- ✅ Cảm giác ứng dụng thật: không thanh địa chỉ, có cửa sổ riêng, hiệu ứng nền Mica/Acrylic trên Windows 11.
-- ⚠️ Cần WebView2 Runtime (có sẵn trên Windows 11) và `pip install pywebview`.
-- ⚠️ Nút đèn giao thông bên trái khác thói quen Windows; cần xử lý kéo cửa sổ, double-click phóng to, và Snap Layouts bằng tay.
-- 📌 Cần thêm `requirements.txt` khi bắt đầu code.
+- ✅ Feels like a real application: no address bar, its own window, Mica/Acrylic backdrop effects on Windows 11.
+- ⚠️ Requires the WebView2 Runtime (included with Windows 11) and `pip install pywebview`.
+- ⚠️ Traffic-light buttons on the left differ from Windows habits; window dragging, double-click to maximize, and Snap Layouts have to be handled manually.
+- 📌 A `requirements.txt` must be added when coding starts.
 
-## Ghi chú khi triển khai (SIC-29, 2026-10-04)
+## Implementation notes (SIC-29, 2026-10-04)
 
-- pywebview 6.2.1 + WebView2. Script pywebview chèn vào trang không bị CSP của server chặn; `window.pywebview.api` có sẵn cho thanh tiêu đề tự vẽ.
-- Cửa sổ frameless của pywebview trên Windows (`FormBorderStyle = None`) **không có viền kéo đổi kích thước** và không có Snap Layouts ⇒ thêm góc kéo dưới-phải gọi `window.resize`; phóng to/thu lại qua nút xanh hoặc bấm đúp thanh tiêu đề.
-- Chưa bật Mica/Acrylic: nội dung WebView2 không trong suốt nên hiệu ứng không thấy được; giữ nền đặc theo `tokens.css`.
-- Windows 11 mặc định đưa icon khay mới vào nhóm ẩn "^"; người dùng kéo ra thanh tác vụ nếu muốn thấy thường trực.
-- Monitor (Task Scheduler) và vỏ desktop là hai tiến trình: vỏ chỉ đọc `server.json` + token trong trang, gọi API như trình duyệt.
+- pywebview 6.2.1 + WebView2. The script pywebview injects into the page is not blocked by the server's CSP; `window.pywebview.api` is available to the custom-drawn title bar.
+- pywebview's frameless window on Windows (`FormBorderStyle = None`) **has no resizable border** and no Snap Layouts ⇒ a bottom-right drag corner that calls `window.resize` was added; maximize/restore is done via the green button or by double-clicking the title bar.
+- Mica/Acrylic is not enabled yet: WebView2 content is not transparent, so the effect would not be visible; a solid background per `tokens.css` is kept.
+- Windows 11 puts new tray icons in the hidden "^" overflow group by default; users can drag it onto the taskbar if they want it always visible.
+- The monitor (Task Scheduler) and the desktop shell are two processes: the shell only reads `server.json` + the token in the page, and calls the API like a browser does.

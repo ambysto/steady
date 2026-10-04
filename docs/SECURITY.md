@@ -1,23 +1,23 @@
-# Bảo mật
+# Security
 
-Mô hình tiến trình theo [ADR-0005](adr/0005-unelevated-server-uac-writes.md): **server chạy quyền thường** trong tiến trình monitor; thao tác cần Admin chạy trong tiến trình con riêng, xin quyền qua **UAC mỗi lần**. Dù vậy server vẫn điều khiển được những việc gây gián đoạn (kết nối lại Wi‑Fi, bật watchdog, kích hộp thoại UAC), nên phải chặn mọi nguồn gọi không phải giao diện của chính tool.
+Process model per [ADR-0005](adr/0005-unelevated-server-uac-writes.md): **the server runs unelevated** inside the monitor process; operations that need Admin run in a separate child process that requests rights via **UAC every time**. Even so, the server can still control disruptive things (reconnecting Wi‑Fi, enabling the watchdog, triggering a UAC dialog), so every caller other than the tool's own UI must be blocked.
 
-## Mối đe dọa & biện pháp
+## Threats & mitigations
 
-| Mối đe dọa | Biện pháp |
+| Threat | Mitigation |
 |---|---|
-| Máy khác trong LAN gọi API | Chỉ bind `127.0.0.1`, không bind `0.0.0.0` |
-| Trang web bất kỳ trong trình duyệt gửi request tới `127.0.0.1` (CSRF) | Token ngẫu nhiên (`secrets`, 256 bit) sinh mỗi lần khởi động, nhúng vào trang giao diện; mọi `/api/*` bắt buộc header `X-Token`, so sánh hằng thời gian. Header tùy biến buộc trình duyệt preflight CORS — server từ chối `OPTIONS` và không trả header CORS nào. Thêm lớp thứ hai cho request ghi: từ chối nếu `Origin` không phải của chính server, hoặc `Sec-Fetch-Site: cross-site` |
-| DNS rebinding (trang lạ trỏ tên miền của nó về 127.0.0.1 để đọc được trang chứa token) | `Host` phải đúng `127.0.0.1:<port>` hoặc `localhost:<port>`, áp dụng cho **mọi** đường dẫn, kể cả trang giao diện |
-| Nhúng giao diện vào khung của trang lạ (clickjacking) | `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY` |
-| Đọc file ngoài thư mục giao diện | Chỉ phục vụ file trong `web/`, kiểm đường dẫn sau khi chuẩn hóa, chỉ một số đuôi file |
-| Làm treo server (body lớn, kết nối chậm) | Giới hạn body 64 KB, timeout socket 10 s, việc lâu (chẩn đoán, đọc tweak) chạy nền và chỉ một việc cùng loại tại một lúc |
-| Chèn lệnh vào PowerShell / netsh | Không ghép chuỗi: PowerShell nhận chuỗi qua base64 (`ps_literal`), netsh/ipconfig nhận từng argv riêng; tên interface/profile/tweak được kiểm định dạng |
-| Tiến trình quyền thường bị chiếm, dùng tiến trình con Admin làm bàn đạp | Tiến trình con chỉ chạy lệnh trong danh sách cố định, tự kiểm lại tham số, chỉ ghi kết quả vào `%LOCALAPPDATA%\StableInternet\results\<uuid>.json`; mỗi lần đều cần người dùng bấm UAC |
-| Thay đổi hệ thống không khôi phục được | Backup giá trị gốc trước khi áp dụng, kiểm chứng, hoàn tác khi lỗi — xem [ADR-0003](adr/0003-tweak-framework.md) |
-| Watchdog tự gây mất mạng liên tục | Giới hạn trong [WATCHDOG.md](WATCHDOG.md) / [ADR-0004](adr/0004-watchdog-safety.md) |
+| Another machine on the LAN calls the API | Bind only to `127.0.0.1`, never to `0.0.0.0` |
+| Any web page in the browser sends requests to `127.0.0.1` (CSRF) | Random token (`secrets`, 256 bits) generated on every startup, embedded in the UI page; every `/api/*` requires the `X-Token` header, compared in constant time. A custom header forces the browser to send a CORS preflight — the server rejects `OPTIONS` and returns no CORS headers at all. A second layer for write requests: reject if `Origin` is not the server's own, or if `Sec-Fetch-Site: cross-site` |
+| DNS rebinding (a foreign page points its domain at 127.0.0.1 to read the page containing the token) | `Host` must be exactly `127.0.0.1:<port>` or `localhost:<port>`, applied to **every** path, including the UI page |
+| Embedding the UI in a foreign page's frame (clickjacking) | `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY` |
+| Reading files outside the UI directory | Serve only files inside `web/`, check the path after normalization, only certain file extensions |
+| Hanging the server (large body, slow connections) | Body limit 64 KB, socket timeout 10 s, long jobs (diagnostics, reading tweaks) run in the background with only one job of each kind at a time |
+| Command injection into PowerShell / netsh | No string concatenation: PowerShell receives strings via base64 (`ps_literal`), netsh/ipconfig receive each argv separately; interface/profile/tweak names are format-validated |
+| The unelevated process is compromised and uses the Admin child process as a springboard | The child process only runs commands from a fixed list, re-validates parameters itself, only writes results to `%LOCALAPPDATA%\StableInternet\results\<uuid>.json`; every run requires the user to click through UAC |
+| System changes that cannot be undone | Back up the original value before applying, verify, roll back on error — see [ADR-0003](adr/0003-tweak-framework.md) |
+| The watchdog itself causing repeated connection loss | Limits in [WATCHDOG.md](WATCHDOG.md) / [ADR-0004](adr/0004-watchdog-safety.md) |
 
-## Ngoài phạm vi
+## Out of scope
 
-- Phần mềm độc hại đã chạy với quyền của người dùng trên máy (có thể đọc token từ bộ nhớ/tiến trình, hoặc tự gọi UAC).
-- Người dùng chủ động bấm đồng ý một hộp thoại UAC mà họ không yêu cầu.
+- Malware already running with the user's rights on the machine (it could read the token from memory/the process, or trigger UAC itself).
+- The user deliberately approving a UAC dialog they did not ask for.

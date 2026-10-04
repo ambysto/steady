@@ -1,78 +1,78 @@
-# Watchdog — tự khôi phục
+# Watchdog — self-healing
 
-Mặc định **tắt**. Bật trong tab Tối ưu (nhóm "Tính năng của tool"), hoặc trong `data/settings.json` (`"watchdog": {"enabled": true}`). Thiết kế an toàn: [ADR-0004](adr/0004-watchdog-safety.md).
+**Off** by default. Turn it on in the Optimize tab ("Tool features" group), or in `data/settings.json` (`"watchdog": {"enabled": true}`). Safety design: [ADR-0004](adr/0004-watchdog-safety.md).
 
-Watchdog chạy **bên trong tiến trình monitor**, đọc trạng thái sống của monitor mỗi giây, và chạy hành động trong một luồng riêng để không chặn việc đo.
+The watchdog runs **inside the monitor process**, reads the monitor's live state every second, and runs actions in a separate thread so it does not block measurement.
 
-## Phát hiện sự cố
+## Outage detection
 
-| Tình huống | Điều kiện |
+| Situation | Condition |
 |---|---|
-| `wifi_down` | Card Wi‑Fi ở trạng thái `disconnected` ≥ `threshold_s` (mặc định 15s) |
-| `router_unreachable` | Ping router thất bại liên tục ≥ `threshold_s`. Gồm cả **treo im lặng**: Wi‑Fi vẫn báo `connected`, cùng BSSID, nhưng không có dữ liệu (EXP-001 57s, EXP-010 ~641s) |
-| *(không xử lý)* | Router OK nhưng mất Internet ⇒ lỗi phía router/ISP, khởi động lại card không giúp được — chỉ ghi nhật ký |
+| `wifi_down` | The Wi‑Fi card is in the `disconnected` state for ≥ `threshold_s` (default 15s) |
+| `router_unreachable` | Pinging the router fails continuously for ≥ `threshold_s`. Includes **silent hangs**: Wi‑Fi still reports `connected`, same BSSID, but no data flows (EXP-001 57s, EXP-010 ~641s) |
+| *(not handled)* | Router OK but Internet lost ⇒ a router/ISP-side fault; restarting the card cannot help — only logged |
 
-**Không can thiệp** khi:
-- uplink hiện tại **không phải** card Wi‑Fi: route mặc định đi qua một card vật lý khác đang Up, như dây mạng, điện thoại chia sẻ qua USB (media "Unspecified") hay USB 4G. Lúc đó PC vẫn có mạng, nên reset Wi‑Fi chỉ cắt một đường không ai dùng. Card ảo (VPN) vẫn tính là Wi‑Fi. Card mới cắm chưa có trong danh sách thì danh sách được đọc lại ngay, mỗi card một lần (lỗi tìm ra 2026-10-04 khi test failover với iPhone);
-- lần ngắt Wi‑Fi gần nhất là **do người dùng** (event 8003 "disconnected by the user") — không giành lại kết nối người dùng vừa ngắt;
-- trong **60s sau khi máy thức dậy** (sự kiện `monitor_gap`): mạng đang tự kết nối lại;
-- trong **120s sau khi một tweak thay đổi máy**: card khởi động lại do tweak không phải sự cố;
-- ngắt mạch đang mở (xem dưới).
+**Does not intervene** when:
+- the current uplink is **not** the Wi‑Fi card: the default route goes through another physical card that is Up, such as Ethernet, a phone tethered over USB (media "Unspecified") or a USB 4G dongle. The PC still has a connection then, so resetting Wi‑Fi would only cut a path nobody is using. Virtual cards (VPN) still count as Wi‑Fi. A newly plugged-in card that is not in the list yet causes the list to be re-read immediately, once per card (bug found on 2026-10-04 while testing failover with an iPhone);
+- the most recent Wi‑Fi disconnect was **by the user** (event 8003 "disconnected by the user") — it does not grab back a connection the user just dropped;
+- within **60s after the machine wakes up** (`monitor_gap` event): the network is reconnecting by itself;
+- within **120s after a tweak changed the machine**: a card restart caused by a tweak is not an outage;
+- the circuit breaker is open (see below).
 
-## Thang hành động
+## Action ladder
 
-| Bước | `wifi_down` | `router_unreachable` |
+| Step | `wifi_down` | `router_unreachable` |
 |---|---|---|
-| 1 | **Kết nối lại** profile gần nhất: `netsh wlan connect` | **Kết nối lại cưỡng bức**: `netsh wlan disconnect` rồi `connect` (buộc liên kết lại, không cần Admin) |
-| 2 | **Khởi động lại card**: `Restart-NetAdapter` (🛡 Admin) | **Khởi động lại card** (🛡 Admin) |
+| 1 | **Reconnect** the most recent profile: `netsh wlan connect` | **Forced reconnect**: `netsh wlan disconnect` then `connect` (forces re-association, no Admin needed) |
+| 2 | **Restart the card**: `Restart-NetAdapter` (🛡 Admin) | **Restart the card** (🛡 Admin) |
 
-Thang được thử **một lần cho mỗi sự cố**; thử hết mà chưa khỏi thì chờ, không lặp lại. Thiếu quyền Admin thì bỏ qua bước 2 và ghi lý do (task tự khởi động mặc định chạy quyền thường; cài với `--highest` để watchdog dùng được bước 2).
+The ladder is tried **once per outage**; if every step has been tried and the outage persists, it waits and does not repeat. Without Admin rights, step 2 is skipped and the reason is logged (the autostart task runs with normal rights by default; install with `--highest` so the watchdog can use step 2).
 
-## Giới hạn an toàn
+## Safety limits
 
-| Thiết lập (`settings.json` → `watchdog`) | Mặc định | Mục đích |
+| Setting (`settings.json` → `watchdog`) | Default | Purpose |
 |---|---|---|
-| `threshold_s` | 15 | Sự cố phải kéo dài bao lâu mới can thiệp |
-| `cooldown_s` | 120 | Khoảng cách tối thiểu giữa hai hành động |
-| `max_per_hour` | 6 | Trần số hành động trong 60 phút trượt, **đếm cả các lần trước khi tiến trình khởi động lại** (đọc từ nhật ký) |
-| `verify_s` | 60 | Sau mỗi hành động chờ chừng này; sự cố chưa hết ⇒ hành động bị tính là **không hiệu quả** |
-| `trip_after` | 3 | Số hành động không hiệu quả **liên tiếp** để mở ngắt mạch |
-| `dry_run` | false | Chỉ ghi "sẽ làm gì", không thực hiện — dùng để quan sát trước khi bật thật |
+| `threshold_s` | 15 | How long an outage must last before intervening |
+| `cooldown_s` | 120 | Minimum interval between two actions |
+| `max_per_hour` | 6 | Cap on the number of actions in a sliding 60 minutes, **counting actions from before the process restarted** (read from the log) |
+| `verify_s` | 60 | Wait this long after each action; outage not over ⇒ the action counts as **ineffective** |
+| `trip_after` | 3 | Number of **consecutive** ineffective actions that opens the circuit breaker |
+| `dry_run` | false | Only logs "what it would do", does not act — used to observe before turning it on for real |
 
-### Chọn ngưỡng (`threshold_s`)
+### Choosing the threshold (`threshold_s`)
 
-Phát lại 257 lần mất router đã ghi ngày 2026-10-03 (không hành động nào được giả định là có tác dụng):
+Replay of the 257 router outages recorded on 2026-10-03 (no action is assumed to have had any effect):
 
-| Ngưỡng | Sự cố đạt ngưỡng | Trong đó tự hết trong 60s sau khi can thiệp | Số hành động trong ngày | Phần thời gian mất mạng được xử lý |
+| Threshold | Outages reaching the threshold | Of which cleared on their own within 60s after intervention | Actions per day | Share of outage time handled |
 |---|---|---|---|---|
 | 15s | 68 | 49 (72%) | 31 | 83% |
 | 30s | 46 | 32 (70%) | 24 | 74% |
 | **45s** | **29** | **16 (55%)** | **20** | **64%** |
 | 60s | 25 | 13 (52%) | 17 | 61% |
 
-Ở 15–30s, phần lớn can thiệp rơi vào sự cố đằng nào cũng tự hết, mà mỗi lần lại tự gây mất mạng vài giây. **Máy phát triển dùng 45s, chạy `dry_run` từ 2026-10-04 10:20** để đối chiếu trước khi bật thật. Mặc định trong code vẫn là 15s cho tới khi có số liệu chạy thử.
+At 15–30s, most interventions land on outages that would have cleared on their own anyway, and each one causes a few seconds of network loss itself. **The development machine uses 45s, running `dry_run` since 2026-10-04 10:20** for comparison before turning it on for real. The default in code stays at 15s until trial-run data is available.
 
-**Ngắt mạch:** khi mở, watchdog tự tắt (`enabled` = false, ghi `tripped_at` vào `settings.json`) và ghi sự kiện mức `bad`. Chỉ người dùng bật lại mới chạy tiếp — kể cả khi tiến trình khởi động lại.
+**Circuit breaker:** when it opens, the watchdog turns itself off (`enabled` = false, writes `tripped_at` to `settings.json`) and logs a `bad`-level event. It only runs again once the user turns it back on — even if the process restarts.
 
-## Thông báo (toast)
+## Notifications (toast)
 
-Mặc định bật (`settings.json` → `notify.enabled`, đọc lại mỗi 10 giây; công tắc cũng có ở `/api/settings`). Toast hiện cho:
+On by default (`settings.json` → `notify.enabled`, re-read every 10 seconds; the switch is also available at `/api/settings`). Toasts are shown for:
 
-| Khi | Nội dung |
+| When | Content |
 |---|---|
-| Sự cố mạng kéo dài ≥ 30s (`notify.outage_after_s`) | "Mất kết nối tới router" hoặc "Mất Internet", kèm thời gian đã mất |
-| Sự cố đó kết thúc | "Đã có mạng trở lại", kèm thời gian — chỉ khi đã báo lúc mất |
-| `watchdog_action`, `watchdog_tripped`, `watchdog_error` | Nội dung sự kiện nhật ký |
+| A network outage lasting ≥ 30s (`notify.outage_after_s`) | "Lost connection to the router" or "Internet is down", with how long it has been down |
+| That outage ends | "Connection restored", with the duration — only if the outage was notified |
+| `watchdog_action`, `watchdog_tripped`, `watchdog_error` | The log event's content |
 
-Không có toast cho: sự cố ngắn hơn 30s, chế độ `dry_run`, các lần bỏ qua, và "đã khôi phục" sau khoảng trống khi máy ngủ (không biết chuyện gì đã xảy ra nên không đoán). Giới hạn: cùng tiêu đề tối đa 1 lần/30s, tối đa 6 toast/10 phút. Toast mang tên "Windows PowerShell" vì script không có AppUserModelID riêng.
+No toast for: outages shorter than 30s, `dry_run` mode, skips, and "restored" after a gap while the machine was asleep (it does not know what happened, so it does not guess). Limits: the same title at most once per 30s, at most 6 toasts per 10 minutes. Toasts carry the name "Windows PowerShell" because the script has no AppUserModelID of its own.
 
-## Nhật ký
+## Log
 
-| Sự kiện | Mức | Khi nào |
+| Event | Level | When |
 |---|---|---|
-| `watchdog_action` | warn | Thực hiện (hoặc "sẽ thực hiện" khi `dry_run`) một hành động, kèm lý do |
-| `watchdog_recovered` | info | Sự cố hết sau hành động, kèm thời gian |
-| `watchdog_ineffective` | warn | Hành động không giúp được sau `verify_s` |
-| `watchdog_skip` | info | Không can thiệp dù có sự cố (thiếu Admin, đạt trần, ngắt do người dùng…) — chỉ ghi khi lý do thay đổi |
-| `watchdog_tripped` | bad | Mở ngắt mạch, watchdog đã tự tắt |
-| `watchdog_error` | bad | Hành động thất bại (lệnh lỗi) |
+| `watchdog_action` | warn | Performs (or "would perform" in `dry_run`) an action, with the reason |
+| `watchdog_recovered` | info | The outage ended after an action, with the duration |
+| `watchdog_ineffective` | warn | The action did not help after `verify_s` |
+| `watchdog_skip` | info | Did not intervene despite an outage (no Admin, cap reached, disconnect by the user…) — logged only when the reason changes |
+| `watchdog_tripped` | bad | Circuit breaker opened, the watchdog turned itself off |
+| `watchdog_error` | bad | The action failed (command error) |

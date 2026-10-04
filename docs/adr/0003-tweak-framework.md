@@ -1,26 +1,26 @@
-# ADR-0003: Khung tweak — sao lưu trước, kiểm chứng sau, rollback khi lỗi
+# ADR-0003: Tweak framework — back up first, verify afterwards, roll back on failure
 
-- **Trạng thái:** Accepted
-- **Ngày:** 2026-10-04
+- **Status:** Accepted
+- **Date:** 2026-10-04
 
-## Bối cảnh
+## Context
 
-Tweak ghi vào thuộc tính driver, registry HKLM, powercfg và binding của card mạng. Lỗi ở đây để lại cấu hình mà người dùng khó tự sửa. Máy phát triển đã từng được áp dụng tay (EXP-001) với bản sao lưu nằm ngoài tool (`data/manual/backup-*.json`). Yêu cầu: bật rồi tắt phải trả đúng giá trị gốc, sao lưu sống sót qua khởi động lại, lỗi giữa chừng phải tự rollback ([TWEAKS.md](../TWEAKS.md), [CONTRIBUTING.md](../../CONTRIBUTING.md)).
+Tweaks write to driver properties, the HKLM registry, powercfg and network adapter bindings. Mistakes here leave behind configuration that users find hard to fix themselves. The development machine has previously had tweaks applied by hand (EXP-001), with backups stored outside the tool (`data/manual/backup-*.json`). Requirements: enabling and then disabling must return exactly the original values, backups must survive a restart, and a failure midway must roll back automatically ([TWEAKS.md](../TWEAKS.md), [CONTRIBUTING.md](../../CONTRIBUTING.md)).
 
-## Quyết định
+## Decision
 
-1. **Tweak là dữ liệu khai báo trên 4 loại nguyên thủy**: thuộc tính nâng cao của card (`Set-NetAdapterAdvancedProperty`), DWORD registry HKLM, chỉ số powercfg AC/DC của power plan hiện tại, binding của card (`Enable/Disable-NetAdapterBinding`). Mọi thao tác hệ thống đi qua **một** lớp `System` (`app/winsys.py`): bản thật là `WindowsSystem`, test dùng bản giả. Chỉ `winsys.py` được ghi vào máy.
-2. **Bật**: đọc trạng thái → kiểm tra hỗ trợ và quyền Admin → nếu chưa có sao lưu thì chụp giá trị gốc và **ghi `backup.json` xuống đĩa trước khi áp dụng** → áp dụng → **đọc lại để kiểm chứng**. Áp dụng lỗi hoặc không có hiệu lực ⇒ rollback về giá trị ngay trước khi áp dụng; rollback cũng lỗi ⇒ giữ sao lưu, ghi sự kiện `bad` để người dùng tắt lại sau.
-3. **Không bao giờ ghi đè sao lưu đã có**: giữ giá trị gốc cũ nhất. `backup.json` hỏng ⇒ từ chối mọi thao tác ghi (thay vì coi như chưa có sao lưu rồi chụp nhầm giá trị đã bị đổi).
-4. **Tắt khi có sao lưu**: khôi phục giá trị gốc, chụp lại và so khớp với gốc; chỉ xóa sao lưu khi khớp.
-5. **Tắt khi không có sao lưu** (giá trị đã đổi trước khi có tool): chỉ dùng mặc định **đã biết chắc** — `Reset-NetAdapterAdvancedProperty` (mặc định của driver), xóa giá trị registry khi mặc định của Windows là "không đặt", bật lại binding. **powercfg không có mặc định đã biết** cho từng chỉ số ⇒ từ chối và giữ nguyên, không đoán.
-6. **Đã bật sẵn** (tool không bật) ⇒ bật là no-op, không tạo sao lưu. Sao lưu từ nguồn ngoài (vd. bản tay EXP-001) được **nhận** qua `adopt_backup()`, không đổi gì trên máy, và không ghi đè sao lưu đã có.
-7. Một khóa cho mọi thao tác ghi. Mỗi thay đổi ghi sự kiện (`tweak_enabled`, `tweak_disabled`, `tweak_failed`) và thời điểm thay đổi gần nhất, để watchdog không coi việc card khởi động lại do tweak là sự cố.
-8. Đọc trạng thái (`list_states()`) không có tác dụng phụ và dùng chung bộ nhớ đệm trong một lần đọc. CLI mặc định chỉ in kế hoạch; phải có `--apply` mới ghi. Test không bao giờ chạy thao tác ghi thật.
+1. **Tweaks are declarative data over 4 primitive types**: adapter advanced properties (`Set-NetAdapterAdvancedProperty`), HKLM registry DWORDs, powercfg AC/DC indexes of the current power plan, adapter bindings (`Enable/Disable-NetAdapterBinding`). All system operations go through **a single** `System` class (`app/winsys.py`): the real implementation is `WindowsSystem`, tests use a fake. Only `winsys.py` is allowed to write to the machine.
+2. **Enable**: read the state → check support and Admin rights → if there is no backup yet, capture the original values and **write `backup.json` to disk before applying** → apply → **read back to verify**. If applying fails or has no effect ⇒ roll back to the values from just before applying; if the rollback also fails ⇒ keep the backup and record a `bad` event so the user can disable it later.
+3. **Never overwrite an existing backup**: keep the oldest original values. A corrupt `backup.json` ⇒ refuse all write operations (rather than treating it as having no backup and then mistakenly capturing values that have already been changed).
+4. **Disable with a backup**: restore the original values, capture again and compare against the originals; delete the backup only when they match.
+5. **Disable without a backup** (values changed before the tool existed): use only **known-for-certain** defaults — `Reset-NetAdapterAdvancedProperty` (driver default), delete the registry value when the Windows default is "not set", re-enable the binding. **powercfg has no known default** per index ⇒ refuse and leave it unchanged, never guess.
+6. **Already enabled** (not by the tool) ⇒ enabling is a no-op and creates no backup. Backups from external sources (e.g. the manual EXP-001 copy) are **adopted** via `adopt_backup()`, changing nothing on the machine and never overwriting an existing backup.
+7. One lock for all write operations. Every change records an event (`tweak_enabled`, `tweak_disabled`, `tweak_failed`) and the time of the most recent change, so that the watchdog does not treat an adapter restart caused by a tweak as an outage.
+8. Reading state (`list_states()`) has no side effects and shares a cache within a single read. The CLI prints only the plan by default; `--apply` is required to write. Tests never run real write operations.
 
-## Hệ quả
+## Consequences
 
-- ✅ Thêm tweak mới = thêm một khai báo; logic sao lưu/rollback/kiểm chứng chỉ viết một lần.
-- ✅ "Tắt" có thể trả lời "không khôi phục được an toàn" thay vì đoán sai.
-- ⚠️ Tweak powercfg đã được bật trước khi có tool và không có sao lưu thì không tắt được qua tool — cần nhận sao lưu ngoài hoặc người dùng tự chỉnh.
-- ⚠️ Kiểm chứng chỉ đọc lại giá trị đã cấu hình (registry/driver), không chứng minh driver đã áp dụng nó vào phần cứng (một số thay đổi cần khởi động lại card hoặc máy).
+- ✅ Adding a new tweak = adding one declaration; the backup/rollback/verification logic is written only once.
+- ✅ "Disable" can answer "cannot be restored safely" instead of guessing wrong.
+- ⚠️ A powercfg tweak that was enabled before the tool existed and has no backup cannot be disabled through the tool — an external backup has to be adopted or the user has to adjust it themselves.
+- ⚠️ Verification only reads back the configured value (registry/driver); it does not prove that the driver has applied it to the hardware (some changes require an adapter or machine restart).

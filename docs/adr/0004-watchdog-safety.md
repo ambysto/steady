@@ -1,25 +1,25 @@
-# ADR-0004: Watchdog — quyết định thuần, giới hạn bền vững, ngắt mạch tự tắt
+# ADR-0004: Watchdog — pure decisions, persistent limits, self-disabling circuit breaker
 
-- **Trạng thái:** Accepted
-- **Ngày:** 2026-10-04
+- **Status:** Accepted
+- **Date:** 2026-10-04
 
-## Bối cảnh
+## Context
 
-Watchdog ngắt mạng có chủ đích (kết nối lại, khởi động lại card). Sai một điều kiện là thành vòng lặp tự gây mất mạng. Dữ liệu thật cho thấy: treo im lặng không có event Windows nào (EXP-001, EXP-010); mất gói ra Internet đều đặn 8–9% trong khi router tốt (EXP-014, nghi ICMP bị giới hạn); máy ngủ/thức tạo khoảng trống số liệu; tweak làm card khởi động lại. Monitor chạy qua Task Scheduler với quyền thường.
+The watchdog deliberately interrupts the network (reconnecting, restarting the adapter). Getting one condition wrong turns it into a loop that causes its own outages. Real data shows: silent hangs with no Windows event at all (EXP-001, EXP-010); a steady 8–9% packet loss to the Internet while the router is fine (EXP-014, suspected ICMP rate limiting); sleep/wake creates gaps in the data; tweaks cause the adapter to restart. The monitor runs through Task Scheduler with standard (unelevated) rights.
 
-## Quyết định
+## Decision
 
-1. **Tách quyết định khỏi thực thi.** `WatchdogPolicy` là hàm thuần nhận một quan sát (trạng thái Wi‑Fi và thời điểm đổi, sự cố router đang mở, uplink, quyền Admin, thời gian ân hạn) và trả về hành động hoặc lý do bỏ qua. Mọi giới hạn an toàn nằm ở đây và được kiểm bằng phát lại (replay) số liệu thật. Thực thi (`app/actions.py`) là module duy nhất ngắt mạng.
-2. **Chỉ phản ứng với lỗi phía PC↔router** (`wifi_down`, `router_unreachable`). Mất Internet khi router tốt không bao giờ dẫn tới hành động.
-3. **Giới hạn bền vững qua khởi động lại:** trần số lần/giờ được tính cả từ nhật ký trong DB, nên một tiến trình crash và tự khởi động lại liên tục không thể vượt trần.
-4. **Ngắt mạch tự tắt watchdog** (ghi vào `settings.json`) sau `trip_after` hành động không hiệu quả liên tiếp; chỉ người dùng bật lại.
-5. **Bước 1 luôn không cần Admin** (kết nối lại; với treo im lặng thì ngắt rồi kết nối lại), vì monitor mặc định chạy quyền thường. Khởi động lại card là bước 2 và cần Admin.
-6. **Thời gian ân hạn** sau khi máy thức (60s) và sau khi tweak đổi máy (120s); không giành lại kết nối người dùng vừa ngắt.
-7. **Chế độ `dry_run`** ghi quyết định mà không thực hiện — cách an toàn để quan sát trên máy thật trước khi bật.
+1. **Separate decision from execution.** `WatchdogPolicy` is a pure function that takes an observation (Wi‑Fi state and the time it changed, any open router outage, uplink, Admin rights, grace periods) and returns an action or a reason for skipping. All safety limits live here and are tested by replaying real data. Execution (`app/actions.py`) is the only module that interrupts the network.
+2. **React only to PC↔router failures** (`wifi_down`, `router_unreachable`). Internet loss while the router is fine never leads to an action.
+3. **Limits persist across restarts:** the per-hour cap is also counted from the log in the DB, so a process that crashes and restarts repeatedly cannot exceed the cap.
+4. **The circuit breaker disables the watchdog** (written to `settings.json`) after `trip_after` consecutive ineffective actions; only the user can re-enable it.
+5. **Step 1 never requires Admin** (reconnect; for a silent hang, disconnect and then reconnect), because the monitor runs unelevated by default. Restarting the adapter is step 2 and requires Admin.
+6. **Grace periods** after the machine wakes (60s) and after a tweak changes the machine (120s); never take back a connection the user has just disconnected.
+7. **`dry_run` mode** records decisions without carrying them out — a safe way to observe behavior on a real machine before enabling it.
 
-## Hệ quả
+## Consequences
 
-- ✅ Toàn bộ logic an toàn kiểm được bằng đồng hồ giả và phát lại sự cố đã ghi.
-- ✅ Không có đường nào để watchdog chạy quá `max_per_hour` lần/giờ, kể cả qua crash-loop.
-- ⚠️ Không có Admin thì watchdog chỉ kết nối lại được; nếu treo im lặng cần khởi động lại card, phải cài task với `--highest`.
-- ⚠️ Kết nối lại cưỡng bức ngắt mạng vài giây ngay cả khi treo im lặng tự hết đúng lúc đó — chấp nhận được vì đã qua ngưỡng 15s.
+- ✅ All safety logic is testable with a fake clock and replays of recorded outages.
+- ✅ There is no way for the watchdog to run more than `max_per_hour` times per hour, even through a crash loop.
+- ⚠️ Without Admin, the watchdog can only reconnect; if a silent hang requires an adapter restart, the task must be installed with `--highest`.
+- ⚠️ A forced reconnect interrupts the network for a few seconds even if the silent hang happens to clear by itself at that exact moment — acceptable, since the 15s threshold has already been exceeded.

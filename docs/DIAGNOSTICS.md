@@ -1,63 +1,63 @@
-# Chẩn đoán
+# Diagnostics
 
-Mỗi kiểm tra trả về một kết quả: `ok` · `warn` · `bad` · `info`, kèm chi tiết và gợi ý (có thể liên kết tới tweak tương ứng). Kiểm tra không chạy được (thiếu dữ liệu, log không đọc được) trả `info` kèm lý do — **không bao giờ** báo `ok` khi chưa đọc được dữ liệu.
+Each check returns one result: `ok` · `warn` · `bad` · `info`, with details and advice (which may link to the corresponding tweak). A check that cannot run (missing data, log cannot be read) returns `info` with the reason — it **never** reports `ok` when the data has not been read.
 
-| # | Kiểm tra | Nguồn dữ liệu | Ngưỡng / đánh giá | Gợi ý |
+| # | Check | Data source | Threshold / evaluation | Advice |
 |---|---|---|---|---|
-| 1 | **Driver card mạng** | `Get-NetAdapter`, `pnputil /enum-drivers /class Net`, System log `WLAN-AutoConfig 10002` (IHV module dừng) | Driver cũ > 12 tháng ⇒ warn; có crash IHV module trong 7 ngày ⇒ bad | Cập nhật / rollback driver; liệt kê các bản cùng nhà cung cấp trong driver store |
-| 2 | **Tín hiệu Wi‑Fi** | `netsh wlan show interfaces` | RSSI ≥ −60 ok · −61…−70 warn · < −70 bad | Dời router/PC, dùng 5GHz, mesh, hoặc cắm LAN |
-| 3 | **Nhiễu kênh** | `netsh wlan show networks mode=bssid` | ≥ 2 mạng khác cùng kênh ⇒ warn. Bỏ qua mạng tín hiệu < 10% và các BSSID cùng thiết bị với AP đang dùng (5 octet MAC đầu trùng) | Gợi ý nhóm kênh 5GHz ít mạng nhất (36–48 / 149–161) |
-| 4 | **Lịch sử rớt mạng (7 ngày)** | `WLAN-AutoConfig/Operational` event 8003 (theo lý do, theo ngày), event 4003 (limited connectivity) | > 5 lần "disconnected by the driver" ⇒ bad; 1–5 lần hoặc có event 4003 ⇒ warn. Không tính ngắt do người dùng / do kết nối mới | Tweak nguồn điện, driver, watchdog |
-| 5 | **Chất lượng ping** | Dữ liệu của monitor, cửa sổ 1 giờ (kèm 5 phút trong chi tiết), cần ≥ 60 mẫu mỗi mục tiêu ping và ≥ 20 mẫu probe. Probe = kết nối TCP:443 và HTTP 204 (`tcp_*`, `http_*`), không phụ thuộc ICMP | Mất gói > 1% warn, > 3% bad · jitter trung bình > 30ms warn. **Ping ra Internet mất gói nhưng probe tốt nhất mất ≤ 1% ⇒ chỉ `info` "ICMP bị giới hạn"** (không phải mất mạng). Chỉ cần một probe tốt: một đích chặn cổng 443 không gây báo động | Phân biệt lỗi nội bộ (router mất) vs ISP (router tốt, probe mất) vs ping bị giới hạn |
-| 6 | **Benchmark DNS** | Truy vấn UDP tới: DNS đang dùng, router, 1.1.1.1, 8.8.8.8, 9.9.9.9 × nhiều tên miền phổ biến | DNS chính chậm hơn DNS nhanh nhất > 20ms (trung vị) ⇒ info; lỗi/timeout ở **DNS đang dùng** ⇒ warn (ở DNS tham chiếu chỉ ghi vào chi tiết). Router trả lời nhanh nhờ bộ nhớ đệm nên số đo của nó lạc quan | Đổi DNS, hoặc đưa DNS nhanh hơn đã cấu hình lên làm chính |
-| 7 | **Cạn port TCP** | Tcpip event 4227 (7 ngày), số kết nối TIME_WAIT | Có event 4227 ⇒ warn | Tweak `tcp_timedwait` |
-| 8 | **VPN / adapter ảo** | `Get-NetAdapter` (WireGuard, Wintun, TAP, OpenVPN, NetBird, Surfshark, Tailscale…) | info nếu có adapter VPN đang `Up` | Cảnh báo VPN có thể ảnh hưởng định tuyến/DNS |
-| 9 | **Mạng dây khả dụng** | Adapter vật lý 802.3 đang `Disconnected` | info | Cắm LAN là giải pháp ổn định nhất |
-| 10 | **Tối ưu chưa bật** | Trạng thái các tweak rủi ro `low` (từ khung tweak) | Còn tweak low chưa bật ⇒ info. Chưa có khung tweak ⇒ info "chưa đánh giá được" | Liên kết sang tab Tối ưu |
-| 11 | **Tương thích Wi‑Fi 7 / MLO** | `show interfaces` (Radio type), `show networks` (BSSID 802.11be của cùng thiết bị), model card, lịch sử 24h của monitor | Card không hỗ trợ Wi‑Fi 7 + router phát 802.11be + **sụp Rx đi kèm mất gói** ⇒ warn. Có 802.11be nhưng chưa thấy sụp ⇒ info. Xem "Hiệu chỉnh" | Tắt MLO trên router, hoặc dùng SSID tương thích Wi‑Fi 5/6. Bài học từ EXP-009 (2026-10-03) |
-| 12 | **Wi‑Fi của modem nhà mạng ở chế độ bridge** | Các SSID lạ, mạnh, cùng họ MAC (bỏ bit locally-administered) trong kết quả quét | ≥ 2 BSSID cùng họ MAC (kể cả SSID ẩn) với tín hiệu cao nhất ≥ 70% ⇒ warn; ≥ 50% ⇒ info. Một mạng lạ đơn lẻ ≥ 70% ⇒ info. Không kiểm tra được "có Internet hay không" từ kết quả quét | Tắt Wi‑Fi modem, đặt router cách ≥ 1 m. Bài học từ EXP-008 |
-| 13 | **Đường truyền vật lý kém (ăng-ten bị che / vị trí)** | Lịch sử 24h của monitor: Rx rate, RSSI, mất gói tới router | Tỉ lệ phút có **Rx ≤ 30 Mbps và router mất gói ≥ 5%**: ≥ 20% ⇒ warn, ≥ 5% ⇒ info (cần ≥ 30 phút dữ liệu kết nối). RSSI trung vị < −76 ⇒ nêu rõ tín hiệu yếu là yếu tố chi phối. Xem "Hiệu chỉnh" | Loại trừ #11, #12, #3 trước. Nếu sạch: ăng-ten card có thể bị che (khung bàn kim loại, thùng máy) — xoay/dời, hoặc dùng ăng-ten nối dài. Bài học từ EXP-014 |
+| 1 | **Network card driver** | `Get-NetAdapter`, `pnputil /enum-drivers /class Net`, System log `WLAN-AutoConfig 10002` (IHV module stopped) | Driver older than 12 months ⇒ warn; IHV module crash within 7 days ⇒ bad | Update / roll back the driver; list the versions from the same vendor in the driver store |
+| 2 | **Wi‑Fi signal** | `netsh wlan show interfaces` | RSSI ≥ −60 ok · −61…−70 warn · < −70 bad | Move the router/PC, use 5GHz, mesh, or plug in a LAN cable |
+| 3 | **Channel interference** | `netsh wlan show networks mode=bssid` | ≥ 2 other networks on the same channel ⇒ warn. Ignores networks with signal < 10% and BSSIDs from the same device as the AP in use (first 5 MAC octets match) | Suggest the 5GHz channel group with the fewest networks (36–48 / 149–161) |
+| 4 | **Disconnection history (7 days)** | `WLAN-AutoConfig/Operational` event 8003 (by reason, by day), event 4003 (limited connectivity) | > 5 "disconnected by the driver" ⇒ bad; 1–5 times or any event 4003 ⇒ warn. Disconnects by the user / for a new connection are not counted | Power tweaks, driver, watchdog |
+| 5 | **Ping quality** | Monitor data, 1-hour window (plus 5 minutes in the details), needs ≥ 60 samples per ping target and ≥ 20 probe samples. Probe = TCP:443 connection and HTTP 204 (`tcp_*`, `http_*`), independent of ICMP | Packet loss > 1% warn, > 3% bad · average jitter > 30ms warn. **Pings to the Internet lose packets but the best probe loses ≤ 1% ⇒ only `info` "ICMP is rate-limited"** (not an outage). One good probe is enough: one destination blocking port 443 does not raise an alarm | Distinguish a local failure (router lost) vs ISP (router fine, probes lost) vs rate-limited ping |
+| 6 | **DNS benchmark** | UDP queries to: the DNS in use, the router, 1.1.1.1, 8.8.8.8, 9.9.9.9 × several popular domains | Primary DNS slower than the fastest DNS by > 20ms (median) ⇒ info; errors/timeouts on the **DNS in use** ⇒ warn (on reference DNS servers they are only recorded in the details). The router answers quickly thanks to its cache, so its measurement is optimistic | Change DNS, or make a faster DNS that is already configured the primary |
+| 7 | **TCP port exhaustion** | Tcpip event 4227 (7 days), number of TIME_WAIT connections | Any event 4227 ⇒ warn | Tweak `tcp_timedwait` |
+| 8 | **VPN / virtual adapters** | `Get-NetAdapter` (WireGuard, Wintun, TAP, OpenVPN, NetBird, Surfshark, Tailscale…) | info if a VPN adapter is `Up` | Warn that a VPN can affect routing/DNS |
+| 9 | **Wired network available** | Physical 802.3 adapter that is `Disconnected` | info | Plugging in a LAN cable is the most stable solution |
+| 10 | **Optimizations not enabled** | State of the `low` risk tweaks (from the tweak framework) | Some low tweaks still not enabled ⇒ info. No tweak framework yet ⇒ info "cannot be evaluated yet" | Link to the Optimize tab |
+| 11 | **Wi‑Fi 7 / MLO compatibility** | `show interfaces` (Radio type), `show networks` (802.11be BSSIDs of the same device), card model, the monitor's 24h history | Card without Wi‑Fi 7 support + router broadcasting 802.11be + **Rx collapse accompanied by packet loss** ⇒ warn. 802.11be present but no collapse seen yet ⇒ info. See "Threshold calibration" | Turn off MLO on the router, or use a Wi‑Fi 5/6-compatible SSID. Lesson from EXP-009 (2026-10-03) |
+| 12 | **ISP modem Wi‑Fi in bridge mode** | Unknown, strong SSIDs from the same MAC family (ignoring the locally-administered bit) in the scan results | ≥ 2 BSSIDs from the same MAC family (including hidden SSIDs) with the highest signal ≥ 70% ⇒ warn; ≥ 50% ⇒ info. A single unknown network ≥ 70% ⇒ info. Whether it "has Internet or not" cannot be checked from the scan results | Turn off the modem's Wi‑Fi, place the router ≥ 1 m away. Lesson from EXP-008 |
+| 13 | **Poor physical link (blocked antenna / placement)** | The monitor's 24h history: Rx rate, RSSI, packet loss to the router | Share of minutes with **Rx ≤ 30 Mbps and router packet loss ≥ 5%**: ≥ 20% ⇒ warn, ≥ 5% ⇒ info (needs ≥ 30 minutes of connected data). Median RSSI < −76 ⇒ state explicitly that weak signal is the dominant factor. See "Threshold calibration" | Rule out #11, #12, #3 first. If clean: the card's antenna may be blocked (metal desk frame, PC case) — rotate/move it, or use an extension antenna. Lesson from EXP-014 |
 
-## Kiểm tra theo yêu cầu (không nằm trong lần chạy mặc định)
+## On-demand checks (not part of the default run)
 
-Kiểm tra này **tạo lưu lượng thật** (tốn dữ liệu, làm chậm mạng vài chục giây) nên chỉ chạy khi người dùng yêu cầu: `python -m app.diagnostics --bufferbloat` hoặc `POST /api/diagnostics/bufferbloat`.
+This check **generates real traffic** (uses data, slows the network for a few tens of seconds), so it only runs when the user asks for it: `python -m app.diagnostics --bufferbloat` or `POST /api/diagnostics/bufferbloat`.
 
-| # | Kiểm tra | Nguồn dữ liệu | Ngưỡng / đánh giá | Gợi ý |
+| # | Check | Data source | Threshold / evaluation | Advice |
 |---|---|---|---|---|
-| 14 | **Bufferbloat** (độ trễ tăng vọt khi đường truyền bận) | Ping router và 1.1.1.1 mỗi 0,2s: 4s lúc rảnh, rồi 10s trong khi tải xuống, rồi 10s trong khi tải lên (4 kết nối song song tới `speed.cloudflare.com`, mỗi yêu cầu 25 MB và lặp lại; mỗi chiều dừng ở 10s hoặc 100 MB tổng — Cloudflare từ chối một yêu cầu lớn hơn ~25 MB). Bỏ 2s đầu mỗi pha (đường truyền đang lấy đà) | Độ trễ **trung vị** tăng thêm so với lúc rảnh, lấy mức tệ nhất giữa hai chiều: < 30 ms ok · 30–100 ms warn · > 100 ms bad. Mất ≥ 20% ping trong lúc tải ⇒ bad. Không tạo được tải (lỗi mạng, < 1 Mbps) hoặc lúc rảnh không có phản hồi ⇒ info | Bật SQM / QoS thông minh (fq_codel, CAKE) trên router và đặt giới hạn tốc độ tải lên/xuống thấp hơn băng thông thật ~5–10%. Tăng cả tới router ⇒ hàng đợi ở chặng PC ↔ router (Wi‑Fi bão hòa hoặc chính router quá tải); chỉ tăng tới đích Internet mà router không tăng ⇒ hàng đợi ở chặng WAN (modem/router → nhà mạng) |
+| 14 | **Bufferbloat** (latency spikes when the link is busy) | Ping the router and 1.1.1.1 every 0.2s: 4s idle, then 10s during download, then 10s during upload (4 parallel connections to `speed.cloudflare.com`, each request 25 MB and repeated; each direction stops at 10s or 100 MB total — Cloudflare rejects a single request larger than ~25 MB). The first 2s of each phase are dropped (the link is ramping up) | Increase in **median** latency over idle, taking the worse of the two directions: < 30 ms ok · 30–100 ms warn · > 100 ms bad. Losing ≥ 20% of pings under load ⇒ bad. Unable to generate load (network error, < 1 Mbps) or no replies while idle ⇒ info | Enable SQM / smart QoS (fq_codel, CAKE) on the router and set the download/upload rate limits ~5–10% below the real bandwidth. Increase also to the router ⇒ queueing on the PC ↔ router hop (Wi‑Fi saturated or the router itself overloaded); increase only to the Internet destination but not to the router ⇒ queueing on the WAN hop (modem/router → ISP) |
 
-Lưu ý: ngưỡng lấy từ chính yêu cầu của ticket (SIC-37), chưa hiệu chỉnh trên số liệu thật. Bufferbloat đo ở đây là của **cả đường**; Wi‑Fi tự nó cũng gây tăng trễ khi bão hòa, nên số đo tới router được báo riêng để phân biệt.
+Note: the thresholds come straight from the ticket's requirements (SIC-37) and have not yet been calibrated on real data. The bufferbloat measured here is for **the whole path**; Wi‑Fi itself also adds latency when saturated, so the measurement to the router is reported separately to tell them apart.
 
-## Ghi chú cài đặt
+## Implementation notes
 
-- Các kiểm tra dựa trên cửa sổ dài (#1, #4: 7 ngày; #11, #13: 24 giờ) luôn ghi "gần nhất bao lâu trước". Với #11 và #13, nếu **3 giờ gần nhất** (≥ 15 phút dữ liệu) đã sạch (< 5% phút bất thường) thì kết quả hạ xuống `info` "đã cải thiện?" — để việc vừa sửa xong không bị báo `warn` mãi vì dữ liệu cũ. #1 và #4 giữ đúng ngưỡng 7 ngày.
+- Checks based on long windows (#1, #4: 7 days; #11, #13: 24 hours) always state "how long ago the most recent occurrence was". For #11 and #13, if the **last 3 hours** (≥ 15 minutes of data) are already clean (< 5% abnormal minutes), the result is lowered to `info` "improved?" — so that something just fixed is not reported as `warn` forever because of old data. #1 and #4 keep the 7-day threshold as is.
 
-- Các truy vấn event log gom vào **một** lệnh PowerShell để giảm thời gian khởi động process. Event log "không tìm thấy sự kiện" là kết quả rỗng bình thường; mọi lỗi khác (không đọc được log) được báo lại.
-- DNS benchmark làm bằng Python (UDP thô), không phụ thuộc cache của Windows.
-- Bỏ qua DNS IPv6 link-local (`fe80::`) vì cần scope id.
-- Kết quả chẩn đoán được lưu (bảng `diagnostic_runs`, kèm thời điểm) để so sánh giữa các lần chạy.
-- Chữ trong kết quả (`title`, `summary`, `details`, `advice`) được lưu dạng thông điệp `{key, params}` (khóa `diag.*` trong `app/locales/*.json`, ADR-0006) và dịch lúc đọc: API trả chữ theo `ui.language` (hoặc `?lang=`), CLI có `--lang`. Lần chạy lưu trước khi chuyển (chữ thuần tiếng Việt) hiển thị nguyên văn. Chuỗi không có chữ (tên card, `RSSI -65 dBm`) vẫn lưu dạng chữ thường.
-- Kết quả chẩn đoán sinh **gợi ý** (`app/suggestions.py`): tweak liên quan và việc làm bằng tay. Bảng việc làm bằng tay ↔ kiểm tra kích hoạt: `antenna` ← #13 warn/thỉnh thoảng sụp; `move_closer` ← #2 warn/bad; `modem_wifi_off` ← #12; `router_channel` ← #3 warn; `router_mlo_off` ← #11 warn; `driver_update` ← #1 warn/bad; `use_cable` ← #9 có cổng LAN trống; `router_sqm` ← #14 warn/bad; `dns_server` ← #6 warn.
-- Chỉ đọc: chẩn đoán không thay đổi cấu hình máy và không kích hoạt quét Wi‑Fi mới (dùng kết quả quét gần nhất của Windows).
+- Event log queries are batched into **one** PowerShell command to reduce process startup time. An event log "no events found" is a normal empty result; every other error (log cannot be read) is reported.
+- The DNS benchmark is done in Python (raw UDP), independent of the Windows cache.
+- IPv6 link-local DNS (`fe80::`) is skipped because it needs a scope id.
+- Diagnostic results are saved (table `diagnostic_runs`, with timestamps) to compare between runs.
+- Text in the results (`title`, `summary`, `details`, `advice`) is stored as `{key, params}` messages (`diag.*` keys in `app/locales/*.json`, ADR-0006) and translated on read: the API returns text according to `ui.language` (or `?lang=`), the CLI has `--lang`. Runs saved before the switch (plain Vietnamese text) are displayed verbatim. Strings without words (card name, `RSSI -65 dBm`) are still stored as plain text.
+- Diagnostic results generate **suggestions** (`app/suggestions.py`): related tweaks and manual steps. Table of manual steps ↔ triggering checks: `antenna` ← #13 warn/occasional collapse; `move_closer` ← #2 warn/bad; `modem_wifi_off` ← #12; `router_channel` ← #3 warn; `router_mlo_off` ← #11 warn; `driver_update` ← #1 warn/bad; `use_cable` ← #9 with a free LAN port; `router_sqm` ← #14 warn/bad; `dns_server` ← #6 warn.
+- Read-only: diagnostics do not change the machine's configuration and do not trigger a new Wi‑Fi scan (they use Windows' latest scan results).
 
-## Hiệu chỉnh ngưỡng (#11, #13)
+## Threshold calibration (#11, #13)
 
-Rx rate của `netsh` là tốc độ khung gần nhất và **không đáng tin khi lưu lượng thấp** (EXP-009: Rx hiển thị 6 Mbps nhiều phút mà không mất gói). Vì vậy không kiểm tra nào dùng Rx một mình: luôn kèm mất gói tới router trong cùng phút.
+The Rx rate from `netsh` is the rate of the most recent frame and is **unreliable at low traffic** (EXP-009: Rx showed 6 Mbps for many minutes without packet loss). Therefore no check uses Rx on its own: it is always paired with packet loss to the router in the same minute.
 
-Các ngưỡng được thử trên số liệu thật của máy phát triển ngày 2026-10-03 (phút kết nối, ≥ 30 gói, tỉ lệ phút thỏa điều kiện):
+The thresholds were tested on real data from the development machine on 2026-10-03 (connected minutes, ≥ 30 packets, share of minutes meeting the condition):
 
-| Khoảng | Mô tả | Rx ≤ 30 & mất ≥ 5% (#13) | Rx ≤ 6 & RSSI ≥ −70 & mất ≥ 5% (#11) |
+| Period | Description | Rx ≤ 30 & loss ≥ 5% (#13) | Rx ≤ 6 & RSSI ≥ −70 & loss ≥ 5% (#11) |
 |---|---|---|---|
-| 11:30–13:14 | MLO bật, kênh 36 (mất gói ~35%) | 73,1% | 52,9% |
-| 14:02–14:41 | MLO tắt, Rx hiển thị 6 nhưng ít mất gói | 53,8% | 2,6% |
-| 14:52–15:37 | 2.4GHz | 87,8% | 14,6% |
-| 15:43–16:22 | Wi‑Fi 6, kênh 40 | 23,1% | 10,3% |
-| 16:27–17:26 | Ép Wi‑Fi 5 | 44,1% | 18,6% |
-| 17:20–17:31 | Trước khi xoay thùng máy (ăng-ten bị che) | 54,5% (chỉ 11 phút) | 0% |
-| 18:44–20:40 | Sau khi xoay thùng máy | **0,0%** | 0,0% |
-| 23:08–08:41 | Qua đêm sau khi xoay | **0,0%** | 0,0% |
+| 11:30–13:14 | MLO on, channel 36 (packet loss ~35%) | 73.1% | 52.9% |
+| 14:02–14:41 | MLO off, Rx shows 6 but little packet loss | 53.8% | 2.6% |
+| 14:52–15:37 | 2.4GHz | 87.8% | 14.6% |
+| 15:43–16:22 | Wi‑Fi 6, channel 40 | 23.1% | 10.3% |
+| 16:27–17:26 | Forced Wi‑Fi 5 | 44.1% | 18.6% |
+| 17:20–17:31 | Before rotating the PC case (antenna blocked) | 54.5% (only 11 minutes) | 0% |
+| 18:44–20:40 | After rotating the PC case | **0.0%** | 0.0% |
+| 23:08–08:41 | Overnight after rotating | **0.0%** | 0.0% |
 
-Kết luận khi chọn ngưỡng:
-- **#13** tách rất rõ lúc hỏng (23–88%) với lúc tốt (0,0%), nên ngưỡng warn 20% / info 5% hợp lý. Nhưng nó **không phân biệt được nguyên nhân** (MLO, 2.4GHz, ăng-ten, nhiễu đều cho kết quả tương tự) — nên kiểm tra này là bộ phát hiện *triệu chứng* và gợi ý thứ tự loại trừ, không khẳng định "ăng-ten bị che".
-- **#11** chỉ coi là lịch sử *bổ trợ* cho bằng chứng cấu trúc (card không Wi‑Fi 7 + router phát 802.11be). Ngưỡng warn là ≥ 25% số phút và ≥ 5 phút: chỉ khoảng MLO bật (52,9%) vượt; các khoảng không MLO nhưng vẫn tệ (10–19%) thì không.
-- Cỡ mẫu nhỏ (một máy, một ngày): coi các ngưỡng là điểm khởi đầu, cần chỉnh khi có thêm dữ liệu.
+Conclusions when choosing thresholds:
+- **#13** separates bad periods (23–88%) from good ones (0.0%) very clearly, so a warn threshold of 20% / info of 5% is reasonable. But it **cannot tell the causes apart** (MLO, 2.4GHz, antenna, interference all give similar results) — so this check is a *symptom* detector and suggests an order of elimination; it does not assert "the antenna is blocked".
+- **#11** treats the history only as *supporting* evidence for the structural evidence (card without Wi‑Fi 7 + router broadcasting 802.11be). The warn threshold is ≥ 25% of minutes and ≥ 5 minutes: only the MLO-on period (52.9%) exceeds it; the non-MLO periods that were still bad (10–19%) do not.
+- Small sample size (one machine, one day): treat the thresholds as a starting point, to be adjusted as more data comes in.

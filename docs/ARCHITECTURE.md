@@ -1,14 +1,14 @@
-# Kiến trúc
+# Architecture
 
-> Bản thiết kế sơ bộ — sẽ cập nhật theo các quyết định trong [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md).
+> Preliminary design — will be updated according to the decisions in [OPEN-QUESTIONS.md](OPEN-QUESTIONS.md).
 
-## Tổng quan
+## Overview
 
 ```
 ┌──────────────────────────┐        HTTP + token        ┌────────────────────────────────┐
-│  Giao diện (web/)         │ ─────────────────────────▶ │  Backend Python (app/)          │
-│  Tổng quan · Tối ưu ·     │ ◀───────── JSON ────────── │  chạy quyền Admin, 127.0.0.1    │
-│  Chẩn đoán · Nhật ký      │                            │                                │
+│  UI (web/)                │ ─────────────────────────▶ │  Backend Python (app/)          │
+│  Overview · Optimize ·    │ ◀───────── JSON ────────── │  unelevated, 127.0.0.1          │
+│  Diagnostics · Log        │                            │                                │
 └──────────────────────────┘                            │  server ─┬─ monitor ── watchdog │
                                                         │          ├─ tweaks              │
                                                         │          ├─ diagnostics         │
@@ -20,115 +20,115 @@
                                                                      Windows
 ```
 
-## Module backend (`app/`)
+## Backend modules (`app/`)
 
-| Module | Trách nhiệm |
+| Module | Responsibility |
 |---|---|
-| `config.py` | Đường dẫn, `settings.json`, `backup.json` (giá trị gốc trước khi tweak) |
-| `winutil.py` | Helper gọi PowerShell (`-EncodedCommand`, trả JSON), `netsh`, kiểm tra Admin, phát hiện card Wi‑Fi và đường mạng chính (uplink) |
-| `icmp.py` | Ping qua `IcmpSendEcho` (iphlpapi, ctypes) — không cần Admin, không tạo process |
-| `dnsprobe.py` | Truy vấn DNS UDP tự dựng gói tin để benchmark từng DNS server |
-| `storage.py` | SQLite: thống kê theo phút, tín hiệu Wi‑Fi, sự kiện; dọn dữ liệu cũ |
-| `monitor.py` | Luồng ping từng mục tiêu, đọc trạng thái Wi‑Fi, phát hiện sự cố, gộp thống kê theo phút |
-| `watchdog.py` | Tự khôi phục khi sự cố kéo dài — xem [WATCHDOG.md](WATCHDOG.md) |
-| `tweaks.py` | Danh mục toggle và khung `read / capture / apply / restore` — xem [TWEAKS.md](TWEAKS.md) |
-| `diagnostics.py` | Các kiểm tra chẩn đoán — xem [DIAGNOSTICS.md](DIAGNOSTICS.md) |
-| `actions.py` | Thao tác một lần: kết nối lại Wi‑Fi, khởi động lại card, flush DNS, renew DHCP |
-| `probe.py` | Probe TCP:443 / HTTP 204, không phụ thuộc ICMP — xác nhận "có Internet" khi ping bị hạn chế |
-| `notify.py` | Toast Windows khi mất mạng (sau 30s) / watchdog can thiệp, tự tắt, gặp lỗi; giới hạn tần suất; chạy nền |
-| `singleton.py` | Chặn chạy hai monitor cùng thư mục dữ liệu (mutex có tên) |
-| `autostart.py` | Task Scheduler khởi động monitor lúc đăng nhập (tạo từ XML) |
-| `winsys.py` | Lớp duy nhất được ghi vào máy (thuộc tính card, HKLM, powercfg, binding) |
-| `elevated.py`, `elevation.py` | Tiến trình con chạy quyền Admin qua UAC cho thao tác ghi — ADR-0005 |
-| `server.py` | HTTP server, định tuyến API, phục vụ `web/` |
-| `desktop.py` | Vỏ desktop (ADR-0002): cửa sổ pywebview dùng khung gốc của Windows (Snap Layouts, đổi kích thước, thanh tiêu đề tô cùng màu nền trang) quanh giao diện + icon khay (pystray). Chỉ là trình xem: đóng cửa sổ = ẩn xuống khay, "Thoát" chỉ tắt vỏ, monitor vẫn chạy. Chỉ module này cần `requirements.txt` |
-| `failover.py` | Chuyển sang đường mạng dự phòng ([ADR-0008](adr/0008-failover.md)): dò các đường (card vật lý có default route), đo từng đường bằng TCP bind vào IP của nó, chính sách thuần có giới hạn an toàn, đổi InterfaceMetric có sao lưu trong `backup.json`. Mặc định tắt |
-| `runtime.py` | Cách khởi chạy từng phần (monitor, desktop, elevated) từ mã nguồn hay từ bản đóng gói — task, UAC, lối tắt đều hỏi ở đây |
-| `installer.py`, `entry.py` | Bản đóng gói `Ambysto Steady.exe` (PyInstaller, kèm Python): lệnh con `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; cài theo người dùng vào `%LOCALAPPDATA%\Programs`, gỡ thì khôi phục mọi tweak + metric trước. Dữ liệu của bản đóng gói ở `%LOCALAPPDATA%\StableInternet\data` |
-| `impact.py` | Đo hiệu quả một thay đổi (tweak, việc làm bằng tay) bằng số liệu monitor trước/sau — [ADR-0007](adr/0007-measured-impact.md) |
-| `suggestions.py` | Gợi ý từ lần chẩn đoán gần nhất: tweak + việc làm bằng tay (xoay ăng-ten, tắt Wi‑Fi modem…), "Tôi đã làm" |
-| `dnswatch.py` | Phát hiện DNS bị đổi trên cùng mạng (chỉ đọc), cảnh báo bằng sự kiện + toast |
-| `i18n.py`, `locales/*.json` | Bản dịch (ADR-0006): `t(key, **params)`, `msg()` để lưu thông điệp dịch sau, `format_duration()`; tiếng Anh là chuẩn và dự phòng |
+| `config.py` | Paths, `settings.json`, `backup.json` (original values before a tweak) |
+| `winutil.py` | Helpers for calling PowerShell (`-EncodedCommand`, returns JSON), `netsh`, Admin check, detection of the Wi‑Fi card and the main network path (uplink) |
+| `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned |
+| `dnsprobe.py` | UDP DNS queries with hand-built packets to benchmark each DNS server |
+| `storage.py` | SQLite: per-minute statistics, Wi‑Fi signal, events; cleanup of old data |
+| `monitor.py` | Ping thread per target, reads Wi‑Fi state, detects incidents, aggregates per-minute statistics |
+| `watchdog.py` | Automatic recovery when an incident persists — see [WATCHDOG.md](WATCHDOG.md) |
+| `tweaks.py` | Toggle catalog and the `read / capture / apply / restore` framework — see [TWEAKS.md](TWEAKS.md) |
+| `diagnostics.py` | Diagnostic checks — see [DIAGNOSTICS.md](DIAGNOSTICS.md) |
+| `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
+| `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
+| `notify.py` | Windows toasts on connection loss (after 30s) / when the watchdog intervenes, disables itself, or hits an error; rate-limited; runs in the background |
+| `singleton.py` | Prevents two monitors running on the same data directory (named mutex) |
+| `autostart.py` | Task Scheduler task that starts the monitor at logon (created from XML) |
+| `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding) |
+| `elevated.py`, `elevation.py` | Child process running as Admin via UAC for write operations — ADR-0005 |
+| `server.py` | HTTP server, API routing, serves `web/` |
+| `desktop.py` | Desktop shell (ADR-0002): a pywebview window using the native Windows frame (Snap Layouts, resizing, title bar painted the same color as the page background) around the UI + tray icon (pystray). It is only a viewer: closing the window = hiding to the tray, "Quit" only closes the shell, the monitor keeps running. Only this module needs `requirements.txt` |
+| `failover.py` | Switching to a backup network path ([ADR-0008](adr/0008-failover.md)): discovers paths (physical cards with a default route), measures each path with TCP bound to its IP, a pure policy with safety limits, changes InterfaceMetric with a backup in `backup.json`. Off by default |
+| `runtime.py` | How each part (monitor, desktop, elevated) is launched, from source or from the packaged build — the task, UAC and shortcuts all ask here |
+| `installer.py`, `entry.py` | Packaged build `Ambysto Steady.exe` (PyInstaller, bundles Python): subcommands `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; per-user install into `%LOCALAPPDATA%\Programs`, uninstall first restores every tweak + metric. Data of the packaged build lives in `%LOCALAPPDATA%\StableInternet\data` |
+| `impact.py` | Measures the effect of a change (tweak, manual step) using monitor data before/after — [ADR-0007](adr/0007-measured-impact.md) |
+| `suggestions.py` | Suggestions from the latest diagnostic run: tweaks + manual steps (rotate the antenna, turn off the modem's Wi‑Fi…), "I did this" |
+| `dnswatch.py` | Detects DNS being changed on the same network (read-only), warns via an event + toast |
+| `i18n.py`, `locales/*.json` | Translations (ADR-0006): `t(key, **params)`, `msg()` to store messages for later translation, `format_duration()`; English is the reference and fallback |
 
-## Mục tiêu theo dõi
+## Monitored targets
 
-| Tên | Địa chỉ | Ý nghĩa |
+| Name | Address | Meaning |
 |---|---|---|
-| `router` | Gateway của uplink hiện tại (tự phát hiện, làm mới 30s) | Lỗi ở đây ⇒ vấn đề Wi‑Fi / card / router |
+| `router` | Gateway of the current uplink (auto-detected, refreshed every 30s) | Failure here ⇒ Wi‑Fi / card / router problem |
 | `cloudflare` | 1.1.1.1 | Internet |
-| `google` | 8.8.8.8 | Internet (đối chứng) |
-| `tcp_cloudflare`, `tcp_google` | 1.1.1.1:443, 8.8.8.8:443 | Probe TCP (không dùng ICMP), mỗi 10s |
-| `http_cloudflare` | `http://cp.cloudflare.com/generate_204` | Probe HTTP, phải trả đúng 204 (200/chuyển hướng ⇒ nghi captive portal), mỗi 10s |
+| `google` | 8.8.8.8 | Internet (control) |
+| `tcp_cloudflare`, `tcp_google` | 1.1.1.1:443, 8.8.8.8:443 | TCP probe (no ICMP), every 10s |
+| `http_cloudflare` | `http://cp.cloudflare.com/generate_204` | HTTP probe, must return exactly 204 (200/redirect ⇒ suspected captive portal), every 10s |
 
-Probe cấu hình ở `settings.json` → `probes` (tắt bằng `"enabled": false`).
+Probes are configured in `settings.json` → `probes` (disable with `"enabled": false`).
 
-DNS của đường mạng chính được đọc mỗi 60 giây bằng `GetAdaptersAddresses` (ctypes, không tạo process). "Mạng" = (giao diện, gateway, SSID): sang mạng mới thì ghi `dns_observed`; cùng mạng mà DNS khác (thấy 2 lần liên tiếp) thì ghi `dns_changed` (warn) và bật toast. Tắt bằng `settings.json` → `dns_watch.enabled`. Số liệu probe nằm cùng bảng `minute_stats`, `target` là tên probe, `ip` là địa chỉ/URL.
+The DNS of the main network path is read every 60 seconds with `GetAdaptersAddresses` (ctypes, no process spawned). "Network" = (interface, gateway, SSID): on a new network, `dns_observed` is recorded; on the same network with different DNS (seen 2 times in a row), `dns_changed` (warn) is recorded and a toast is shown. Disable with `settings.json` → `dns_watch.enabled`. Probe data lives in the same `minute_stats` table, `target` is the probe name, `ip` is the address/URL.
 
-Phân loại sự cố:
-- Router không phản hồi ≥ 3 lần liên tiếp ⇒ **mất kết nối nội bộ** (PC ↔ router).
-- Router OK nhưng **cả** mọi mục tiêu ping **và** vòng probe gần nhất đều thất bại ≥ 3 lần liên tiếp ⇒ **mất Internet** (router ↔ ISP). Chỉ ping hỏng mà probe vẫn thông thì **không** phải sự cố (ICMP là thứ đầu tiên bị hạn chế); vòng probe cũ quá 2,5 chu kỳ không được tính (quay về chỉ dùng ping).
+Incident classification:
+- Router not responding ≥ 3 times in a row ⇒ **local connection lost** (PC ↔ router).
+- Router OK but **all** ping targets **and** the latest probe round all fail ≥ 3 times in a row ⇒ **Internet lost** (router ↔ ISP). Ping failing alone while probes still get through is **not** an incident (ICMP is the first thing to get restricted); a probe round older than 2.5 cycles is not counted (falls back to ping only).
 
-## Lưu trữ (`data/`)
+## Storage (`data/`)
 
-| File | Nội dung |
+| File | Contents |
 |---|---|
-| `settings.json` | Cấu hình người dùng (watchdog, chu kỳ ping, mục tiêu, `ui.language`…) |
-| `backup.json` | Giá trị gốc của từng tweak trước khi áp dụng |
-| `metrics.db` | SQLite (WAL, `PRAGMA user_version` = phiên bản schema): `minute_stats(ts, target, ip, sent, lost, avg, max, jitter)`, `wifi_stats(ts, state, ssid, bssid, channel, signal, rssi, rx_mbps, tx_mbps)`, `events(id, ts, kind, level, message, duration, message_key, message_params)` (v3: sự kiện có lời văn lưu khóa dịch + tham số JSON, cột `message` giữ bản tiếng Anh để đọc thẳng DB; API trả chữ theo ngôn ngữ đang chọn). `ts` là Unix giây UTC; bảng thống kê khoá theo đầu phút. Sự kiện `*_down` ghi lúc kết thúc sự cố nên `ts` là thời điểm phục hồi, `duration` cho biết lúc bắt đầu. Khi monitor mất số liệu > 30 s (máy ngủ/treo), sự cố đang mở được cắt tại tick cuối trước khoảng trống (message có "cut short by a monitoring gap") và một sự kiện `monitor_gap` ghi độ dài khoảng trống — thời gian không đo được không bao giờ bị tính là mất mạng. `rx_mbps`/`tx_mbps`/`bssid` cần cho chẩn đoán MLO và roaming; `ip` vì IP router có thể đổi |
+| `settings.json` | User configuration (watchdog, ping interval, targets, `ui.language`…) |
+| `backup.json` | Original value of each tweak before it is applied |
+| `metrics.db` | SQLite (WAL, `PRAGMA user_version` = schema version): `minute_stats(ts, target, ip, sent, lost, avg, max, jitter)`, `wifi_stats(ts, state, ssid, bssid, channel, signal, rssi, rx_mbps, tx_mbps)`, `events(id, ts, kind, level, message, duration, message_key, message_params)` (v3: events with text store a translation key + JSON parameters, the `message` column keeps the English version for reading the DB directly; the API returns text in the currently selected language). `ts` is Unix seconds UTC; statistics tables are keyed by the start of the minute. `*_down` events are written when the incident ends, so `ts` is the recovery time and `duration` tells when it started. When the monitor loses data for > 30 s (machine asleep/hung), the open incident is cut at the last tick before the gap (message contains "cut short by a monitoring gap") and a `monitor_gap` event records the length of the gap — time that could not be measured is never counted as an outage. `rx_mbps`/`tx_mbps`/`bssid` are needed for MLO and roaming diagnostics; `ip` because the router IP can change |
 
-Mẫu ping thô chỉ giữ trong RAM (15 phút gần nhất); DB lưu thống kê theo phút, giữ 30 ngày.
+Raw ping samples are kept only in RAM (last 15 minutes); the DB stores per-minute statistics, kept for 30 days.
 
-## Giao diện (`web/`)
+## UI (`web/`)
 
-HTML/CSS/JS thuần, không thư viện, không bước build (ES module). Server phục vụ `web/` cùng origin; trang chỉ nạp script `type="module"` từ chính nó nên giữ được CSP chặt (`script-src 'self'`, không inline script, không `innerHTML` — test kiểm).
+Plain HTML/CSS/JS, no libraries, no build step (ES modules). The server serves `web/` on the same origin; the page only loads `type="module"` scripts from itself, so a strict CSP can be kept (`script-src 'self'`, no inline scripts, no `innerHTML` — checked by tests).
 
-| File | Vai trò |
+| File | Role |
 |---|---|
-| `index.html` | Khung: thanh bên/thanh tab, chỗ chứa 5 màn hình, sheet xác nhận, icon SVG; token X-Token nhúng ở `<meta name="si-token">` |
-| `tokens.css`, `app.css` | Design token (SIC-27) và component; < 760px thanh bên thành thanh tab |
-| `js/app.js` | Điều hướng `#/màn-hình`, trạng thái chung, polling (Tổng quan 2s, khác 10–30s, dừng khi tab ẩn), theme, đổi ngôn ngữ |
-| `js/api.js` | Gọi API kèm token, chờ job (`/api/jobs/{id}`), tự tải lại trang khi server khởi động lại (token mới) |
-| `js/i18n.js` | Catalog từ `/api/i18n`, cùng luật với `app/i18n.py` (số nhiều, dấu phẩy thập phân) |
-| `js/chart.js` | Biểu đồ SVG: router/Internet, mất gói, vùng sự cố, mốc thay đổi (tweak, việc làm bằng tay) |
-| `js/widgets.js` | Khối "Hiệu quả", dòng gợi ý, bật/tắt tweak (sheet cho tweak thử nghiệm, UAC khi không có Admin) |
-| `js/screens/*.js` | Tổng quan, Tối ưu, Chẩn đoán, Nhật ký, Cài đặt |
+| `index.html` | Shell: sidebar/tab bar, containers for the 5 screens, confirmation sheet, SVG icons; the X-Token token is embedded in `<meta name="si-token">` |
+| `tokens.css`, `app.css` | Design tokens (SIC-27) and components; < 760px the sidebar becomes a tab bar |
+| `js/app.js` | `#/screen` navigation, shared state, polling (Overview 2s, others 10–30s, paused when the tab is hidden), theme, language switching |
+| `js/api.js` | Calls the API with the token, waits for jobs (`/api/jobs/{id}`), reloads the page automatically when the server restarts (new token) |
+| `js/i18n.js` | Catalog from `/api/i18n`, same rules as `app/i18n.py` (plurals, decimal comma) |
+| `js/chart.js` | SVG charts: router/Internet, packet loss, incident regions, change markers (tweak, manual step) |
+| `js/widgets.js` | "Impact" block, suggestion rows, tweak toggles (sheet for experimental tweaks, UAC when not Admin) |
+| `js/screens/*.js` | Overview, Optimize, Diagnostics, Log, Settings |
 
-Chữ do backend sinh (chẩn đoán, sự kiện, tweak) đến từ API đã dịch; JS chỉ dịch nhãn của chính giao diện (`ui.*`).
+Text generated by the backend (diagnostics, events, tweaks) comes already translated from the API; JS only translates the UI's own labels (`ui.*`).
 
 ## API
 
-| Method | Đường dẫn | Mô tả |
+| Method | Path | Description |
 |---|---|---|
-| GET | `/api/state` | Quyền Admin, phiên bản, mục tiêu ping, các mục cài đặt sửa được (`watchdog`, `notify`, `ui`) |
-| GET | `/api/i18n[?lang=vi]` | Ngôn ngữ đã chọn (`setting`), ngôn ngữ thực dùng, danh sách ngôn ngữ có catalog, toàn bộ bản dịch (đã trộn dự phòng tiếng Anh); `?lang=` để xem trước |
-| GET | `/api/suggestions` | Gợi ý (tweak + việc làm bằng tay) từ lần chẩn đoán gần nhất, kèm kết quả trước/sau cho việc đã làm |
-| POST | `/api/manual/{id}/done` | Người dùng đã làm một việc bằng tay → sự kiện `manual_step_done`, bắt đầu đo |
-| GET | `/api/failover` | Các đường mạng, đường đang dùng, đã chuyển chưa, cài đặt |
-| POST | `/api/failover/prefer/{ifIndex}` · `/api/failover/restore` | Chuyển sang / về (job; không có Admin thì qua UAC) |
-| GET | `/api/impact` | Các thay đổi 14 ngày qua (tweak bật, việc đã làm) với số liệu trước/sau |
-| GET | `/api/autostart` | Monitor có tự chạy cùng Windows không (chỉ đọc, cache 60s) |
-| GET | `/api/live?window=300` | Mẫu ping gần nhất (≤ 900s), trạng thái Wi‑Fi, sự cố đang diễn ra |
-| GET | `/api/history?hours=24&bucket=1` | Thống kê theo phút + Wi‑Fi + sự kiện (≤ 30 ngày); `bucket=N` gộp N phút (biểu đồ 7 ngày) |
-| GET | `/api/events?limit=200` | Nhật ký |
-| GET | `/api/tweaks` | Trạng thái tweak từ bộ đệm 60s; đọc lại chạy nền (~11s); `impact` cho tweak đang bật |
-| POST | `/api/tweaks/{id}` | `{ "enable": true/false }` → job; không có quyền Admin thì qua UAC |
-| POST | `/api/diagnostics` | Chạy toàn bộ chẩn đoán → job (một lần chạy tại một thời điểm) |
-| GET | `/api/diagnostics/runs[/{id}]` | Các lần chẩn đoán đã lưu |
-| GET | `/api/jobs/{id}` | Trạng thái/kết quả của job |
+| GET | `/api/state` | Admin rights, version, ping targets, editable settings (`watchdog`, `notify`, `ui`) |
+| GET | `/api/i18n[?lang=vi]` | Selected language (`setting`), language actually used, list of languages with a catalog, all translations (with English fallback merged in); `?lang=` to preview |
+| GET | `/api/suggestions` | Suggestions (tweaks + manual steps) from the latest diagnostic run, with before/after results for steps already done |
+| POST | `/api/manual/{id}/done` | The user has done a manual step → `manual_step_done` event, measurement starts |
+| GET | `/api/failover` | Network paths, the path in use, whether it has switched, settings |
+| POST | `/api/failover/prefer/{ifIndex}` · `/api/failover/restore` | Switch to / back (job; via UAC when not Admin) |
+| GET | `/api/impact` | Changes in the last 14 days (tweaks enabled, steps done) with before/after data |
+| GET | `/api/autostart` | Whether the monitor starts with Windows (read-only, cached 60s) |
+| GET | `/api/live?window=300` | Latest ping samples (≤ 900s), Wi‑Fi state, ongoing incident |
+| GET | `/api/history?hours=24&bucket=1` | Per-minute statistics + Wi‑Fi + events (≤ 30 days); `bucket=N` aggregates N minutes (7-day chart) |
+| GET | `/api/events?limit=200` | Log |
+| GET | `/api/tweaks` | Tweak state from a 60s cache; re-reading runs in the background (~11s); `impact` for enabled tweaks |
+| POST | `/api/tweaks/{id}` | `{ "enable": true/false }` → job; via UAC when not Admin |
+| POST | `/api/diagnostics` | Run all diagnostics → job (one run at a time) |
+| GET | `/api/diagnostics/runs[/{id}]` | Saved diagnostic runs |
+| GET | `/api/jobs/{id}` | Job status/result |
 | POST | `/api/actions/{name}` | `reconnect`, `restart_adapter` (UAC), `flush_dns`, `renew_dhcp` → job |
-| POST | `/api/settings` | Chỉ các khóa trong `SETTINGS_SCHEMA` (`watchdog.*`, `notify.enabled`, `ui.language`), kiểm kiểu, khoảng giá trị / danh sách cho phép |
+| POST | `/api/settings` | Only keys in `SETTINGS_SCHEMA` (`watchdog.*`, `notify.enabled`, `ui.language`), type-checked, value ranges / allowed lists |
 
-Server chạy trong tiến trình monitor, **quyền thường**, tại `http://127.0.0.1:47613/` (đổi trong `settings.json` → `server.port`); vị trí thực tế ghi ở `%LOCALAPPDATA%\StableInternet\server.json`. Mọi request phải có `Host` đúng; mọi `/api/*` yêu cầu header `X-Token`; request ghi bị từ chối nếu khác origin — xem [SECURITY.md](SECURITY.md) và [ADR-0005](adr/0005-unelevated-server-uac-writes.md).
+The server runs inside the monitor process, **unelevated**, at `http://127.0.0.1:47613/` (change in `settings.json` → `server.port`); the actual location is written to `%LOCALAPPDATA%\StableInternet\server.json`. Every request must have the correct `Host`; every `/api/*` requires the `X-Token` header; write requests are rejected if cross-origin — see [SECURITY.md](SECURITY.md) and [ADR-0005](adr/0005-unelevated-server-uac-writes.md).
 
-## Luồng bật một tweak
+## Enabling a tweak: flow
 
 ```
-UI bật toggle → POST /api/tweaks/{id} {enable:true}
-  → kiểm tra supported + quyền Admin
-  → nếu chưa có backup: capture() giá trị gốc → backup.json
+UI turns toggle on → POST /api/tweaks/{id} {enable:true}
+  → check supported + Admin rights
+  → if there is no backup yet: capture() original value → backup.json
   → apply()
-  → ghi sự kiện "Bật tối ưu: …" vào nhật ký
-  → read() lại và trả trạng thái mới cho UI
+  → write event "Optimization on: …" to the log
+  → read() again and return the new state to the UI
 ```
 
-Tắt: `restore(backup)` → xóa backup → ghi sự kiện. Nếu không có backup (giá trị đã được đổi từ trước khi dùng tool), khôi phục về mặc định của driver/Windows.
+Disable: `restore(backup)` → delete backup → write event. If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.

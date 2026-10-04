@@ -1,31 +1,31 @@
-# ADR-0008: Failover sang đường mạng dự phòng bằng metric của interface
+# ADR-0008: Failover to a backup network path using interface metrics
 
-- **Trạng thái:** Accepted
-- **Ngày:** 2026-10-04
-- **Liên quan:** [ADR-0003](0003-tweak-framework.md) (sao lưu/khôi phục), [ADR-0004](0004-watchdog-safety.md) (giới hạn an toàn), [ADR-0005](0005-unelevated-server-uac-writes.md) (ghi cần Admin)
+- **Status:** Accepted
+- **Date:** 2026-10-04
+- **Related:** [ADR-0003](0003-tweak-framework.md) (backup/restore), [ADR-0004](0004-watchdog-safety.md) (safety limits), [ADR-0005](0005-unelevated-server-uac-writes.md) (writes requiring Admin)
 
-## Bối cảnh
+## Context
 
-Cải thiện ổn định rõ nhất đến từ việc có **≥ 2 đường ra Internet** (Wi‑Fi + LAN, USB 4G, điện thoại chia sẻ mạng…). Windows tự dùng đường khác khi một card **mất kết nối vật lý**, nhưng không làm gì khi card vẫn "Connected" mà Internet sau router đã chết (nhà mạng lỗi, router treo) — đúng ca hay gặp nhất. Speedify giải bằng server trung gian (giữ được phiên TCP); ta chọn cách nhẹ, không cần server: đổi thứ tự ưu tiên đường đi.
+The clearest stability improvement comes from having **≥ 2 paths to the Internet** (Wi‑Fi + LAN, USB 4G, phone tethering…). Windows automatically switches to another path when an adapter **loses its physical connection**, but does nothing when the adapter is still "Connected" while the Internet behind the router is dead (ISP failure, hung router) — exactly the most common case. Speedify solves this with an intermediary server (which keeps TCP sessions alive); we choose a lightweight approach that needs no server: change the route priority order.
 
-## Quyết định
+## Decision
 
-1. **Đường (path)** = một card vật lý (không phải VPN/adapter ảo), đang Up, có default route IPv4 qua gateway. Danh sách đường đọc lại mỗi 60s; đường chính = đường Windows đang dùng (`GetBestRoute`).
-2. **Đo từng đường riêng**: kết nối TCP tới `1.1.1.1:443` / `8.8.8.8:443` với socket **bind vào IP của đường đó** (Windows dùng mô hình strong host khi gửi, nên gói đi ra đúng card) mỗi 5s. Một lần thành công là đường còn dùng được.
-3. **Chuyển (failover)** khi: đường chính hỏng liên tục ≥ `threshold_s` (20s) **và** có đường dự phòng khỏe liên tục ≥ 10s. Hành động: đặt **InterfaceMetric** của đường dự phòng đủ thấp để nó thắng (`Set-NetIPInterface`), không đụng đường chính.
-4. **Quay về (failback)** khi đường chính khỏe liên tục ≥ `failback_s` (120s): khôi phục metric gốc của đường dự phòng. Tắt tính năng, monitor khởi động thấy còn metric đã đổi (crash), hay gỡ cài đặt ⇒ cũng khôi phục.
-5. **Sao lưu trước khi ghi**: metric gốc (`AutomaticMetric`, `InterfaceMetric`) lưu vào `backup.json` khóa `failover:<ifIndex>` *trước* khi đổi; đọc lại để kiểm chứng; khôi phục xong mới xóa bản sao lưu (giống ADR-0003).
-6. **Giới hạn an toàn** (giống ADR-0004, chính sách thuần, test được): giãn cách ≥ 60s giữa hai lần chuyển, tối đa 6 lần/giờ, chuyển qua lại ≥ 3 lần trong 30 phút ⇒ **ngắt mạch**: tự tắt tính năng, khôi phục metric, báo người dùng. Có chế độ `dry_run` chỉ ghi "sẽ làm gì". **Mặc định tắt.**
-7. **Quyền Admin**: đổi metric cần Admin. Monitor chạy quyền Admin (task `--highest`) thì tự chuyển; nếu không, chỉ **báo** (sự kiện + toast "có đường dự phòng đang thông") và giao diện có nút "Chuyển ngay" — lúc đó UAC hỏi người dùng (ADR-0005). Không bao giờ bật hộp thoại UAC khi người dùng không chủ động bấm.
-8. **Ai sở hữu lần chuyển** (`source` trong bản sao lưu): người dùng bấm "Chuyển ngay" khi failover đang **tắt** ⇒ `manual`: giữ nguyên cho tới khi người dùng chuyển về, chỉ tự hoàn tác nếu đường đó hỏng. Failover tự chuyển, hoặc người dùng bấm khi failover **bật** ⇒ `failover`: tự quay về như mục 4.
-9. **Chuyển/khôi phục thất bại** (adapter bị rút, chính sách chặn…): báo **một lần**, thử lại sau 60s, 5 phút, rồi 15 phút, không thử mỗi tick. Bản sao lưu giữ nguyên cho tới khi khôi phục được; Windows lưu metric theo interface nên cắm lại là khôi phục được, và giao diện vẫn có nút "Chuyển về" cho đường đã rút.
-10. **Đo không chắc chắn ≠ hỏng**: bind vào IP cũ thất bại (DHCP cấp IP mới) ⇒ "chưa biết", đọc lại danh sách đường ngay; máy ngủ (hai tick cách > 30s) ⇒ quên các khoảng "khỏe/hỏng bao lâu" để không chuyển nhầm sau khi thức.
-11. `backup.json` được monitor, tiến trình Admin và trình gỡ cài đặt cùng ghi: mỗi lần ghi giữ khóa liên tiến trình (`config.backup_lock`), đọc lại file ngay trong khóa và chỉ đổi đúng mục của mình.
+1. **Path** = a physical adapter (not a VPN/virtual adapter) that is Up and has an IPv4 default route through a gateway. The path list is re-read every 60s; the primary path = the path Windows is currently using (`GetBestRoute`).
+2. **Probe each path separately**: a TCP connection to `1.1.1.1:443` / `8.8.8.8:443` with the socket **bound to that path's IP** (Windows uses the strong host model when sending, so packets leave through the correct adapter) every 5s. A single success means the path is still usable.
+3. **Switch (failover)** when: the primary path has been continuously failing for ≥ `threshold_s` (20s) **and** there is a backup path that has been continuously healthy for ≥ 10s. Action: set the backup path's **InterfaceMetric** low enough for it to win (`Set-NetIPInterface`), without touching the primary path.
+4. **Switch back (failback)** when the primary path has been continuously healthy for ≥ `failback_s` (120s): restore the backup path's original metric. Disabling the feature, the monitor finding a still-changed metric on startup (crash), or uninstalling ⇒ also restores it.
+5. **Back up before writing**: the original metric (`AutomaticMetric`, `InterfaceMetric`) is saved to `backup.json` under the key `failover:<ifIndex>` *before* changing it; read back to verify; delete the backup only after restoring (same as ADR-0003).
+6. **Safety limits** (same as ADR-0004, a pure, testable policy): ≥ 60s spacing between two switches, at most 6 per hour, switching back and forth ≥ 3 times within 30 minutes ⇒ **circuit breaker**: disable the feature automatically, restore the metric, notify the user. There is a `dry_run` mode that only records "what it would do". **Disabled by default.**
+7. **Admin rights**: changing the metric requires Admin. If the monitor runs with Admin rights (task `--highest`), it switches automatically; otherwise it only **notifies** (an event + a toast "a backup path is available") and the UI has a "Switch now" button — at that point UAC asks the user (ADR-0005). Never show a UAC prompt when the user has not actively clicked.
+8. **Who owns a switch** (`source` in the backup): the user clicks "Switch now" while failover is **disabled** ⇒ `manual`: kept until the user switches back, reverted automatically only if that path fails. Failover switched automatically, or the user clicked while failover is **enabled** ⇒ `failover`: switches back automatically as in item 4.
+9. **Switch/restore failures** (adapter unplugged, blocked by policy…): notify **once**, retry after 60s, 5 minutes, then 15 minutes, not on every tick. The backup is kept until the restore succeeds; Windows stores the metric per interface, so plugging it back in allows it to be restored, and the UI still has a "Switch back" button for an unplugged path.
+10. **Uncertain probe ≠ failure**: binding to an old IP fails (DHCP assigned a new IP) ⇒ "unknown", and the path list is re-read immediately; machine sleep (two ticks > 30s apart) ⇒ forget the "healthy/failing for how long" durations so as not to switch by mistake after waking.
+11. `backup.json` is written by the monitor, the Admin process and the uninstaller alike: every write holds an inter-process lock (`config.backup_lock`), re-reads the file right inside the lock and changes only its own entry.
 
-## Hệ quả
+## Consequences
 
-- ✅ Không cần server, không thêm thư viện; giữ đường chính nguyên vẹn.
-- ⚠️ Phiên TCP đang mở trên đường cũ sẽ rớt khi chuyển (ứng dụng tự kết nối lại); khác Speedify.
-- ⚠️ Đường dự phòng tính phí (4G) có thể tốn data — giao diện ghi rõ đường nào đang được dùng.
-- ⚠️ Máy chỉ có một đường thì tính năng không làm gì (báo "chưa có đường dự phòng").
-- 📌 Không áp dụng lên máy phát triển nếu người dùng chưa đồng ý (CLAUDE.md).
+- ✅ No server needed, no extra libraries; the primary path is left intact.
+- ⚠️ TCP sessions open on the old path will drop when switching (applications reconnect by themselves); unlike Speedify.
+- ⚠️ A metered backup path (4G) may use up data — the UI clearly shows which path is in use.
+- ⚠️ On a machine with only one path, the feature does nothing (it reports "no backup path yet").
+- 📌 Not to be applied on the development machine unless the user has agreed (CLAUDE.md).

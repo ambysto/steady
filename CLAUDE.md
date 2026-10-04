@@ -1,27 +1,28 @@
 # CLAUDE.md
 
-Hướng dẫn cho AI agent làm việc trong repo này.
+Guidance for AI agents working in this repo.
 
-## Dự án
+## Project
 
-**Ambysto Steady** (tên hiển thị, khóa `app.name`; công ty Ambysto) — tool Windows theo dõi, tự khôi phục và tối ưu kết nối mạng. `StableInternet` chỉ còn là tên nội bộ (repo, package, thư mục dữ liệu, mutex). Backend Python, giao diện web tại `127.0.0.1`. Đọc [README.md](README.md) và [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) trước khi sửa code.
+**Ambysto Steady** (display name, key `app.name`; company Ambysto) — a Windows tool that monitors, automatically recovers and optimizes the network connection. `StableInternet` is now only the internal name (repo, package, data folder, mutex). Python backend, web UI at `127.0.0.1`. Read [README.md](README.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing code.
 
-## Quy tắc bắt buộc
+## Mandatory rules
 
-- **Không tự áp dụng tweak lên máy thật** trong lúc phát triển/kiểm thử. Chỉ chạy các thao tác đọc; thao tác ghi (Set-NetAdapterAdvancedProperty, powercfg /set…, ghi registry, Restart-NetAdapter) chỉ chạy khi người dùng đồng ý rõ ràng.
-- Mọi tweak mới phải được mô tả trong [docs/TWEAKS.md](docs/TWEAKS.md) trước khi viết code.
-- Các quyết định kiến trúc mới → thêm ADR trong `docs/adr/`.
-- Cập nhật `CHANGELOG.md` khi thay đổi hành vi.
-- **Tên trong code luôn bằng tiếng Anh**: hàm, biến, lớp, tham số, khóa cấu hình, khóa dịch, biến PowerShell. Không dùng tiếng Việt, kể cả tiếng Việt không dấu (`kiem_tra_mang`, `ketNoi` đều sai). `tests/test_naming.py` chặn tự động.
-- Chữ người dùng thấy không viết cứng trong code: đi qua `app/locales/*.json` (mặc định tiếng Anh) — xem [ADR-0006](docs/adr/0006-i18n.md).
+- **Do not apply tweaks to the real machine on your own** during development/testing. Only run read operations; write operations (Set-NetAdapterAdvancedProperty, powercfg /set…, registry writes, Restart-NetAdapter) run only when the user explicitly agrees.
+- Every new tweak must be described in [docs/TWEAKS.md](docs/TWEAKS.md) before writing code.
+- New architectural decisions → add an ADR in `docs/adr/`.
+- Update `CHANGELOG.md` when changing behavior.
+- **Names in code are always in English**: functions, variables, classes, parameters, config keys, translation keys, PowerShell variables. Do not use Vietnamese, not even Vietnamese without diacritics (`kiem_tra_mang`, `ketNoi` are both wrong). `tests/test_naming.py` blocks this automatically.
+- User-visible text is not hard-coded in code: it goes through `app/locales/*.json` (English by default) — see [ADR-0006](docs/adr/0006-i18n.md).
+- All documentation (README, CHANGELOG, `docs/`, ADRs, CLAUDE.md) is written in English; only the user-facing UI catalogs in `app/locales` are translated.
 
-## Môi trường máy phát triển
+## Development machine environment
 
-- Windows 11 Pro, PowerShell 5.1 (không có `pwsh`), Python 3.11, Node 26.
-- PowerShell 5.1: không có `&&`, `Test-Connection -TargetName`; dùng `System.Net.NetworkInformation.Ping` hoặc ICMP qua ctypes.
-- Output `netsh` là tiếng Anh, mã hóa OEM.
+- Windows 11 Pro, PowerShell 5.1 (no `pwsh`), Python 3.11, Node 26.
+- PowerShell 5.1: no `&&`, no `Test-Connection -TargetName`; use `System.Net.NetworkInformation.Ping` or ICMP via ctypes.
+- `netsh` output is in English, OEM-encoded.
 
-## Lệnh hữu ích (chỉ đọc)
+## Useful commands (read-only)
 
 ```powershell
 netsh wlan show interfaces

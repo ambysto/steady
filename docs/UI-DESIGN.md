@@ -1,71 +1,71 @@
-# Định hướng giao diện
+# UI direction
 
-> **Đã chốt (2026-10-03):** hướng A, cửa sổ pywebview, nút điều khiển kiểu Mac — xem [ADR-0002](adr/0002-macos-style-ui-pywebview.md).
+> **Decided (2026-10-03):** option A, pywebview window, Mac-style window controls — see [ADR-0002](adr/0002-macos-style-ui-pywebview.md).
 
-## Câu hỏi: thiết kế theo hướng "macOS native"
+## Question: designing in a "macOS native" direction
 
-Có hai cách hiểu, khác nhau rất lớn về khối lượng công việc:
+There are two interpretations, with very different amounts of work:
 
-| | A. Phong cách macOS trên Windows | B. Ứng dụng macOS thật |
+| | A. macOS style on Windows | B. Real macOS app |
 |---|---|---|
-| Chạy trên | Windows (máy hiện tại) | Mac |
-| Công nghệ | Web UI + cửa sổ desktop (pywebview / Tauri) | Swift + SwiftUI, Xcode |
-| Backend | Giữ nguyên (Python + PowerShell) | Viết lại hoàn toàn cho macOS |
-| Tweak hiện có | Giữ nguyên | Phần lớn không tồn tại trên macOS (driver properties, ASPM, PnPCapabilities…) |
-| Phân phối | Thư mục/exe | Cần Apple Developer account để ký & notarize |
+| Runs on | Windows (current machine) | Mac |
+| Technology | Web UI + desktop window (pywebview / Tauri) | Swift + SwiftUI, Xcode |
+| Backend | Kept as is (Python + PowerShell) | Completely rewritten for macOS |
+| Existing tweaks | Kept as is | Mostly do not exist on macOS (driver properties, ASPM, PnPCapabilities…) |
+| Distribution | Folder/exe | Requires an Apple Developer account to sign & notarize |
 
-**Đề xuất: A** — dùng ngôn ngữ thiết kế macOS cho tool Windows.
+**Recommendation: A** — use the macOS design language for the Windows tool.
 
-## Những gì cần cho hướng A
+## What option A needs
 
-### 1. Ngôn ngữ thiết kế
-Tham chiếu **System Settings** (macOS Sonoma/Sequoia) và Apple Human Interface Guidelines:
-- Bố cục **sidebar + nội dung**: sidebar trong mờ (vibrancy) liệt kê Tổng quan · Tối ưu · Chẩn đoán · Nhật ký.
-- **Grouped inset list**: nhóm thiết lập trong khối bo góc ~10px, mỗi dòng gồm nhãn, mô tả phụ, control bên phải.
-- Control: switch kiểu macOS, segmented control, popover, **sheet** xác nhận cho tweak rủi ro.
-- Typography: body 13px, tiêu đề lớn; lưới 8pt; dùng ít màu, màu nhấn (accent) theo hệ thống.
-- Sáng/tối tự động theo hệ thống; chuyển động mềm (spring), không gạch chân khi hover.
+### 1. Design language
+Reference **System Settings** (macOS Sonoma/Sequoia) and the Apple Human Interface Guidelines:
+- **Sidebar + content** layout: a translucent (vibrancy) sidebar listing Overview · Optimize · Diagnostics · Log.
+- **Grouped inset list**: settings grouped in blocks with ~10px rounded corners; each row has a label, a secondary description, and a control on the right.
+- Controls: macOS-style switch, segmented control, popover, confirmation **sheet** for risky tweaks.
+- Typography: 13px body, large titles; 8pt grid; few colors, accent color follows the system.
+- Light/dark follows the system automatically; soft (spring) motion, no underline on hover.
 
-### 2. Font & icon — lưu ý bản quyền
-- **SF Pro** và **SF Symbols** chỉ được cấp phép dùng trên nền tảng Apple ⇒ không đóng gói vào tool Windows.
-- Thay thế: font **Inter** (OFL) gần giống SF; hoặc `system-ui` (Windows sẽ ra Segoe UI Variable).
-- Icon: **Lucide** / **Phosphor** (MIT) — nét mảnh tương tự SF Symbols.
+### 2. Fonts & icons — licensing notes
+- **SF Pro** and **SF Symbols** are licensed for use on Apple platforms only ⇒ do not bundle them into the Windows tool.
+- Alternatives: the **Inter** font (OFL), close to SF; or `system-ui` (Windows will resolve it to Segoe UI Variable).
+- Icons: **Lucide** / **Phosphor** (MIT) — thin strokes similar to SF Symbols.
 
-### 3. Cửa sổ ứng dụng (thay vì tab trình duyệt)
-Một tab trình duyệt không thể cho cảm giác native. Lựa chọn:
+### 3. App window (instead of a browser tab)
+A browser tab cannot feel native. Options:
 
-| Lựa chọn | Ưu | Nhược |
+| Option | Pros | Cons |
 |---|---|---|
-| **pywebview** (WebView2) | Giữ Python, nhẹ, cửa sổ frameless | Thêm dependency (phá ADR-0001 "chỉ thư viện chuẩn") |
-| Tauri | Rất nhẹ, đóng gói tốt | Thêm Rust toolchain, backend tách process |
-| Electron | Hệ sinh thái lớn | Nặng (~150MB) |
-| Tab trình duyệt | Không cần gì thêm | Không có cảm giác ứng dụng |
+| **pywebview** (WebView2) | Keeps Python, lightweight, frameless window | Adds a dependency (breaks ADR-0001 "standard library only") |
+| Tauri | Very lightweight, good packaging | Adds the Rust toolchain, backend in a separate process |
+| Electron | Large ecosystem | Heavy (~150MB) |
+| Browser tab | Needs nothing extra | Does not feel like an app |
 
-Với cửa sổ frameless cần tự vẽ title bar. Nút điều khiển cửa sổ: nút kiểu "đèn giao thông" bên trái (giống Mac, lạ với người dùng Windows) hay nút Windows bên phải → **đã chốt (2026-10-04): dùng khung gốc của Windows**, không frameless. Thanh tiêu đề tự vẽ không có Snap Layouts, không chia màn hình khi kéo vào mép và không có Win+mũi tên; khung gốc có sẵn hết. Thanh tiêu đề được tô cùng màu nền trang.
+A frameless window needs a self-drawn title bar. Window control buttons: "traffic light" buttons on the left (like Mac, unfamiliar to Windows users) or Windows buttons on the right → **decided (2026-10-04): use the native Windows frame**, not frameless. A self-drawn title bar has no Snap Layouts, no split-screen when dragged to an edge and no Win+arrow; the native frame has all of these. The title bar is painted in the same color as the page background.
 
-Hiệu ứng nền mờ thật: Windows 11 có **Mica/Acrylic** qua `DwmSetWindowAttribute(DWMWA_SYSTEMBACKDROP_TYPE)` — gọi được bằng ctypes trên handle cửa sổ; kết hợp CSS `backdrop-filter` cho sidebar.
+Real blurred background effect: Windows 11 has **Mica/Acrylic** via `DwmSetWindowAttribute(DWMWA_SYSTEMBACKDROP_TYPE)` — callable with ctypes on the window handle; combined with CSS `backdrop-filter` for the sidebar.
 
-### 4. Biểu tượng khay hệ thống (tương đương menu bar extra của macOS)
-Rất hợp với tool theo dõi mạng: icon xanh/vàng/đỏ theo trạng thái, bấm vào mở popover nhỏ (ping hiện tại, mất gói, nút "Kết nối lại"). Cần `pystray` + `Pillow`, hoặc tự gọi `Shell_NotifyIcon` qua ctypes.
+### 4. System tray icon (the equivalent of a macOS menu bar extra)
+A very good fit for a network monitoring tool: green/yellow/red icon by status; clicking it opens a small popover (current ping, packet loss, "Reconnect" button). Requires `pystray` + `Pillow`, or calling `Shell_NotifyIcon` directly via ctypes.
 
-### 5. Chi tiết tạo cảm giác native
-- Phím tắt (`Ctrl+,` mở cài đặt, `Ctrl+R` chạy chẩn đoán).
-- Thông báo hệ thống (Windows toast) thay cho popup trong trang.
-- Không có cuộn ngang, không hiện thanh địa chỉ, không menu chuột phải của trình duyệt.
-- Phản hồi tức thì: toggle chuyển trạng thái "đang áp dụng…" rồi xác nhận.
+### 5. Details that create a native feel
+- Keyboard shortcuts (`Ctrl+,` opens settings, `Ctrl+R` runs diagnostics).
+- System notifications (Windows toast) instead of in-page popups.
+- No horizontal scrolling, no visible address bar, no browser right-click menu.
+- Instant feedback: a toggle switches to an "applying…" state, then confirms.
 
-### 6. Quy trình thiết kế
-1. Mockup tĩnh (HTML) cho 4 màn hình + popover khay → duyệt.
-2. Bộ design token (màu, khoảng cách, bo góc, font) dùng chung.
-3. Dựng giao diện thật trên token đó.
+### 6. Design process
+1. Static mockup (HTML) for 4 screens + tray popover → review.
+2. A shared set of design tokens (colors, spacing, corner radius, fonts).
+3. Build the real UI on top of those tokens.
 
-## Mockup và design token (SIC-27, đã duyệt 2026-10-04)
+## Mockup and design tokens (SIC-27, approved 2026-10-04)
 
-- **Tên hiển thị:** "Ambysto Steady" (khóa `app.name`, không dịch; đổi 2026-10-04 từ "Stable Internet Connection", nay là câu mô tả). Ambysto là tên công ty, gốc từ tên khoa học của loài kỳ giông nước (axolotl). "StableInternet" chỉ còn là tên repo/thư mục/task/mutex nội bộ.
-- **Khổ hẹp (< 760px):** thanh bên chuyển thành thanh tab ngang phía trên — điều hướng không bao giờ bị ẩn.
+- **Display name:** "Ambysto Steady" (key `app.name`, not translated; changed on 2026-10-04 from "Stable Internet Connection", which is now the tagline). Ambysto is the company name, derived from the scientific name of the aquatic salamander (axolotl). "StableInternet" is now only the internal repo/folder/task/mutex name.
+- **Narrow width (< 760px):** the sidebar turns into a horizontal tab bar at the top — navigation is never hidden.
 
-- **Mở xem:** `docs/mockup/dist/stableinternet-mockup.html` (một file, mở thẳng bằng trình duyệt). Bản nguồn: `docs/mockup/mockup.html`, `mockup.css`, `mockup.js`; chạy `python scripts/build_mockup.py --bundle` sau khi sửa nguồn hoặc catalog.
-- **Màn hình:** Tổng quan (trạng thái, biểu đồ độ trễ router/Internet, số liệu, sự cố gần đây, thao tác nhanh, watchdog) · Tối ưu (nhóm theo `tweak.group.*`, nhãn rủi ro/Admin/mất mạng, switch, sheet xác nhận cho tweak thử nghiệm) · Chẩn đoán (13 kiểm tra mở rộng được, "Nên làm gì", bufferbloat theo yêu cầu) · Nhật ký (lọc Tất cả/Sự cố/Watchdog/Thay đổi, nhóm theo ngày) · Cài đặt (**Ngôn ngữ**, giao diện Sáng/Tối/Theo Windows, chạy cùng Windows, thông báo, watchdog) · popover khay. Thanh trên cùng (chỉ có trong mockup) giả lập mất mạng và bật/tắt popover.
-- **Chữ:** toàn bộ lấy từ `app/locales/*.json` (khóa `ui.*` và chính các thông điệp `diag.*`/`event.*`/`watchdog.*` của backend), đổi ngôn ngữ trong Cài đặt có hiệu lực ngay. Dữ liệu mẫu lấy từ máy phát triển ngày 2026-10-04.
-- **Design token:** `web/tokens.css` — font (Inter → Segoe UI Variable), cỡ chữ 11/12/13/15/22/28, lưới 4 pt, bo góc 10 (nhóm/cửa sổ) và 6 (control), bảng màu sáng/tối theo ngữ nghĩa (`--ok/--warn/--bad/--info`, `--surface`, `--separator`…), chuyển động ngắn và tắt khi `prefers-reduced-motion`. Dark mode theo hệ thống, ép bằng `data-theme`. Giao diện thật (SIC-28) dùng lại file này.
-- **Chưa có trong mockup:** font Inter đóng gói (đang dùng font hệ thống), hiệu ứng Mica thật của cửa sổ, biểu tượng khay.
+- **To view:** `docs/mockup/dist/stableinternet-mockup.html` (a single file, open it directly in a browser). Sources: `docs/mockup/mockup.html`, `mockup.css`, `mockup.js`; run `python scripts/build_mockup.py --bundle` after editing the sources or the catalog.
+- **Screens:** Overview (status, router/Internet latency chart, metrics, recent outages, quick actions, watchdog) · Optimize (grouped by `tweak.group.*`, risk/Admin/network-drop labels, switches, confirmation sheet for experimental tweaks) · Diagnostics (13 expandable checks, "What to do", on-demand bufferbloat) · Log (filter All/Outages/Watchdog/Changes, grouped by day) · Settings (**Language**, Light/Dark/Same as Windows appearance, start with Windows, notifications, watchdog) · tray popover. The top bar (mockup only) simulates a network outage and toggles the popover.
+- **Text:** all taken from `app/locales/*.json` (keys `ui.*` and the backend's own `diag.*`/`event.*`/`watchdog.*` messages); changing the language in Settings takes effect immediately. Sample data taken from the development machine on 2026-10-04.
+- **Design tokens:** `web/tokens.css` — font (Inter → Segoe UI Variable), font sizes 11/12/13/15/22/28, 4 pt grid, corner radius 10 (groups/windows) and 6 (controls), semantic light/dark palette (`--ok/--warn/--bad/--info`, `--surface`, `--separator`…), short motion that is disabled under `prefers-reduced-motion`. Dark mode follows the system, forced with `data-theme`. The real UI (SIC-28) reuses this file.
+- **Not yet in the mockup:** bundled Inter font (system font used for now), the window's real Mica effect, the tray icon.

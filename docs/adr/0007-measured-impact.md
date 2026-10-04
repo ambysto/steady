@@ -1,24 +1,24 @@
-# ADR-0007: Đo hiệu quả của một thay đổi bằng số liệu monitor trước/sau
+# ADR-0007: Measuring the impact of a change with before/after monitor data
 
-- **Trạng thái:** Accepted
-- **Ngày:** 2026-10-04
+- **Status:** Accepted
+- **Date:** 2026-10-04
 
-## Bối cảnh
+## Context
 
-Các tool "tăng tốc mạng" (IObit Internet Booster, TCP Optimizer…) đổi hàng loạt giá trị hệ thống mà không chứng minh được gì. Monitor của ta chạy 24/7 và lưu số liệu theo phút, nên có thể cho người dùng thấy một thay đổi — bật một tweak, hay một việc làm bằng tay như xoay ăng-ten — có làm mạng tốt hơn không. Nguy cơ là đưa ra kết luận sai từ quá ít dữ liệu hoặc từ hai khoảng thời gian không so sánh được (ban ngày với ban đêm, có lúc máy ngủ).
+"Network booster" tools (IObit Internet Booster, TCP Optimizer…) change large numbers of system values without proving anything. Our monitor runs 24/7 and stores per-minute data, so it can show the user whether a change — enabling a tweak, or something done by hand such as rotating an antenna — actually made the network better. The risk is drawing wrong conclusions from too little data or from two time periods that are not comparable (daytime versus nighttime, periods when the machine was asleep).
 
-## Quyết định
+## Decision
 
-1. **Hai cửa sổ dài bằng nhau** quanh thời điểm thay đổi `t`: sau = `[t, min(bây giờ, t + 24h, lúc thay đổi bị hoàn tác))`, trước = cùng độ dài ngay trước `t`. Đủ 24h mỗi bên thì hai cửa sổ phủ cùng các giờ trong ngày; ngắn hơn thì kết quả gắn nhãn **sơ bộ**.
-2. **Chỉ tính thời gian có giám sát:** số phút có số liệu ping. Khoảng máy ngủ/monitor dừng không được tính là tốt hay xấu; tần suất được quy về "mỗi ngày giám sát".
-3. **Chỉ số:** số sự cố (`router_down`, `internet_down`) mỗi ngày, phút mất kết nối mỗi ngày, % mất gói tới router, % phút đường truyền sụp (Rx ≤ 30 Mbps kèm mất gói ≥ 5%, như kiểm tra #13).
-4. **Ngưỡng tối thiểu:** cần ≥ 2 giờ giám sát mỗi bên, nếu không kết quả là `collecting` (hoặc `no_baseline` khi không có số liệu trước thay đổi). Một chỉ số chỉ được gọi là tốt hơn khi giảm ít nhất một nửa **và** giá trị trước đủ lớn để có ý nghĩa (≥ 3 sự cố, ≥ 5 phút mất kết nối, ≥ 1% mất gói, ≥ 5% phút sụp); xấu hơn theo luật đối xứng. Còn lại là "không khác biệt rõ".
-5. **Kết luận chung:** `better` / `worse` / `mixed` / `no_change`. Luôn kèm câu nhắc rằng đây là **tương quan đo được, không phải chứng minh nhân quả** — router, giờ cao điểm, thiết bị khác cũng có thể là nguyên nhân.
-6. Thời điểm thay đổi lấy từ nhật ký (`tweak_enabled` có `tweak_id`, `manual_step_done`); với tweak bật trước khi có nhật ký đó thì dùng `captured_at` trong `backup.json` (chỉ khi bản sao lưu do tool tự chụp).
+1. **Two windows of equal length** around the change time `t`: after = `[t, min(now, t + 24h, when the change was reverted))`, before = the same length immediately before `t`. With a full 24h on each side, the two windows cover the same hours of the day; if shorter, the result is labeled **preliminary**.
+2. **Count only monitored time:** the number of minutes with ping data. Periods when the machine was asleep or the monitor was stopped are not counted as good or bad; frequencies are normalized to "per monitored day".
+3. **Metrics:** number of outages (`router_down`, `internet_down`) per day, minutes of lost connectivity per day, % packet loss to the router, % of minutes with a collapsed link (Rx ≤ 30 Mbps together with packet loss ≥ 5%, as in check #13).
+4. **Minimum thresholds:** ≥ 2 hours of monitoring are required on each side, otherwise the result is `collecting` (or `no_baseline` when there is no data from before the change). A metric is called better only when it drops by at least half **and** the before value is large enough to be meaningful (≥ 3 outages, ≥ 5 minutes of lost connectivity, ≥ 1% packet loss, ≥ 5% collapsed minutes); worse follows the symmetric rule. Everything else is "no clear difference".
+5. **Overall verdict:** `better` / `worse` / `mixed` / `no_change`. Always accompanied by a reminder that this is a **measured correlation, not proof of causation** — the router, peak hours, or other devices could also be the cause.
+6. The change time is taken from the log (`tweak_enabled` with `tweak_id`, `manual_step_done`); for a tweak enabled before that log existed, `captured_at` in `backup.json` is used (only when the backup was captured by the tool itself).
 
-## Hệ quả
+## Consequences
 
-- ✅ Người dùng thấy bằng chứng cụ thể ("sự cố: 18 → 2 mỗi ngày") thay vì lời hứa.
-- ✅ Không cần thêm dữ liệu hay bảng mới: dùng `minute_stats`, `wifi_stats`, `events` sẵn có.
-- ⚠️ Hai thay đổi gần nhau (< 24h) thì cửa sổ chồng lên nhau và không tách được tác động — giao diện nên nói rõ điều này.
-- ⚠️ Mạng vốn đã ổn thì phần lớn kết quả sẽ là "không khác biệt rõ" — đó là đúng, không phải lỗi.
+- ✅ Users see concrete evidence ("outages: 18 → 2 per day") instead of promises.
+- ✅ No additional data or new tables are needed: the existing `minute_stats`, `wifi_stats`, `events` are used.
+- ⚠️ Two changes close together (< 24h) have overlapping windows and their effects cannot be separated — the UI should state this clearly.
+- ⚠️ If the network is already stable, most results will be "no clear difference" — that is correct, not a bug.
