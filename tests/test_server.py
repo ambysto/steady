@@ -580,6 +580,9 @@ class ElevationTests(unittest.TestCase):
     @unittest.skipUnless(sys.platform == "win32", "ShellExecuteEx")
     def test_real_shell_execute_round_trip_without_elevation(self):
         # verb "open" runs the same child unelevated: it must report "no admin" through the result file.
+        # Run as Administrator (CI runners are), the child would really apply the tweak: never do that.
+        if __import__("app.winutil", fromlist=["is_admin"]).is_admin():
+            self.skipTest("running as admin: the child would change the machine")
         res = elevation.run_elevated("tweak-enable", "wifi_power_saving", verb="open", timeout_s=60)
         self.assertFalse(res.ok)
         self.assertIsNotNone(res.result, res.message)

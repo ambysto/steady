@@ -1,4 +1,5 @@
 import copy
+import os
 import sys
 import unittest
 
@@ -159,6 +160,7 @@ class ToastScriptTests(unittest.TestCase):
         self.assertEqual(send_toast("a", "b", ps=lambda s, **k: "\r\nEnabled\r\n"), "Enabled")
 
     @unittest.skipUnless(sys.platform == "win32", "WinRT toast API")
+    @unittest.skipIf(os.environ.get("CI"), "hosted CI runners have no interactive session for notifications")
     def test_real_powershell_builds_the_toast_without_showing_it(self):
         # show=False: loads the WinRT types, builds the XML from base64, creates the notifier. No pop-up.
         for s in self.NASTY:
