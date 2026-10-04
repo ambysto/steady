@@ -78,6 +78,11 @@ Chạy test: `python -m unittest discover -s tests -t .`
 
 Bắt đầu từ [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Mọi quyết định kiến trúc được ghi tại [docs/adr/](docs/adr/).
 
+## Ký số và quyền riêng tư
+
+- [Code signing policy](CODE_SIGNING.md) — ký số qua SignPath Foundation (đang chờ duyệt).
+- [Privacy policy](PRIVACY.md) — không thu thập dữ liệu; liệt kê mọi kết nối app tạo ra.
+
 ## Giấy phép
 
 Copyright (C) 2026 Ambysto. Phát hành theo **GNU General Public License v3.0**, xem [LICENSE](LICENSE). Đóng góp: xem [CONTRIBUTING.md](CONTRIBUTING.md) và [CLA.md](CLA.md).
