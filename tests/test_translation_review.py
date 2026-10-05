@@ -16,12 +16,14 @@ ENGLISH = {
     "ui.live.rtt": "{value} ms",
     "ui.settings.history_minutes": {"one": "{count} minute stored", "other": "{count} minutes stored"},
     "apple.diag.ping.no_data": "Not enough measurements yet (needs ≥ {count} samples)",
+    "diag.ping.recent": " · last 5 minutes: {loss:.2f}% lost",
 }
 GERMAN = {
     "ui.nav.history": "Verlauf",
     "ui.live.rtt": "{value} ms",
     "ui.settings.history_minutes": {"one": "{count} Minute gespeichert", "other": "{count} Minuten gespeichert"},
     "apple.diag.ping.no_data": "Noch zu wenige Messungen (mindestens {count})",
+    "diag.ping.recent": " · letzte 5 Minuten: {loss:.2f}% verloren",
 }
 
 
@@ -57,7 +59,8 @@ class TranslationReviewTests(unittest.TestCase):
         _, rows = self.sheet(list(ENGLISH))
         self.assertEqual([(r["key"], r["form"]) for r in rows],
                          [("ui.nav.history", ""), ("ui.live.rtt", ""), ("ui.settings.history_minutes", "one"),
-                          ("ui.settings.history_minutes", "other"), ("apple.diag.ping.no_data", "")])
+                          ("ui.settings.history_minutes", "other"), ("apple.diag.ping.no_data", ""),
+                          ("diag.ping.recent", "")])
         plural = rows[3]
         self.assertEqual((plural["english"], plural["translation"], plural["placeholders"]),
                          ("{count} minutes stored", "{count} Minuten gespeichert", "{count}"))
@@ -90,6 +93,34 @@ class TranslationReviewTests(unittest.TestCase):
         self.assertEqual(len(problems), 2)
         self.assertIn("ui.live.rtt", problems[0])
         self.assertIn("should be ['count']", problems[1])
+
+    def test_a_text_joined_to_another_keeps_its_leading_space(self):
+        path, rows = self.sheet(["diag.ping.recent"])
+        rows[0]["suggestion"] = "· in den letzten 5 Minuten: {loss:.2f}% verloren  "   # the spreadsheet trimmed it
+        self.write(path, rows)
+        review.apply("de", review.read_suggestions(path), self.locales)
+        catalog = json.loads((self.locales / "de.json").read_text(encoding="utf-8"))
+        self.assertEqual(catalog["diag.ping.recent"], " · in den letzten 5 Minuten: {loss:.2f}% verloren")
+
+    def test_sheets_saved_with_semicolons_are_read(self):
+        path, rows = self.sheet(["ui.nav.history"])
+        rows[0]["suggestion"] = "Verlauf; Messungen"
+        with path.open("w", encoding="utf-8-sig", newline="") as f:   # as Excel saves it in German
+            writer = csv.DictWriter(f, fieldnames=review.COLUMNS, delimiter=";")
+            writer.writeheader()
+            writer.writerows(rows)
+        self.assertEqual(review.read_suggestions(path), {"ui.nav.history": {"": "Verlauf; Messungen"}})
+
+    def test_a_sheet_that_cannot_be_read_stops_with_a_message(self):
+        path = Path(self.dir.name) / "de.csv"
+        path.write_bytes("key,form,suggestion\nui.nav.history,,Übersicht\n".encode("latin-1"))
+        with self.assertRaises(SystemExit) as stop:
+            review.read_suggestions(path)
+        self.assertIn("CSV UTF-8", str(stop.exception))
+        path.write_text("Schlüssel;Vorschlag\nui.nav.history;Verlauf\n", encoding="utf-8")
+        with self.assertRaises(SystemExit) as stop:
+            review.read_suggestions(path)
+        self.assertIn("columns", str(stop.exception))
 
     def test_unknown_keys_and_forms_are_refused(self):
         problems = review.check("de", {"ui.no.such.key": {"": "x"}, "ui.nav.history": {"one": "x"}}, self.locales)

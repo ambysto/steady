@@ -28,6 +28,11 @@ Each `<language>.csv` (UTF-8, opens in Excel, Numbers or Google Sheets) has one 
 
 The reviewer writes a corrected text in **suggestion**, and leaves it empty when the translation is right.
 
+Spreadsheet tips:
+- **Excel in a language that separates CSV columns with ";"** (German, French…) may put everything in column A. Use Data > From Text/CSV to open the sheet instead.
+- **Save as "CSV UTF-8".** Sheets saved with ";" or tabs are read as well.
+- Leading and trailing spaces in a suggestion do not matter: the English text's are kept, which matters for texts joined to others, such as " · last 5 minutes".
+
 Then:
 
 ```bash

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import io
 import json
 import re
 import subprocess
@@ -104,14 +105,34 @@ def export(langs: list[str], keys: list[str], out: Path, locales: Path = LOCALES
 
 
 def read_suggestions(path: Path) -> dict[str, dict[str, str]]:
-    """key -> {form: suggestion}; form is "" for a plain key."""
+    """key -> {form: suggestion}; form is "" for a plain key. A spreadsheet may save the sheet
+    with ";" or tabs between columns (Excel does in German or French), which is accepted; a sheet
+    without the expected columns or not in UTF-8 stops with a message rather than applying nothing."""
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        raise SystemExit(f"{path}: not UTF-8; save it as \"CSV UTF-8\" and try again") from None
+    header = text.split("\n", 1)[0]
+    delimiter = max(",;\t", key=header.count)
+    reader = csv.DictReader(io.StringIO(text, newline=""), delimiter=delimiter)
+    if not {"key", "form", "suggestion"} <= set(reader.fieldnames or []):
+        raise SystemExit(f"{path}: the columns key, form and suggestion are missing; "
+                         "export a new sheet and keep its first row")
     found: dict[str, dict[str, str]] = {}
-    with path.open(encoding="utf-8-sig", newline="") as f:
-        for row in csv.DictReader(f):
-            text = (row.get("suggestion") or "").strip()
-            if text:
-                found.setdefault(row["key"], {})[row.get("form") or ""] = text
+    for row in reader:
+        suggestion = row.get("suggestion") or ""
+        if suggestion.strip():
+            found.setdefault(row["key"], {})[row.get("form") or ""] = suggestion
     return found
+
+
+def with_edges_of(english: str, suggestion: str) -> str:
+    """The suggestion with the English text's leading and trailing whitespace: some texts are
+    joined to others (" · last 5 minutes"), and a spreadsheet easily adds or drops a space."""
+    core = english.strip()
+    lead = english[:len(english) - len(english.lstrip())] if core else ""
+    trail = english[len(english.rstrip()):] if core else ""
+    return lead + suggestion.strip() + trail
 
 
 def check(lang: str, suggestions: dict[str, dict[str, str]], locales: Path = LOCALES) -> list[str]:
@@ -139,9 +160,11 @@ def apply(lang: str, suggestions: dict[str, dict[str, str]], locales: Path = LOC
     raw = path.read_bytes().decode("utf-8")
     newline = "\r\n" if "\r\n" in raw else "\n"
     lines = raw.split(newline)
-    catalog = json.loads(raw)
+    catalog, english = json.loads(raw), load(DEFAULT_LANGUAGE, locales)
     changed = 0
     for key, forms in suggestions.items():
+        source = english[key]
+        forms = {form: with_edges_of(source[form] if form else source, text) for form, text in forms.items()}
         value = catalog.get(key)
         if isinstance(value, dict) or any(forms):
             value = dict(value) if isinstance(value, dict) else {}
