@@ -24,6 +24,10 @@
 - Names of variables, functions, classes, parameters, config keys and translation keys, and comments in code, are **in English** — no Vietnamese, not even without diacritics. `tests/test_naming.py` checks this automatically.
 - Text displayed to users (UI, diagnostics, toasts, log) goes through the translation catalogs `app/locales/<code>.json`, English by default ([ADR-0006](docs/adr/0006-i18n.md)). All documentation (README, CHANGELOG, `docs/`, ADRs, CLAUDE.md) is written in English; only the user-facing UI catalogs in `app/locales` are translated.
 
+## Line endings
+
+The repository stores **LF**, on Windows and on a Mac alike, and `.gitattributes` enforces it (only `.bat` and `.cmd` files are CRLF). Do not set `core.autocrlf` on any machine. If an editor or a script rewrites a whole file and `git diff` shows every line changed, restore the line endings with `git add --renormalize .` and check that `git diff --cached --ignore-space-at-eol` shows only the real change. When merging a branch that was started before this rule, use `git merge -X renormalize main`.
+
 ## Commits
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
