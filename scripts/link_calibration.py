@@ -16,6 +16,7 @@ Without --period, every hour that has minutes is a period. Times are local.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sqlite3
 import sys
 from datetime import datetime
@@ -28,7 +29,8 @@ MIN_SENT = 30                      # router pings needed in a minute, as join_mi
 
 def minutes(db: Path) -> list[tuple[int, int, float, float]]:
     """(ts, rssi, rate Mbps, router loss %) per connected Wi-Fi minute with enough router pings."""
-    with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+    # `with sqlite3.connect()` only ends a transaction; closing is needed to release the file on Windows.
+    with contextlib.closing(sqlite3.connect(f"file:{db}?mode=ro", uri=True)) as conn:
         rows = conn.execute("""
             SELECT w.ts, w.rssi, COALESCE(w.rx_mbps, w.tx_mbps), 100.0 * m.lost / m.sent
             FROM wifi_stats w JOIN minute_stats m ON m.ts = w.ts AND m.target = 'router'
