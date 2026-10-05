@@ -56,6 +56,7 @@ While the Overview screen is open, `LiveMonitor` measures with the Windows monit
 - Minutes are stored in SQLite (`Application Support/metrics.sqlite`, the `minute_stats` table of the Windows app, 30 days, excluded from backups; [ADR-0011](../docs/adr/0011-apple-measurement-history.md)), so check #5 keeps the last hour across launches. A partial minute is saved when measuring stops and merged if the app reopens within the same minute.
 - ICMP uses an unprivileged datagram socket **connected** to the target: the macOS App Sandbox refuses to read replies on an unconnected ICMP socket (`EPERM`) unless the app also asks for `network.server`.
 - Pinging the router is local network access: iOS and macOS ask the user once, with the `NSLocalNetworkUsageDescription` text generated from `ui.permission.local_network`.
+- When the route changes (connected or not, the preferred interface such as `en0` → `utun5` when a VPN starts, the router), the live numbers start afresh so they do not mix two routes. The hourly history and check #5 keep those minutes for now (issue #2).
 - The iOS Simulator does not report the router address, IPv4/IPv6 or DNS support of the path, so the router row is missing there; Internet pings and TCP probes work.
 
 ## Diagnosis rules

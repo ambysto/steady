@@ -53,6 +53,7 @@ public final class LiveMonitor {
     }
 
     public private(set) var samples: [String: [Double?]] = [:]
+    private var network: String?
     public private(set) var minutes: [MinuteAggregator.Minute] = []
     private var aggregator = MinuteAggregator()
     /// One line per closed minute and target (`log stream --predicate 'subsystem == "com.ambysto.steady"'`):
@@ -77,6 +78,17 @@ public final class LiveMonitor {
 
     public var targets: [Target] {
         (routerAddress.map { [Target(id: Self.router, address: $0)] } ?? []) + Self.internetTargets + Self.probeTargets
+    }
+
+    /// Starts the live numbers afresh when the network changes (a VPN turned on or off, another
+    /// Wi‑Fi network): mixing samples from two routes shows loss and jitter that belong to
+    /// neither. `network` identifies the route; the first call only records it. The per-minute
+    /// history, and so check #5, is not affected.
+    public func networkChanged(to network: String) {
+        defer { self.network = network }
+        guard let previous = self.network, previous != network else { return }
+        samples.removeAll()
+        Self.log.info("network changed: live samples cleared")
     }
 
     public func stats(for target: Target) -> LiveStats {

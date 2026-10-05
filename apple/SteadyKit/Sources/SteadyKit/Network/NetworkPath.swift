@@ -35,6 +35,12 @@ public struct NetworkPath: Equatable, Sendable {
     /// Names of the interfaces the path can use, preferred first ("en0", "utun4"…).
     public var interfaces: [String]
 
+    /// Changes when traffic takes another route: connected or not, the preferred interface
+    /// ("en0" → "utun5" when a VPN starts), the router.
+    public var route: String {
+        "\(status)|\(interfaces.first ?? "")|\(routerIPv4 ?? "")"
+    }
+
     /// The first IPv4 router address: what the monitor pings (ICMP is IPv4 only, as on Windows).
     public var routerIPv4: String? {
         gateways.first { $0.contains(".") && !$0.contains(":") }

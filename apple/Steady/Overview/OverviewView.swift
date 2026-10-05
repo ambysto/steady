@@ -95,6 +95,7 @@ struct OverviewView: View {
         .task {
             for await update in NetworkPath.updates() {
                 path = update
+                monitor.networkChanged(to: update.route)
                 monitor.routerAddress = update.routerIPv4
                 // Turning a VPN on or off changes the path, so check #8 follows it.
                 vpn = VPNCheck.evaluate(VPNReader.adapters(pathInterfaces: update.interfaces))

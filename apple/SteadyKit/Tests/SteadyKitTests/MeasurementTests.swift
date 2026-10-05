@@ -258,3 +258,25 @@ struct VPNReaderTests {
         #expect(VPNCheck.evaluate([]).summary == Message("diag.vpn.none"))
     }
 }
+
+@MainActor
+struct NetworkChangeTests {
+    @Test func liveSamplesRestartWhenTheRouteChangesButHistoryStays() {
+        let clock = LiveMonitorTests.FakeClock()
+        let monitor = LiveMonitor(now: { clock.now })
+        let wifi = NetworkPath(status: .connected, link: .wifi, gateways: ["192.0.2.1"], interfaces: ["en0"])
+        let vpn = NetworkPath(status: .connected, link: .other, gateways: ["192.0.2.1"], interfaces: ["utun5", "en0"])
+        monitor.networkChanged(to: wifi.route)
+        for _ in 0..<61 {
+            monitor.record([("cloudflare", 20)])
+            clock.advance(1)
+        }
+        #expect(monitor.minutes.count == 1)
+        monitor.networkChanged(to: wifi.route)           // the same route: nothing happens
+        #expect(monitor.samples["cloudflare"]?.count == 60)
+        monitor.networkChanged(to: vpn.route)            // a VPN takes the traffic
+        #expect(monitor.samples.isEmpty)
+        #expect(monitor.minutes.count == 1)
+        #expect(wifi.route != vpn.route)
+    }
+}
