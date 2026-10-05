@@ -15,6 +15,7 @@ struct PathStatusView: View {
                     Image(systemName: symbol)
                         .font(.title)
                         .foregroundStyle(color)
+                        .accessibilityHidden(true)   // the text beside it says the same
                 }
             }
             .frame(width: 40)

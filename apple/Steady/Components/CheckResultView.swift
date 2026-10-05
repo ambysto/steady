@@ -7,14 +7,28 @@ struct CheckResultView<Action: View>: View {
     let text: Localizer
     @ViewBuilder var action: () -> Action
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            // At accessibility text sizes the status goes under the title, which otherwise
+            // breaks mid-word beside it.
+            if typeSize.isAccessibilitySize {
                 Text(text(result.title))
                     .font(.headline)
-                Spacer()
-                StatusLabel(status: result.status, text: text)
-                action()
+                HStack {
+                    StatusLabel(status: result.status, text: text)
+                    Spacer()
+                    action()
+                }
+            } else {
+                HStack {
+                    Text(text(result.title))
+                        .font(.headline)
+                    Spacer()
+                    StatusLabel(status: result.status, text: text)
+                    action()
+                }
             }
             Text(text(result.summary))
             if result.advice != .empty {

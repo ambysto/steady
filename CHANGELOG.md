@@ -89,6 +89,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Product renamed to Ambysto Steady** ("Stable Internet Connection" is now the tagline). Renamed accordingly: exe `Ambysto Steady.exe`, install folder `%LOCALAPPDATA%\Programs\Ambysto Steady`, shortcuts, the Apps & features entry (key `AmbystoSteady`, Publisher "Ambysto"), task `Ambysto Steady Monitor` (when registering, it removes the old task `StableInternet Monitor` and waits for the old monitor to exit, to avoid contention over the mutex), zip `AmbystoSteady-<version>-win64.zip`, User-Agent `AmbystoSteady/<version>`, 9 languages and documentation. The internal name (`StableInternet`: data folder, mutex, environment variables) is unchanged, so no data has to be migrated.
 
 ### Fixed
+- **Apple app: accessibility and other languages** (SIC-75), checked on the iPhone Simulator in German at the largest accessibility text size and in Japanese:
+  - Measurement rows and check card headers stack at accessibility text sizes instead of breaking words mid-way ("Inter-net", "Ping-Quali-tät"). The Overview summary and the measurement details put one part per line there.
+  - Chart axes cap their text so labels no longer overlap. Chart points read "Internet, 20:38: 47 ms" to VoiceOver, and the Wi‑Fi symbol beside the "Wi‑Fi" text is hidden from it.
+  - A key missing in a language now falls back to English, as on Windows; it showed as "app.name" in Settings in every language but English.
 - Apple app: when a VPN is up and the system refuses to reach the router, the Overview names the VPN ("some VPN apps can allow local network access") instead of saying local network access is off; on a real iPhone a VPN, not the permission, caused the refusal (SIC-73). The problem report says "router refused, vpn up". New key in all 9 catalogs.
 - **Apple app on a real iPhone** (SIC-67), two bugs the Simulator could not show:
   - On mobile data the carrier's gateway was taken for the router, pinged (it never answers: "100% lost") and shown with its addresses. Check #5 would have blamed the local network. Mobile data now has no router to measure, show or use for the DNS check.
