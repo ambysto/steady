@@ -667,6 +667,7 @@
   "ui.path.reason.cellular_denied": "Mobile data is turned off for this app",
   "ui.path.reason.wifi_denied": "Wi‑Fi is turned off for this app",
   "ui.path.reason.local_network_denied": "Local network access is turned off for this app",
+  "ui.path.reason.vpn_blocks_router": "The VPN keeps the router out of reach, so it is not measured (some VPN apps can allow local network access)",
   "ui.path.reason.vpn_inactive": "The required VPN is not connected",
 
   "ui.live.measuring": "Measuring…",

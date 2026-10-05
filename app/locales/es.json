@@ -665,6 +665,7 @@
   "ui.path.reason.cellular_denied": "Los datos móviles están desactivados para esta app",
   "ui.path.reason.wifi_denied": "El Wi‑Fi está desactivado para esta app",
   "ui.path.reason.local_network_denied": "El acceso a la red local está desactivado para esta app",
+  "ui.path.reason.vpn_blocks_router": "La VPN deja el router fuera de alcance, así que no se mide (algunas apps de VPN permiten el acceso a la red local)",
   "ui.path.reason.vpn_inactive": "La VPN necesaria no está conectada",
 
   "ui.live.measuring": "Midiendo…",

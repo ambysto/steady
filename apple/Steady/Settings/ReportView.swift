@@ -80,7 +80,7 @@ struct ReportView: View {
         if path.isConstrained { parts.append("low data mode") }
         parts.append(path.supportsIPv4 ? "ipv4" : "no ipv4")
         parts.append(path.supportsIPv6 ? "ipv6" : "no ipv6")
-        if model.monitor.routerRefused { parts.append("local network refused") }
+        if model.monitor.routerRefused { parts.append(model.vpnUp ? "router refused, vpn up" : "local network refused") }
         return parts.joined(separator: ", ")
     }
 

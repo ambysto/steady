@@ -52,7 +52,7 @@ struct LocalizationTests {
         // Keys OverviewView renders directly.
         var used: Set<String> = ["ui.path.checking", "ui.path.connection", "ui.path.ip", "ui.path.dns",
                                  "ui.overview.router", "ui.overview.internet", "ui.overview.latency",
-                                 "ui.overview.see_all", "ui.nav.overview", "ui.live.tcp", "ui.live.window_note",
+                                 "ui.overview.see_all", "ui.nav.overview", "ui.path.reason.vpn_blocks_router", "ui.live.tcp", "ui.live.window_note",
                                  "ui.live.measuring", "ui.live.no_reply", "ui.live.rtt", "ui.live.loss",
                                  "ui.live.jitter", "ui.diag.run", "ui.diag.running", "ui.diag.on_demand", "ui.diag.count.info",
                                  "ui.diag.bufferbloat_run", "ui.diag.bufferbloat_confirm", "ui.sheet.cancel",

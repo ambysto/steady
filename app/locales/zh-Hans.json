@@ -665,6 +665,7 @@
   "ui.path.reason.cellular_denied": "此应用的蜂窝数据已关闭",
   "ui.path.reason.wifi_denied": "此应用的 Wi‑Fi 已关闭",
   "ui.path.reason.local_network_denied": "此应用的本地网络访问已关闭",
+  "ui.path.reason.vpn_blocks_router": "VPN 使路由器无法访问，因此不测量路由器（部分 VPN 应用可允许访问本地网络）",
   "ui.path.reason.vpn_inactive": "所需的 VPN 未连接",
 
   "ui.live.measuring": "正在测量…",

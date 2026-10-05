@@ -21947,6 +21947,65 @@
         }
       }
     },
+    "ui.path.reason.vpn_blocks_router" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das VPN macht den Router unerreichbar, daher wird er nicht gemessen (manche VPN-Apps können den Zugriff auf das lokale Netzwerk erlauben)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The VPN keeps the router out of reach, so it is not measured (some VPN apps can allow local network access)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La VPN deja el router fuera de alcance, así que no se mide (algunas apps de VPN permiten el acceso a la red local)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le VPN rend le routeur inaccessible, il n'est donc pas mesuré (certaines apps VPN peuvent autoriser l'accès au réseau local)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN によりルーターに到達できないため、ルーターは測定しません（ローカルネットワークへのアクセスを許可できる VPN アプリもあります）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 때문에 라우터에 연결할 수 없어 측정하지 않음 (일부 VPN 앱은 로컬 네트워크 접근을 허용할 수 있음)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A VPN deixa o roteador inacessível, por isso ele não é medido (alguns apps de VPN permitem o acesso à rede local)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN chặn đường tới router nên không đo router (một số ứng dụng VPN cho phép truy cập mạng cục bộ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 使路由器无法访问，因此不测量路由器（部分 VPN 应用可允许访问本地网络）"
+          }
+        }
+      }
+    },
     "ui.path.reason.vpn_inactive" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -665,6 +665,7 @@
   "ui.path.reason.cellular_denied": "このアプリのモバイルデータ通信はオフになっています",
   "ui.path.reason.wifi_denied": "このアプリの Wi‑Fi はオフになっています",
   "ui.path.reason.local_network_denied": "このアプリのローカルネットワークへのアクセスはオフになっています",
+  "ui.path.reason.vpn_blocks_router": "VPN によりルーターに到達できないため、ルーターは測定しません（ローカルネットワークへのアクセスを許可できる VPN アプリもあります）",
   "ui.path.reason.vpn_inactive": "必要な VPN が接続されていません",
 
   "ui.live.measuring": "測定中…",

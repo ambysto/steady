@@ -665,6 +665,7 @@
   "ui.path.reason.cellular_denied": "Dữ liệu di động đang bị tắt cho ứng dụng này",
   "ui.path.reason.wifi_denied": "Wi‑Fi đang bị tắt cho ứng dụng này",
   "ui.path.reason.local_network_denied": "Quyền truy cập mạng cục bộ đang bị tắt cho ứng dụng này",
+  "ui.path.reason.vpn_blocks_router": "VPN chặn đường tới router nên không đo router (một số ứng dụng VPN cho phép truy cập mạng cục bộ)",
   "ui.path.reason.vpn_inactive": "VPN bắt buộc chưa được kết nối",
 
   "ui.live.measuring": "Đang đo…",
