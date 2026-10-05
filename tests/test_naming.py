@@ -70,7 +70,8 @@ class NamingRuleTests(unittest.TestCase):
     def test_python_identifiers_are_english(self):
         hits = []
         for path in sorted(list((ROOT / "app").rglob("*.py")) + list((ROOT / "tests").rglob("*.py"))
-                           + list((ROOT / "scripts").rglob("*.py*"))):
+                           + list((ROOT / "scripts").rglob("*.py")) + list((ROOT / "scripts").rglob("*.pyw"))):
+            # not "*.py*": that also matches the .pyc files tests leave in scripts/__pycache__
             if path.name == "test_naming.py":
                 continue  # this file lists Vietnamese words on purpose
             hits += [(str(path.relative_to(ROOT)), line, name) for line, name in python_names(path)
