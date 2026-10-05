@@ -59,12 +59,13 @@ def hourly(data: list[tuple[int, int, float, float]]) -> list[tuple[str, int, in
 
 
 def table(data: list[tuple[int, int, float, float]], periods: list[tuple[str, int, int]]) -> list[list[str]]:
-    header = ["period", "minutes", "median RSSI", "median rate"] + [f"≤{r} & loss≥5%" for r in RATES]
+    # ASCII only: a Windows pipe or redirect uses the ANSI code page, which cannot print "≤", "≥" or "–".
+    header = ["period", "minutes", "median RSSI", "median rate"] + [f"<={r} & loss>=5%" for r in RATES]
     out = [header]
     for label, start, end in periods:
         part = [m for m in data if start <= m[0] < end]
         if not part:
-            out.append([label, "0"] + ["–"] * (len(header) - 2))
+            out.append([label, "0"] + ["-"] * (len(header) - 2))
             continue
         rssi = sorted(m[1] for m in part)[len(part) // 2]
         rate = sorted(m[2] for m in part)[len(part) // 2]

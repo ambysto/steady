@@ -1,6 +1,7 @@
 """scripts/link_calibration.py: the share of bad minutes per period and rate threshold."""
 import contextlib
 import importlib.util
+import io
 import sqlite3
 import tempfile
 import unittest
@@ -51,7 +52,8 @@ class LinkCalibrationTests(unittest.TestCase):
         self.assertEqual(rows[1][:4], ["desk", "20", "-55 dBm", "720 Mbps"])
         self.assertEqual(set(rows[1][4:]), {"0.0%"})
         far = dict(zip(rows[0], rows[2]))
-        self.assertEqual((far["≤12 & loss≥5%"], far["≤24 & loss≥5%"], far["≤30 & loss≥5%"]), ("0.0%", "50.0%", "50.0%"))
+        self.assertEqual((far["<=12 & loss>=5%"], far["<=24 & loss>=5%"], far["<=30 & loss>=5%"]),
+                         ("0.0%", "50.0%", "50.0%"))
 
     def test_without_periods_every_hour_is_one(self):
         self.assertEqual([p[0] for p in calibration.hourly(calibration.minutes(self.db))],
@@ -60,6 +62,17 @@ class LinkCalibrationTests(unittest.TestCase):
     def test_a_bad_period_is_refused(self):
         with self.assertRaises(Exception):
             calibration.parse_period("late=2026-10-06 10:00..09:00")
+
+    def test_the_table_prints_through_a_windows_pipe(self):
+        # On Windows a pipe or a redirect uses the ANSI code page (cp1252), which has neither "≤",
+        # "≥" nor "–". `script | more` and `script > table.txt` used to stop with UnicodeEncodeError.
+        # The second run has a period without data, which prints a placeholder instead of numbers.
+        for extra in ([], ["--period", "empty=2026-10-07 09:00..10:00"]):
+            pipe = io.TextIOWrapper(io.BytesIO(), encoding="cp1252", errors="strict")
+            with contextlib.redirect_stdout(pipe):
+                self.assertEqual(calibration.main([str(self.db), *extra]), 0)
+            pipe.flush()
+            self.assertIn(b"period", pipe.buffer.getvalue())
 
 
 if __name__ == "__main__":
