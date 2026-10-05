@@ -50,6 +50,7 @@ public struct Localizer {
         case .text(let text): text
         case .message(let message): render(message)
         case .number(let number): formatNumber(number, spec: format)
+        case .list(let values): values.map { render($0, format: format) }.joined(separator: ", ")
         }
     }
 

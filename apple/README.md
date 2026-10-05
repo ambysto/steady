@@ -44,3 +44,8 @@ While the Overview screen is open, `LiveMonitor` measures with the Windows monit
 ## Diagnosis rules
 
 A rule is ported from `app/diagnostics.py` together with its vectors in `spec/diagnosis/`. The Swift tests (`DiagnosisVectorTests`) and `tests/test_diagnosis_vectors.py` run the same cases; a change to a rule changes the vectors and both implementations.
+
+| # | Check | Swift | Vectors | Inputs on Apple platforms |
+|---|---|---|---|---|
+| 5 | Ping quality | `PingQuality` | `ping.json` | `LiveMonitor` (ICMP + TCP while the app is open) |
+| 6 | DNS benchmark | `DNSBenchmark` | `dns.json` | `DNSCheck`: system DNS servers from `res_ninit` (the `CResolver` C target, libresolv), raw UDP queries as in `app/dnsprobe.py`; runs when connected and when the router changes, or from its refresh button |

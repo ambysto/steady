@@ -32,24 +32,46 @@ struct DiagnosisVectorTests {
         }
     }
 
-    static let pingCases: [VectorFile<PingInput>.Case] = {
-        let data = try! RepositoryData.data("spec/diagnosis/ping.json")
-        return try! JSONDecoder().decode(VectorFile<PingInput>.self, from: data).cases
-    }()
+    struct DNSInput: Decodable, Sendable {
+        var bench: [DNSBenchmark.Server]
+        var inUse: [String]
+        var roles: [String: DNSBenchmark.Role]
 
-    @Test func pingVectorsAreLoaded() {
+        enum CodingKeys: String, CodingKey {
+            case bench, inUse = "in_use", roles = "labels"
+        }
+    }
+
+    static func cases<Input>(_ file: String, as: Input.Type) -> [VectorFile<Input>.Case] {
+        let data = try! RepositoryData.data("spec/diagnosis/\(file)")
+        return try! JSONDecoder().decode(VectorFile<Input>.self, from: data).cases
+    }
+
+    static let pingCases = cases("ping.json", as: PingInput.self)
+    static let dnsCases = cases("dns.json", as: DNSInput.self)
+
+    @Test func vectorsAreLoaded() {
         #expect(Self.pingCases.count >= 10)
+        #expect(Self.dnsCases.count >= 10)
     }
 
     @Test(arguments: pingCases)
     func ping(_ vector: VectorFile<PingInput>.Case) {
-        let result = PingQuality.evaluate(hour: vector.input.hour, recent: vector.input.recent)
-        #expect(result.status == vector.expected.status)
-        #expect(result.summary == vector.expected.summary)
-        #expect(approximatelyEqual(result.advice, vector.expected.advice))
-        #expect(result.details.count == vector.expected.details.count)
-        for (actual, expected) in zip(result.details, vector.expected.details) {
-            #expect(approximatelyEqual(actual, expected), "\(actual) != \(expected)")
+        check(PingQuality.evaluate(hour: vector.input.hour, recent: vector.input.recent), vector.expected)
+    }
+
+    @Test(arguments: dnsCases)
+    func dns(_ vector: VectorFile<DNSInput>.Case) {
+        check(DNSBenchmark.evaluate(vector.input.bench, inUse: vector.input.inUse, roles: vector.input.roles), vector.expected)
+    }
+
+    private func check(_ result: CheckResult, _ expected: Expected) {
+        #expect(result.status == expected.status)
+        #expect(approximatelyEqual(result.summary, expected.summary), "\(result.summary) != \(expected.summary)")
+        #expect(approximatelyEqual(result.advice, expected.advice), "\(result.advice) != \(expected.advice)")
+        #expect(result.details.count == expected.details.count)
+        for (actual, wanted) in zip(result.details, expected.details) {
+            #expect(approximatelyEqual(actual, wanted), "\(actual) != \(wanted)")
         }
     }
 }

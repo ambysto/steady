@@ -122,3 +122,41 @@ struct ICMPPacketTests {
         #expect(!ICMPPing.isEchoReply(ICMPPing.echoRequest(identifier: 1, sequence: 7)[...], sequence: 7))   // a request, not a reply
     }
 }
+
+struct DNSProbeTests {
+    @Test func queryPacketMatchesDnsprobePy() {
+        // app/dnsprobe.py build_query("google.com", qid=0x1234)
+        let expected: [UInt8] = [0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                 6] + Array("google".utf8) + [3] + Array("com".utf8) + [0, 0, 1, 0, 1]
+        #expect(DNSProbe.buildQuery("google.com", identifier: 0x1234) == expected)
+        #expect(DNSProbe.buildQuery("", identifier: 1) == nil)
+        #expect(DNSProbe.buildQuery(String(repeating: "a", count: 64) + ".com", identifier: 1) == nil)
+    }
+
+    @Test func repliesAreMatchedOnIdAndResponseBit() {
+        var reply: [UInt8] = [0x12, 0x34, 0x81, 0x83] + Array(repeating: 0, count: 8)   // NXDOMAIN
+        #expect(DNSProbe.responseCode(reply[...], identifier: 0x1234) == 3)
+        #expect(DNSProbe.responseCode(reply[...], identifier: 0x1235) == nil)
+        reply[2] = 0x01   // a query, not a response
+        #expect(DNSProbe.responseCode(reply[...], identifier: 0x1234) == nil)
+        #expect(DNSProbe.responseCode(reply[..<11], identifier: 0x1234) == nil)
+    }
+
+    @Test func planMeasuresInUseThenRouterThenPublic() {
+        let plan = DNSBenchmark.plan(inUse: ["192.0.2.1", "fe80::1", "192.0.2.1"], router: "192.0.2.1")
+        #expect(plan.servers == ["192.0.2.1", "1.1.1.1", "8.8.8.8", "9.9.9.9"])
+        #expect(plan.roles["192.0.2.1"] == .inUseRouter)
+        let other = DNSBenchmark.plan(inUse: ["2001:db8::53"], router: "192.0.2.1")
+        #expect(other.servers == ["2001:db8::53", "192.0.2.1", "1.1.1.1", "8.8.8.8", "9.9.9.9"])
+        #expect(other.roles["192.0.2.1"] == .router)
+    }
+
+    @Test func linkLocalAndScopedServersAreNotUsable() {
+        #expect(DNSBenchmark.isUsable("203.0.113.53"))
+        #expect(DNSBenchmark.isUsable("2001:db8::53"))
+        #expect(!DNSBenchmark.isUsable("fe80::1"))
+        #expect(!DNSBenchmark.isUsable("febf::1"))
+        #expect(!DNSBenchmark.isUsable("2001:db8::53%en0"))
+        #expect(!DNSBenchmark.isUsable("not an address"))
+    }
+}

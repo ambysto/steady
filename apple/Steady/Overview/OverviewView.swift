@@ -6,6 +6,8 @@ import SwiftUI
 struct OverviewView: View {
     @State private var path: NetworkPath?
     @State private var monitor = LiveMonitor()
+    @State private var dns: CheckResult?
+    @State private var dnsRunning = false
     private let text = Localizer()
 
     var body: some View {
@@ -25,6 +27,18 @@ struct OverviewView: View {
             }
             Section {
                 CheckResultView(result: monitor.pingQuality, text: text)
+            }
+            if let dns {
+                Section {
+                    CheckResultView(result: dns, text: text) {
+                        rerunButton
+                    }
+                }
+            } else if dnsTrigger != nil {
+                Section {
+                    Label(text("ui.diag.running"), systemImage: "hourglass")
+                        .foregroundStyle(.secondary)
+                }
             }
             if let path {
                 Section {
@@ -54,6 +68,37 @@ struct OverviewView: View {
         .task {
             await monitor.run()
         }
+        .task(id: dnsTrigger) {
+            guard dnsTrigger != nil else { return }
+            await runDNS()
+        }
+    }
+
+    /// Runs check #6 once connected, and again when the router changes.
+    private var dnsTrigger: String? {
+        guard let path, path.status == .connected else { return nil }
+        return path.routerIPv4 ?? "-"
+    }
+
+    private func runDNS() async {
+        dnsRunning = true
+        dns = await DNSCheck.run(router: path?.routerIPv4)
+        dnsRunning = false
+    }
+
+    private var rerunButton: some View {
+        Button {
+            Task { await runDNS() }
+        } label: {
+            if dnsRunning {
+                ProgressView().controlSize(.small)
+            } else {
+                Image(systemName: "arrow.clockwise")
+            }
+        }
+        .buttonStyle(.borderless)
+        .disabled(dnsRunning || dnsTrigger == nil)
+        .accessibilityLabel(text(dnsRunning ? "ui.diag.running" : "ui.diag.run"))
     }
 
     private func title(of target: LiveMonitor.Target) -> String {
@@ -166,10 +211,11 @@ private struct MeasurementRow: View {
     }
 }
 
-/// A diagnosis check: status, verdict and advice; the per-target lines on demand.
-private struct CheckResultView: View {
+/// A diagnosis check: status, verdict and advice; the detail lines on demand.
+private struct CheckResultView<Action: View>: View {
     let result: CheckResult
     let text: Localizer
+    @ViewBuilder var action: () -> Action
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -181,6 +227,7 @@ private struct CheckResultView: View {
                     .labelStyle(.titleAndIcon)
                     .font(.subheadline)
                     .foregroundStyle(color)
+                action()
             }
             Text(text(result.summary))
             if result.advice != .empty {
@@ -227,5 +274,11 @@ private struct CheckResultView: View {
 #Preview {
     NavigationStack {
         OverviewView()
+    }
+}
+
+extension CheckResultView where Action == EmptyView {
+    init(result: CheckResult, text: Localizer) {
+        self.init(result: result, text: text) { EmptyView() }
     }
 }

@@ -8,7 +8,8 @@ let package = Package(
         .library(name: "SteadyKit", targets: ["SteadyKit"]),
     ],
     targets: [
-        .target(name: "SteadyKit"),
+        .target(name: "CResolver", linkerSettings: [.linkedLibrary("resolv")]),
+        .target(name: "SteadyKit", dependencies: ["CResolver"]),
         .testTarget(name: "SteadyKitTests", dependencies: ["SteadyKit"]),
     ]
 )

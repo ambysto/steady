@@ -25,6 +25,7 @@ func approximatelyEqual(_ a: MessageValue, _ b: MessageValue) -> Bool {
     case (.text(let x), .text(let y)): x == y
     case (.number(let x), .number(let y)): abs(x - y) <= 1e-9
     case (.message(let x), .message(let y)): approximatelyEqual(x, y)
+    case (.list(let x), .list(let y)): x.count == y.count && zip(x, y).allSatisfy(approximatelyEqual)
     default: false
     }
 }

@@ -18,11 +18,13 @@ public struct Message: Hashable, Sendable, Codable {
     }
 }
 
-/// A message parameter: plain text, a number (formatted when rendered) or a nested message.
+/// A message parameter: plain text, a number (formatted when rendered), a nested message, or a
+/// list of those (rendered "a, b, c", as in app/i18n.py).
 public enum MessageValue: Hashable, Sendable, Codable {
     case text(String)
     case number(Double)
     case message(Message)
+    case list([MessageValue])
 
     /// Python passes "" where an optional part of a sentence is absent.
     public static let empty = MessageValue.text("")
@@ -33,6 +35,8 @@ public enum MessageValue: Hashable, Sendable, Codable {
             self = .text(text)
         } else if let number = try? container.decode(Double.self) {
             self = .number(number)
+        } else if let list = try? container.decode([MessageValue].self) {
+            self = .list(list)
         } else {
             self = .message(try container.decode(Message.self))
         }
@@ -44,6 +48,7 @@ public enum MessageValue: Hashable, Sendable, Codable {
         case .text(let text): try container.encode(text)
         case .number(let number): try container.encode(number)
         case .message(let message): try container.encode(message)
+        case .list(let list): try container.encode(list)
         }
     }
 }

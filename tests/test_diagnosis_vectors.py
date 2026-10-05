@@ -8,13 +8,15 @@ import math
 import unittest
 from pathlib import Path
 
-from app import diagnostics
+from app import diagnostics, dnsprobe
 
 SPEC = Path(__file__).resolve().parent.parent / "spec" / "diagnosis"
 
 # rule name in the vector file -> function computing the result from the case's "input"
 RULES = {
     "ping": lambda data: diagnostics.evaluate_ping(data["rows_1h"], data["rows_5m"]),
+    "dns": lambda data: diagnostics.evaluate_dns([dnsprobe.ServerBenchmark(**b) for b in data["bench"]],
+                                                 data["in_use"], data["labels"]),
 }
 COMPARED = ("status", "summary", "details", "advice")
 
