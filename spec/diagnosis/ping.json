@@ -2,7 +2,7 @@
   "rule": "ping",
   "check": 5,
   "reference": "app/diagnostics.py evaluate_ping",
-  "description": "Ping quality over one hour of monitor data (docs/DIAGNOSTICS.md #5). Rows are per-minute aggregates: target, sent, lost, optional jitter (ms). Targets starting with tcp_ or http_ are TCP/HTTP probes; 'router' is the gateway; anything else is an Internet ping target. Thresholds: >= 60 samples per ping target, >= 20 per probe.",
+  "description": "Ping quality over one hour of monitor data (docs/DIAGNOSTICS.md #5). Rows are per-minute aggregates: ts (start of the minute, seconds since 1970; optional), target, sent, lost, optional jitter (ms). Optional 'changes' are times of network changes: rows of the minute of each change and of the next minute are left out (by ts), and a detail line counts them. Targets starting with tcp_ or http_ are TCP/HTTP probes; 'router' is the gateway; anything else is an Internet ping target. Thresholds: >= 60 samples per ping target, >= 20 per probe.",
   "cases": [
     {
       "name": "no data at all",
@@ -2152,6 +2152,658 @@
         ],
         "advice": {
           "key": "diag.ping.advice_wan",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "network change: its minute and the next are left out (VPN switch, two events in one minute)",
+      "input": {
+        "rows_1h": [
+          {
+            "ts": 1789999980,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1789999980,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000040,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000040,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000100,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000100,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000160,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000160,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000220,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 257.0
+          },
+          {
+            "ts": 1790000220,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 1
+          },
+          {
+            "ts": 1790000280,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 3,
+            "jitter": 120.0
+          },
+          {
+            "ts": 1790000280,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000340,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000340,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000400,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000400,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000460,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000460,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000520,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000520,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          }
+        ],
+        "rows_5m": [
+          {
+            "ts": 1790000280,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 3,
+            "jitter": 120.0
+          },
+          {
+            "ts": 1790000280,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000340,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000340,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000400,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000400,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000460,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000460,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000520,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000520,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          }
+        ],
+        "changes": [
+          1790000255,
+          1790000270
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 480,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.0
+                }
+              },
+              "recent": {
+                "key": "diag.ping.recent",
+                "params": {
+                  "loss": 0.0
+                }
+              }
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 48
+            }
+          },
+          {
+            "key": "diag.ping.left_out",
+            "params": {
+              "count": 2
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "network change: without it the same rows warn of an ISP/WAN problem",
+      "input": {
+        "rows_1h": [
+          {
+            "ts": 1789999980,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1789999980,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000040,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000040,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000100,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000100,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000160,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000160,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000220,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 257.0
+          },
+          {
+            "ts": 1790000220,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 1
+          },
+          {
+            "ts": 1790000280,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 3,
+            "jitter": 120.0
+          },
+          {
+            "ts": 1790000280,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000340,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000340,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000400,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000400,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000460,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000460,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000520,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000520,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          }
+        ],
+        "rows_5m": [
+          {
+            "ts": 1790000280,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 3,
+            "jitter": 120.0
+          },
+          {
+            "ts": 1790000280,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000340,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000340,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000400,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000400,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000460,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000460,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          },
+          {
+            "ts": 1790000520,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 3.0
+          },
+          {
+            "ts": 1790000520,
+            "target": "tcp_cloudflare",
+            "sent": 6,
+            "lost": 0
+          }
+        ],
+        "changes": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.wan_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.5,
+              "lost": 3,
+              "sent": 600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 40.1
+                }
+              },
+              "recent": {
+                "key": "diag.ping.recent",
+                "params": {
+                  "loss": 1.0
+                }
+              }
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 1.6666666666666667,
+              "lost": 1,
+              "sent": 60
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_wan",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "network change: only minutes that have rows are counted",
+      "input": {
+        "rows_1h": [
+          {
+            "ts": 1789999980,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 2.0
+          },
+          {
+            "ts": 1790000040,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 2.0
+          },
+          {
+            "ts": 1790000160,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 2.0
+          },
+          {
+            "ts": 1790000220,
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 2.0
+          }
+        ],
+        "rows_5m": [],
+        "changes": [
+          1790000110
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 180,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 2.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.left_out",
+            "params": {
+              "count": 1
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "network change: every minute left out leaves no data, with the note",
+      "input": {
+        "rows_1h": [
+          {
+            "ts": 1789999980,
+            "target": "router",
+            "sent": 60,
+            "lost": 30
+          },
+          {
+            "ts": 1790000040,
+            "target": "router",
+            "sent": 60,
+            "lost": 30
+          }
+        ],
+        "rows_5m": [],
+        "changes": [
+          1789999980
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.ping.no_data",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.left_out",
+            "params": {
+              "count": 2
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "network change: rows without a time are never left out",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 1000,
+            "lost": 50
+          }
+        ],
+        "rows_5m": [],
+        "changes": [
+          1789999980
+        ]
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 5.0,
+              "lost": 50,
+              "sent": 1000,
+              "jitter": "",
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
           "params": {}
         }
       }

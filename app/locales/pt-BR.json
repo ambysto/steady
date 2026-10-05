@@ -88,6 +88,7 @@
   "diag.ping.jitter": ", jitter {jitter:.1f} ms",
   "diag.ping.recent": " · últimos 5 minutos: {loss:.2f}% perdidos",
   "diag.ping.probe_line": "{target} (conexão real, não ping): {loss:.2f}% perdidos ({lost}/{sent})",
+  "diag.ping.left_out": {"one": "{count} minuto deixado de fora: a rede mudou nesse momento", "other": "{count} minutos deixados de fora: a rede mudou nesse momento"},
   "diag.ping.router_loss": "Perda de pacotes até o roteador: problema local (PC ↔ roteador / Wi‑Fi)",
   "diag.ping.icmp_limited": "Os pings para a Internet perdem pacotes, mas as conexões TCP/HTTP estão normais: o ICMP tem limite de taxa, não é uma queda",
   "diag.ping.wan_loss": "O roteador está bem, mas as conexões TCP/HTTP para a Internet perdem pacotes: problema no provedor/WAN",

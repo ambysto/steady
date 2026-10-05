@@ -26,9 +26,10 @@ struct DiagnosisVectorTests {
     struct PingInput: Decodable, Sendable {
         var hour: [PingQuality.Row]
         var recent: [PingQuality.Row]
+        var changes: [Int]?
 
         enum CodingKeys: String, CodingKey {
-            case hour = "rows_1h", recent = "rows_5m"
+            case hour = "rows_1h", recent = "rows_5m", changes
         }
     }
 
@@ -88,7 +89,8 @@ struct DiagnosisVectorTests {
 
     @Test(arguments: pingCases)
     func ping(_ vector: VectorFile<PingInput>.Case) {
-        check(PingQuality.evaluate(hour: vector.input.hour, recent: vector.input.recent), vector.expected)
+        check(PingQuality.evaluate(hour: vector.input.hour, recent: vector.input.recent,
+                                  changes: vector.input.changes ?? []), vector.expected)
     }
 
     @Test(arguments: dnsCases)

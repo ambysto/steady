@@ -88,6 +88,7 @@
   "diag.ping.jitter": ", jitter {jitter:.1f} ms",
   "diag.ping.recent": " · 5 phút gần nhất: mất {loss:.2f}%",
   "diag.ping.probe_line": "{target} (kết nối thật, không phải ping): mất {loss:.2f}% ({lost}/{sent})",
+  "diag.ping.left_out": {"one": "Bỏ qua {count} phút: mạng đã thay đổi trong lúc đó", "other": "Bỏ qua {count} phút: mạng đã thay đổi trong lúc đó"},
   "diag.ping.router_loss": "Mất gói tới router: lỗi nội bộ (PC ↔ router / Wi‑Fi)",
   "diag.ping.icmp_limited": "Ping ra Internet mất gói nhưng kết nối TCP/HTTP ổn: ICMP bị giới hạn, không phải mất mạng",
   "diag.ping.wan_loss": "Router tốt nhưng kết nối TCP/HTTP ra Internet mất gói: lỗi phía ISP/WAN",

@@ -23,7 +23,7 @@ def _measurement(data: dict) -> bufferbloat.Measurement:
 
 # rule name in the vector file -> function computing the result from the case's "input"
 RULES = {
-    "ping": lambda data: diagnostics.evaluate_ping(data["rows_1h"], data["rows_5m"]),
+    "ping": lambda data: diagnostics.evaluate_ping(data["rows_1h"], data["rows_5m"], changes=data.get("changes", [])),
     "dns": lambda data: diagnostics.evaluate_dns([dnsprobe.ServerBenchmark(**b) for b in data["bench"]],
                                                  data["in_use"], data["labels"]),
     "bufferbloat": lambda data: diagnostics.evaluate_bufferbloat(_measurement(data)),

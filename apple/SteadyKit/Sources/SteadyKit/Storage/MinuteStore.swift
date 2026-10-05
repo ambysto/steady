@@ -2,14 +2,17 @@ import Foundation
 import os
 import SQLite3
 
-/// Per-minute measurement rows in SQLite, in the `minute_stats` table of app/storage.py (ADR-0011).
-/// Used from the main actor only, by `LiveMonitor`.
+/// Per-minute measurement rows in SQLite, in the `minute_stats` table of app/storage.py (ADR-0011),
+/// and the times the network route changed, in its `events` table. Used from the main actor only,
+/// by `LiveMonitor`.
 public final class MinuteStore {
     public struct StoreError: Error, CustomStringConvertible {
         public let description: String
     }
 
     static let retentionDays = 30.0
+    /// Event kind of a route change (the Windows monitor writes gateway_change, roam, wifi_state).
+    static let networkChangeKind = "route_change"
     private var db: OpaquePointer?
 
     private static let log = Logger(subsystem: "com.ambysto.steady", category: "storage")
@@ -61,6 +64,18 @@ public final class MinuteStore {
                 jitter REAL,
                 PRIMARY KEY (ts, target)
             ) WITHOUT ROWID;
+            CREATE TABLE IF NOT EXISTS events (
+                id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts       INTEGER NOT NULL,
+                kind     TEXT    NOT NULL,
+                level    TEXT    NOT NULL,
+                message  TEXT    NOT NULL DEFAULT '',
+                duration REAL,
+                message_key    TEXT,
+                message_params TEXT
+            );
+            CREATE INDEX IF NOT EXISTS events_ts   ON events (ts);
+            CREATE INDEX IF NOT EXISTS events_kind ON events (kind, ts);
             """)
     }
 
@@ -138,17 +153,44 @@ public final class MinuteStore {
         return Int(sqlite3_column_int64(statement, 0))
     }
 
-    /// Deletes every stored minute (Settings > Delete history), then rewrites the file and empties
-    /// the WAL so the old rows do not stay behind in free pages.
-    public func deleteAll() throws {
-        try execute("DELETE FROM minute_stats; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")
+    /// Records that the network route changed at `ts` (seconds since 1970).
+    public func addNetworkChange(at ts: Int) throws {
+        try run("INSERT INTO events (ts, kind, level, message) VALUES (?, ?, 'info', 'network route changed')",
+                [.int(ts), .text(Self.networkChangeKind)])
     }
 
-    /// Deletes rows older than the retention period; returns how many.
+    /// Times of the route changes at or after `start`, oldest first.
+    public func networkChanges(since start: Int) throws -> [Int] {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT ts FROM events WHERE kind = ? AND ts >= ? ORDER BY ts",
+                                 -1, &statement, nil) == SQLITE_OK else { throw lastError() }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_text(statement, 1, Self.networkChangeKind, -1, Self.transient)
+        sqlite3_bind_int64(statement, 2, Int64(start))
+        var times: [Int] = []
+        while true {
+            switch sqlite3_step(statement) {
+            case SQLITE_ROW: times.append(Int(sqlite3_column_int64(statement, 0)))
+            case SQLITE_DONE: return times
+            default: throw lastError()
+            }
+        }
+    }
+
+    /// Deletes every stored minute and event (Settings > Delete history), then rewrites the file
+    /// and empties the WAL so the old rows do not stay behind in free pages.
+    public func deleteAll() throws {
+        try execute("DELETE FROM minute_stats; DELETE FROM events; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")
+    }
+
+    /// Deletes minutes and events older than the retention period; returns how many minute rows.
     @discardableResult
     public func purge(now: Double) throws -> Int {
-        try run("DELETE FROM minute_stats WHERE ts < ?", [.int(Int(now - Self.retentionDays * 86400))])
-        return Int(sqlite3_changes(db))
+        let cutoff = Int(now - Self.retentionDays * 86400)
+        try run("DELETE FROM minute_stats WHERE ts < ?", [.int(cutoff)])
+        let minutes = Int(sqlite3_changes(db))
+        try run("DELETE FROM events WHERE ts < ?", [.int(cutoff)])
+        return minutes
     }
 
     // MARK: - SQLite plumbing

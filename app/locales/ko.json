@@ -88,6 +88,7 @@
   "diag.ping.jitter": ", 지터 {jitter:.1f} ms",
   "diag.ping.recent": " · 최근 5분: {loss:.2f}% 손실",
   "diag.ping.probe_line": "{target} (ping이 아닌 실제 연결): {loss:.2f}% 손실 ({lost}/{sent})",
+  "diag.ping.left_out": {"one": "{count}분 제외: 그동안 네트워크가 바뀌었습니다", "other": "{count}분 제외: 그동안 네트워크가 바뀌었습니다"},
   "diag.ping.router_loss": "라우터까지 패킷 손실: 로컬 문제 (PC ↔ 라우터 / Wi‑Fi)",
   "diag.ping.icmp_limited": "인터넷으로의 ping은 패킷이 손실되지만 TCP/HTTP 연결은 정상입니다: ICMP가 속도 제한된 것이며 장애가 아닙니다",
   "diag.ping.wan_loss": "라우터는 정상이지만 인터넷으로의 TCP/HTTP 연결에서 패킷이 손실됩니다: ISP/WAN 문제",

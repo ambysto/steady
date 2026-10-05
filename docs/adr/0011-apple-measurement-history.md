@@ -17,6 +17,7 @@ Options considered: SwiftData/Core Data (a second data model to keep in step wit
 3. **Partial minutes are kept:** when measuring stops (screen closed, app suspended) the current minute is written as it is. Because the app may reopen within the same minute, a row that already exists is **merged** (sent and lost added, the newer jitter kept), where Windows replaces it.
 4. **Retention 30 days**, like `retention_days` on Windows, purged when measuring starts.
 5. Nothing leaves the device.
+6. **Route changes** (added with SIC-61) go to the Windows `events` table, kind `route_change`, so check #5 leaves out the minutes around them after a relaunch too; purged and deleted with the minutes.
 
 ## Consequences
 

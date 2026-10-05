@@ -26,7 +26,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from . import config, dnsprobe, i18n, winutil
 from .i18n import msg
@@ -317,14 +317,32 @@ def _is_probe(target: str) -> bool:
     return target.startswith(PROBE_PREFIXES)
 
 
+# Minutes left out of check #5 after a network change: the minute of the change and the next one.
+# Around a switch (VPN on/off, another Wi-Fi network, a new router) pings fail or take two routes,
+# and that says nothing about the line (GitHub issue #2).
+CHANGE_MINUTES = 2
+NETWORK_CHANGE_EVENTS = ("gateway_change", "roam", "wifi_state")   # event kinds of app/monitor.py
+
+
+def left_out_minutes(changes: Iterable[float]) -> set[int]:
+    """Starts of the minutes left out for network changes at the given times (seconds since 1970)."""
+    return {int(c) - int(c) % 60 + 60 * i for c in changes for i in range(CHANGE_MINUTES)}
+
+
 def evaluate_ping(rows_1h: list[dict], rows_5m: list[dict], min_sent: int = 60,
-                  min_probe_sent: int = 20) -> CheckResult:
+                  min_probe_sent: int = 20, changes: Iterable[float] = ()) -> CheckResult:
+    """`changes`: times of network changes; rows of the minutes around them (by `ts`) are left out."""
     base = dict(id=5, key="ping", title=title_of("ping"))
+    left_out = left_out_minutes(changes)
+    skipped = len({r["ts"] for r in rows_1h if r.get("ts") in left_out})
+    rows_1h = [r for r in rows_1h if r.get("ts") not in left_out]
+    rows_5m = [r for r in rows_5m if r.get("ts") not in left_out]
+    note = [msg("diag.ping.left_out", count=skipped)] if skipped else []
     agg = _aggregate(rows_1h)
     icmp_hour = {t: a for t, a in agg.items() if not _is_probe(t) and a["sent"] >= min_sent}
     probe_hour = {t: a for t, a in agg.items() if _is_probe(t) and a["sent"] >= min_probe_sent}
     if not icmp_hour and not probe_hour:
-        return CheckResult(**base, status=INFO, summary=msg("diag.ping.no_data"))
+        return CheckResult(**base, status=INFO, summary=msg("diag.ping.no_data"), details=note)
     recent = _aggregate(rows_5m)
     statuses: dict[str, str] = {}
     details: list[Message] = []
@@ -340,6 +358,7 @@ def evaluate_ping(rows_1h: list[dict], rows_5m: list[dict], min_sent: int = 60,
     for target, a in sorted(probe_hour.items()):
         details.append(msg("diag.ping.probe_line", target=target, loss=a["loss"], lost=int(a["lost"]),
                            sent=int(a["sent"])))
+    details += note
 
     # "Does real traffic work?" = the best probe, the same any-one-is-enough rule the monitor uses:
     # one target blocking port 443 must not raise an alarm.
@@ -718,6 +737,7 @@ class Context:
             "gateway": winutil.get_gateway,
             "ping_rows_1h": lambda: self._ping_rows(3600),
             "ping_rows_5m": lambda: self._ping_rows(300),
+            "network_changes": self._load_network_changes,
             "minutes": self._load_minutes,
             "dns_bench": self._load_dns_bench,
             "tweak_states": self._load_tweak_states,
@@ -755,6 +775,14 @@ class Context:
         if self.storage is None:
             return []
         return self.storage.query_minute_stats(int(self.now) - seconds, int(self.now) + 60)
+
+    def _load_network_changes(self) -> list[int]:
+        """Times of the monitor's network-change events that can touch the last hour's minutes."""
+        if self.storage is None:
+            return []
+        since = int(self.now) - 3600 - 60 * CHANGE_MINUTES
+        events = self.storage.query_events(since, int(self.now) + 60, kinds=NETWORK_CHANGE_EVENTS, limit=1000)
+        return [e["ts"] for e in events]
 
     def _load_minutes(self) -> list[Minute]:
         if self.storage is None:
@@ -823,7 +851,7 @@ def check_drops(ctx: Context) -> CheckResult:
 
 
 def check_ping(ctx: Context) -> CheckResult:
-    return evaluate_ping(ctx.get("ping_rows_1h"), ctx.get("ping_rows_5m"))
+    return evaluate_ping(ctx.get("ping_rows_1h"), ctx.get("ping_rows_5m"), changes=ctx.get("network_changes"))
 
 
 def check_dns(ctx: Context) -> CheckResult:
