@@ -36,6 +36,9 @@ LOCALIZATION_PREFERS_STRING_CATALOGS = YES
 SWIFT_EMIT_LOC_STRINGS = NO
 STRING_CATALOG_GENERATE_SYMBOLS = NO
 
+// App icon: Steady/AppIcon.icon (Icon Composer; the Windows icon's green tile and Wi-Fi arcs)
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
+
 // Info.plist
 GENERATE_INFOPLIST_FILE = YES
 // CFBundleDisplayName and permission texts: Generated.xcconfig (from app/locales).

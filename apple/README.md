@@ -5,7 +5,7 @@ One SwiftUI multiplatform app (ADR-0009). Layout, versions, signing and how text
 | Path | Content |
 |---|---|
 | `Steady.xcodeproj` | One app target `Steady`: iPhone, iPad, native Mac. Minimum iOS/iPadOS/macOS 26.0 |
-| `Steady/` | SwiftUI views. `Resources/*.xcstrings` are generated, do not edit them in Xcode |
+| `Steady/` | SwiftUI views. `Resources/*.xcstrings` are generated, do not edit them in Xcode. `AppIcon.icon` is the app icon (Icon Composer): a dark gray tile (#2B2B2E, like the Terminal app's icon) with the Windows icon's white Wi‑Fi arcs (`app/desktop.py` `draw_icon`) and a small "A" and "S" as one SVG layer; the system adds the shape and the glass. Shapes in that SVG are filled outlines, not strokes (the renderer lights open strokes as closed shapes and shows stray lines). A temporary icon until a designed one |
 | `SteadyKit/` | Swift package with everything testable: localization runtime, network path model, diagnosis rules |
 | `Config/Base.xcconfig` | Shared build settings; `Local.xcconfig` (not tracked) adds your team ID |
 
