@@ -71,6 +71,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `app/singleton.py`: prevents two monitor instances from running at the same time using a named mutex (no "stale PID" problem as with a PID file). The mutex name is tied to the data folder: only two monitors writing the same `metrics.db` block each other. `python -m app.monitor` exits immediately if another instance is already running; adds `--log-file` (rotating) for running without a console.
 
 ### Changed (2026-10-05)
+- **One line ending (LF) on Windows and Mac** (SIC-77): the repository mixed CRLF (72 files written on Windows) and LF (141 files written on a Mac), so unrelated changes showed up as whole-file diffs. `.gitattributes` now stores LF (only `.bat`/`.cmd` stay CRLF) and the 73 CRLF and mixed files were converted in a commit that changes nothing but line endings. A branch started before this should merge `main` with `git merge -X renormalize`. See CONTRIBUTING.md.
 - **Check #3 on 6 GHz** (SIC-71), Windows and Apple: a crowded 6 GHz channel got the 2.4 GHz advice ("move to 5 GHz or channels 1/6/11"). It now gets `diag.interference.advice_6g`: another 6 GHz channel, or a narrower width. 1 new shared vector, and the new key in all 9 catalogs.
 - **Check #5 names jitter as jitter** (SIC-66), on Windows and Apple. When a target warns only for jitter above 30 ms, the summary used to say packet loss. It now says latency is unstable:
   - the router: `diag.ping.router_jitter`, with an Apple wording;
