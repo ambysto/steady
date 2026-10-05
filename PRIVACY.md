@@ -63,9 +63,9 @@ Settings > Report a problem shows a text report in full before anything can leav
 the app never sends it: you choose to share it, email it to us or copy it. The report holds the app
 and system versions, the device model (not its name), the app language, the connection state, the
 checks' verdicts, the last hour of per-minute measurement counts, the app's own recent log and short
-summaries of crashes the system reported to the app. It contains no network names, and IP addresses
+summaries of crashes and hangs the system reported to the app. It contains no network names, and IP addresses
 are replaced with `<address>` (except the public resolvers listed above). Crash summaries are kept
-on the device only for this purpose.
+on the device only for this purpose. Settings > Delete history erases the stored measurements.
 
 ## Components from Microsoft and Apple
 

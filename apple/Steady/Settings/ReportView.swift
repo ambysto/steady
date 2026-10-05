@@ -57,8 +57,8 @@ struct ReportView: View {
         .formStyle(.grouped)
         .navigationTitle(text("ui.report.title"))
         .task {
-            log = RecentLog.lines()
-            crashes = CrashReports.shared.summaries()
+            // Reading the log store can take a moment; keep it off the main thread.
+            (log, crashes) = await Task.detached { (RecentLog.lines(), CrashReports.shared.summaries()) }.value
         }
     }
 
@@ -90,6 +90,8 @@ struct ReportView: View {
         components.path = Self.address
         components.queryItems = [URLQueryItem(name: "subject", value: "Ambysto Steady: " + text("ui.report.title")),
                                  URLQueryItem(name: "body", value: report)]
+        // URLComponents leaves "+" as is, and some mail apps read it as a space.
+        components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         return components.url
     }
 

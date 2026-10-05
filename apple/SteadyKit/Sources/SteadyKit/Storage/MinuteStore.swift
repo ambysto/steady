@@ -138,9 +138,10 @@ public final class MinuteStore {
         return Int(sqlite3_column_int64(statement, 0))
     }
 
-    /// Deletes every stored minute (Settings > Delete history).
+    /// Deletes every stored minute (Settings > Delete history), then rewrites the file and empties
+    /// the WAL so the old rows do not stay behind in free pages.
     public func deleteAll() throws {
-        try execute("DELETE FROM minute_stats")
+        try execute("DELETE FROM minute_stats; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")
     }
 
     /// Deletes rows older than the retention period; returns how many.

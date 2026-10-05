@@ -50,7 +50,7 @@ Every user-visible string comes from `app/locales/*.json`. To add one: add the k
 
 ## Measurements
 
-While the Overview screen is open, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
+While the app has a window open, whichever tab is shown, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
 
 - iOS gives apps no continuous background time, so nothing is measured while the app is in the background.
 - Minutes are stored in SQLite (`Application Support/History/metrics.sqlite`, the folder excluded from backups, the `minute_stats` table of the Windows app, 30 days, excluded from backups; [ADR-0011](../docs/adr/0011-apple-measurement-history.md)), so check #5 keeps the last hour across launches. A partial minute is saved when measuring stops and merged if the app reopens within the same minute.

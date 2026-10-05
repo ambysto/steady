@@ -78,7 +78,6 @@ public enum ProblemReport {
     /// Replaces IPv4 and IPv6 addresses, other than the public resolvers, with "<address>".
     /// Candidates are confirmed with inet_pton, so times such as 10:15:17 stay as they are.
     static func redact(_ text: String) -> String {
-        let candidates = try! NSRegularExpression(pattern: #"(?<![\w:.])(?:[0-9A-Fa-f.:]*:[0-9A-Fa-f.:]*|(?:\d{1,3}\.){3}\d{1,3})(?:%[\w.]+)?(?![\w:])"#)
         var result = text
         for match in candidates.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
             guard let range = Range(match.range, in: result) else { continue }
@@ -90,6 +89,9 @@ public enum ProblemReport {
         }
         return result
     }
+
+    private static let candidates = try! NSRegularExpression(
+        pattern: #"(?<![\w:.])(?:[0-9A-Fa-f.:]*:[0-9A-Fa-f.:]*|(?:\d{1,3}\.){3}\d{1,3})(?:%[\w.]+)?(?![\w:])"#)
 
     private static func isAddress(_ text: String) -> Bool {
         var v4 = in_addr(), v6 = in6_addr()

@@ -29,8 +29,9 @@ final class AppModel {
     private var dnsTask: Task<Void, Never>?
     private var dnsTrigger: String?
     private var bufferbloatTask: Task<Void, Never>?
-    /// The Mac may open several windows; only the first one measures.
-    private var running = false
+    /// The Mac and the iPad may open several windows: measuring goes on while any of them is open.
+    private var windows = 0
+    private var measuring: Task<Void, Never>?
 
     /// The checks that have a result, in the order of docs/DIAGNOSTICS.md.
     var checks: [CheckResult] {
@@ -39,11 +40,23 @@ final class AppModel {
 
     var isConnected: Bool { path?.status == .connected }
 
-    /// Measures until the app goes away.
+    /// Called by each window for as long as it is open; measures while at least one is.
     func run() async {
-        guard !running else { return }
-        running = true
-        defer { running = false }
+        windows += 1
+        if measuring == nil {
+            measuring = Task { await measure() }
+        }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(3600))
+        }
+        windows -= 1
+        if windows == 0 {
+            measuring?.cancel()
+            measuring = nil
+        }
+    }
+
+    private func measure() async {
         await withDiscardingTaskGroup { group in
             group.addTask { await self.followPath() }
             group.addTask { await self.monitor.run() }
