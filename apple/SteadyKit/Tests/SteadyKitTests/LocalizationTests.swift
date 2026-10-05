@@ -59,8 +59,10 @@ struct LocalizationTests {
                                  "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload"]
         used.formUnion([CheckStatus.ok, .info, .warn, .bad].map { "ui.status." + $0.rawValue })
         for check in [PingQuality.evaluate(hour: [], recent: []), DNSBenchmark.evaluate([], inUse: [], roles: [:]),
-                      WiFiSignal.evaluate(nil)] {
+                      WiFiSignal.evaluate(nil), VPNCheck.evaluate([]),
+                      VPNCheck.evaluate([VPNCheck.Adapter(name: "utun7", status: "Up", isTunnel: true)])] {
             used.formUnion([check.title.key, check.summary.key])
+            if case .message(let advice) = check.advice { used.insert(advice.key) }
         }
         for path in paths {
             used.insert(path.statusMessage.key)

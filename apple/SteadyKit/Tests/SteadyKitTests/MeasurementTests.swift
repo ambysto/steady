@@ -240,3 +240,21 @@ struct MinuteStoreTests {
         #expect(second.pingQuality.status == .ok)
     }
 }
+
+struct VPNReaderTests {
+    @Test func onlyTunnelsCarryingTrafficCount() {
+        #expect(VPNReader.isTunnel("utun4") && VPNReader.isTunnel("ipsec0") && VPNReader.isTunnel("ppp0"))
+        #expect(!VPNReader.isTunnel("en0") && !VPNReader.isTunnel("awdl0") && !VPNReader.isTunnel("bridge0"))
+        let adapters = VPNReader.adapters(pathInterfaces: ["utun7", "en0"])
+        #expect(adapters.contains(VPNCheck.Adapter(name: "utun7", status: "Up", isTunnel: true)))
+        #expect(!adapters.contains { $0.name == "en0" })
+    }
+
+    @Test func anAppleTunnelIsAVPNWhateverItsName() {
+        let result = VPNCheck.evaluate([VPNCheck.Adapter(name: "utun7", status: "Up", isTunnel: true)])
+        #expect(result.status == .info)
+        #expect(result.summary == Message("diag.vpn.up", ["count": 1]))
+        #expect(result.details == [.text("utun7: Up")])
+        #expect(VPNCheck.evaluate([]).summary == Message("diag.vpn.none"))
+    }
+}

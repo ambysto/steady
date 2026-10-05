@@ -10,6 +10,7 @@ struct OverviewView: View {
     @State private var monitor = LiveMonitor(store: history)
     @State private var dns: CheckResult?
     @State private var dnsRunning = false
+    @State private var vpn: CheckResult?
     @State private var bufferbloat: CheckResult?
     @State private var bufferbloatStage: BufferbloatTest.Stage?
     @State private var confirmingBufferbloat = false
@@ -42,6 +43,11 @@ struct OverviewView: View {
             #endif
             Section {
                 CheckResultView(result: monitor.pingQuality, text: text)
+            }
+            if let vpn {
+                Section {
+                    CheckResultView(result: vpn, text: text)
+                }
             }
             if let dns {
                 Section {
@@ -90,6 +96,8 @@ struct OverviewView: View {
             for await update in NetworkPath.updates() {
                 path = update
                 monitor.routerAddress = update.routerIPv4
+                // Turning a VPN on or off changes the path, so check #8 follows it.
+                vpn = VPNCheck.evaluate(VPNReader.adapters(pathInterfaces: update.interfaces))
             }
         }
         .task {

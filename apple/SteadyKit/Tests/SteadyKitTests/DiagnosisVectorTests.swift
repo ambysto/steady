@@ -57,11 +57,23 @@ struct DiagnosisVectorTests {
 
     static let signalCases = cases("signal.json", as: SignalInput.self)
 
+    struct VPNInput: Decodable, Sendable {
+        var adapters: [VPNCheck.Adapter]
+    }
+
+    static let vpnCases = cases("vpn.json", as: VPNInput.self)
+
     @Test func vectorsAreLoaded() {
         #expect(Self.pingCases.count >= 10)
         #expect(Self.dnsCases.count >= 10)
         #expect(Self.bufferbloatCases.count >= 10)
         #expect(Self.signalCases.count >= 8)
+        #expect(Self.vpnCases.count >= 8)
+    }
+
+    @Test(arguments: vpnCases)
+    func vpn(_ vector: VectorFile<VPNInput>.Case) {
+        check(VPNCheck.evaluate(vector.input.adapters), vector.expected)
     }
 
     @Test(arguments: signalCases)

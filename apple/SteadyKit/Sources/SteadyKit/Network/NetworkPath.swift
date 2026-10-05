@@ -32,6 +32,8 @@ public struct NetworkPath: Equatable, Sendable {
     public var supportsDNS: Bool
     /// Router addresses, as text.
     public var gateways: [String]
+    /// Names of the interfaces the path can use, preferred first ("en0", "utun4"…).
+    public var interfaces: [String]
 
     /// The first IPv4 router address: what the monitor pings (ICMP is IPv4 only, as on Windows).
     public var routerIPv4: String? {
@@ -40,7 +42,7 @@ public struct NetworkPath: Equatable, Sendable {
 
     public init(status: Status, link: Link? = nil, reason: Reason? = nil, isExpensive: Bool = false,
                 isConstrained: Bool = false, supportsIPv4: Bool = false, supportsIPv6: Bool = false,
-                supportsDNS: Bool = false, gateways: [String] = []) {
+                supportsDNS: Bool = false, gateways: [String] = [], interfaces: [String] = []) {
         self.status = status
         self.link = link
         self.reason = reason
@@ -50,6 +52,7 @@ public struct NetworkPath: Equatable, Sendable {
         self.supportsIPv6 = supportsIPv6
         self.supportsDNS = supportsDNS
         self.gateways = gateways
+        self.interfaces = interfaces
     }
 }
 
@@ -78,7 +81,8 @@ extension NetworkPath {
         self.init(status: status, link: link, reason: reason, isExpensive: path.isExpensive,
                   isConstrained: path.isConstrained, supportsIPv4: path.supportsIPv4,
                   supportsIPv6: path.supportsIPv6, supportsDNS: path.supportsDNS,
-                  gateways: path.gateways.compactMap(Self.address))
+                  gateways: path.gateways.compactMap(Self.address),
+                  interfaces: path.availableInterfaces.map(\.name))
     }
 
     private static func address(_ endpoint: NWEndpoint) -> String? {

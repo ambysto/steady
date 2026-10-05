@@ -1,0 +1,292 @@
+{
+  "rule": "vpn",
+  "check": 8,
+  "reference": "app/diagnostics.py evaluate_vpn",
+  "description": "VPN / virtual adapters (docs/DIAGNOSTICS.md #8). adapters: the network adapters with Name, InterfaceDescription and Status (\"Up\" when connected). An adapter is a VPN when its name or description matches the vendor list in _VPN_RE; any VPN up gives info, otherwise ok.",
+  "cases": [
+    {
+      "name": "no adapters at all",
+      "input": {
+        "adapters": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.vpn.none",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "only ordinary cards",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "Ethernet",
+            "InterfaceDescription": "Intel(R) Ethernet Connection (7) I219-V",
+            "Status": "Disconnected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.vpn.none",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "a word containing 'tap' is not a TAP adapter",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "Tapo Hub",
+            "InterfaceDescription": "Realtek USB GbE Family Controller",
+            "Status": "Up"
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.vpn.none",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "WireGuard installed but disconnected",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "wg0",
+            "InterfaceDescription": "WireGuard Tunnel",
+            "Status": "Disconnected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.vpn.off",
+          "params": {}
+        },
+        "details": [
+          "wg0 (WireGuard Tunnel): Disconnected"
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "one VPN up",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "Tailscale",
+            "InterfaceDescription": "Tailscale Tunnel",
+            "Status": "Up"
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.vpn.up",
+          "params": {
+            "count": 1
+          }
+        },
+        "details": [
+          "Tailscale (Tailscale Tunnel): Up"
+        ],
+        "advice": {
+          "key": "diag.vpn.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "two VPNs up, one installed but off",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "OpenVPN TAP-Windows6",
+            "InterfaceDescription": "TAP-Windows Adapter V9",
+            "Status": "Up"
+          },
+          {
+            "Name": "WARP",
+            "InterfaceDescription": "Cloudflare WARP Interface Tunnel",
+            "Status": "Up"
+          },
+          {
+            "Name": "NordLynx",
+            "InterfaceDescription": "NordLynx Tunnel",
+            "Status": "Disconnected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.vpn.up",
+          "params": {
+            "count": 2
+          }
+        },
+        "details": [
+          "OpenVPN TAP-Windows6 (TAP-Windows Adapter V9): Up",
+          "WARP (Cloudflare WARP Interface Tunnel): Up",
+          "NordLynx (NordLynx Tunnel): Disconnected"
+        ],
+        "advice": {
+          "key": "diag.vpn.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "vendor names match regardless of case",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "home",
+            "InterfaceDescription": "wireguard tunnel",
+            "Status": "Up"
+          },
+          {
+            "Name": "zt0",
+            "InterfaceDescription": "zerotier virtual port",
+            "Status": "Disconnected"
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.vpn.up",
+          "params": {
+            "count": 1
+          }
+        },
+        "details": [
+          "home (wireguard tunnel): Up",
+          "zt0 (zerotier virtual port): Disconnected"
+        ],
+        "advice": {
+          "key": "diag.vpn.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "a TAP adapter named by the word itself",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "Local Area Connection 2",
+            "InterfaceDescription": "TAP adapter for test",
+            "Status": "Up"
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.vpn.up",
+          "params": {
+            "count": 1
+          }
+        },
+        "details": [
+          "Local Area Connection 2 (TAP adapter for test): Up"
+        ],
+        "advice": {
+          "key": "diag.vpn.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "Fortinet and Cisco AnyConnect",
+      "input": {
+        "adapters": [
+          {
+            "Name": "Wi-Fi",
+            "InterfaceDescription": "MediaTek Wi-Fi 6E MT7922 160MHz Wireless LAN Card",
+            "Status": "Up"
+          },
+          {
+            "Name": "Ethernet 3",
+            "InterfaceDescription": "Fortinet SSL VPN Virtual Ethernet Adapter",
+            "Status": "Disconnected"
+          },
+          {
+            "Name": "Ethernet 4",
+            "InterfaceDescription": "Cisco AnyConnect Secure Mobility Client Virtual Miniport Adapter for Windows x64",
+            "Status": "Up"
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.vpn.up",
+          "params": {
+            "count": 1
+          }
+        },
+        "details": [
+          "Ethernet 3 (Fortinet SSL VPN Virtual Ethernet Adapter): Disconnected",
+          "Ethernet 4 (Cisco AnyConnect Secure Mobility Client Virtual Miniport Adapter for Windows x64): Up"
+        ],
+        "advice": {
+          "key": "diag.vpn.advice",
+          "params": {}
+        }
+      }
+    }
+  ]
+}
