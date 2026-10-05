@@ -60,10 +60,14 @@ public enum PingQuality {
         }
         let recentTotals = aggregate(recent.filter(kept))
         var statuses: [String: CheckStatus] = [:]
+        var lossy: Set<String> = []   // targets whose loss alone warns; the others warn for jitter only
         var details: [MessageValue] = []
 
         for (target, total) in icmpHour.sorted(by: routerFirst) {
             var status = lossStatus(total.loss)
+            if status >= .warn {
+                lossy.insert(target)
+            }
             if let jitter = total.jitter, jitter > 30 {
                 status = max(status, .warn)
             }
@@ -100,15 +104,17 @@ public enum PingQuality {
         }
         let overall = CheckStatus.worst(Array(statuses.values) + (probeBest.map { [lossStatus($0)] } ?? []))
 
+        // Unstable latency without loss is said as such, not as packet loss (SIC-66).
+        let internetLossy = lossy.contains { $0 != Self.router }
         let summary: String
         if routerBad {
-            summary = "diag.ping.router_loss"
+            summary = lossy.contains(Self.router) ? "diag.ping.router_loss" : "diag.ping.router_jitter"
         } else if icmpLimited {
-            summary = "diag.ping.icmp_limited"
+            summary = internetLossy ? "diag.ping.icmp_limited" : "diag.ping.icmp_jitter"
         } else if let probeBest, probeBest > 1.0 {
             summary = "diag.ping.wan_loss"
         } else if icmpInternet >= .warn {
-            summary = "diag.ping.wan_loss_ping_only"
+            summary = internetLossy ? "diag.ping.wan_loss_ping_only" : "diag.ping.wan_jitter"
         } else {
             summary = "diag.ping.ok"
         }

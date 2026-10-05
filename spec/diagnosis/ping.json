@@ -783,7 +783,7 @@
       "expected": {
         "status": "warn",
         "summary": {
-          "key": "diag.ping.wan_loss_ping_only",
+          "key": "diag.ping.wan_jitter",
           "params": {}
         },
         "details": [
@@ -869,7 +869,7 @@
       "expected": {
         "status": "warn",
         "summary": {
-          "key": "diag.ping.router_loss",
+          "key": "diag.ping.router_jitter",
           "params": {}
         },
         "details": [
@@ -2804,6 +2804,258 @@
         ],
         "advice": {
           "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "high jitter on the Internet, probes clean: ICMP deprioritized, not packet loss",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.5
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 45.0
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.ping.icmp_jitter",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.5
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 45.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_icmp_limited",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "router loses packets and has high jitter: loss is named",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 1000,
+            "lost": 20,
+            "jitter": 40.0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 2.0,
+              "lost": 20,
+              "sent": 1000,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 40.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "router at exactly 1% loss with jitter 31 ms: jitter only",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 1000,
+            "lost": 10,
+            "jitter": 31.0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.router_jitter",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 1.0,
+              "lost": 10,
+              "sent": 1000,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 31.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "Internet: one target loses packets, another only has jitter: loss is named",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 1000,
+            "lost": 20,
+            "jitter": 2.0
+          },
+          {
+            "target": "google",
+            "sent": 1000,
+            "lost": 0,
+            "jitter": 50.0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.wan_loss_ping_only",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 2.0,
+              "lost": 20,
+              "sent": 1000,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 2.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 1000,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 50.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_wan",
           "params": {}
         }
       }
