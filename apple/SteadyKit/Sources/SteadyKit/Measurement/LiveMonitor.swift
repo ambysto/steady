@@ -74,6 +74,10 @@ public final class LiveMonitor {
     /// The Wi‑Fi rows of the last 24 hours when there is no store.
     private var wifiMinutes: [WiFiMinute] = []
     private var aggregator = MinuteAggregator()
+    /// Rounds that start before this are not counted: just after iOS resumes the app, the radio
+    /// is still waking up and the first TCP probes fail at once ("no route").
+    private var settledAt: ContinuousClock.Instant?
+    static let settleTime = Duration.seconds(5)
     /// One line per closed minute and target (`log stream --predicate 'subsystem == "com.ambysto.steady"'`):
     /// target names and counts only, never addresses.
     private static let log = Logger(subsystem: "com.ambysto.steady", category: "measurement")
@@ -256,9 +260,20 @@ public final class LiveMonitor {
         }
     }
 
+    /// The app is back on screen after being in the background (called by the app).
+    public func resumed() {
+        settledAt = ContinuousClock.now + Self.settleTime
+    }
+
+    /// Whether a round starting now counts: not while the app is just back from the background.
+    func isSettled(at instant: ContinuousClock.Instant = .now) -> Bool {
+        settledAt.map { instant >= $0 } ?? true
+    }
+
     private func pingRound() async {
         // The router is still tried while refused, to notice when the permission is granted.
         let started = ContinuousClock.now
+        guard isSettled(at: started) else { return }
         let outcomes = await Self.ping(routerTarget + Self.internetTargets)
         guard Self.ranOnTime(ContinuousClock.now - started, timeout: Self.pingTimeout) else {
             Self.log.info("ping round dropped: the app was paused while measuring")
@@ -297,6 +312,7 @@ public final class LiveMonitor {
 
     private func probeRound() async {
         let started = ContinuousClock.now
+        guard isSettled(at: started) else { return }
         let results = await Self.measure(Self.probeTargets)
         guard Self.ranOnTime(ContinuousClock.now - started, timeout: Self.probeTimeout) else {
             Self.log.info("probe round dropped: the app was paused while measuring")

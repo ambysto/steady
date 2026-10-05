@@ -54,7 +54,9 @@ The privacy policies of these services apply to the connections they receive:
 
 - **Local network:** the system asks once whether the app may reach devices on your network. It
   is used only to ping your router and to ask it for DNS answers, which tells Wi‑Fi problems
-  apart from Internet problems. If you decline, the router is simply not measured.
+  apart from Internet problems. If you decline and the system blocks those requests, the router is
+  simply not measured. (On an iPhone with iOS 26, pings to the router still went through after
+  declining; the router was then measured as usual, and nothing else on the network was contacted.)
 - **Location is not requested.** The app therefore cannot read the name (SSID) or hardware address
   (BSSID) of your Wi‑Fi network, and does not. On the Mac, the channel interference check looks at
   the channel and signal strength of the Wi‑Fi networks around you, from the list macOS already

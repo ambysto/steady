@@ -268,6 +268,14 @@ struct PausedRoundTests {
         #expect(!LiveMonitor.ranOnTime(.seconds(4), timeout: .milliseconds(900)))
         #expect(!LiveMonitor.ranOnTime(.seconds(12), timeout: .seconds(3)))
     }
+    @MainActor @Test func roundsRightAfterAResumeDoNotCount() {
+        // As seen on an iPhone: the first TCP probes after the app came back failed at once.
+        let monitor = LiveMonitor()
+        #expect(monitor.isSettled())
+        monitor.resumed()
+        #expect(!monitor.isSettled())
+        #expect(monitor.isSettled(at: .now + LiveMonitor.settleTime))
+    }
 }
 
 struct CellularRouterTests {

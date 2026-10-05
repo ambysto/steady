@@ -21,6 +21,7 @@ struct SteadyApp: App {
 /// Four tabs: a tab bar on iPhone, a sidebar on iPad and Mac.
 struct ContentView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.scenePhase) private var scenePhase
     private let text = Localizer()
 
     var body: some View {
@@ -42,6 +43,11 @@ struct ContentView: View {
         .tabViewStyle(.sidebarAdaptable)
         .task {
             await model.run()
+        }
+        .onChange(of: scenePhase) { old, new in
+            if old == .background, new != .background {
+                model.monitor.resumed()   // the first seconds back measure iOS waking the radio
+            }
         }
     }
 }
