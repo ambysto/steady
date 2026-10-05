@@ -258,8 +258,20 @@ public final class LiveMonitor {
 
     private func pingRound() async {
         // The router is still tried while refused, to notice when the permission is granted.
+        let started = ContinuousClock.now
         let outcomes = await Self.ping(routerTarget + Self.internetTargets)
+        guard Self.ranOnTime(ContinuousClock.now - started, timeout: Self.pingTimeout) else {
+            Self.log.info("ping round dropped: the app was paused while measuring")
+            return
+        }
         record(refusals: outcomes)
+    }
+
+    /// A round that took longer than its timeout ran while iOS had paused the app (in the
+    /// background, or the device locked): its round-trip times include the pause and its
+    /// timeouts are not losses, so it is dropped rather than counted.
+    nonisolated static func ranOnTime(_ elapsed: Duration, timeout: Duration) -> Bool {
+        elapsed <= timeout + .milliseconds(500)
     }
 
     /// Records a ping round; a refused router is noted, not counted as a lost ping.
@@ -284,7 +296,13 @@ public final class LiveMonitor {
     }
 
     private func probeRound() async {
-        record(await Self.measure(Self.probeTargets))
+        let started = ContinuousClock.now
+        let results = await Self.measure(Self.probeTargets)
+        guard Self.ranOnTime(ContinuousClock.now - started, timeout: Self.probeTimeout) else {
+            Self.log.info("probe round dropped: the app was paused while measuring")
+            return
+        }
+        record(results)
     }
 
     private nonisolated static func measure(_ targets: [Target]) async -> [(target: String, rttMs: Double?)] {
