@@ -29,7 +29,11 @@ What the App Store page of Ambysto Steady says, kept next to the code so it chan
 
 ## Screenshots (`screenshots/`, made by script, not tracked)
 
-`apple/AppStore/screenshots.sh` builds the app in Debug and takes the iPhone and iPad screenshots on the Simulators, in English, light appearance, with a 9:41 status bar. The app then runs with `-StoreScreenshots` (and `-StoreTab <tab>`): instead of measuring, it shows `SampleNetwork`, a healthy made-up network on documentation addresses (router 192.0.2.1). That code exists only in Debug builds. Retake the screenshots whenever the UI changes. The Mac's are taken by hand from the same mode: open the app with `--args -StoreScreenshots -StoreTab diagnostics`, place the window on a plain background, and capture at a 16:10 size.
+`apple/AppStore/screenshots.sh` builds the app in Debug and takes the iPhone and iPad screenshots on the Simulators, in English, light appearance, with a 9:41 status bar. The app then runs with `-StoreScreenshots` (and `-StoreTab <tab>`): instead of measuring, it shows `SampleNetwork`, a healthy made-up network on documentation addresses (router 192.0.2.1). That code exists only in Debug builds. Retake the screenshots whenever the UI changes. The Mac's are taken by hand from the same mode:
+1. Open the Debug build with `--args -StoreScreenshots -StoreTab overview` (then `diagnostics`).
+2. Zoom the window to fill the screen, and bring it to the front with `open -a` (Stage Manager otherwise keeps it in the strip).
+3. Capture it with `screencapture -o -l <window id>`.
+4. Resample to 2880 × 1800 with `sips --resampleHeightWidth 1800 2880`. A zoomed window on a 16:10 MacBook screen is within 1% of that.
 
 
 | Device | Size (portrait) | Shown |
