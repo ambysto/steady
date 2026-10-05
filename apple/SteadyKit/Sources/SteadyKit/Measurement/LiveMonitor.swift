@@ -62,6 +62,17 @@ public final class LiveMonitor {
     public private(set) var minutes: [MinuteAggregator.Minute] = []
     /// Times the route changed (seconds since 1970) that can still touch the last hour's minutes.
     public private(set) var networkChanges: [Int] = []
+    /// The Wi‑Fi interface as last read (the Mac, every few seconds); stored with each minute
+    /// for check #13. Always nil on iPhone and iPad, which cannot read it.
+    public var wifi: WiFiSignal.State? {
+        didSet {
+            if oldValue == nil, wifi != nil, physicalLink == nil { updatePhysicalLink() }
+        }
+    }
+    /// Check #13 over the last 24 hours; nil where there is no Wi‑Fi data (iPhone, iPad).
+    public private(set) var physicalLink: CheckResult?
+    /// The Wi‑Fi rows of the last 24 hours when there is no store.
+    private var wifiMinutes: [WiFiMinute] = []
     private var aggregator = MinuteAggregator()
     /// One line per closed minute and target (`log stream --predicate 'subsystem == "com.ambysto.steady"'`):
     /// target names and counts only, never addresses.
@@ -78,6 +89,7 @@ public final class LiveMonitor {
             try store.purge(now: now())
             minutes = try store.minutes(since: Int(now()) - Self.historySeconds)
             networkChanges = try store.networkChanges(since: Self.changesStart(now: Int(now())))
+            updatePhysicalLink()
             Self.log.info("history: \(self.minutes.count, privacy: .public) minutes of the last hour loaded")
         } catch {
             Self.log.error("history unavailable: \(String(describing: error), privacy: .public)")
@@ -113,6 +125,8 @@ public final class LiveMonitor {
         try store?.deleteAll()
         minutes.removeAll()
         networkChanges.removeAll()
+        wifiMinutes.removeAll()
+        updatePhysicalLink()
     }
 
     /// Starts the live numbers afresh when the route changes (a VPN turned on or off, another
@@ -193,10 +207,50 @@ public final class LiveMonitor {
         } catch {
             Self.log.error("could not save a minute: \(String(describing: error), privacy: .public)")
         }
+        if let wifi {
+            let row = WiFiMinute(ts: minute.start, state: wifi.state, channel: wifi.channel,
+                                 signal: wifi.signal.map(Double.init), rssi: wifi.rssi,
+                                 rxMbps: wifi.rxMbps.map(Double.init), txMbps: wifi.txMbps.map(Double.init))
+            wifiMinutes.append(row)
+            wifiMinutes.removeAll { $0.ts < minute.start - PhysicalLink.historySeconds }
+            do {
+                try store?.insert(row)
+            } catch {
+                Self.log.error("could not save a Wi-Fi minute: \(String(describing: error), privacy: .public)")
+            }
+        }
+        updatePhysicalLink()
+    }
+
+    /// Check #13 from the stored day (or what memory holds without a store); nil until there is
+    /// any Wi‑Fi data.
+    private func updatePhysicalLink() {
+        let time = Int(now())
+        let start = time - PhysicalLink.historySeconds
+        var wifiRows = wifiMinutes.filter { $0.ts >= start }
+        var pingRows = rows(since: start)
+        if let store {
+            do {
+                wifiRows = try store.wifiMinutes(since: start)
+                pingRows = Self.rows(of: try store.minutes(since: start))
+            } catch {
+                Self.log.error("history unavailable for check #13: \(String(describing: error), privacy: .public)")
+            }
+        }
+        guard !wifiRows.isEmpty || wifi != nil else {
+            physicalLink = nil
+            return
+        }
+        physicalLink = PhysicalLink.evaluate(PhysicalLink.join(wifi: wifiRows, ping: pingRows), now: time)
     }
 
     private func rows(since start: Int) -> [PingQuality.Row] {
-        minutes.filter { $0.start >= start }.flatMap { minute in
+        Self.rows(of: minutes.filter { $0.start >= start })
+    }
+
+    /// The minutes' rows, each with its minute's start.
+    private static func rows(of minutes: [MinuteAggregator.Minute]) -> [PingQuality.Row] {
+        minutes.flatMap { minute in
             minute.rows.map { row in
                 var row = row
                 row.ts = minute.start

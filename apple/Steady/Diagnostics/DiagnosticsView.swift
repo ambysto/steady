@@ -14,6 +14,11 @@ struct DiagnosticsView: View {
                     CheckResultView(result: signal, text: text)
                 }
             }
+            if let interference = model.interference {
+                Section {
+                    CheckResultView(result: interference, text: text)
+                }
+            }
             Section {
                 CheckResultView(result: model.monitor.pingQuality, text: text)
             }
@@ -32,6 +37,11 @@ struct DiagnosticsView: View {
                 Section {
                     Label(text("ui.diag.running"), systemImage: "hourglass")
                         .foregroundStyle(.secondary)
+                }
+            }
+            if let link = model.monitor.physicalLink {
+                Section {
+                    CheckResultView(result: link, text: text)
                 }
             }
             Section {

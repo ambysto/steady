@@ -674,6 +674,11 @@
   "apple.diag.ping.no_data": "Aún no hay suficientes mediciones (se necesitan ≥ 60 muestras en la última hora)",
   "apple.diag.ping.router_loss": "Pérdida de paquetes hacia el router: un problema local (dispositivo ↔ router / Wi‑Fi)",
   "apple.diag.bufferbloat.where_local": ", y aumenta incluso hasta el router ⇒ la cola está en el salto dispositivo ↔ router (Wi‑Fi saturado o router sobrecargado)",
+  "apple.diag.common.hidden_ssid": "Red cercana",
+  "apple.diag.physical_link.bad_minutes": "{bad}/{total} minutos ({fraction:.0%}) con velocidad de transmisión ≤ 30 Mbps y ≥ 5% de pérdida de paquetes hacia el router",
+  "apple.diag.physical_link.ok": "La velocidad de transmisión y la pérdida de paquetes hacia el router son estables",
+  "apple.diag.physical_link.advice": "Esta comprobación no puede determinar la causa. Descarta primero: la interferencia de canal y los ajustes Wi‑Fi del router (MLO/Wi‑Fi 7, el Wi‑Fi de un módem antiguo). Si todo eso está en orden, sospecha del entorno del Mac: el metal, la tapa cerrada, un dock o una pantalla pueden tapar sus antenas; ponlo en un lugar despejado o más cerca del router y vuelve a comparar después de unas horas.",
+  "apple.diag.physical_link.advice_improved": "Si acabas de mover el Mac o el router, o de cambiar algún ajuste, observa unas horas más para confirmarlo.",
 
   "ui.nav.history": "Historial",
   "ui.overview.all_ok": "Todas las comprobaciones están bien",

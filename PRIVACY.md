@@ -13,8 +13,9 @@ per-session token. Uninstalling offers to delete this data.
 
 **iPhone, iPad and Mac.** Per-minute measurements (latency, packet loss and jitter to each target
 below) are stored only in the app's own storage on the device, kept for 30 days and excluded from
-iCloud and device backups. Diagnostics results and the Mac's Wi‑Fi signal readings are shown but
-not stored. Deleting the app deletes this data.
+iCloud and device backups; on the Mac, so is the Wi‑Fi reading at the end of each minute (signal
+strength, channel and transmit rate, without the network's name or address). Diagnostics results
+are shown but not stored. Deleting the app deletes this data.
 
 ## Network connections the app makes
 
@@ -55,7 +56,9 @@ The privacy policies of these services apply to the connections they receive:
   is used only to ping your router and to ask it for DNS answers, which tells Wi‑Fi problems
   apart from Internet problems. If you decline, the router is simply not measured.
 - **Location is not requested.** The app therefore cannot read the name (SSID) or hardware address
-  (BSSID) of your Wi‑Fi network, and does not.
+  (BSSID) of your Wi‑Fi network, and does not. On the Mac, the channel interference check looks at
+  the channel and signal strength of the Wi‑Fi networks around you, from the list macOS already
+  keeps; it does not read their names or addresses, and does not store them.
 
 ## Reporting a problem (iPhone, iPad and Mac)
 
