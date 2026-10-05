@@ -78,9 +78,51 @@ public struct MinuteAggregator: Sendable {
         return total / Double(replies.count - 1)
     }
 
-    /// Python's round(x, 1): halves go to the even digit.
+    /// Python's round(x, 1), which rounds the exact binary value: 0.35 is 0.3499999… and gives 0.3,
+    /// 30.05 is 30.0500000…07 and gives 30.1. The C library's "%.1f" rounds the same way;
+    /// (x * 10).rounded() / 10 does not.
     static func roundToTenth(_ value: Double) -> Double {
-        (value * 10).rounded(.toNearestOrEven) / 10
+        guard value.isFinite else { return value }
+        return Double(String(format: "%.1f", value)) ?? value
+    }
+
+    /// Python's math.fsum: the correctly rounded sum (Shewchuk's partials, as CPython does), so
+    /// means match statistics.fmean to the last bit.
+    static func exactSum(_ values: some Sequence<Double>) -> Double {
+        var partials: [Double] = []
+        for value in values {
+            var x = value
+            var i = 0
+            for var y in partials {
+                if abs(x) < abs(y) { swap(&x, &y) }
+                let high = x + y
+                let low = y - (high - x)
+                if low != 0 {
+                    partials[i] = low
+                    i += 1
+                }
+                x = high
+            }
+            partials.removeSubrange(i...)
+            partials.append(x)
+        }
+        guard var n = partials.indices.last else { return 0 }
+        var high = partials[n]
+        var low = 0.0
+        while n > 0 {
+            let x = high
+            n -= 1
+            let y = partials[n]
+            high = x + y
+            low = y - (high - x)
+            if low != 0 { break }
+        }
+        if n > 0, (low < 0 && partials[n - 1] < 0) || (low > 0 && partials[n - 1] > 0) {
+            let y = low * 2
+            let x = high + y
+            if y == x - high { high = x }
+        }
+        return high
     }
 }
 

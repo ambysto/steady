@@ -10,6 +10,8 @@ struct OverviewView: View {
     @State private var monitor = LiveMonitor(store: history)
     @State private var dns: CheckResult?
     @State private var dnsRunning = false
+    /// Only the latest DNS run may show its result: the router can change while one is running.
+    @State private var dnsRun = 0
     @State private var vpn: CheckResult?
     @State private var bufferbloat: CheckResult?
     @State private var bufferbloatStage: BufferbloatTest.Stage?
@@ -81,9 +83,9 @@ struct OverviewView: View {
                     LabeledContent(text("ui.path.ip"), value: text.render(path.ipVersions))
                     LabeledContent(text("ui.path.dns"), value: text(path.dnsMessage))
                 }
-                if !path.notes.isEmpty {
+                if !notes(for: path).isEmpty {
                     Section {
-                        ForEach(path.notes, id: \.self) { note in
+                        ForEach(notes(for: path), id: \.self) { note in
                             Label(text(note), systemImage: "info.circle")
                         }
                     }
@@ -119,6 +121,11 @@ struct OverviewView: View {
         }
     }
 
+    /// The path's own notes, plus a declined local network permission (the router is not measured).
+    private func notes(for path: NetworkPath) -> [Message] {
+        path.notes + (monitor.routerRefused ? [Message("ui.path.reason.local_network_denied")] : [])
+    }
+
     /// Runs check #6 once connected, and again when the router changes.
     private var dnsTrigger: String? {
         guard let path, path.status == .connected else { return nil }
@@ -126,9 +133,15 @@ struct OverviewView: View {
     }
 
     private func runDNS() async {
+        dnsRun += 1
+        let run = dnsRun
         dnsRunning = true
-        dns = await DNSCheck.run(router: path?.routerIPv4)
+        let result = await DNSCheck.run(router: path?.routerIPv4)
+        guard run == dnsRun else { return }   // a newer run owns the card
         dnsRunning = false
+        if !Task.isCancelled {
+            dns = result
+        }
     }
 
     /// Check #14 runs only on request: it moves up to ~200 MB (docs/DIAGNOSTICS.md).

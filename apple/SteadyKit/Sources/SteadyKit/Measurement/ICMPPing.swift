@@ -9,8 +9,25 @@ import Synchronization
 /// (network.client) read replies on a connected socket but refuses `recvfrom` on an unconnected
 /// one with EPERM, and a connected socket also only receives that target's packets.
 public enum ICMPPing {
+    public enum Outcome: Equatable, Sendable {
+        /// Round-trip time in milliseconds.
+        case reply(Double)
+        case noReply
+        /// The system would not let the packet out: on iOS and macOS 15+ that is what a declined
+        /// local network permission looks like for an address on the LAN.
+        case refused
+
+        public var rttMs: Double? {
+            if case .reply(let rtt) = self { rtt } else { nil }
+        }
+    }
+
     /// Round-trip time in milliseconds, or nil when no reply came within `timeout`.
     public static func ping(_ address: String, timeout: Duration = .milliseconds(900)) async -> Double? {
+        await outcome(address, timeout: timeout).rttMs
+    }
+
+    public static func outcome(_ address: String, timeout: Duration = .milliseconds(900)) async -> Outcome {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 continuation.resume(returning: pingBlocking(address, timeout: timeout))
@@ -18,18 +35,23 @@ public enum ICMPPing {
         }
     }
 
+    /// errno values meaning "not allowed to send there" rather than "no answer".
+    static func isRefusal(_ code: Int32) -> Bool {
+        [EHOSTUNREACH, EPERM, EACCES].contains(code)
+    }
+
     private static let identifier = UInt16.random(in: 1...UInt16.max)
     private static let sequence = Mutex<UInt16>(0)
     private static let payload = Array("Ambysto Steady ping 0123456789ab".utf8)   // 32 bytes, as on Windows
 
-    static func pingBlocking(_ address: String, timeout: Duration) -> Double? {
+    static func pingBlocking(_ address: String, timeout: Duration) -> Outcome {
         var destination = sockaddr_in()
         destination.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         destination.sin_family = sa_family_t(AF_INET)
-        guard inet_pton(AF_INET, address, &destination.sin_addr) == 1 else { return nil }
+        guard inet_pton(AF_INET, address, &destination.sin_addr) == 1 else { return .noReply }
 
         let socketHandle = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)
-        guard socketHandle >= 0 else { return nil }
+        guard socketHandle >= 0 else { return .noReply }
         defer { close(socketHandle) }
 
         let number = sequence.withLock { value in
@@ -44,21 +66,23 @@ public enum ICMPPing {
                 connect(socketHandle, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
             }
         }
-        guard connected == 0, send(socketHandle, request, request.count, 0) == request.count else { return nil }
+        guard connected == 0, send(socketHandle, request, request.count, 0) == request.count else {
+            return isRefusal(errno) ? .refused : .noReply
+        }
 
         var buffer = [UInt8](repeating: 0, count: 2048)
         while true {
             let remaining = timeout - (clock.now - start)
-            guard remaining > .zero else { return nil }
+            guard remaining > .zero else { return .noReply }
             var descriptor = pollfd(fd: socketHandle, events: Int16(POLLIN), revents: 0)
-            guard poll(&descriptor, 1, max(1, Int32(remaining.inMilliseconds.rounded(.up)))) > 0 else { return nil }
+            guard poll(&descriptor, 1, max(1, Int32(remaining.inMilliseconds.rounded(.up)))) > 0 else { return .noReply }
 
             let received = recv(socketHandle, &buffer, buffer.count, 0)
-            guard received > 0 else { return nil }
+            guard received > 0 else { return isRefusal(errno) ? .refused : .noReply }
             guard isEchoReply(buffer[..<received], sequence: number) else {
                 continue   // an older reply or an ICMP error: keep waiting
             }
-            return (clock.now - start).inMilliseconds
+            return .reply((clock.now - start).inMilliseconds)
         }
     }
 
@@ -77,7 +101,9 @@ public enum ICMPPing {
     static func isEchoReply(_ data: ArraySlice<UInt8>, sequence: UInt16) -> Bool {
         var bytes = Array(data)
         if bytes.count >= 20, bytes[0] >> 4 == 4 {
-            bytes.removeFirst(Int(bytes[0] & 0x0F) * 4)
+            let header = Int(bytes[0] & 0x0F) * 4
+            guard header >= 20, header <= bytes.count else { return false }
+            bytes.removeFirst(header)
         }
         guard bytes.count >= 8, bytes[0] == 0 else { return false }   // type 0 = echo reply
         return UInt16(bytes[6]) << 8 | UInt16(bytes[7]) == sequence

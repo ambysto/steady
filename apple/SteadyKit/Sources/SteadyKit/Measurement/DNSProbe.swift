@@ -31,12 +31,16 @@ public enum DNSProbe {
     }
 
     /// Queries every name on `server` once, in turn (dnsprobe.benchmark). NXDOMAIN counts as an
-    /// answer for the timing; other error codes and timeouts count as failures.
+    /// answer for the timing; other error codes and timeouts count as failures. nil when the
+    /// system refuses to send to the server at all (a declined local network permission for the
+    /// router): that server cannot be measured, which is not the same as failing.
     public static func benchmark(_ server: String, names: [String] = names,
-                                 timeout: Duration = .milliseconds(1500)) async -> DNSBenchmark.Server {
+                                 timeout: Duration = .milliseconds(1500)) async -> DNSBenchmark.Server? {
         var result = DNSBenchmark.Server(server: server)
         for name in names {
-            let reply = await query(server, name: name, timeout: timeout)
+            let outcome = await query(server, name: name, timeout: timeout)
+            if outcome == .refused { return nil }
+            let reply = outcome.reply
             result.sent += 1
             if let reply {
                 result.replies += 1
@@ -50,7 +54,17 @@ public enum DNSProbe {
         return result
     }
 
-    public static func query(_ server: String, name: String, timeout: Duration) async -> Reply? {
+    public enum Outcome: Equatable, Sendable {
+        case answered(Reply)
+        case noReply
+        case refused
+
+        public var reply: Reply? {
+            if case .answered(let reply) = self { reply } else { nil }
+        }
+    }
+
+    public static func query(_ server: String, name: String, timeout: Duration) async -> Outcome {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 continuation.resume(returning: queryBlocking(server, name: name, timeout: timeout))
@@ -58,25 +72,29 @@ public enum DNSProbe {
         }
     }
 
-    static func queryBlocking(_ server: String, name: String, timeout: Duration) -> Reply? {
+    static func queryBlocking(_ server: String, name: String, timeout: Duration) -> Outcome {
         let identifier = UInt16.random(in: 0...UInt16.max)
-        guard DNSBenchmark.isUsable(server), let packet = buildQuery(name, identifier: identifier),
-              let socketHandle = connectedUDPSocket(server, port: 53) else { return nil }
+        guard DNSBenchmark.isUsable(server), let packet = buildQuery(name, identifier: identifier) else { return .noReply }
+        guard let socketHandle = connectedUDPSocket(server, port: 53) else {
+            return ICMPPing.isRefusal(errno) ? .refused : .noReply
+        }
         defer { close(socketHandle) }
 
         let clock = ContinuousClock()
         let start = clock.now
-        guard send(socketHandle, packet, packet.count, 0) == packet.count else { return nil }
+        guard send(socketHandle, packet, packet.count, 0) == packet.count else {
+            return ICMPPing.isRefusal(errno) ? .refused : .noReply
+        }
         var buffer = [UInt8](repeating: 0, count: 4096)
         while true {
             let remaining = timeout - (clock.now - start)
-            guard remaining > .zero else { return nil }
+            guard remaining > .zero else { return .noReply }
             var descriptor = pollfd(fd: socketHandle, events: Int16(POLLIN), revents: 0)
-            guard poll(&descriptor, 1, max(1, Int32(remaining.inMilliseconds.rounded(.up)))) > 0 else { return nil }
+            guard poll(&descriptor, 1, max(1, Int32(remaining.inMilliseconds.rounded(.up)))) > 0 else { return .noReply }
             let received = recv(socketHandle, &buffer, buffer.count, 0)
-            guard received > 0 else { return nil }
+            guard received > 0 else { return ICMPPing.isRefusal(errno) ? .refused : .noReply }
             if let rcode = responseCode(buffer[..<received], identifier: identifier) {
-                return Reply(rttMs: (clock.now - start).inMilliseconds, rcode: rcode)
+                return .answered(Reply(rttMs: (clock.now - start).inMilliseconds, rcode: rcode))
             }
             // A stray or late packet: keep waiting until the deadline.
         }
@@ -147,13 +165,13 @@ public enum DNSCheck {
     public static func run(router: String?) async -> CheckResult {
         let inUse = DNSProbe.systemServers().filter(DNSBenchmark.isUsable)
         let plan = DNSBenchmark.plan(inUse: inUse, router: router)
-        let bench = await withTaskGroup(of: DNSBenchmark.Server.self) { group in
+        let bench = await withTaskGroup(of: DNSBenchmark.Server?.self) { group in
             for server in plan.servers {
                 group.addTask { await DNSProbe.benchmark(server) }
             }
             var results: [DNSBenchmark.Server] = []
             for await result in group {
-                results.append(result)
+                if let result { results.append(result) }   // nil: not allowed to reach that server
             }
             return plan.servers.compactMap { server in results.first { $0.server == server } }
         }

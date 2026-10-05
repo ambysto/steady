@@ -65,7 +65,11 @@ public enum BufferbloatTest {
         let clock = ContinuousClock()
         let started = clock.now
         let loadTask = Task { await load.run(seconds: loadSeconds) }
-        let samples = await sample(targets, seconds: loadSeconds)
+        let samples = await withTaskCancellationHandler {
+            await sample(targets, seconds: loadSeconds)
+        } onCancel: {
+            load.stop()   // leaving the screen must not leave ~100 MB of transfers running
+        }
         load.stop()
         let outcome = await loadTask.value
         let elapsed = max((clock.now - started).inMilliseconds / 1000, 1e-6)
@@ -142,6 +146,10 @@ final class LoadGenerator: Sendable {
         }
     }
 
+    var isStopped: Bool {
+        state.withLock { $0.stopped }
+    }
+
     private func isDone(deadline: ContinuousClock.Instant) -> Bool {
         ContinuousClock.now >= deadline || state.withLock { $0.stopped || $0.bytes >= BufferbloatTest.maxBytes }
     }
@@ -166,6 +174,9 @@ final class LoadGenerator: Sendable {
 final class LoadWorker: NSObject, URLSessionDataDelegate, Sendable {
     private unowned let generator: LoadGenerator
     private let current = Mutex<(task: URLSessionTask?, continuation: CheckedContinuation<Bool, Never>?)>((nil, nil))
+    /// Set when the server refused a request: the worker stops instead of asking again
+    /// (app/bufferbloat.py returns from the worker on a non-200 reply).
+    private let refused = Mutex(false)
     private let session = Mutex<URLSession?>(nil)
 
     init(generator: LoadGenerator) {
@@ -185,6 +196,9 @@ final class LoadWorker: NSObject, URLSessionDataDelegate, Sendable {
             let task = body.map { session.uploadTask(with: request, from: $0) } ?? session.dataTask(with: request)
             current.withLock { $0 = (task, continuation) }
             task.resume()
+            if generator.isStopped {   // stop() came just before this task was registered
+                task.cancel()
+            }
         }
     }
 
@@ -204,6 +218,7 @@ final class LoadWorker: NSObject, URLSessionDataDelegate, Sendable {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         if dataTask.originalRequest?.httpMethod == "GET", status != 200 {
             generator.fail("HTTP \(status)")
+            refused.withLock { $0 = true }
             completionHandler(.cancel)
             return
         }
@@ -224,7 +239,7 @@ final class LoadWorker: NSObject, URLSessionDataDelegate, Sendable {
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
-        var keepGoing = true
+        var keepGoing = !refused.withLock { $0 }
         if let error {
             let cancelled = (error as? URLError)?.code == .cancelled
             if !cancelled {

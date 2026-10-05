@@ -9,6 +9,7 @@ int steady_dns_servers(char *buffer, int stride, int max) {
     struct __res_state state;
     memset(&state, 0, sizeof state);
     if (res_ninit(&state) != 0) {
+        res_ndestroy(&state);   // res_ninit may have allocated before failing
         return -1;
     }
     union res_sockaddr_union servers[16];

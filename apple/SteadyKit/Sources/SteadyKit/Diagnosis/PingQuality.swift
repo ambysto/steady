@@ -102,7 +102,8 @@ public enum PingQuality {
         var jitters: [Double] = []
 
         var loss: Double { sent > 0 ? 100.0 * Double(lost) / Double(sent) : 0 }
-        var jitter: Double? { jitters.isEmpty ? nil : jitters.reduce(0, +) / Double(jitters.count) }
+        /// statistics.fmean: an exact sum, then one division.
+        var jitter: Double? { jitters.isEmpty ? nil : MinuteAggregator.exactSum(jitters) / Double(jitters.count) }
     }
 
     static func aggregate(_ rows: [Row]) -> [String: Total] {

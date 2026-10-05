@@ -1,4 +1,5 @@
 import Foundation
+import os
 import SQLite3
 
 /// Per-minute measurement rows in SQLite, in the `minute_stats` table of app/storage.py (ADR-0011).
@@ -11,22 +12,40 @@ public final class MinuteStore {
     static let retentionDays = 30.0
     private var db: OpaquePointer?
 
-    /// The app's database: Application Support/metrics.sqlite, excluded from backups.
+    private static let log = Logger(subsystem: "com.ambysto.steady", category: "storage")
+
+    /// The app's database: Application Support/History/metrics.sqlite. The whole folder is
+    /// excluded from backups, so SQLite's -wal and -shm files are too.
     public static func standard() throws -> MinuteStore {
-        let folder = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
-                                                 appropriateFor: nil, create: true)
-        var url = folder.appending(path: "metrics.sqlite")
-        let store = try MinuteStore(url: url)
+        let fileManager = FileManager.default
+        let support = try fileManager.url(for: .applicationSupportDirectory, in: .userDomainMask,
+                                          appropriateFor: nil, create: true)
+        var folder = support.appending(path: "History", directoryHint: .isDirectory)
+        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
         var values = URLResourceValues()
         values.isExcludedFromBackup = true
-        try? url.setResourceValues(values)
-        return store
+        do {
+            try folder.setResourceValues(values)
+        } catch {
+            log.error("could not exclude the history from backups: \(String(describing: error), privacy: .public)")
+        }
+        let url = folder.appending(path: "metrics.sqlite")
+        // Builds before 2026-10-05 kept the database directly in Application Support.
+        for suffix in ["", "-wal", "-shm"] {
+            let old = support.appending(path: "metrics.sqlite" + suffix)
+            let new = folder.appending(path: "metrics.sqlite" + suffix)
+            if fileManager.fileExists(atPath: old.path), !fileManager.fileExists(atPath: new.path) {
+                try? fileManager.moveItem(at: old, to: new)
+            }
+        }
+        return try MinuteStore(url: url)
     }
 
     public init(url: URL) throws {
         guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
             let message = db.map { String(cString: sqlite3_errmsg($0)) } ?? "cannot open"
             sqlite3_close(db)
+            db = nil   // deinit runs even though init throws, and must not close it again
             throw StoreError(description: message)
         }
         try execute("""

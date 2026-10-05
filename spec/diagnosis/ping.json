@@ -1876,6 +1876,172 @@
       }
     },
     {
+      "name": "jitter averaging exactly 30 ms (needs an exact sum, as statistics.fmean) is not high",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 36.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 22.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 29.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 36.3
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 38.9
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 21.1
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.4
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 21.5
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 25.8
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 22.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 32.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 30.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 31.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 27.4
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 22.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 30.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 28.4
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 37.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 32.6
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 1320,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 30.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
       "name": "probes lose 1.5% while ping is clean",
       "input": {
         "rows_1h": [

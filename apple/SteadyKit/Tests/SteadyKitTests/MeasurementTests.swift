@@ -280,3 +280,39 @@ struct NetworkChangeTests {
         #expect(wifi.route != vpn.route)
     }
 }
+
+@MainActor
+struct LocalNetworkRefusalTests {
+    @Test func aRefusedRouterIsLeftOutNotCountedAsLost() {
+        let monitor = LiveMonitor()
+        monitor.routerAddress = "192.0.2.1"
+        monitor.record(refusals: [("router", .refused), ("cloudflare", .reply(20)), ("google", .noReply)])
+        #expect(monitor.routerRefused)
+        #expect(monitor.samples["router"] == nil)
+        #expect(monitor.samples["google"] == [nil])
+        #expect(!monitor.targets.contains { $0.id == "router" })
+        monitor.record(refusals: [("router", .reply(3)), ("cloudflare", .reply(20))])   // permission granted
+        #expect(!monitor.routerRefused)
+        #expect(monitor.samples["router"] == [3])
+        #expect(monitor.targets.first?.id == "router")
+    }
+
+    @Test func refusalErrorsAreRecognised() {
+        #expect(ICMPPing.isRefusal(EHOSTUNREACH) && ICMPPing.isRefusal(EPERM))
+        #expect(!ICMPPing.isRefusal(ETIMEDOUT))
+    }
+}
+
+struct MinuteStoreFailureTests {
+    @Test func aDatabaseThatCannotOpenThrowsWithoutCrashing() {
+        let missing = URL(filePath: "/nonexistent-\(UUID().uuidString)/metrics.sqlite")
+        #expect(throws: MinuteStore.StoreError.self) { try MinuteStore(url: missing) }
+    }
+}
+
+struct VPNPreferredInterfaceTests {
+    @Test func onlyThePreferredTunnelCounts() {
+        #expect(!VPNReader.adapters(pathInterfaces: ["en0", "utun3"]).contains { $0.name == "utun3" })
+        #expect(VPNReader.adapters(pathInterfaces: ["utun3", "en0"]).contains { $0.name == "utun3" })
+    }
+}

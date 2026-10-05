@@ -53,6 +53,9 @@ public final class LiveMonitor {
     }
 
     public private(set) var samples: [String: [Double?]] = [:]
+    /// The system refuses to send to the router: the local network permission was declined.
+    /// The router is then left out (not counted as lost) until a ping gets through again.
+    public private(set) var routerRefused = false
     private var network: String?
     public private(set) var minutes: [MinuteAggregator.Minute] = []
     private var aggregator = MinuteAggregator()
@@ -76,8 +79,13 @@ public final class LiveMonitor {
         }
     }
 
+    /// What the screen lists: the router only while it can be measured.
     public var targets: [Target] {
-        (routerAddress.map { [Target(id: Self.router, address: $0)] } ?? []) + Self.internetTargets + Self.probeTargets
+        (routerRefused ? [] : routerTarget) + Self.internetTargets + Self.probeTargets
+    }
+
+    private var routerTarget: [Target] {
+        routerAddress.map { [Target(id: Self.router, address: $0)] } ?? []
     }
 
     /// Starts the live numbers afresh when the network changes (a VPN turned on or off, another
@@ -143,7 +151,30 @@ public final class LiveMonitor {
     }
 
     private func pingRound() async {
-        record(await Self.measure(targets.filter { $0.kind == .icmp }))
+        // The router is still tried while refused, to notice when the permission is granted.
+        let outcomes = await Self.ping(routerTarget + Self.internetTargets)
+        record(refusals: outcomes)
+    }
+
+    /// Records a ping round; a refused router is noted, not counted as a lost ping.
+    func record(refusals outcomes: [(target: String, outcome: ICMPPing.Outcome)]) {
+        if let router = outcomes.first(where: { $0.target == Self.router }) {
+            routerRefused = router.outcome == .refused
+        }
+        record(outcomes.filter { $0.outcome != .refused }.map { ($0.target, $0.outcome.rttMs) })
+    }
+
+    private nonisolated static func ping(_ targets: [Target]) async -> [(target: String, outcome: ICMPPing.Outcome)] {
+        await withTaskGroup(of: (target: String, outcome: ICMPPing.Outcome).self) { group in
+            for target in targets {
+                group.addTask { (target.id, await ICMPPing.outcome(target.address, timeout: pingTimeout)) }
+            }
+            var results: [(target: String, outcome: ICMPPing.Outcome)] = []
+            for await result in group {
+                results.append(result)
+            }
+            return targets.compactMap { target in results.first { $0.target == target.id } }
+        }
     }
 
     private func probeRound() async {

@@ -12,7 +12,7 @@ Options considered: SwiftData/Core Data (a second data model to keep in step wit
 
 ## Decision
 
-1. **SQLite via the system `SQLite3` module**, one database `metrics.sqlite` in the app's Application Support folder (inside the sandbox container on macOS), excluded from iCloud/device backups: it is measurement data that can be measured again.
+1. **SQLite via the system `SQLite3` module**, one database `metrics.sqlite` in its own `History` folder in the app's Application Support folder (inside the sandbox container on macOS); the folder is excluded from iCloud/device backups, which covers SQLite's `-wal` and `-shm` files too: it is measurement data that can be measured again.
 2. **Same table as Windows:** `minute_stats (ts, target, ip, sent, lost, avg, max, jitter)`, keyed by `(ts, target)`, timestamps in Unix seconds at the start of the minute, the same target names (`router`, `cloudflare`, `tcp_google`…). Rules read the same rows on every platform, and exported data compares directly.
 3. **Partial minutes are kept:** when measuring stops (screen closed, app suspended) the current minute is written as it is. Because the app may reopen within the same minute, a row that already exists is **merged** (sent and lost added, the newer jitter kept), where Windows replaces it.
 4. **Retention 30 days**, like `retention_days` on Windows, purged when measuring starts.

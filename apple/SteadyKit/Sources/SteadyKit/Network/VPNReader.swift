@@ -8,11 +8,13 @@ import Foundation
 public enum VPNReader {
     static let tunnelPrefixes = ["utun", "ipsec", "ppp", "tap", "tun"]
 
-    /// - Parameter pathInterfaces: names of the interfaces the current network path uses.
+    /// - Parameter pathInterfaces: names of the interfaces the current network path can use,
+    ///   preferred first.
     public static func adapters(pathInterfaces: [String]) -> [VPNCheck.Adapter] {
         var names = scopedInterfaces().filter(isTunnel)
-        for name in pathInterfaces where isTunnel(name) && !names.contains(name) {
-            names.append(name)
+        // Only the interface the path prefers carries the traffic; the others are merely available.
+        if let preferred = pathInterfaces.first, isTunnel(preferred), !names.contains(preferred) {
+            names.append(preferred)
         }
         return names.map { VPNCheck.Adapter(name: $0, status: "Up", isTunnel: true) }
     }

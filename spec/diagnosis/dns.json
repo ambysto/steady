@@ -1255,6 +1255,176 @@
       }
     },
     {
+      "name": "Python rounding: a 30.05 ms median is 30.1, so 20.1 ms slower than 10 ms",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 1,
+            "replies": 1,
+            "failures": 0,
+            "rtts_ms": [
+              30.05
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 1,
+            "replies": 1,
+            "failures": 0,
+            "rtts_ms": [
+              10.0
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "1.1.1.1",
+            "gap": 20.1
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30.1
+                }
+              },
+              "failures": 0,
+              "sent": 1
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 10.0
+                }
+              },
+              "failures": 0,
+              "sent": 1
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_consider",
+          "params": {
+            "server": "1.1.1.1"
+          }
+        }
+      }
+    },
+    {
+      "name": "Python rounding: a 0.35 ms median is 0.3",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 3,
+            "replies": 3,
+            "failures": 0,
+            "rtts_ms": [
+              0.35,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 1,
+            "replies": 1,
+            "failures": 0,
+            "rtts_ms": [
+              0.3
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 0.3
+                }
+              },
+              "failures": 0,
+              "sent": 3
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 0.3
+                }
+              },
+              "failures": 0,
+              "sent": 1
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
       "name": "equal medians: the first measured wins",
       "input": {
         "bench": [
