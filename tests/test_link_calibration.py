@@ -1,4 +1,5 @@
 """scripts/link_calibration.py: the share of bad minutes per period and rate threshold."""
+import contextlib
 import importlib.util
 import sqlite3
 import tempfile
@@ -18,7 +19,8 @@ class LinkCalibrationTests(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         self.db = Path(self.dir.name) / "metrics.sqlite"
-        with sqlite3.connect(self.db) as conn:
+        # closing() releases the file (Windows cannot delete an open one); `conn` commits on exit
+        with contextlib.closing(sqlite3.connect(self.db)) as conn, conn:
             conn.execute("CREATE TABLE minute_stats (ts INTEGER, target TEXT, sent INTEGER, lost INTEGER)")
             conn.execute("CREATE TABLE wifi_stats (ts INTEGER PRIMARY KEY, state TEXT, rssi INTEGER,"
                          " rx_mbps REAL, tx_mbps REAL)")
