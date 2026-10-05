@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 - **Apple app: ready for TestFlight** (SIC-63, ADR-0013):
-  - `apple/scripts/release.sh` archives iOS and macOS from a Mac and, with `--upload`, sends both to App Store Connect. It first checks that the catalogs are generated and the tests pass. The build number is a UTC timestamp, and the team ID and API key come from the environment.
+  - `apple/scripts/release.sh` archives iOS and macOS from a Mac and, with `--upload`, sends both to App Store Connect. It first checks that the catalogs are generated and the tests pass. The build number is the UTC time (`2026.1005.1830`), and the team ID and API key come from the environment.
   - A privacy manifest (no tracking, no collected data, none of the APIs that need a reason).
   - `ITSAppUsesNonExemptEncryption = NO`.
   - The Mac app is now "Ambysto Steady.app" with that menu name, as on Windows; the Swift module stays `Steady`.

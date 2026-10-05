@@ -8,7 +8,7 @@ How Ambysto Steady for iPhone, iPad and Mac gets to testers, per [ADR-0013](../d
 - **Mac:** sandboxed (required for TestFlight and the Mac App Store), hardened runtime, outgoing connections only.
 - **Export compliance:** `ITSAppUsesNonExemptEncryption = NO`, since the app uses only the system's HTTPS. App Store Connect does not ask about encryption on each upload.
 - **Privacy manifest:** `Steady/PrivacyInfo.xcprivacy` declares no tracking and no collected data. The app uses none of the APIs that need a stated reason; check `nm -u` on the binary when adding code that touches UserDefaults, file timestamps, boot time, disk space or keyboards.
-- **Build numbers:** a UTC timestamp (`yyyymmddHHMM`), so every upload is higher than the last. `MARKETING_VERSION` in `Config/Base.xcconfig` is the version users see.
+- **Build numbers:** the UTC time as year.monthday.hourminute, such as `2026.1005.1830`. Every upload is higher than the last, and the number stays within Apple's limits: at most three integers of up to 4 digits, 18 characters in all. `MARKETING_VERSION` in `Config/Base.xcconfig` is the version users see.
 - dSYMs are uploaded with each build, so crash reports are symbolicated.
 
 ## One-time setup for the Ambysto organization

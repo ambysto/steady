@@ -8,7 +8,8 @@
 #
 # Environment:
 #   STEADY_TEAM_ID           the Ambysto organization's team ID (required)
-#   STEADY_BUILD             build number (default: UTC time, yyyymmddHHMM: always increasing)
+#   STEADY_BUILD             build number (default: UTC time as year.monthday.hourminute, such as
+#                            2026.1005.1830: always increasing, three integers of at most 4 digits)
 #   STEADY_PLATFORMS         "iOS macOS" (default) or one of them
 #   STEADY_BUNDLE_ID_SUFFIX  empty for a release; ".dev" for a dry run with a personal team
 #   STEADY_ALLOW_DIRTY=1     archive uncommitted changes (never for an upload)
@@ -27,10 +28,16 @@ done
 apple="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(dirname "$apple")"
 team="${STEADY_TEAM_ID:?set STEADY_TEAM_ID to the team that signs the release}"
-build="${STEADY_BUILD:-$(TZ=UTC date +%Y%m%d%H%M)}"
+stamp="$(TZ=UTC date +%Y%m%d%H%M)"
+build="${STEADY_BUILD:-${stamp:0:4}.$((10#${stamp:4:4})).$((10#${stamp:8:4}))}"
 platforms="${STEADY_PLATFORMS:-iOS macOS}"
 suffix="${STEADY_BUNDLE_ID_SUFFIX-}"
 out="$apple/build/release/$build"
+
+if ! [[ "$build" =~ ^[0-9]{1,4}(\.[0-9]{1,4}){0,2}$ ]]; then
+    echo "Build number $build: use up to three integers of at most 4 digits, such as 2026.1005.1830." >&2
+    exit 2
+fi
 
 if [[ -n "$(git -C "$repo" status --porcelain)" ]]; then
     if [[ "${STEADY_ALLOW_DIRTY:-}" != 1 || "$upload" == true ]]; then

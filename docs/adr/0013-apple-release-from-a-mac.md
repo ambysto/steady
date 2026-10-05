@@ -24,7 +24,7 @@ Options considered:
    - the SteadyKit tests pass;
    - the working tree is clean.
 2. **Automatic signing** (`-allowProvisioningUpdates`): Xcode creates the App ID, certificates and profiles of the team given in `STEADY_TEAM_ID`. Uploads use an App Store Connect API key from the environment, or Xcode's signed-in account. **No team ID or key is committed;** `Config/ExportOptions.plist` is filled in at run time.
-3. **Build number = UTC time** (`yyyymmddHHMM`), so every upload is higher than the last without a counter in the repository. `MARKETING_VERSION` stays in `Config/Base.xcconfig`.
+3. **Build number = UTC time** as year.monthday.hourminute (`2026.1005.1830`), so every upload is higher than the last without a counter in the repository. Three integers of at most 4 digits fit Apple's limits for `CFBundleVersion` (a single 12-digit number might not). `MARKETING_VERSION` stays in `Config/Base.xcconfig`.
 4. A release is tagged `apple-v<version>-<build>`, separate from the Windows `v*` tags, which trigger the Windows workflow.
 5. The bundle carries what review needs:
    - a privacy manifest declaring nothing (no tracking, no data collected, no APIs that need a reason);
