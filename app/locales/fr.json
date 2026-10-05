@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "routeur également injoignable ; écourté par une interruption de la surveillance",
   "event.internet_down.wan": "routeur joignable -> côté FAI/WAN du routeur",
   "event.internet_down.wan.cut": "routeur joignable -> côté FAI/WAN du routeur ; écourté par une interruption de la surveillance",
+  "event.internet_down.local.unstable": "routeur également injoignable; instable : {drops} coupures",
+  "event.internet_down.wan.unstable": "routeur joignable -> côté FAI/WAN du routeur; instable : {drops} coupures",
 
   "event.monitor_gap": "aucun échantillon pendant {seconds} s (veille, blocage ou pause)",
   "event.user_action": "Utilisateur : {action} — {result}",

@@ -257,6 +257,23 @@ class PowerShellIntegrationTests(unittest.TestCase):
         self.assertEqual(native["gateway"], uplink["gateway"])
         self.assertEqual(native["interface_index"], uplink["interface_index"])
 
+    def test_internet_route_is_a_real_interface(self):
+        route = winutil.internet_route_native()
+        if route is None:
+            self.skipTest("no route to the Internet (offline)")
+        self.assertGreater(route["interface_index"], 0)
+        self.assertTrue(route["gateway"] is None or route["gateway"].count(".") == 3)
+
+    def test_default_route_is_found_while_a_full_tunnel_vpn_hides_it(self):
+        # No skip: this is the case the monitor must handle with the VPN on or off.
+        native = winutil.default_route_native()
+        uplink = winutil.get_uplink()
+        if uplink is None:
+            self.skipTest("offline")
+        self.assertIsNotNone(native)
+        self.assertEqual((native["gateway"], native["interface_index"]),
+                         (uplink["gateway"], uplink["interface_index"]))
+
     def test_get_gateway_uses_native_without_spawning_powershell(self):
         from unittest import mock
         with mock.patch.object(winutil, "default_route_native", return_value={"gateway": "10.1.1.1"}), \
@@ -274,6 +291,58 @@ class PowerShellIntegrationTests(unittest.TestCase):
         with mock.patch.object(winutil, "default_route_native", return_value=None), \
                 mock.patch.object(winutil, "get_uplink", side_effect=winutil.PowerShellError("x")):
             self.assertIsNone(winutil.get_gateway())
+
+
+def ip(text):
+    import socket
+    return int.from_bytes(socket.inet_aton(text), "little")
+
+
+def forward_table(*rows):
+    """rows: (dest, mask, next_hop, if_index, metric) as text/ints -> bytes of a MIB_IPFORWARDTABLE."""
+    def dword(v):
+        return (ip(v) if isinstance(v, str) else v).to_bytes(4, "little")
+    out = len(rows).to_bytes(4, "little")
+    for dest, mask, hop, index, metric in rows:
+        fields = [dword(dest), dword(mask), dword(0), dword(hop), dword(index), dword(4), dword(3), dword(0),
+                  dword(0), dword(metric), dword(0), dword(0), dword(0), dword(0)]
+        out += b"".join(fields)
+    return out
+
+
+class ForwardTableTests(unittest.TestCase):
+    WIFI = ("0.0.0.0", "0.0.0.0", "192.168.3.1", 6, 2)
+    TUNNEL_LOW = ("0.0.0.0", "128.0.0.0", "0.0.0.0", 44, 5)
+    TUNNEL_HIGH = ("128.0.0.0", "128.0.0.0", "0.0.0.0", 44, 5)
+    LOCAL = ("192.168.3.0", "255.255.255.0", "0.0.0.0", 6, 281)
+
+    def best(self, *rows):
+        return winutil.best_default_route(winutil.parse_forward_table(forward_table(*rows)))
+
+    def test_parses_every_row(self):
+        rows = winutil.parse_forward_table(forward_table(self.WIFI, self.LOCAL))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual((rows[0]["next_hop"], rows[0]["interface_index"], rows[0]["metric"]),
+                         (ip("192.168.3.1"), 6, 2))
+
+    def test_the_default_route_is_found_beside_a_wireguard_style_split(self):
+        route = self.best(self.TUNNEL_LOW, self.TUNNEL_HIGH, self.WIFI, self.LOCAL)
+        self.assertEqual(route, {"gateway": "192.168.3.1", "interface_index": 6, "metric": 2})
+
+    def test_the_lowest_metric_wins_between_default_routes(self):
+        wired = ("0.0.0.0", "0.0.0.0", "10.0.0.1", 3, 25)
+        self.assertEqual(self.best(wired, self.WIFI)["interface_index"], 6)
+        self.assertEqual(self.best(self.WIFI, ("0.0.0.0", "0.0.0.0", "10.0.0.1", 3, 1))["interface_index"], 3)
+
+    def test_an_on_link_default_route_and_no_default_route_are_not_gateways(self):
+        self.assertIsNone(self.best(("0.0.0.0", "0.0.0.0", "0.0.0.0", 44, 5), self.LOCAL))
+        self.assertIsNone(self.best(self.LOCAL))
+        self.assertIsNone(self.best())
+
+    def test_a_truncated_table_does_not_raise(self):
+        data = forward_table(self.WIFI, self.LOCAL)
+        self.assertEqual(len(winutil.parse_forward_table(data[:-10])), 1)
+        self.assertEqual(winutil.parse_forward_table(b""), [])
 
 
 class ConfigTests(unittest.TestCase):

@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "Router ebenfalls nicht erreichbar; durch eine Überwachungslücke verkürzt",
   "event.internet_down.wan": "Router erreichbar -> Provider-/Router-WAN-Seite",
   "event.internet_down.wan.cut": "Router erreichbar -> Provider-/Router-WAN-Seite; durch eine Überwachungslücke verkürzt",
+  "event.internet_down.local.unstable": "Router ebenfalls nicht erreichbar; instabil: {drops} Ausfälle",
+  "event.internet_down.wan.unstable": "Router erreichbar -> Provider-/Router-WAN-Seite; instabil: {drops} Ausfälle",
 
   "event.monitor_gap": "keine Messungen für {seconds} s (Ruhezustand, Hänger oder pausiert)",
   "event.user_action": "Benutzer: {action} — {result}",

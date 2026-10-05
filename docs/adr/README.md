@@ -17,3 +17,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0011](0011-apple-measurement-history.md) | The Apple app keeps its measurement history in SQLite, in the Windows schema | Accepted |
 | [0012](0012-user-sent-problem-reports.md) | Problem reports are written by the app, read in full and sent by the user | Accepted |
 | [0013](0013-apple-release-from-a-mac.md) | Apple builds are archived and uploaded from a Mac, by script | Accepted |
+| [0014](0014-merge-internet-drops.md) | Internet drops close together are one unstable episode | Accepted |

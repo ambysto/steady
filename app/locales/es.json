@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "el router tampoco responde; interrumpido por un hueco de monitorización",
   "event.internet_down.wan": "el router responde -> lado ISP/WAN del router",
   "event.internet_down.wan.cut": "el router responde -> lado ISP/WAN del router; interrumpido por un hueco de monitorización",
+  "event.internet_down.local.unstable": "el router tampoco responde; inestable: {drops} caídas",
+  "event.internet_down.wan.unstable": "el router responde -> lado ISP/WAN del router; inestable: {drops} caídas",
 
   "event.monitor_gap": "sin muestras durante {seconds} s (suspensión, bloqueo o pausa)",
   "event.user_action": "Usuario: {action} — {result}",

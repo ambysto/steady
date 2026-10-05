@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "라우터에도 연결할 수 없음. 모니터링 공백으로 중단됨",
   "event.internet_down.wan": "라우터는 연결됨 -> ISP/라우터 WAN 측",
   "event.internet_down.wan.cut": "라우터는 연결됨 -> ISP/라우터 WAN 측. 모니터링 공백으로 중단됨",
+  "event.internet_down.local.unstable": "라우터에도 연결할 수 없음; 불안정: {drops}회 끊김",
+  "event.internet_down.wan.unstable": "라우터는 연결됨 -> ISP/라우터 WAN 측; 불안정: {drops}회 끊김",
 
   "event.monitor_gap": "{seconds}초 동안 샘플 없음 (절전, 멈춤 또는 일시 중지)",
   "event.user_action": "사용자: {action} — {result}",

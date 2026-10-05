@@ -32,10 +32,10 @@ APP_DIR = DIST / runtime.APP_NAME
 
 
 def make_icon() -> Path:
-    from app.desktop import draw_icon
-    ico = BUILD / "app.ico"
-    ico.parent.mkdir(parents=True, exist_ok=True)
-    draw_icon("ok", 256).save(ico, sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    """The exe, shortcut and Apps & features icon: app/assets/app.ico (scripts/make_app_icon.py)."""
+    ico = ROOT / "app" / "assets" / "app.ico"
+    if not ico.is_file():
+        raise SystemExit(f"{ico} is missing: run python scripts/make_app_icon.py")
     return ico
 
 
@@ -50,6 +50,7 @@ def build() -> None:
         "--paths", str(ROOT),
         "--add-data", f"{ROOT / 'web'}{sep}web",
         "--add-data", f"{ROOT / 'app' / 'locales'}{sep}app/locales",
+        "--add-data", f"{ROOT / 'app' / 'assets'}{sep}app/assets",
         "--collect-submodules", "app",
         "--hidden-import", "pystray._win32",
         "--exclude-module", "tkinter",

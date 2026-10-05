@@ -33,6 +33,8 @@ from .storage import Storage
 log = logging.getLogger("stableinternet.monitor")
 
 OUTAGE_THRESHOLD = 3        # consecutive failed ticks before an outage is declared
+ROUTE_POLL_S = 2            # how often the default route is compared (a native call, no process)
+MERGE_WINDOW_S = 60         # Internet drops closer together than this are one unstable episode (ADR-0014)
 GAP_MIN_S = 30              # a pause between ticks longer than this is a monitoring gap (sleep/hang)
 RAW_WINDOW_S = 15 * 60      # raw ping samples kept in RAM
 PURGE_EVERY_S = 3600
@@ -57,10 +59,17 @@ class OutageTracker:
     router_down    : PC could not reach the router  (local link / Wi-Fi / adapter)
     internet_down  : no Internet target answered; message says whether the router
                      was also failing (then it is the local link) or not (ISP side)
+
+    An Internet outage that closes is held back for `merge_window_s`: if another one starts
+    within that time the two are one unstable episode, reported as a single event that spans
+    both (ts = last recovery, duration from the first drop) and counts the drops. `active()`
+    is not affected - it always reflects what is down right now (toasts, watchdog, tray).
     """
 
-    def __init__(self, threshold: int = OUTAGE_THRESHOLD) -> None:
+    def __init__(self, threshold: int = OUTAGE_THRESHOLD, merge_window_s: float = MERGE_WINDOW_S) -> None:
         self.threshold = threshold
+        self.merge_window_s = merge_window_s
+        self._held: dict[str, Any] | None = None   # closed Internet outage(s) waiting to be reported
         self._streak = {"router": 0, "internet": 0}
         self._first_fail: dict[str, float | None] = {"router": None, "internet": None}
         self._outage_start: dict[str, float | None] = {"router": None, "internet": None}
@@ -74,9 +83,28 @@ class OutageTracker:
     def _router_message(self, cut: bool = False) -> Any:
         return msg("event.router_down" + (".cut" if cut else ""), router=self._router_ip or "?")
 
-    def _internet_message(self, cut: bool = False) -> Any:
-        key = "event.internet_down.local" if self._internet_overlap else "event.internet_down.wan"
-        return msg(key + (".cut" if cut else ""))
+    def _internet_message(self, cut: bool = False, overlap: bool | None = None, drops: int = 1) -> Any:
+        local = self._internet_overlap if overlap is None else overlap
+        key = "event.internet_down.local" if local else "event.internet_down.wan"
+        if cut:
+            return msg(key + ".cut")
+        if drops > 1:
+            return msg(key + ".unstable", drops=drops)
+        return msg(key)
+
+    def _held_event(self, cut: bool = False) -> MonitorEvent:
+        held = self._held
+        assert held is not None
+        self._held = None
+        return MonitorEvent(int(held["end"]), "internet_down",
+                            self._internet_message(cut=cut, overlap=held["overlap"], drops=held["drops"]),
+                            round(held["end"] - held["start"]))
+
+    def flush(self, ts: float) -> list[MonitorEvent]:
+        """Report the held Internet outage once nothing more can merge into it (also on shutdown)."""
+        if self._held is None:
+            return []
+        return [self._held_event()]
 
     def interrupt(self, last_ts: float) -> list[MonitorEvent]:
         """Monitoring stopped seeing the network after `last_ts` (sleep, hang, paused process).
@@ -89,8 +117,14 @@ class OutageTracker:
             events.append(MonitorEvent(int(last_ts), "router_down", self._router_message(cut=True),
                                        round(last_ts - self._outage_start["router"])))
         if self._outage_start["internet"] is not None:
+            start = self._outage_start["internet"]
+            if self._held is not None:   # the open drop continues an earlier one: one event for both
+                start = self._held["start"]
+                self._held = None
             events.append(MonitorEvent(int(last_ts), "internet_down", self._internet_message(cut=True),
-                                       round(last_ts - self._outage_start["internet"])))
+                                       round(last_ts - start)))
+        elif self._held is not None:
+            events.append(self._held_event())
         self._streak = {"router": 0, "internet": 0}
         self._first_fail = {"router": None, "internet": None}
         self._outage_start = {"router": None, "internet": None}
@@ -120,7 +154,13 @@ class OutageTracker:
         if internet_ok:
             start = self._outage_start["internet"]
             if start is not None:
-                events.append(MonitorEvent(int(ts), "internet_down", self._internet_message(), round(ts - start)))
+                held = self._held
+                self._held = {
+                    "start": held["start"] if held else start,
+                    "end": ts,
+                    "drops": (held["drops"] if held else 0) + 1,
+                    "overlap": self._internet_overlap or bool(held and held["overlap"]),
+                }
                 self._outage_start["internet"] = None
             self._streak["internet"] = 0
             self._first_fail["internet"] = None
@@ -129,10 +169,16 @@ class OutageTracker:
                 self._first_fail["internet"] = ts
             self._streak["internet"] += 1
             if self._streak["internet"] == self.threshold:
-                self._outage_start["internet"] = self._first_fail["internet"]
+                first = self._first_fail["internet"]
+                if self._held is not None and first - self._held["end"] > self.merge_window_s:
+                    events.append(self._held_event())   # too far apart: a separate episode
+                self._outage_start["internet"] = first
                 self._internet_overlap = False
             if self._outage_start["internet"] is not None and self._streak["router"] > 0:
                 self._internet_overlap = True
+        if (self._held is not None and self._outage_start["internet"] is None
+                and ts - self._held["end"] > self.merge_window_s):
+            events.append(self._held_event())
         return events
 
 
@@ -241,10 +287,12 @@ class Monitor:
                  probe_fn: Callable[[str, str, float], Any] = run_probe,
                  notify: Callable[[str, str], Any] | None = None,
                  route_fn: Callable[[], dict | None] = winutil.default_route_native,
+                 path_fn: Callable[[], dict | None] = winutil.internet_route_native,
                  dns_fn: Callable[[], dict[int, list[str]] | None] = winutil.dns_servers_native) -> None:
         self.storage = storage
         self._notify = notify
-        self._route_fn, self._dns_fn = route_fn, dns_fn
+        self._route_fn, self._dns_fn, self._path_fn = route_fn, dns_fn, path_fn
+        self._last_route: tuple[int, str] | None = None   # (interface index, gateway) of the last default route seen
         self._dns_watch = DnsWatch()
         self.settings = settings if settings is not None else config.load_settings()
         after_s = float(self.settings.get("notify", {}).get("outage_after_s", 30))
@@ -291,6 +339,7 @@ class Monitor:
         self._stop.clear()
         self.refresh_gateway()
         self.poll_wifi(baseline=True)
+        self.poll_route(baseline=True)
         self._seed_dns()
         self._record(MonitorEvent(int(self._clock()), "monitor_start",
                                   msg("event.monitor_start", gateway=self._targets[ROUTER] or "?", pid=os.getpid())))
@@ -311,6 +360,10 @@ class Monitor:
         if self._probe_pool is not None:
             self._probe_pool.shutdown(wait=False, cancel_futures=True)
         self._write_batch(self._agg.flush())
+        with self._lock:
+            held = self._tracker.flush(self._clock())
+        for ev in held:
+            self._record(ev)
         self._record(MonitorEvent(int(self._clock()), "monitor_stop", msg("event.monitor_stop", pid=os.getpid())))
 
     def snapshot(self, window_s: float = 300) -> dict[str, Any]:
@@ -439,6 +492,27 @@ class Monitor:
         if changed:
             self._record(MonitorEvent(int(self._clock()), "gateway_change", f"{old} -> {gw}"))
 
+    def poll_route(self, baseline: bool = False) -> None:
+        """Notice the route of Internet traffic moving to another interface (VPN on/off, wired <->
+        Wi-Fi) within ROUTE_POLL_S: `route_change` carries that moment, which a gateway that stays
+        the same (or is only re-read every `gateway_refresh_s`) cannot. A route that disappears is a
+        lost connection, not a switch; the next route is compared with the last one that existed."""
+        try:
+            route = self._path_fn()
+        except Exception as exc:
+            self._log_once(f"route:{exc}", "route lookup failed: %r", exc)
+            return
+        if not route:
+            return
+        current = (route["interface_index"], route.get("gateway") or "")   # a tunnel's route is on-link: no gateway
+        with self._lock:
+            before, self._last_route = self._last_route, current
+        if baseline or before is None or before == current:
+            return
+        if before[0] != current[0]:
+            self._record(MonitorEvent(int(self._clock()), "route_change", f"if{before[0]} -> if{current[0]}"))
+        self.refresh_gateway()   # a new gateway is picked up now, not up to gateway_refresh_s later
+
     def _seed_dns(self) -> None:
         try:
             stored = self.storage.query_events(kinds=list(DNS_EVENT_KINDS), limit=500)
@@ -527,13 +601,16 @@ class Monitor:
             self._stop.wait(max(delay, 0))
 
     def _slow_loop(self) -> None:
-        next_wifi = next_gw = next_dns = time.monotonic()
+        next_wifi = next_gw = next_dns = next_route = time.monotonic()
         dns_cfg = self.settings.get("dns_watch") or {}
         while not self._stop.is_set():
             now = time.monotonic()
             if dns_cfg.get("enabled") and now >= next_dns:
                 self.check_dns()
                 next_dns = time.monotonic() + float(dns_cfg.get("interval_s", 60))
+            if now >= next_route:
+                self.poll_route()
+                next_route = time.monotonic() + ROUTE_POLL_S
             if now >= next_wifi:
                 self.poll_wifi()
                 next_wifi = time.monotonic() + float(self.settings["wifi_poll_s"])
