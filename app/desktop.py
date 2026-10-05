@@ -22,6 +22,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any, Callable
 
 from . import config
@@ -179,6 +180,28 @@ def paint_caption(hwnd: int, theme: str) -> bool:
                                                       ctypes.sizeof(colour)) == 0
 
 
+APP_ICON = Path(__file__).resolve().parent / "assets" / "app.ico"    # made by scripts/make_app_icon.py
+
+
+def set_window_icon(hwnd: int, ico: Path = APP_ICON) -> bool:
+    """Title bar and taskbar icon of the window (the tray icon keeps its status colors)."""
+    if not ico.is_file():
+        return False
+    user32 = ctypes.windll.user32
+    user32.LoadImageW.restype = ctypes.c_void_p
+    user32.LoadImageW.argtypes = [ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_uint, ctypes.c_int, ctypes.c_int, ctypes.c_uint]
+    user32.SendMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_size_t, ctypes.c_void_p]
+    IMAGE_ICON, LR_LOADFROMFILE, WM_SETICON = 1, 0x10, 0x80
+    ok = False
+    for which, metric in ((0, 49), (1, 11)):          # ICON_SMALL / SM_CXSMICON, ICON_BIG / SM_CXICON
+        size = user32.GetSystemMetrics(metric)
+        handle = user32.LoadImageW(None, str(ico), IMAGE_ICON, size, size, LR_LOADFROMFILE)
+        if handle:
+            user32.SendMessageW(ctypes.c_void_p(hwnd), WM_SETICON, which, ctypes.c_void_p(handle))
+            ok = True
+    return ok
+
+
 MIN_SIZE = (420, 560)
 SELFTEST_SIZE = (600, 760)
 
@@ -224,6 +247,8 @@ class Desktop:
             hwnd = int(self.window.native.Handle.ToInt64())
         except Exception:
             return              # not shown yet
+        if self._caption is None:
+            set_window_icon(hwnd)
         if paint_caption(hwnd, theme):
             self._caption = theme
 

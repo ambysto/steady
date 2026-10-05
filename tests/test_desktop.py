@@ -96,6 +96,18 @@ class StateTests(unittest.TestCase):
         self.assertEqual(img.getpixel((8, 32))[:3], desktop.COLORS["bad"])
         self.assertEqual(img.getpixel((0, 0))[3], 0)      # transparent corner
 
+    def test_app_icon_has_every_size_the_shell_asks_for(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        self.assertTrue(desktop.APP_ICON.is_file(), "run scripts/make_app_icon.py")
+        with Image.open(desktop.APP_ICON) as ico:
+            self.assertTrue({(16, 16), (32, 32), (48, 48), (256, 256)} <= set(ico.info["sizes"]))
+
+    def test_window_icon_is_skipped_when_the_file_is_missing(self):
+        self.assertFalse(desktop.set_window_icon(0, desktop.APP_ICON.with_name("missing.ico")))
+
 
 class FakeWindow:
     def __init__(self):
