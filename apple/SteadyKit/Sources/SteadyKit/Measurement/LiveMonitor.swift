@@ -57,6 +57,8 @@ public final class LiveMonitor {
     /// The router is then left out (not counted as lost) until a ping gets through again.
     public private(set) var routerRefused = false
     private var network: String?
+    /// The last route that reached the network.
+    private var connectedRoute: String?
     public private(set) var minutes: [MinuteAggregator.Minute] = []
     /// Times the route changed (seconds since 1970) that can still touch the last hour's minutes.
     public private(set) var networkChanges: [Int] = []
@@ -113,14 +115,23 @@ public final class LiveMonitor {
         networkChanges.removeAll()
     }
 
-    /// Starts the live numbers afresh when the network changes (a VPN turned on or off, another
-    /// Wi‑Fi network): mixing samples from two routes shows loss and jitter that belong to
-    /// neither. `network` identifies the route; the first call only records it. The time of the
-    /// change is kept, so check #5 leaves out the minutes around it (as on Windows).
-    public func networkChanged(to network: String) {
-        defer { self.network = network }
-        guard let previous = self.network, previous != network else { return }
-        samples.removeAll()
+    /// Starts the live numbers afresh when the route changes (a VPN turned on or off, another
+    /// Wi‑Fi network, the connection lost): mixing samples from two routes shows loss and jitter
+    /// that belong to neither. The first call only records the route.
+    ///
+    /// A switch from one working route to another is also kept, so check #5 leaves out the
+    /// minutes around it (as on Windows). Losing the connection and getting the same route back
+    /// is not a switch but an outage, which the check must still see: the app has no check #4.
+    public func networkChanged(to path: NetworkPath) {
+        let route = path.route
+        if let previous = network, previous != route {
+            samples.removeAll()
+            Self.log.info("network changed: live samples cleared")
+        }
+        network = route
+        guard path.status == .connected else { return }
+        defer { connectedRoute = route }
+        guard let previous = connectedRoute, previous != route else { return }
         let time = Int(now())
         networkChanges.append(time)
         networkChanges.removeAll { $0 < Self.changesStart(now: time) }
@@ -129,7 +140,6 @@ public final class LiveMonitor {
         } catch {
             Self.log.error("could not save a network change: \(String(describing: error), privacy: .public)")
         }
-        Self.log.info("network changed: live samples cleared")
     }
 
     /// Changes earlier than this cannot leave out a minute of the last hour.

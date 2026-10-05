@@ -267,15 +267,15 @@ struct NetworkChangeTests {
         let monitor = LiveMonitor(now: { clock.now })
         let wifi = NetworkPath(status: .connected, link: .wifi, gateways: ["192.0.2.1"], interfaces: ["en0"])
         let vpn = NetworkPath(status: .connected, link: .other, gateways: ["192.0.2.1"], interfaces: ["utun5", "en0"])
-        monitor.networkChanged(to: wifi.route)
+        monitor.networkChanged(to: wifi)
         for _ in 0..<61 {
             monitor.record([("cloudflare", 20)])
             clock.advance(1)
         }
         #expect(monitor.minutes.count == 1)
-        monitor.networkChanged(to: wifi.route)           // the same route: nothing happens
+        monitor.networkChanged(to: wifi)           // the same route: nothing happens
         #expect(monitor.samples["cloudflare"]?.count == 60)
-        monitor.networkChanged(to: vpn.route)            // a VPN takes the traffic
+        monitor.networkChanged(to: vpn)            // a VPN takes the traffic
         #expect(monitor.samples.isEmpty)
         #expect(monitor.minutes.count == 1)
         #expect(wifi.route != vpn.route)
@@ -294,10 +294,10 @@ struct NetworkChangeTests {
                 clock.advance(1)
             }
         }
-        monitor.networkChanged(to: wifi.route)
+        monitor.networkChanged(to: wifi)
         minute(lost: 0)
         minute(lost: 0)
-        monitor.networkChanged(to: vpn.route)   // at the start of minute 2, which loses half its pings
+        monitor.networkChanged(to: vpn)   // at the start of minute 2, which loses half its pings
         minute(lost: 30)
         for _ in 0..<3 { minute(lost: 0) }
         monitor.record([])                      // closes minute 5
@@ -312,6 +312,24 @@ struct NetworkChangeTests {
         try relaunched.deleteHistory()
         #expect(relaunched.networkChanges.isEmpty)
         #expect(try MinuteStore(url: url).networkChanges(since: 0).isEmpty)
+    }
+
+    @Test func losingTheConnectionIsAnOutageNotASwitch() {
+        let clock = LiveMonitorTests.FakeClock()
+        let monitor = LiveMonitor(now: { clock.now })
+        let home = NetworkPath(status: .connected, link: .wifi, gateways: ["192.0.2.1"], interfaces: ["en0"])
+        let lost = NetworkPath(status: .disconnected)
+        let other = NetworkPath(status: .connected, link: .wifi, gateways: ["198.51.100.1"], interfaces: ["en0"])
+        monitor.networkChanged(to: home)
+        monitor.record([("cloudflare", 20)])
+        monitor.networkChanged(to: lost)
+        #expect(monitor.samples.isEmpty)               // the live numbers restart
+        monitor.networkChanged(to: home)
+        #expect(monitor.networkChanges.isEmpty)        // the same route back: the outage still counts
+        clock.advance(10)
+        monitor.networkChanged(to: lost)
+        monitor.networkChanged(to: other)              // back on another network: a switch
+        #expect(monitor.networkChanges == [1_790_000_040 + 10])
     }
 }
 
