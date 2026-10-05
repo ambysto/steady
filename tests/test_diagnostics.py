@@ -597,6 +597,25 @@ class ContextTests(unittest.TestCase):
         ctx = d.Context(now=NOW)
         self.assertEqual((ctx.get("minutes"), ctx.get("ping_rows_1h")), ([], []))
 
+    def test_ping_leaves_out_the_minutes_of_network_changes(self):
+        with Storage() as db:
+            change = int(NOW) - 600
+            minute_of_change = change - change % 60
+            for i in range(-4, 6):
+                ts = minute_of_change + 60 * i
+                db.add_minute_stat(ts, "router", 60, 30 if ts == minute_of_change else 0)
+            db.add_event(change, "gateway_change", "192.0.2.1 -> 192.0.2.254")
+            db.add_event(int(NOW) - 2 * H, "roam", "an hour too early")
+            db.add_event(int(NOW) - 300, "internet_down", "not a network change")
+            ctx = d.Context(db, now=NOW)
+            self.assertEqual(ctx.get("network_changes"), [change])
+            result = d.check_ping(ctx)
+        self.assertEqual(result.status, d.OK)
+        self.assertEqual(result.details[-1], i18n.msg("diag.ping.left_out", count=2))
+
+    def test_without_storage_there_are_no_network_changes(self):
+        self.assertEqual(d.Context(now=NOW).get("network_changes"), [])
+
 
 def fake_context(**overrides):
     loaders = {

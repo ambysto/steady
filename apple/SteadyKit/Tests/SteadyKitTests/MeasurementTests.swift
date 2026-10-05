@@ -280,6 +280,39 @@ struct NetworkChangeTests {
         #expect(monitor.minutes.count == 1)
         #expect(wifi.route != vpn.route)
     }
+
+    @Test func check5LeavesOutTheMinutesAroundAChangeAlsoAfterARelaunch() throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "steady-test-\(UUID().uuidString).sqlite")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let clock = LiveMonitorTests.FakeClock()   // starts on a minute
+        let monitor = LiveMonitor(store: try MinuteStore(url: url), now: { clock.now })
+        let wifi = NetworkPath(status: .connected, link: .wifi, gateways: ["192.0.2.1"], interfaces: ["en0"])
+        let vpn = NetworkPath(status: .connected, link: .other, gateways: ["192.0.2.1"], interfaces: ["utun5", "en0"])
+        func minute(lost: Int) {
+            for second in 0..<60 {
+                monitor.record([("cloudflare", second < lost ? nil : 20)])
+                clock.advance(1)
+            }
+        }
+        monitor.networkChanged(to: wifi.route)
+        minute(lost: 0)
+        minute(lost: 0)
+        monitor.networkChanged(to: vpn.route)   // at the start of minute 2, which loses half its pings
+        minute(lost: 30)
+        for _ in 0..<3 { minute(lost: 0) }
+        monitor.record([])                      // closes minute 5
+        let leftOut = MessageValue.message(Message("diag.ping.left_out", ["count": .number(2)]))
+        #expect(monitor.minutes.count == 6)
+        #expect(monitor.pingQuality.status == .ok)   // 30 of 360 lost would be bad
+        #expect(monitor.pingQuality.details.last == leftOut)
+
+        let relaunched = LiveMonitor(store: try MinuteStore(url: url), now: { clock.now })
+        #expect(relaunched.networkChanges == [1_790_000_040 + 120])
+        #expect(relaunched.pingQuality.details.last == leftOut)
+        try relaunched.deleteHistory()
+        #expect(relaunched.networkChanges.isEmpty)
+        #expect(try MinuteStore(url: url).networkChanges(since: 0).isEmpty)
+    }
 }
 
 @MainActor

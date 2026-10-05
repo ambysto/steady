@@ -90,6 +90,7 @@
   "diag.ping.jitter": ", jitter {jitter:.1f} ms",
   "diag.ping.recent": " · last 5 minutes: {loss:.2f}% lost",
   "diag.ping.probe_line": "{target} (real connection, not ping): {loss:.2f}% lost ({lost}/{sent})",
+  "diag.ping.left_out": {"one": "{count} minute left out: the network changed then", "other": "{count} minutes left out: the network changed then"},
   "diag.ping.router_loss": "Packet loss to the router: a local problem (PC ↔ router / Wi‑Fi)",
   "diag.ping.icmp_limited": "Pings to the Internet lose packets but TCP/HTTP connections are fine: ICMP is rate-limited, this is not an outage",
   "diag.ping.wan_loss": "The router is fine but TCP/HTTP connections to the Internet lose packets: an ISP/WAN problem",

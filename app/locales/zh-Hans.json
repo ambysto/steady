@@ -88,6 +88,7 @@
   "diag.ping.jitter": "，抖动 {jitter:.1f} ms",
   "diag.ping.recent": " · 最近 5 分钟：丢包 {loss:.2f}%",
   "diag.ping.probe_line": "{target}（真实连接，非 ping）：丢包 {loss:.2f}%（{lost}/{sent}）",
+  "diag.ping.left_out": {"one": "已略过 {count} 分钟：这段时间网络发生了变化", "other": "已略过 {count} 分钟：这段时间网络发生了变化"},
   "diag.ping.router_loss": "到路由器的丢包：本地问题（电脑 ↔ 路由器 / Wi‑Fi）",
   "diag.ping.icmp_limited": "到互联网的 ping 有丢包，但 TCP/HTTP 连接正常：ICMP 被限速，并非断网",
   "diag.ping.wan_loss": "路由器正常，但到互联网的 TCP/HTTP 连接有丢包：ISP/WAN 问题",

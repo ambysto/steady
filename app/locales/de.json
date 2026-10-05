@@ -88,6 +88,7 @@
   "diag.ping.jitter": ", Jitter {jitter:.1f} ms",
   "diag.ping.recent": " · letzte 5 Minuten: {loss:.2f}% verloren",
   "diag.ping.probe_line": "{target} (echte Verbindung, kein Ping): {loss:.2f}% verloren ({lost}/{sent})",
+  "diag.ping.left_out": {"one": "{count} Minute ausgelassen: Das Netzwerk hat sich dabei geändert", "other": "{count} Minuten ausgelassen: Das Netzwerk hat sich dabei geändert"},
   "diag.ping.router_loss": "Paketverlust zum Router: ein lokales Problem (PC ↔ Router / Wi‑Fi)",
   "diag.ping.icmp_limited": "Pings ins Internet verlieren Pakete, aber TCP/HTTP-Verbindungen sind in Ordnung: ICMP wird gedrosselt, das ist kein Ausfall",
   "diag.ping.wan_loss": "Der Router ist in Ordnung, aber TCP/HTTP-Verbindungen ins Internet verlieren Pakete: ein Problem beim Provider/WAN",

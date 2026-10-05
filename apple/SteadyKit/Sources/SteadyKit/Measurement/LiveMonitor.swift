@@ -58,6 +58,8 @@ public final class LiveMonitor {
     public private(set) var routerRefused = false
     private var network: String?
     public private(set) var minutes: [MinuteAggregator.Minute] = []
+    /// Times the route changed (seconds since 1970) that can still touch the last hour's minutes.
+    public private(set) var networkChanges: [Int] = []
     private var aggregator = MinuteAggregator()
     /// One line per closed minute and target (`log stream --predicate 'subsystem == "com.ambysto.steady"'`):
     /// target names and counts only, never addresses.
@@ -73,6 +75,7 @@ public final class LiveMonitor {
         do {
             try store.purge(now: now())
             minutes = try store.minutes(since: Int(now()) - Self.historySeconds)
+            networkChanges = try store.networkChanges(since: Self.changesStart(now: Int(now())))
             Self.log.info("history: \(self.minutes.count, privacy: .public) minutes of the last hour loaded")
         } catch {
             Self.log.error("history unavailable: \(String(describing: error), privacy: .public)")
@@ -107,17 +110,31 @@ public final class LiveMonitor {
     public func deleteHistory() throws {
         try store?.deleteAll()
         minutes.removeAll()
+        networkChanges.removeAll()
     }
 
     /// Starts the live numbers afresh when the network changes (a VPN turned on or off, another
     /// Wi‑Fi network): mixing samples from two routes shows loss and jitter that belong to
-    /// neither. `network` identifies the route; the first call only records it. The per-minute
-    /// history, and so check #5, is not affected.
+    /// neither. `network` identifies the route; the first call only records it. The time of the
+    /// change is kept, so check #5 leaves out the minutes around it (as on Windows).
     public func networkChanged(to network: String) {
         defer { self.network = network }
         guard let previous = self.network, previous != network else { return }
         samples.removeAll()
+        let time = Int(now())
+        networkChanges.append(time)
+        networkChanges.removeAll { $0 < Self.changesStart(now: time) }
+        do {
+            try store?.addNetworkChange(at: time)
+        } catch {
+            Self.log.error("could not save a network change: \(String(describing: error), privacy: .public)")
+        }
         Self.log.info("network changed: live samples cleared")
+    }
+
+    /// Changes earlier than this cannot leave out a minute of the last hour.
+    private static func changesStart(now: Int) -> Int {
+        now - historySeconds - 60 * PingQuality.changeMinutes
     }
 
     public func stats(for target: Target) -> LiveStats {
@@ -127,7 +144,8 @@ public final class LiveMonitor {
     /// Check #5 over the completed minutes of the last hour, as on Windows.
     public var pingQuality: CheckResult {
         let time = Int(now())
-        return PingQuality.evaluate(hour: rows(since: time - 3600), recent: rows(since: time - 300))
+        return PingQuality.evaluate(hour: rows(since: time - 3600), recent: rows(since: time - 300),
+                                    changes: networkChanges)
     }
 
     /// Measures until the calling task is cancelled, then keeps the partial minute.
@@ -168,7 +186,13 @@ public final class LiveMonitor {
     }
 
     private func rows(since start: Int) -> [PingQuality.Row] {
-        minutes.filter { $0.start >= start }.flatMap(\.rows)
+        minutes.filter { $0.start >= start }.flatMap { minute in
+            minute.rows.map { row in
+                var row = row
+                row.ts = minute.start
+                return row
+            }
+        }
     }
 
     private func pingRound() async {

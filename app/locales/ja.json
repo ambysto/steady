@@ -88,6 +88,7 @@
   "diag.ping.jitter": ", ジッター {jitter:.1f} ms",
   "diag.ping.recent": " · 直近 5 分: 損失 {loss:.2f}%",
   "diag.ping.probe_line": "{target}（ping ではなく実際の接続）: 損失 {loss:.2f}%（{lost}/{sent}）",
+  "diag.ping.left_out": {"one": "{count} 分を除外: その間にネットワークが切り替わりました", "other": "{count} 分を除外: その間にネットワークが切り替わりました"},
   "diag.ping.router_loss": "ルーターへのパケット損失: ローカルの問題です（PC ↔ ルーター / Wi‑Fi）",
   "diag.ping.icmp_limited": "インターネットへの ping はパケットを損失していますが、TCP/HTTP 接続は正常です。ICMP がレート制限されており、障害ではありません",
   "diag.ping.wan_loss": "ルーターは正常ですが、インターネットへの TCP/HTTP 接続でパケットを損失しています: ISP/WAN の問題です",
