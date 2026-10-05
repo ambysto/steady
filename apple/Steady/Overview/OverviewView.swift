@@ -1,81 +1,33 @@
 import SteadyKit
 import SwiftUI
 
-/// First screen: the connection the system reports (NWPathMonitor), live measurements of the
-/// router and the Internet while the screen is open, and check #5 over those measurements.
+/// The connection at a glance: what the system reports, how the checks stand, and live
+/// measurements of the router and the Internet.
 struct OverviewView: View {
-    @State private var path: NetworkPath?
-    /// Opened once: a @State initial value is evaluated every time the view is re-created.
-    private static let history = try? MinuteStore.standard()
-    @State private var monitor = LiveMonitor(store: history)
-    @State private var dns: CheckResult?
-    @State private var dnsRunning = false
-    /// Only the latest DNS run may show its result: the router can change while one is running.
-    @State private var dnsRun = 0
-    @State private var vpn: CheckResult?
-    @State private var bufferbloat: CheckResult?
-    @State private var bufferbloatStage: BufferbloatTest.Stage?
-    @State private var confirmingBufferbloat = false
-    #if os(macOS)
-    @State private var signal: CheckResult?
-    #endif
+    @Environment(AppModel.self) private var model
     private let text = Localizer()
 
     var body: some View {
         Form {
             Section {
-                PathStatusView(path: path, text: text)
+                PathStatusView(path: model.path, text: text)
             }
             Section {
-                ForEach(monitor.targets) { target in
+                ChecksSummary(checks: model.checks, text: text) {
+                    model.selectedTab = .diagnostics
+                }
+            }
+            Section {
+                ForEach(model.monitor.targets) { target in
                     MeasurementRow(title: title(of: target), endpoint: target.endpoint,
-                                   stats: monitor.stats(for: target), text: text)
+                                   stats: model.monitor.stats(for: target), text: text)
                 }
             } header: {
                 Text(text("ui.overview.latency"))
             } footer: {
                 Text(text("ui.live.window_note"))
             }
-            #if os(macOS)
-            if let signal {
-                Section {
-                    CheckResultView(result: signal, text: text)
-                }
-            }
-            #endif
-            Section {
-                CheckResultView(result: monitor.pingQuality, text: text)
-            }
-            if let vpn {
-                Section {
-                    CheckResultView(result: vpn, text: text)
-                }
-            }
-            if let dns {
-                Section {
-                    CheckResultView(result: dns, text: text) {
-                        rerunButton
-                    }
-                }
-            } else if dnsTrigger != nil {
-                Section {
-                    Label(text("ui.diag.running"), systemImage: "hourglass")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Section {
-                bufferbloatCard
-                    // Anchored to the card, so the iPad/Mac popover points at the button that opened it.
-                    .confirmationDialog(text("diag.bufferbloat.title"), isPresented: $confirmingBufferbloat, titleVisibility: .visible) {
-                        Button(text("ui.diag.bufferbloat_run")) {
-                            Task { await runBufferbloat() }
-                        }
-                        Button(text("ui.sheet.cancel"), role: .cancel) {}
-                    } message: {
-                        Text(text("ui.diag.bufferbloat_confirm"))
-                    }
-            }
-            if let path {
+            if let path = model.path {
                 Section {
                     LabeledContent(text("ui.path.connection"), value: path.linkMessage.map { text($0) } ?? "—")
                     LabeledContent(text("ui.overview.router"),
@@ -94,304 +46,48 @@ struct OverviewView: View {
         }
         .formStyle(.grouped)
         .navigationTitle(text("ui.nav.overview"))
-        .task {
-            for await update in NetworkPath.updates() {
-                path = update
-                monitor.networkChanged(to: update.route)
-                monitor.routerAddress = update.routerIPv4
-                // Turning a VPN on or off changes the path, so check #8 follows it.
-                vpn = VPNCheck.evaluate(VPNReader.adapters(pathInterfaces: update.interfaces))
-            }
-        }
-        .task {
-            await monitor.run()
-        }
-        #if os(macOS)
-        .task {
-            // Check #2 on the Mac only (CoreWLAN); re-read every 5 s like the Windows monitor.
-            while !Task.isCancelled {
-                signal = WiFiSignal.evaluate(WiFiReader.current())
-                try? await Task.sleep(for: .seconds(5))
-            }
-        }
-        #endif
-        .task(id: dnsTrigger) {
-            guard dnsTrigger != nil else { return }
-            await runDNS()
-        }
-    }
-
-    /// The path's own notes, plus a declined local network permission (the router is not measured).
-    private func notes(for path: NetworkPath) -> [Message] {
-        path.notes + (monitor.routerRefused ? [Message("ui.path.reason.local_network_denied")] : [])
-    }
-
-    /// Runs check #6 once connected, and again when the router changes.
-    private var dnsTrigger: String? {
-        guard let path, path.status == .connected else { return nil }
-        return path.routerIPv4 ?? "-"
-    }
-
-    private func runDNS() async {
-        dnsRun += 1
-        let run = dnsRun
-        dnsRunning = true
-        let result = await DNSCheck.run(router: path?.routerIPv4)
-        guard run == dnsRun else { return }   // a newer run owns the card
-        dnsRunning = false
-        if !Task.isCancelled {
-            dns = result
-        }
-    }
-
-    /// Check #14 runs only on request: it moves up to ~200 MB (docs/DIAGNOSTICS.md).
-    @ViewBuilder private var bufferbloatCard: some View {
-        if let stage = bufferbloatStage {
-            HStack(spacing: 10) {
-                ProgressView().controlSize(.small)
-                Text(bufferbloatProgress(stage))
-                    .foregroundStyle(.secondary)
-            }
-        } else if let bufferbloat {
-            CheckResultView(result: bufferbloat, text: text) {
-                Button {
-                    confirmingBufferbloat = true
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.borderless)
-                .disabled(dnsTrigger == nil)
-                .accessibilityLabel(text("ui.diag.bufferbloat_run"))
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(text("diag.bufferbloat.title"))
-                        .font(.headline)
-                    Spacer()
-                    Text(text("ui.diag.on_demand"))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Button(text("ui.diag.bufferbloat_run")) {
-                    confirmingBufferbloat = true
-                }
-                .disabled(dnsTrigger == nil)
-            }
-            .padding(.vertical, 4)
-        }
-    }
-
-    private func bufferbloatProgress(_ stage: BufferbloatTest.Stage) -> String {
-        switch stage {
-        case .idle: text("ui.diag.running")
-        case .download: text("ui.diag.running") + " · " + text("diag.bufferbloat.download")
-        case .upload: text("ui.diag.running") + " · " + text("diag.bufferbloat.upload")
-        }
-    }
-
-    private func runBufferbloat() async {
-        bufferbloatStage = .idle
-        let measurement = await BufferbloatTest.run(router: path?.routerIPv4) { stage in
-            await MainActor.run { bufferbloatStage = stage }
-        }
-        bufferbloat = Bufferbloat.evaluate(measurement)
-        bufferbloatStage = nil
-    }
-
-    private var rerunButton: some View {
-        Button {
-            Task { await runDNS() }
-        } label: {
-            if dnsRunning {
-                ProgressView().controlSize(.small)
-            } else {
-                Image(systemName: "arrow.clockwise")
-            }
-        }
-        .buttonStyle(.borderless)
-        .disabled(dnsRunning || dnsTrigger == nil)
-        .accessibilityLabel(text(dnsRunning ? "ui.diag.running" : "ui.diag.run"))
     }
 
     private func title(of target: LiveMonitor.Target) -> String {
         if target.id == LiveMonitor.router { return text("ui.overview.router") }
         return text(target.kind == .tcp ? "ui.live.tcp" : "ui.overview.internet")
     }
-}
 
-private struct PathStatusView: View {
-    let path: NetworkPath?
-    let text: Localizer
-
-    var body: some View {
-        HStack(spacing: 14) {
-            Group {
-                if path == nil {
-                    ProgressView()
-                } else {
-                    Image(systemName: symbol)
-                        .font(.title)
-                        .foregroundStyle(color)
-                }
-            }
-            .frame(width: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(path.map { text($0.statusMessage) } ?? text("ui.path.checking"))
-                    .font(.headline)
-                if let path, path.status == .connected, let link = path.linkMessage {
-                    Text(text(link))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.vertical, 6)
-        .accessibilityElement(children: .combine)
-    }
-
-    private var symbol: String {
-        guard let path else { return "network" }
-        switch path.status {
-        case .disconnected: return "wifi.slash"
-        case .requiresConnection: return "network"
-        case .connected:
-            switch path.link {
-            case .wifi: return "wifi"
-            case .wired: return "cable.connector"
-            case .cellular: return "antenna.radiowaves.left.and.right"
-            case .other, nil: return "network"
-            }
-        }
-    }
-
-    private var color: Color {
-        switch path?.status {
-        case .connected: .green
-        case .requiresConnection: .orange
-        case .disconnected: .red
-        case nil: .secondary
-        }
+    /// The path's own notes, plus a declined local network permission (the router is not measured).
+    private func notes(for path: NetworkPath) -> [Message] {
+        path.notes + (model.monitor.routerRefused ? [Message("ui.path.reason.local_network_denied")] : [])
     }
 }
 
-/// One measured target: latest round-trip time, then loss and jitter over the live window.
-private struct MeasurementRow: View {
-    let title: String
-    let endpoint: String
-    let stats: LiveStats
+/// "1 warning · 4 OK" (or "All checks are OK") with a way to the Diagnostics tab.
+private struct ChecksSummary: View {
+    let checks: [CheckResult]
     let text: Localizer
+    let open: () -> Void
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                Text(endpoint)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                latest
-                if !stats.isEmpty {
-                    Text(details)
-                        .font(.caption)
-                        .foregroundStyle(stats.lossPercent > 1 ? .orange : .secondary)
-                }
-            }
-            .monospacedDigit()
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder private var latest: some View {
-        switch stats.latest {
-        case nil:
-            Text(text("ui.live.measuring")).foregroundStyle(.secondary)
-        case .some(nil):
-            Text(text("ui.live.no_reply")).foregroundStyle(.red)
-        case .some(.some(let rtt)):
-            Text(text("ui.live.rtt", ["value": .number(rtt)]))
-        }
-    }
-
-    private var details: String {
-        var parts = [text("ui.live.loss", ["loss": .number(stats.lossPercent)])]
-        if let jitter = stats.jitter {
-            parts.append(text("ui.live.jitter", ["value": .number(jitter)]))
-        }
-        return parts.joined(separator: " · ")
-    }
-}
-
-/// A diagnosis check: status, verdict and advice; the detail lines on demand.
-private struct CheckResultView<Action: View>: View {
-    let result: CheckResult
-    let text: Localizer
-    @ViewBuilder var action: () -> Action
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        Button(action: open) {
             HStack {
-                Text(text(result.title))
-                    .font(.headline)
+                StatusLabel(status: CheckStatus.worst(checks.map(\.status)), text: text, iconOnly: true)
+                Text(summary)
                 Spacer()
-                Label(text("ui.status." + result.status.rawValue), systemImage: symbol)
-                    .labelStyle(.titleAndIcon)
-                    .font(.subheadline)
-                    .foregroundStyle(color)
-                action()
+                Image(systemName: "chevron.forward")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
             }
-            Text(text(result.summary))
-            if result.advice != .empty {
-                Text(text.render(result.advice))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            if !result.details.isEmpty {
-                DisclosureGroup {
-                    ForEach(Array(result.details.enumerated()), id: \.offset) { _, line in
-                        Text(text.render(line))
-                            .font(.caption)
-                            .monospacedDigit()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                } label: {
-                    Text(text("ui.overview.see_all"))
-                        .font(.callout)
-                }
-            }
+            .contentShape(Rectangle())
         }
-        .padding(.vertical, 4)
+        .buttonStyle(.plain)
+        .accessibilityHint(text("ui.overview.open_diagnostics"))
     }
 
-    private var symbol: String {
-        switch result.status {
-        case .ok: "checkmark.circle.fill"
-        case .info: "info.circle.fill"
-        case .warn: "exclamationmark.triangle.fill"
-        case .bad: "xmark.octagon.fill"
-        }
-    }
-
-    private var color: Color {
-        switch result.status {
-        case .ok: .green
-        case .info: .blue
-        case .warn: .orange
-        case .bad: .red
-        }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        OverviewView()
-    }
-}
-
-extension CheckResultView where Action == EmptyView {
-    init(result: CheckResult, text: Localizer) {
-        self.init(result: result, text: text) { EmptyView() }
+    private var summary: String {
+        func count(_ status: CheckStatus) -> Int { checks.filter { $0.status == status }.count }
+        guard checks.contains(where: { $0.status != .ok }) else { return text("ui.overview.all_ok") }
+        let parts: [(CheckStatus, String)] = [(.bad, "ui.diag.count.bad"), (.warn, "ui.diag.count.warn"),
+                                              (.info, "ui.diag.count.info"), (.ok, "ui.diag.count.ok")]
+        return parts.filter { count($0.0) > 0 }
+            .map { text($0.1, ["count": .number(Double(count($0.0)))]) }
+            .joined(separator: " · ")
     }
 }

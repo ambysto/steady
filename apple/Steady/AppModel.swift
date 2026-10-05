@@ -1,0 +1,124 @@
+import SteadyKit
+import SwiftUI
+
+enum AppTab: Hashable {
+    case overview, diagnostics, history, settings
+}
+
+/// Everything the tabs share: the network path, the live monitor and the checks. It lives for
+/// the whole app, so measuring goes on whichever tab is shown.
+@MainActor
+@Observable
+final class AppModel {
+    /// Opened once for the app's lifetime.
+    private static let history = try? MinuteStore.standard()
+
+    var selectedTab: AppTab = .overview
+    private(set) var path: NetworkPath?
+    let monitor = LiveMonitor(store: history)
+    private(set) var vpn: CheckResult?
+    /// Check #2: on the Mac only (CoreWLAN).
+    private(set) var signal: CheckResult?
+    private(set) var dns: CheckResult?
+    private(set) var dnsRunning = false
+    private(set) var bufferbloat: CheckResult?
+    private(set) var bufferbloatStage: BufferbloatTest.Stage?
+
+    /// Only the latest DNS run may show its result: the router can change while one is running.
+    private var dnsRun = 0
+    private var dnsTask: Task<Void, Never>?
+    private var dnsTrigger: String?
+    private var bufferbloatTask: Task<Void, Never>?
+    /// The Mac and the iPad may open several windows: measuring goes on while any of them is open.
+    private var windows = 0
+    private var measuring: Task<Void, Never>?
+
+    /// The checks that have a result, in the order of docs/DIAGNOSTICS.md.
+    var checks: [CheckResult] {
+        [signal, monitor.pingQuality, vpn, dns, bufferbloat].compactMap { $0 }.sorted { $0.id < $1.id }
+    }
+
+    var isConnected: Bool { path?.status == .connected }
+
+    /// Called by each window for as long as it is open; measures while at least one is.
+    func run() async {
+        windows += 1
+        if measuring == nil {
+            measuring = Task { await measure() }
+        }
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(3600))
+        }
+        windows -= 1
+        if windows == 0 {
+            measuring?.cancel()
+            measuring = nil
+        }
+    }
+
+    private func measure() async {
+        await withDiscardingTaskGroup { group in
+            group.addTask { await self.followPath() }
+            group.addTask { await self.monitor.run() }
+            #if os(macOS)
+            group.addTask { await self.readSignal() }
+            #endif
+        }
+    }
+
+    func runDNS() {
+        dnsTask?.cancel()
+        dnsTask = Task { await measureDNS() }
+    }
+
+    func runBufferbloat() {
+        guard bufferbloatTask == nil else { return }
+        bufferbloatTask = Task {
+            bufferbloatStage = .idle
+            let measurement = await BufferbloatTest.run(router: path?.routerIPv4) { stage in
+                await MainActor.run { self.bufferbloatStage = stage }
+            }
+            bufferbloat = Bufferbloat.evaluate(measurement)
+            bufferbloatStage = nil
+            bufferbloatTask = nil
+        }
+    }
+
+    private func followPath() async {
+        for await update in NetworkPath.updates() {
+            path = update
+            monitor.networkChanged(to: update.route)
+            monitor.routerAddress = update.routerIPv4
+            // Turning a VPN on or off changes the path, so check #8 follows it.
+            vpn = VPNCheck.evaluate(VPNReader.adapters(pathInterfaces: update.interfaces))
+            // Check #6 runs once connected, and again when the router changes.
+            let trigger = update.status == .connected ? (update.routerIPv4 ?? "-") : nil
+            if trigger != dnsTrigger {
+                dnsTrigger = trigger
+                if trigger != nil { runDNS() }
+            }
+        }
+    }
+
+    private func measureDNS() async {
+        dnsRun += 1
+        let run = dnsRun
+        dnsRunning = true
+        let result = await DNSCheck.run(router: path?.routerIPv4)
+        guard run == dnsRun else { return }   // a newer run owns the card
+        dnsRunning = false
+        if !Task.isCancelled {
+            dns = result
+        }
+    }
+
+    #if os(macOS)
+    /// Re-reads the Wi‑Fi signal every 5 s, like the Windows monitor.
+    private func readSignal() async {
+        while !Task.isCancelled {
+            signal = WiFiSignal.evaluate(WiFiReader.current())
+            try? await Task.sleep(for: .seconds(5))
+        }
+    }
+    #endif
+}

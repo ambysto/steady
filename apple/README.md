@@ -5,7 +5,7 @@ One SwiftUI multiplatform app (ADR-0009). Layout, versions, signing and how text
 | Path | Content |
 |---|---|
 | `Steady.xcodeproj` | One app target `Steady`: iPhone, iPad, native Mac. Minimum iOS/iPadOS/macOS 26.0 |
-| `Steady/` | SwiftUI views. `Resources/*.xcstrings` are generated, do not edit them in Xcode. `AppIcon.icon` is the app icon (Icon Composer): a dark gray tile (#2B2B2E, like the Terminal app's icon) with the Windows icon's white Wi‑Fi arcs (`app/desktop.py` `draw_icon`) and a small "A" and "S" as one SVG layer; the system adds the shape and the glass. Shapes in that SVG are filled outlines, not strokes (the renderer lights open strokes as closed shapes and shows stray lines). A temporary icon until a designed one |
+| `Steady/` | SwiftUI views: four tabs (Overview, Diagnostics, History, Settings) over one `AppModel` that measures for the whole app. `Resources/*.xcstrings` are generated, do not edit them in Xcode. `AppIcon.icon` is the app icon (Icon Composer): a dark gray tile (#2B2B2E, like the Terminal app's icon) with the Windows icon's white Wi‑Fi arcs (`app/desktop.py` `draw_icon`) and a small "A" and "S" as one SVG layer; the system adds the shape and the glass. Shapes in that SVG are filled outlines, not strokes (the renderer lights open strokes as closed shapes and shows stray lines). A temporary icon until a designed one |
 | `SteadyKit/` | Swift package with everything testable: localization runtime, network path model, diagnosis rules |
 | `Config/Base.xcconfig` | Shared build settings; `Local.xcconfig` (not tracked) adds your team ID |
 
@@ -50,7 +50,7 @@ Every user-visible string comes from `app/locales/*.json`. To add one: add the k
 
 ## Measurements
 
-While the Overview screen is open, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
+While the app has a window open, whichever tab is shown, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
 
 - iOS gives apps no continuous background time, so nothing is measured while the app is in the background.
 - Minutes are stored in SQLite (`Application Support/History/metrics.sqlite`, the folder excluded from backups, the `minute_stats` table of the Windows app, 30 days, excluded from backups; [ADR-0011](../docs/adr/0011-apple-measurement-history.md)), so check #5 keeps the last hour across launches. A partial minute is saved when measuring stops and merged if the app reopens within the same minute.
@@ -58,6 +58,11 @@ While the Overview screen is open, `LiveMonitor` measures with the Windows monit
 - Pinging the router is local network access: iOS and macOS ask the user once, with the `NSLocalNetworkUsageDescription` text generated from `ui.permission.local_network`. When it is declined the system refuses the send (`EHOSTUNREACH`/`EPERM`/`EACCES`): the router is left out of the live numbers and of the DNS check, not counted as lost, and the Overview says local network access is off.
 - When the route changes (connected or not, the preferred interface such as `en0` → `utun5` when a VPN starts, the router), the live numbers start afresh so they do not mix two routes. The hourly history and check #5 keep those minutes for now (issue #2).
 - The iOS Simulator does not report the router address, IPv4/IPv6 or DNS support of the path, so the router row is missing there; Internet pings and TCP probes work.
+
+## History and problem reports
+
+- **History** draws latency and loss to the router and to the Internet from the stored minutes (`HistorySeries`: per minute over an hour, 10-minute buckets over a day, hours over a week; a gap starts a new line segment).
+- **Settings > Report a problem** ([ADR-0012](../docs/adr/0012-user-sent-problem-reports.md)): `ProblemReport` writes the text the user reads in full and sends themselves; addresses are masked except the public resolvers. `CrashReports` keeps short MetricKit summaries on the device; `RecentLog` reads the app's own log.
 
 ## Diagnosis rules
 

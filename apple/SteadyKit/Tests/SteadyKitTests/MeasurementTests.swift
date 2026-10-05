@@ -25,7 +25,7 @@ struct MinuteAggregatorTests {
             aggregator.add("router", rttMs: rtt)
         }
         let rows = aggregator.roll(at: base + 60)?.rows
-        #expect(rows == [PingQuality.Row(target: "router", sent: 4, lost: 1, jitter: 15)])
+        #expect(rows == [PingQuality.Row(target: "router", sent: 4, lost: 1, jitter: 15, avg: 23.3, max: 40)])
     }
 
     @Test func allLostAndSingleSampleHaveNoJitter() {
@@ -36,7 +36,7 @@ struct MinuteAggregatorTests {
         aggregator.add("one", rttMs: 7)
         let rows = aggregator.roll(at: base + 60)?.rows
         #expect(rows == [PingQuality.Row(target: "dead", sent: 2, lost: 2, jitter: nil),
-                         PingQuality.Row(target: "one", sent: 1, lost: 0, jitter: nil)])
+                         PingQuality.Row(target: "one", sent: 1, lost: 0, jitter: nil, avg: 7, max: 7)])
     }
 
     @Test func aMinuteWithoutSamplesProducesNoRows() {
@@ -210,9 +210,10 @@ struct MinuteStoreTests {
     @Test func aPartialMinuteWrittenTwiceIsMerged() throws {
         defer { try? FileManager.default.removeItem(at: url) }
         let store = try MinuteStore(url: url)
-        try store.insert(minute(base, [.init(target: "router", sent: 20, lost: 1, jitter: 1)]))
-        try store.insert(minute(base, [.init(target: "router", sent: 40, lost: 2, jitter: nil)]))
-        #expect(try store.minutes(since: base)[0].rows == [.init(target: "router", sent: 60, lost: 3, jitter: 1)])
+        try store.insert(minute(base, [.init(target: "router", sent: 20, lost: 1, jitter: 1, avg: 10, max: 30)]))
+        try store.insert(minute(base, [.init(target: "router", sent: 40, lost: 2, jitter: nil, avg: 20, max: 25)]))
+        // avg weighted by replies: (10 × 19 + 20 × 38) / 57 = 16.67 -> 16.7; the higher max wins
+        #expect(try store.minutes(since: base)[0].rows == [.init(target: "router", sent: 60, lost: 3, jitter: 1, avg: 16.7, max: 30)])
     }
 
     @Test func rowsOlderThan30DaysArePurged() throws {
@@ -314,5 +315,76 @@ struct VPNPreferredInterfaceTests {
     @Test func onlyThePreferredTunnelCounts() {
         #expect(!VPNReader.adapters(pathInterfaces: ["en0", "utun3"]).contains { $0.name == "utun3" })
         #expect(VPNReader.adapters(pathInterfaces: ["utun3", "en0"]).contains { $0.name == "utun3" })
+    }
+}
+
+struct HistorySeriesTests {
+    let base = 1_790_000_040   // a minute boundary, also a 10-minute and an hour boundary? no: only a minute
+
+    func minute(_ start: Int, router: (Int, Int, Double?), internet: [(String, Int, Int, Double?)]) -> MinuteAggregator.Minute {
+        MinuteAggregator.Minute(start: start, rows: [PingQuality.Row(target: "router", sent: router.0, lost: router.1, avg: router.2)]
+            + internet.map { PingQuality.Row(target: $0.0, sent: $0.1, lost: $0.2, avg: $0.3) }
+            + [PingQuality.Row(target: "tcp_cloudflare", sent: 6, lost: 6)])   // TCP probes are not drawn
+    }
+
+    @Test func internetCombinesBothPingTargetsWeightedByReplies() {
+        let minutes = [minute(base, router: (60, 0, 3), internet: [("cloudflare", 60, 0, 40), ("google", 60, 30, 70)])]
+        let points = HistorySeries.points(minutes, range: .hour, now: Date(timeIntervalSince1970: TimeInterval(base + 30)))
+        let internet = points.first { $0.line == .internet }!
+        #expect(abs(internet.latency! - 50) < 1e-9)          // (40 × 60 + 70 × 30) / 90
+        #expect(abs(internet.lossPercent - 25) < 1e-9)       // 30 of 120
+        #expect(points.first { $0.line == .router }?.latency == 3)
+    }
+
+    @Test func gapsStartANewSegmentAndOldMinutesAreLeftOut() {
+        let now = Date(timeIntervalSince1970: TimeInterval(base + 600))
+        let minutes = [minute(base - 7200, router: (60, 0, 3), internet: []),        // outside the hour
+                       minute(base, router: (60, 0, 3), internet: []),
+                       minute(base + 60, router: (60, 0, 4), internet: []),
+                       minute(base + 300, router: (60, 60, nil), internet: [])]      // after a gap, nothing answered
+        let router = HistorySeries.points(minutes, range: .hour, now: now).filter { $0.line == .router }
+        #expect(router.map(\.segment) == [0, 0, 1])
+        #expect(router.last?.latency == nil && router.last?.lossPercent == 100)
+    }
+}
+
+struct ProblemReportTests {
+    @Test func addressesAreMaskedButPublicResolversStay() {
+        let text = "router 192.168.1.1 dns 203.0.113.53 via fe80::1%en0 and 2001:db8::53; public 1.1.1.1, 9.9.9.9; at 10:15:17Z"
+        let redacted = ProblemReport.redact(text)
+        #expect(!redacted.contains("192.168") && !redacted.contains("203.0.113") && !redacted.contains("fe80") && !redacted.contains("2001:db8"))
+        #expect(redacted.contains("1.1.1.1") && redacted.contains("9.9.9.9") && redacted.contains("10:15:17Z"))
+    }
+
+    @Test func theReportHasTheChecksTheDescriptionAndNoDetails() {
+        let dns = CheckResult(id: 6, key: "dns", status: .warn, summary: Message("diag.dns.broken", ["servers": .list([.text("192.0.2.1")])]),
+                              details: [.text("secret detail 192.0.2.1")], advice: .message(Message("diag.dns.advice_broken")))
+        let context = ProblemReport.Context(appVersion: "0.1.0", build: "1", system: "iPadOS 27.0.1", device: "iPad14,2",
+                                            language: "en", connection: "wifi", checks: [dns],
+                                            minutes: [MinuteAggregator.Minute(start: 1_790_000_040, rows: [PingQuality.Row(target: "router", sent: 60, lost: 1, avg: 4.2)])],
+                                            log: ["10:00:00Z [measurement] minute 1790000040 router: sent 60, lost 1"], crashes: [],
+                                            description: "  Slow at night  ")
+        let text = ProblemReport.text(context, renderer: Localizer(bundle: .main, language: "en"))
+        #expect(text.hasPrefix("## Description\nSlow at night\n"))
+        #expect(text.contains("#6 dns: warn - diag.dns.broken"))   // no bundle in tests: keys render as themselves
+        #expect(text.contains("router 60/1 4.2"))
+        #expect(!text.contains("secret detail") && !text.contains("192.0.2.1"))
+    }
+}
+
+struct MinuteStoreDeleteTests {
+    let url = FileManager.default.temporaryDirectory.appending(path: "steady-test-\(UUID().uuidString).sqlite")
+
+    @MainActor @Test func deleteHistoryEmptiesStoreAndMemory() throws {
+        defer { try? FileManager.default.removeItem(at: url) }
+        let store = try MinuteStore(url: url)
+        try store.insert(MinuteAggregator.Minute(start: 1_790_000_040, rows: [.init(target: "router", sent: 60, lost: 0)]))
+        try store.insert(MinuteAggregator.Minute(start: 1_790_000_100, rows: [.init(target: "router", sent: 60, lost: 0),
+                                                                             .init(target: "cloudflare", sent: 60, lost: 0)]))
+        #expect(try store.minuteCount() == 2)
+        let monitor = LiveMonitor(store: store, now: { 1_790_000_200 })
+        #expect(monitor.history(seconds: 3600).count == 2)
+        try monitor.deleteHistory()
+        #expect(monitor.storedMinutes == 0 && monitor.minutes.isEmpty)
     }
 }

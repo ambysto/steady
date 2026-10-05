@@ -77,6 +77,7 @@ public enum MessageCatalog {
         "time.minutes_seconds": [MessageArgument("minutes", nil), MessageArgument("seconds", nil)],
         "time.seconds": [MessageArgument("count", nil)],
         "ui.diag.count.bad": [MessageArgument("count", nil)],
+        "ui.diag.count.info": [MessageArgument("count", nil)],
         "ui.diag.count.ok": [MessageArgument("count", nil)],
         "ui.diag.count.warn": [MessageArgument("count", nil)],
         "ui.diag.last_run": [MessageArgument("time", nil)],
@@ -89,7 +90,9 @@ public enum MessageCatalog {
         "ui.optimize.enabled_count": [MessageArgument("enabled", nil), MessageArgument("total", nil)],
         "ui.overview.router_loss": [MessageArgument("loss", ".1f")],
         "ui.overview.window": [MessageArgument("count", nil)],
+        "ui.settings.history_minutes": [MessageArgument("count", nil)],
         "ui.settings.notify_after": [MessageArgument("duration", nil)],
+        "ui.settings.version": [MessageArgument("version", nil), MessageArgument("build", nil)],
         "ui.sheet.experimental.body": [MessageArgument("name", nil)],
         "ui.state.internet_down_detail": [MessageArgument("duration", nil)],
         "ui.state.router_down_detail": [MessageArgument("duration", nil)],
@@ -119,8 +122,10 @@ public enum MessageCatalog {
         "time.minutes",
         "time.seconds",
         "ui.diag.count.bad",
+        "ui.diag.count.info",
         "ui.diag.count.warn",
         "ui.overview.window",
+        "ui.settings.history_minutes",
     ]
 
     /// Keys with an Apple wording under "apple.<key>", rendered instead of the key itself.

@@ -54,7 +54,7 @@ struct LocalizationTests {
                                  "ui.overview.router", "ui.overview.internet", "ui.overview.latency",
                                  "ui.overview.see_all", "ui.nav.overview", "ui.live.tcp", "ui.live.window_note",
                                  "ui.live.measuring", "ui.live.no_reply", "ui.live.rtt", "ui.live.loss",
-                                 "ui.live.jitter", "ui.diag.run", "ui.diag.running", "ui.diag.on_demand",
+                                 "ui.live.jitter", "ui.diag.run", "ui.diag.running", "ui.diag.on_demand", "ui.diag.count.info",
                                  "ui.diag.bufferbloat_run", "ui.diag.bufferbloat_confirm", "ui.sheet.cancel",
                                  "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload"]
         used.formUnion([CheckStatus.ok, .info, .warn, .bad].map { "ui.status." + $0.rawValue })

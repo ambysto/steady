@@ -9,12 +9,18 @@ public enum PingQuality {
         public var lost: Int
         /// Mean jitter of the minute in ms, when measured.
         public var jitter: Double?
+        /// Mean and highest round-trip time of the minute's replies in ms (minute_stats avg/max).
+        /// Not used by the rule; the History screen draws them.
+        public var avg: Double?
+        public var max: Double?
 
-        public init(target: String, sent: Int, lost: Int, jitter: Double? = nil) {
+        public init(target: String, sent: Int, lost: Int, jitter: Double? = nil, avg: Double? = nil, max: Double? = nil) {
             self.target = target
             self.sent = sent
             self.lost = lost
             self.jitter = jitter
+            self.avg = avg
+            self.max = max
         }
     }
 

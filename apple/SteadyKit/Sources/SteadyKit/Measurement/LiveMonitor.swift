@@ -31,10 +31,10 @@ public final class LiveMonitor {
         public var endpoint: String { kind == .tcp ? "\(address):\(port)" : address }
     }
 
-    public static let router = PingQuality.router
-    public static let internetTargets = [Target(id: "cloudflare", address: "1.1.1.1"),
+    public nonisolated static let router = PingQuality.router
+    public nonisolated static let internetTargets = [Target(id: "cloudflare", address: "1.1.1.1"),
                                          Target(id: "google", address: "8.8.8.8")]
-    public static let probeTargets = [Target(id: "tcp_cloudflare", address: "1.1.1.1", kind: .tcp, port: 443),
+    public nonisolated static let probeTargets = [Target(id: "tcp_cloudflare", address: "1.1.1.1", kind: .tcp, port: 443),
                                       Target(id: "tcp_google", address: "8.8.8.8", kind: .tcp, port: 443)]
     static let pingInterval = Duration.seconds(1)
     static let pingTimeout = Duration.milliseconds(900)
@@ -86,6 +86,27 @@ public final class LiveMonitor {
 
     private var routerTarget: [Target] {
         routerAddress.map { [Target(id: Self.router, address: $0)] } ?? []
+    }
+
+    /// Minutes stored on the device, or nil without a store.
+    public var storedMinutes: Int? {
+        try? store?.minuteCount()
+    }
+
+    /// Minutes of the last `seconds` from the store (the History screen); the in-memory hour
+    /// when there is no store.
+    public func history(seconds: Int) -> [MinuteAggregator.Minute] {
+        let start = Int(now()) - seconds
+        guard let store, let stored = try? store.minutes(since: start) else {
+            return minutes.filter { $0.start >= start }
+        }
+        return stored
+    }
+
+    /// Settings > Delete history: the stored minutes and the hour kept in memory.
+    public func deleteHistory() throws {
+        try store?.deleteAll()
+        minutes.removeAll()
     }
 
     /// Starts the live numbers afresh when the network changes (a VPN turned on or off, another

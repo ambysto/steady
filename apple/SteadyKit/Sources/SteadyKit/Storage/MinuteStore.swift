@@ -75,11 +75,19 @@ public final class MinuteStore {
         do {
             for row in minute.rows {
                 try run("""
-                    INSERT INTO minute_stats (ts, target, sent, lost, jitter) VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO minute_stats (ts, target, sent, lost, avg, max, jitter) VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (ts, target) DO UPDATE SET
+                        avg = CASE
+                            WHEN excluded.avg IS NULL THEN avg
+                            WHEN avg IS NULL THEN excluded.avg
+                            ELSE round((avg * (sent - lost) + excluded.avg * (excluded.sent - excluded.lost))
+                                       / ((sent - lost) + (excluded.sent - excluded.lost)), 1)
+                        END,
+                        max = CASE WHEN max IS NULL OR excluded.max > max THEN COALESCE(excluded.max, max) ELSE max END,
                         sent = sent + excluded.sent, lost = lost + excluded.lost,
                         jitter = COALESCE(excluded.jitter, jitter)
-                    """, [.int(minute.start), .text(row.target), .int(row.sent), .int(row.lost), .double(row.jitter)])
+                    """, [.int(minute.start), .text(row.target), .int(row.sent), .int(row.lost), .double(row.avg),
+                          .double(row.max), .double(row.jitter)])
             }
             try execute("COMMIT")
         } catch {
@@ -91,7 +99,7 @@ public final class MinuteStore {
     /// Minutes starting at or after `start`, oldest first.
     public func minutes(since start: Int) throws -> [MinuteAggregator.Minute] {
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, "SELECT ts, target, sent, lost, jitter FROM minute_stats WHERE ts >= ? ORDER BY ts, target",
+        guard sqlite3_prepare_v2(db, "SELECT ts, target, sent, lost, jitter, avg, max FROM minute_stats WHERE ts >= ? ORDER BY ts, target",
                                  -1, &statement, nil) == SQLITE_OK else { throw lastError() }
         defer { sqlite3_finalize(statement) }
         sqlite3_bind_int64(statement, 1, Int64(start))
@@ -105,15 +113,35 @@ public final class MinuteStore {
                 rows = []
             }
             current = ts
-            let jitter = sqlite3_column_type(statement, 4) == SQLITE_NULL ? nil : sqlite3_column_double(statement, 4)
+            func double(_ column: Int32) -> Double? {
+                sqlite3_column_type(statement, column) == SQLITE_NULL ? nil : sqlite3_column_double(statement, column)
+            }
             rows.append(PingQuality.Row(target: String(cString: sqlite3_column_text(statement, 1)),
                                         sent: Int(sqlite3_column_int64(statement, 2)),
-                                        lost: Int(sqlite3_column_int64(statement, 3)), jitter: jitter))
+                                        lost: Int(sqlite3_column_int64(statement, 3)), jitter: double(4),
+                                        avg: double(5), max: double(6)))
         }
         if let current {
             minutes.append(MinuteAggregator.Minute(start: current, rows: rows))
         }
         return minutes
+    }
+
+    /// How many minutes are stored (for the Settings screen).
+    public func minuteCount() throws -> Int {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT COUNT(DISTINCT ts) FROM minute_stats", -1, &statement, nil) == SQLITE_OK else {
+            throw lastError()
+        }
+        defer { sqlite3_finalize(statement) }
+        guard sqlite3_step(statement) == SQLITE_ROW else { throw lastError() }
+        return Int(sqlite3_column_int64(statement, 0))
+    }
+
+    /// Deletes every stored minute (Settings > Delete history), then rewrites the file and empties
+    /// the WAL so the old rows do not stay behind in free pages.
+    public func deleteAll() throws {
+        try execute("DELETE FROM minute_stats; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")
     }
 
     /// Deletes rows older than the retention period; returns how many.
