@@ -64,12 +64,60 @@ struct DiagnosisVectorTests {
 
     static let vpnCases = cases("vpn.json", as: VPNInput.self)
 
+    struct InterferenceInput: Decodable, Sendable {
+        var wifi: Interference.Connection?
+        var scan: [Interference.Network]
+    }
+
+    static let interferenceCases = cases("interference.json", as: InterferenceInput.self)
+
+    /// Runs of identical minutes, 60 s apart (the vector file says so).
+    struct LinkInput: Decodable, Sendable {
+        struct Run: Decodable, Sendable {
+            var from: Int
+            var count: Int
+            var rssi: Int
+            var rxMbps: Double
+            var routerLossPct: Double
+
+            enum CodingKeys: String, CodingKey {
+                case from, count, rssi, rxMbps = "rx_mbps", routerLossPct = "router_loss_pct"
+            }
+        }
+
+        var runs: [Run]
+        var now: Int?
+
+        var minutes: [PhysicalLink.Minute] {
+            runs.flatMap { run in
+                (0..<run.count).map {
+                    PhysicalLink.Minute(ts: run.from + 60 * $0, rssi: run.rssi, rateMbps: run.rxMbps,
+                                        routerLossPercent: run.routerLossPct)
+                }
+            }
+        }
+    }
+
+    static let linkCases = cases("link.json", as: LinkInput.self)
+
     @Test func vectorsAreLoaded() {
         #expect(Self.pingCases.count >= 10)
         #expect(Self.dnsCases.count >= 10)
         #expect(Self.bufferbloatCases.count >= 10)
         #expect(Self.signalCases.count >= 8)
         #expect(Self.vpnCases.count >= 8)
+        #expect(Self.interferenceCases.count >= 10)
+        #expect(Self.linkCases.count >= 10)
+    }
+
+    @Test(arguments: interferenceCases)
+    func interference(_ vector: VectorFile<InterferenceInput>.Case) {
+        check(Interference.evaluate(vector.input.wifi, scan: vector.input.scan), vector.expected)
+    }
+
+    @Test(arguments: linkCases)
+    func link(_ vector: VectorFile<LinkInput>.Case) {
+        check(PhysicalLink.evaluate(vector.input.minutes, now: vector.input.now), vector.expected)
     }
 
     @Test(arguments: vpnCases)

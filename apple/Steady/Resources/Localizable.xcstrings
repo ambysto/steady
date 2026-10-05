@@ -71,6 +71,301 @@
         }
       }
     },
+    "apple.diag.common.hidden_ssid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Netzwerk in der Nähe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nearby network"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Red cercana"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réseau à proximité"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "近くのネットワーク"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주변 네트워크"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rede próxima"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mạng xung quanh"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附近的网络"
+          }
+        }
+      }
+    },
+    "apple.diag.physical_link.advice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Prüfung kann die Ursache nicht bestimmen. Zuerst ausschließen: Kanalstörungen und die Wi‑Fi-Einstellungen des Routers (MLO/Wi‑Fi 7, das Wi‑Fi eines alten Modems). Wenn diese in Ordnung sind, auf die Umgebung des Mac tippen: Metall, ein geschlossener Deckel, ein Dock oder ein Bildschirm können seine Antennen verdecken; den Mac frei oder näher am Router aufstellen und nach einigen Stunden erneut vergleichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This check cannot tell the cause. Rule out first: channel interference and the router's Wi‑Fi settings (MLO/Wi‑Fi 7, an old modem's Wi‑Fi). If those are clean, suspect what is around the Mac: metal, a closed lid, a dock or a display can block its antennas; move it into the open or closer to the router, and compare again after a few hours."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta comprobación no puede determinar la causa. Descarta primero: la interferencia de canal y los ajustes Wi‑Fi del router (MLO/Wi‑Fi 7, el Wi‑Fi de un módem antiguo). Si todo eso está en orden, sospecha del entorno del Mac: el metal, la tapa cerrada, un dock o una pantalla pueden tapar sus antenas; ponlo en un lugar despejado o más cerca del router y vuelve a comparar después de unas horas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette vérification ne peut pas déterminer la cause. Écartez d'abord : les interférences de canal et les réglages Wi‑Fi du routeur (MLO/Wi‑Fi 7, le Wi‑Fi d'un ancien modem). Si tout est en ordre, soupçonnez l'environnement du Mac : du métal, un écran rabattu, un dock ou un moniteur peuvent masquer ses antennes ; placez-le à découvert ou plus près du routeur, puis comparez de nouveau après quelques heures."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このチェックでは原因を特定できません。まず次を除外してください: チャンネル干渉、ルーターの Wi‑Fi 設定（MLO/Wi‑Fi 7、古いモデムの Wi‑Fi）。それらに問題がなければ、Mac の周囲を疑ってください。金属、閉じたふた、ドック、ディスプレイがアンテナを遮ることがあります。Mac を開けた場所やルーターの近くに移し、数時間後にもう一度比べてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 점검으로는 원인을 알 수 없습니다. 먼저 채널 간섭과 라우터의 Wi‑Fi 설정(MLO/Wi‑Fi 7, 이전 모뎀의 Wi‑Fi)을 배제하십시오. 이들이 문제없다면 Mac 주변을 의심하십시오. 금속, 닫힌 덮개, 독, 디스플레이가 안테나를 가릴 수 있습니다. Mac을 트인 곳이나 라우터 가까이로 옮기고 몇 시간 뒤 다시 비교하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta verificação não identifica a causa. Descarte antes: interferência de canal e as configurações de Wi‑Fi do roteador (MLO/Wi‑Fi 7, Wi‑Fi de um modem antigo). Se tudo isso estiver limpo, suspeite do que está ao redor do Mac: metal, a tampa fechada, um dock ou uma tela podem bloquear as antenas; coloque-o em um lugar aberto ou mais perto do roteador e compare de novo depois de algumas horas."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra không nói được nguyên nhân. Loại trừ trước: nhiễu kênh và cấu hình Wi‑Fi của router (MLO/Wi‑Fi 7, Wi‑Fi modem cũ). Nếu sạch thì nghi thứ xung quanh Mac: kim loại, gập nắp, dock hay màn hình có thể che ăng-ten; đặt Mac ở chỗ thoáng hoặc gần router hơn rồi so lại sau vài giờ."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此检查无法判断原因。请先排除：信道干扰和路由器的 Wi‑Fi 设置（MLO/Wi‑Fi 7、旧调制解调器的 Wi‑Fi）。如果都没有问题，则怀疑 Mac 周围的环境：金属、合上的屏幕、扩展坞或显示器可能遮挡天线；把 Mac 放到开阔处或靠近路由器，几小时后再比较。"
+          }
+        }
+      }
+    },
+    "apple.diag.physical_link.advice_improved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn gerade der Mac oder der Router umgestellt oder eine Einstellung geändert wurde, noch einige Stunden beobachten, um es zu bestätigen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If you just moved the Mac or the router, or changed a setting, watch a few more hours to confirm."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si acabas de mover el Mac o el router, o de cambiar algún ajuste, observa unas horas más para confirmarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si vous venez de déplacer le Mac ou le routeur, ou de changer un réglage, observez encore quelques heures pour confirmer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac やルーターを動かしたり設定を変えたりした直後であれば、あと数時間様子を見て確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac이나 라우터를 방금 옮기거나 설정을 바꿨다면 몇 시간 더 지켜보며 확인하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se você acabou de mover o Mac ou o roteador, ou mudou alguma configuração, observe mais algumas horas para confirmar."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nếu bạn vừa dời Mac/router hoặc đổi cấu hình, theo dõi thêm vài giờ để xác nhận."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果你刚移动过 Mac 或路由器，或更改了设置，请再观察几个小时以确认。"
+          }
+        }
+      }
+    },
+    "apple.diag.physical_link.bad_minutes" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ Minuten (%3$@) mit Senderate ≤ 30 Mbps und ≥ 5 %% Paketverlust zum Router"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ minutes (%3$@) had a transmit rate ≤ 30 Mbps and ≥ 5%% packet loss to the router"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ minutos (%3$@) con velocidad de transmisión ≤ 30 Mbps y ≥ 5%% de pérdida de paquetes hacia el router"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ minutes (%3$@) avec un débit d'émission ≤ 30 Mbps et ≥ 5%% de perte de paquets vers le routeur"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ 分（%3$@）で送信レート ≤ 30 Mbps かつルーターへのパケット損失 ≥ 5%% でした"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@분(%3$@)에서 전송 속도 ≤ 30 Mbps이면서 라우터까지 패킷 손실 ≥ 5%%였습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ minutos (%3$@) tiveram taxa de transmissão ≤ 30 Mbps e ≥ 5%% de perda de pacotes até o roteador"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ phút (%3$@) có tốc độ gửi ≤ 30 Mbps và mất gói tới router ≥ 5%%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@/%2$@ 分钟（%3$@）出现发送速率 ≤ 30 Mbps 且到路由器丢包 ≥ 5%%"
+          }
+        }
+      }
+    },
+    "apple.diag.physical_link.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senderate und Paketverlust zum Router sind stabil"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The transmit rate and packet loss to the router are stable"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La velocidad de transmisión y la pérdida de paquetes hacia el router son estables"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le débit d'émission et la perte de paquets vers le routeur sont stables"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信レートとルーターへのパケット損失は安定しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전송 속도와 라우터까지의 패킷 손실이 안정적입니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A taxa de transmissão e a perda de pacotes até o roteador estão estáveis"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tốc độ gửi và mất gói tới router ổn định"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送速率和到路由器的丢包稳定"
+          }
+        }
+      }
+    },
     "apple.diag.ping.no_data" : {
       "extractionState" : "manual",
       "localizations" : {

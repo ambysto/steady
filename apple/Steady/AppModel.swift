@@ -17,8 +17,9 @@ final class AppModel {
     private(set) var path: NetworkPath?
     let monitor = LiveMonitor(store: history)
     private(set) var vpn: CheckResult?
-    /// Check #2: on the Mac only (CoreWLAN).
+    /// Checks #2 and #3: on the Mac only (CoreWLAN).
     private(set) var signal: CheckResult?
+    private(set) var interference: CheckResult?
     private(set) var dns: CheckResult?
     private(set) var dnsRunning = false
     private(set) var bufferbloat: CheckResult?
@@ -35,7 +36,8 @@ final class AppModel {
 
     /// The checks that have a result, in the order of docs/DIAGNOSTICS.md.
     var checks: [CheckResult] {
-        [signal, monitor.pingQuality, vpn, dns, bufferbloat].compactMap { $0 }.sorted { $0.id < $1.id }
+        [signal, interference, monitor.pingQuality, vpn, dns, monitor.physicalLink, bufferbloat]
+            .compactMap { $0 }.sorted { $0.id < $1.id }
     }
 
     var isConnected: Bool { path?.status == .connected }
@@ -113,10 +115,27 @@ final class AppModel {
     }
 
     #if os(macOS)
-    /// Re-reads the Wi‑Fi signal every 5 s, like the Windows monitor.
+    /// Re-reads the Wi‑Fi signal every 5 s, like the Windows monitor; the readings also go with
+    /// each stored minute for check #13. Check #3 looks at the networks around every 5 minutes
+    /// and when the channel changes.
     private func readSignal() async {
+        var lastLook: ContinuousClock.Instant?
+        var lastChannel: Int?
         while !Task.isCancelled {
-            signal = WiFiSignal.evaluate(WiFiReader.current())
+            let state = WiFiReader.current()
+            signal = WiFiSignal.evaluate(state)
+            monitor.wifi = state
+            if lastLook.map({ $0.duration(to: .now) >= .seconds(300) }) ?? true || state?.channel != lastChannel {
+                lastLook = .now
+                lastChannel = state?.channel
+                let seen = await Task.detached { WiFiReader.surroundings(allowScan: true) }.value
+                if let seen {
+                    let (connection, networks) = Interference.anonymous(current: seen.current, around: seen.around)
+                    interference = Interference.evaluate(connection, scan: networks)
+                } else {
+                    interference = Interference.evaluate(nil, scan: [])
+                }
+            }
             try? await Task.sleep(for: .seconds(5))
         }
     }

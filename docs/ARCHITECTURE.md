@@ -67,7 +67,7 @@ The DNS of the main network path is read every 60 seconds with `GetAdaptersAddre
 Incident classification:
 - Router not responding ≥ 3 times in a row ⇒ **local connection lost** (PC ↔ router).
 - Router OK but **all** ping targets **and** the latest probe round all fail ≥ 3 times in a row ⇒ **Internet lost** (router ↔ ISP). Ping failing alone while probes still get through is **not** an incident (ICMP is the first thing to get restricted); a probe round older than 2.5 cycles is not counted (falls back to ping only).
-- **Unstable episodes**: Internet drops that start within 60 s of the previous one's recovery are one episode ([ADR-0013](adr/0013-merge-internet-drops.md)): a single `internet_down` event spans them (last recovery, duration from the first drop) and says how many drops there were. It is written up to 60 s after the last recovery; the live state (tray, toasts, watchdog) is not delayed.
+- **Unstable episodes**: Internet drops that start within 60 s of the previous one's recovery are one episode ([ADR-0014](adr/0014-merge-internet-drops.md)): a single `internet_down` event spans them (last recovery, duration from the first drop) and says how many drops there were. It is written up to 60 s after the last recovery; the live state (tray, toasts, watchdog) is not delayed.
 
 ## Storage (`data/`)
 

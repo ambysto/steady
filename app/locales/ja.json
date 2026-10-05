@@ -676,6 +676,11 @@
   "apple.diag.ping.no_data": "測定データがまだ不足しています（直近 1 時間に 60 サンプル以上が必要です）",
   "apple.diag.ping.router_loss": "ルーターへのパケット損失: ローカルの問題です（デバイス ↔ ルーター / Wi‑Fi）",
   "apple.diag.bufferbloat.where_local": "。ルーターまでの遅延も上昇しているため、キューは デバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）",
+  "apple.diag.common.hidden_ssid": "近くのネットワーク",
+  "apple.diag.physical_link.bad_minutes": "{bad}/{total} 分（{fraction:.0%}）で送信レート ≤ 30 Mbps かつルーターへのパケット損失 ≥ 5% でした",
+  "apple.diag.physical_link.ok": "送信レートとルーターへのパケット損失は安定しています",
+  "apple.diag.physical_link.advice": "このチェックでは原因を特定できません。まず次を除外してください: チャンネル干渉、ルーターの Wi‑Fi 設定（MLO/Wi‑Fi 7、古いモデムの Wi‑Fi）。それらに問題がなければ、Mac の周囲を疑ってください。金属、閉じたふた、ドック、ディスプレイがアンテナを遮ることがあります。Mac を開けた場所やルーターの近くに移し、数時間後にもう一度比べてください。",
+  "apple.diag.physical_link.advice_improved": "Mac やルーターを動かしたり設定を変えたりした直後であれば、あと数時間様子を見て確認してください。",
 
   "ui.nav.history": "履歴",
   "ui.overview.all_ok": "すべてのチェックは正常です",

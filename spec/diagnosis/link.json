@@ -1,0 +1,756 @@
+{
+  "rule": "link",
+  "check": 13,
+  "reference": "app/diagnostics.py evaluate_link",
+  "description": "Poor physical link (docs/DIAGNOSTICS.md #13) over the connected minutes of the last 24 hours. 'runs' expand to minutes: 'count' consecutive minutes starting at 'from' (seconds since 1970), 60 s apart, each with rssi (dBm), rx_mbps (the link rate; the Mac gives its Tx rate) and router_loss_pct. 'now' (or null) enables the last-3-hours comparison. A minute is bad when the rate is <= 30 Mbps and router loss >= 5%; >= 30 minutes needed; >= 5% bad info, >= 20% warn.",
+  "cases": [
+    {
+      "name": "not enough data: 29 minutes",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 29,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.physical_link.not_enough",
+          "params": {
+            "count": 29,
+            "needed": 30
+          }
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: exactly 30 clean minutes are enough",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 30,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.physical_link.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 0,
+              "total": 30,
+              "fraction": 0.0
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "4.5% bad minutes is ok",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 9,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789928580,
+            "count": 191,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.physical_link.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 9,
+              "total": 200,
+              "fraction": 0.045
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: 5% bad minutes is info",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 10,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789928640,
+            "count": 190,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.physical_link.info",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 10,
+              "total": 200,
+              "fraction": 0.05
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "19.5% bad minutes is info",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 39,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789930380,
+            "count": 161,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.physical_link.info",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 39,
+              "total": 200,
+              "fraction": 0.195
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: 20% bad minutes warns",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 40,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789930440,
+            "count": 160,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 40,
+              "total": 200,
+              "fraction": 0.2
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "a low rate without loss is not bad",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 200,
+            "rssi": -65,
+            "rx_mbps": 6,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.physical_link.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 0,
+              "total": 200,
+              "fraction": 0.0
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "loss without a low rate is not bad",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 200,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 30.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.physical_link.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 0,
+              "total": 200,
+              "fraction": 0.0
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: a rate of exactly 30 Mbps with exactly 5% loss is bad",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 50,
+            "rssi": -65,
+            "rx_mbps": 30,
+            "router_loss_pct": 5.0
+          },
+          {
+            "from": 1789931040,
+            "count": 50,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 50,
+              "total": 100,
+              "fraction": 0.5
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "just above: 31 Mbps or 4.9% loss is not bad",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 50,
+            "rssi": -65,
+            "rx_mbps": 31,
+            "router_loss_pct": 5.0
+          },
+          {
+            "from": 1789931040,
+            "count": 50,
+            "rssi": -65,
+            "rx_mbps": 30,
+            "router_loss_pct": 4.9
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.physical_link.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 0,
+              "total": 100,
+              "fraction": 0.0
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "weak signal: median RSSI below -76 dBm adds a note",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 100,
+            "rssi": -80,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789934040,
+            "count": 100,
+            "rssi": -80,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 100,
+              "total": 200,
+              "fraction": 0.5
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -80.0
+            }
+          },
+          {
+            "key": "diag.physical_link.weak_signal",
+            "params": {}
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: median RSSI of exactly -76 dBm adds no note",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 100,
+            "rssi": -76,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789934040,
+            "count": 100,
+            "rssi": -76,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 100,
+              "total": 200,
+              "fraction": 0.5
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -76.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "the median of an even count averages the two middle values",
+      "input": {
+        "runs": [
+          {
+            "from": 1789928040,
+            "count": 50,
+            "rssi": -77,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          },
+          {
+            "from": 1789931040,
+            "count": 50,
+            "rssi": -76,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          }
+        ],
+        "now": null
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 50,
+              "total": 100,
+              "fraction": 0.5
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -76.5
+            }
+          },
+          {
+            "key": "diag.physical_link.weak_signal",
+            "params": {}
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "bad long ago, clean in the last 3 hours: improved",
+      "input": {
+        "runs": [
+          {
+            "from": 1789964040,
+            "count": 100,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789992840,
+            "count": 60,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": 1790000040
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.physical_link.improved",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 100,
+              "total": 160,
+              "fraction": 0.625
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          },
+          {
+            "key": "diag.physical_link.recent",
+            "params": {
+              "fraction": 0.0,
+              "total": 60
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice_improved",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "too few recent minutes keep the overall verdict",
+      "input": {
+        "runs": [
+          {
+            "from": 1789964040,
+            "count": 100,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789996440,
+            "count": 5,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": 1790000040
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 100,
+              "total": 105,
+              "fraction": 0.9523809523809523
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "still bad in the last 3 hours stays warn",
+      "input": {
+        "runs": [
+          {
+            "from": 1789989840,
+            "count": 150,
+            "rssi": -65,
+            "rx_mbps": 10,
+            "router_loss_pct": 20.0
+          },
+          {
+            "from": 1789998840,
+            "count": 50,
+            "rssi": -65,
+            "rx_mbps": 500,
+            "router_loss_pct": 0.0
+          }
+        ],
+        "now": 1790000040
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.physical_link.warn",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.physical_link.bad_minutes",
+            "params": {
+              "bad": 150,
+              "total": 200,
+              "fraction": 0.75
+            }
+          },
+          {
+            "key": "diag.physical_link.rssi",
+            "params": {
+              "rssi": -65.0
+            }
+          },
+          {
+            "key": "diag.physical_link.recent",
+            "params": {
+              "fraction": 0.75,
+              "total": 200
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.physical_link.advice",
+          "params": {}
+        }
+      }
+    }
+  ]
+}

@@ -1,21 +1,116 @@
 {
-  "fill" : {
-    "solid" : "srgb:0.16863,0.16863,0.18039,1.00000"
-  },
-  "groups" : [
+  "fill-specializations": [
     {
-      "layers" : [
-        {
-          "image-name" : "wifi.svg",
-          "name" : "wifi"
-        }
-      ]
+      "value": {
+        "automatic-gradient": "srgb:0.96000,0.96000,0.97000,1.00000"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": {
+        "automatic-gradient": "srgb:0.16863,0.16863,0.18039,1.00000"
+      }
     }
   ],
-  "supported-platforms" : {
-    "circles" : [
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "arcs.svg",
+          "name": "arcs",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.16863,0.16863,0.18039,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "image-name": "dot.svg",
+          "name": "dot",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.16863,0.16863,0.18039,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.4
+      }
+    },
+    {
+      "layers": [
+        {
+          "image-name": "letters.svg",
+          "name": "letters",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.16863,0.16863,0.18039,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
       "watchOS"
     ],
-    "squares" : "shared"
+    "squares": "shared"
   }
 }

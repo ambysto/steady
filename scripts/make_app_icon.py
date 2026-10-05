@@ -1,9 +1,10 @@
 """Builds the Windows app icon (app/assets/app.ico) from the Apple icon's artwork.
 
-The Wi-Fi arcs and the "A"/"S" live in apple/Steady/AppIcon.icon/Assets/wifi.svg, and the tile
-color in its icon.json, so there is one source. Windows does not mask an icon the way iOS does,
-so the rounded tile is drawn here. A headless Edge/Chrome renders the SVG (Pillow cannot read
-SVG); the result is committed, so building the app needs only Pillow.
+The Wi-Fi arcs, the dot and the "A"/"S" live in apple/Steady/AppIcon.icon/Assets/*.svg, and the tile
+color in its icon.json (the dark appearance: graphite tile, white artwork), so there is one source.
+Windows does not mask an icon the way iOS does, so the rounded tile is drawn here. A headless
+Edge/Chrome renders the SVGs (Pillow cannot read SVG); the result is committed, so building the
+app needs only Pillow.
 
     python scripts/make_app_icon.py
 """
@@ -29,9 +30,15 @@ MARGIN = 0.03        # transparent border around the tile, like the tray icon's
 RADIUS = 0.22        # corner radius as a share of the tile
 
 
+LAYERS = ("arcs", "dot", "letters")   # Assets/<name>.svg, drawn white over the tile
+
+
 def tile_color() -> str:
-    r, g, b = (float(v) for v in json.loads((ICON_DIR / "icon.json").read_text())["fill"]["solid"]
-               .removeprefix("srgb:").split(",")[:3])
+    """The tile of icon.json's dark appearance (solid or automatic-gradient fill), as #RRGGBB."""
+    fills = json.loads((ICON_DIR / "icon.json").read_text())["fill-specializations"]
+    dark = next(f for f in fills if f.get("appearance") == "dark")["value"]
+    value = next(iter(dark.values()))
+    r, g, b = (float(v) for v in value.removeprefix("srgb:").split(",")[:3])
     return "#%02X%02X%02X" % tuple(round(v * 255) for v in (r, g, b))
 
 
@@ -39,7 +46,7 @@ def render(png: Path, size: int = 1024) -> None:
     browser = next((b for b in BROWSERS if Path(b).exists()), None) or shutil.which("msedge")
     if not browser:
         raise SystemExit("Edge or Chrome is needed to render the SVG")
-    svg = (ICON_DIR / "Assets" / "wifi.svg").read_text(encoding="utf-8")
+    svg = "".join((ICON_DIR / "Assets" / f"{name}.svg").read_text(encoding="utf-8") for name in LAYERS)
     pad = size * MARGIN
     html = (f"<!doctype html><meta charset=utf-8><style>html,body{{margin:0;background:transparent;overflow:hidden}}"
             f".tile{{position:absolute;left:{pad}px;top:{pad}px;width:{size - 2 * pad}px;height:{size - 2 * pad}px;"

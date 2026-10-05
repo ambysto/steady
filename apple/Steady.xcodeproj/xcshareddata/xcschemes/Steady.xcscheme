@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "5E0000000000000000000008"
-               BuildableName = "Steady.app"
+               BuildableName = "Ambysto Steady.app"
                BlueprintName = "Steady"
                ReferencedContainer = "container:Steady.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "5E0000000000000000000008"
-            BuildableName = "Steady.app"
+            BuildableName = "Ambysto Steady.app"
             BlueprintName = "Steady"
             ReferencedContainer = "container:Steady.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "5E0000000000000000000008"
-            BuildableName = "Steady.app"
+            BuildableName = "Ambysto Steady.app"
             BlueprintName = "Steady"
             ReferencedContainer = "container:Steady.xcodeproj">
          </BuildableReference>

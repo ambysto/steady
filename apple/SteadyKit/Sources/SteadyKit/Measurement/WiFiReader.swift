@@ -19,6 +19,36 @@ public enum WiFiReader {
                                 txMbps: transmit > 0 ? Int(transmit.rounded()) : nil)
     }
 
+    /// What check #3 needs: our channel and signal, and the networks around (channel, band and
+    /// signal only: no names, no BSSIDs). The system's last scan is used when it has one, so
+    /// the radio does not leave the channel and disturb the measurements; `allowScan` lets an
+    /// empty cache be filled by scanning. nil when not connected over Wi‑Fi.
+    public static func surroundings(allowScan: Bool) -> (current: Interference.Sighting, around: [Interference.Sighting])? {
+        guard let interface = CWWiFiClient.shared().interface(), interface.powerOn(),
+              let channel = interface.wlanChannel(), interface.rssiValue() != 0 else { return nil }
+        var networks = interface.cachedScanResults() ?? []
+        if networks.isEmpty, allowScan {
+            networks = (try? interface.scanForNetworks(withSSID: nil)) ?? []
+        }
+        let around = networks.compactMap { network -> Interference.Sighting? in
+            guard let channel = network.wlanChannel else { return nil }
+            return Interference.Sighting(rssi: network.rssiValue, channel: channel.channelNumber, band: band(channel.channelBand))
+        }
+        return (Interference.Sighting(rssi: interface.rssiValue(), channel: channel.channelNumber,
+                                      band: band(channel.channelBand)), around)
+    }
+
+    /// The names Windows' netsh uses for the band.
+    static func band(_ band: CWChannelBand) -> String {
+        switch band {
+        case .band2GHz: "2.4 GHz"
+        case .band5GHz: "5 GHz"
+        case .band6GHz: "6 GHz"
+        case .bandUnknown: ""
+        @unknown default: ""
+        }
+    }
+
     /// The names Windows' netsh uses for the radio type.
     static func radioType(_ mode: CWPHYMode) -> String {
         switch mode {

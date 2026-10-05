@@ -1,0 +1,933 @@
+{
+  "rule": "interference",
+  "check": 3,
+  "reference": "app/diagnostics.py evaluate_interference",
+  "description": "Channel interference (docs/DIAGNOSTICS.md #3). 'wifi' is the connection (state, bssid, channel) or null; 'scan' lists the networks around, one entry per BSSID: ssid ('' when hidden), bssid, signal (percent, null when unknown), band, channel. A network is foreign when its first 5 BSSID octets differ from the connection's and its signal is >= 10%; foreign networks on the connection's channel and band count once per SSID (per BSSID when hidden). >= 2 warn.",
+  "cases": [
+    {
+      "name": "not connected to Wi-Fi",
+      "input": {
+        "wifi": null,
+        "scan": []
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.interference.not_connected",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "Wi-Fi disconnected",
+      "input": {
+        "wifi": {
+          "state": "disconnected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.interference.not_connected",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "connected but the channel is unknown",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": null
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.interference.not_connected",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "two foreign networks on the same 5 GHz channel warn, with the quieter group",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 40
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.interference.groups",
+            "params": {
+              "groups": [
+                "36–48: 2",
+                "149–161: 0"
+              ]
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_5g",
+          "params": {
+            "group": "149–161",
+            "channel": 149
+          }
+        }
+      }
+    },
+    {
+      "name": "one foreign network is quiet",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.interference.quiet",
+          "params": {
+            "channel": 40,
+            "count": 1
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 1
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "the own router's other SSIDs (same first 5 octets) are not foreign",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "HomeNet-guest",
+            "bssid": "02:5e:00:9a:40:32",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "HomeNet-5",
+            "bssid": "02:5e:00:9a:40:33",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.interference.quiet",
+          "params": {
+            "channel": 40,
+            "count": 0
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "networks below 10% are ignored; exactly 10% counts",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 9,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 10,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "C",
+            "bssid": "cc:00:00:00:00:03",
+            "signal": 0,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.interference.quiet",
+          "params": {
+            "channel": 40,
+            "count": 1
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 1
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 10
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: two networks at exactly 10% warn",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 10,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 10,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 40
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 10
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 10
+            }
+          },
+          {
+            "key": "diag.interference.groups",
+            "params": {
+              "groups": [
+                "36–48: 2",
+                "149–161: 0"
+              ]
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_5g",
+          "params": {
+            "group": "149–161",
+            "channel": 149
+          }
+        }
+      }
+    },
+    {
+      "name": "the same channel number on another band is not interference",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.interference.quiet",
+          "params": {
+            "channel": 40,
+            "count": 0
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 0
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "hidden networks are counted by BSSID",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 40
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": {
+                "key": "diag.common.hidden_ssid",
+                "params": {}
+              },
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": {
+                "key": "diag.common.hidden_ssid",
+                "params": {}
+              },
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.interference.groups",
+            "params": {
+              "groups": [
+                "36–48: 2",
+                "149–161: 0"
+              ]
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_5g",
+          "params": {
+            "group": "149–161",
+            "channel": 149
+          }
+        }
+      }
+    },
+    {
+      "name": "two BSSIDs of one neighbouring SSID count once",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:01:01",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.interference.quiet",
+          "params": {
+            "channel": 40,
+            "count": 1
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 1
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "5 GHz advice: the group and channel with the fewest networks",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "C",
+            "bssid": "cc:00:00:00:00:03",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 36
+          },
+          {
+            "ssid": "D",
+            "bssid": "dd:00:00:00:00:04",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 44
+          },
+          {
+            "ssid": "E",
+            "bssid": "ee:00:00:00:00:05",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 149
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 40
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.interference.groups",
+            "params": {
+              "groups": [
+                "36–48: 4",
+                "149–161: 1"
+              ]
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_5g",
+          "params": {
+            "group": "149–161",
+            "channel": 153
+          }
+        }
+      }
+    },
+    {
+      "name": "2.4 GHz: crowded channel 6",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 6
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 6
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 6
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 6
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 6
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 6,
+              "band": "2.4 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 50
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_24g",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "own BSSID missing from the scan: the band follows the channel (<= 14 is 2.4 GHz)",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 11
+        },
+        "scan": [
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 11
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "2.4 GHz",
+            "channel": 11
+          },
+          {
+            "ssid": "C",
+            "bssid": "cc:00:00:00:00:03",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 11
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 11
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 11,
+              "band": "2.4 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 50
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_24g",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "a network without a signal value counts as 0% and is ignored",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 40
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": null,
+            "band": "5 GHz",
+            "channel": 40
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "5 GHz",
+            "channel": 40
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.interference.quiet",
+          "params": {
+            "channel": 40,
+            "count": 1
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 40,
+              "band": "5 GHz",
+              "count": 1
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 50
+            }
+          }
+        ],
+        "advice": ""
+      }
+    }
+  ]
+}

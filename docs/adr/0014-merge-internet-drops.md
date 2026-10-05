@@ -1,4 +1,4 @@
-# ADR-0013: Internet drops close together are one unstable episode
+# ADR-0014: Internet drops close together are one unstable episode
 
 - **Status:** Accepted
 - **Date:** 2026-10-05

@@ -3,6 +3,7 @@
 public enum MessageCatalog {
     /// Parameters of each key with arguments, in the order of the positional specifiers.
     public static let arguments: [String: [MessageArgument]] = [
+        "apple.diag.physical_link.bad_minutes": [MessageArgument("bad", nil), MessageArgument("total", nil), MessageArgument("fraction", ".0%")],
         "diag.ago.days": [MessageArgument("count", nil)],
         "diag.ago.hours": [MessageArgument("count", nil)],
         "diag.ago.minutes": [MessageArgument("count", nil)],
@@ -133,6 +134,11 @@ public enum MessageCatalog {
     /// Keys with an Apple wording under "apple.<key>", rendered instead of the key itself.
     public static let appleVariants: Set<String> = [
         "diag.bufferbloat.where_local",
+        "diag.common.hidden_ssid",
+        "diag.physical_link.advice",
+        "diag.physical_link.advice_improved",
+        "diag.physical_link.bad_minutes",
+        "diag.physical_link.ok",
         "diag.ping.no_data",
         "diag.ping.router_loss",
         "diag.signal.advice",

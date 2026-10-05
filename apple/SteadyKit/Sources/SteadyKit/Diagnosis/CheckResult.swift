@@ -32,6 +32,15 @@ public struct CheckResult: Equatable, Sendable {
 
     public var title: Message { Message("diag.\(key).title") }
 
+    /// Summaries that say the check could not judge (not enough data yet, not on Wi‑Fi): the
+    /// Diagnostics tab shows them, but they are nothing to note in the Overview's summary.
+    static let notAssessed: Set<String> = ["diag.ping.no_data", "diag.physical_link.not_enough",
+                                           "diag.interference.not_connected", "diag.signal.not_connected",
+                                           "diag.common.no_wifi_card"]
+
+    /// false while the check has nothing to go on.
+    public var isAssessed: Bool { !Self.notAssessed.contains(summary.key) }
+
     public init(id: Int, key: String, status: CheckStatus, summary: Message,
                 details: [MessageValue] = [], advice: MessageValue = .empty) {
         self.id = id

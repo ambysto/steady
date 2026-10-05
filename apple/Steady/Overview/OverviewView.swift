@@ -59,16 +59,29 @@ struct OverviewView: View {
     }
 }
 
-/// "1 warning · 4 OK" (or "All checks are OK") with a way to the Diagnostics tab.
+/// "1 warning · 4 OK" (or "All checks are OK") with a way to the Diagnostics tab. Checks that
+/// could not judge yet (no data, not on Wi‑Fi) are left out; the Diagnostics tab shows them.
 private struct ChecksSummary: View {
-    let checks: [CheckResult]
+    let all: [CheckResult]
     let text: Localizer
     let open: () -> Void
+
+    init(checks: [CheckResult], text: Localizer, open: @escaping () -> Void) {
+        all = checks
+        self.text = text
+        self.open = open
+    }
+
+    private var checks: [CheckResult] { all.filter(\.isAssessed) }
 
     var body: some View {
         Button(action: open) {
             HStack {
-                StatusLabel(status: CheckStatus.worst(checks.map(\.status)), text: text, iconOnly: true)
+                if checks.isEmpty {
+                    ProgressView().controlSize(.small)
+                } else {
+                    StatusLabel(status: CheckStatus.worst(checks.map(\.status)), text: text, iconOnly: true)
+                }
                 Text(summary)
                 Spacer()
                 Image(systemName: "chevron.forward")
@@ -83,6 +96,7 @@ private struct ChecksSummary: View {
 
     private var summary: String {
         func count(_ status: CheckStatus) -> Int { checks.filter { $0.status == status }.count }
+        guard !checks.isEmpty else { return text("ui.live.measuring") }
         guard checks.contains(where: { $0.status != .ok }) else { return text("ui.overview.all_ok") }
         let parts: [(CheckStatus, String)] = [(.bad, "ui.diag.count.bad"), (.warn, "ui.diag.count.warn"),
                                               (.info, "ui.diag.count.info"), (.ok, "ui.diag.count.ok")]

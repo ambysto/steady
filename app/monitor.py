@@ -34,7 +34,7 @@ log = logging.getLogger("stableinternet.monitor")
 
 OUTAGE_THRESHOLD = 3        # consecutive failed ticks before an outage is declared
 ROUTE_POLL_S = 2            # how often the default route is compared (a native call, no process)
-MERGE_WINDOW_S = 60         # Internet drops closer together than this are one unstable episode (ADR-0013)
+MERGE_WINDOW_S = 60         # Internet drops closer together than this are one unstable episode (ADR-0014)
 GAP_MIN_S = 30              # a pause between ticks longer than this is a monitoring gap (sleep/hang)
 RAW_WINDOW_S = 15 * 60      # raw ping samples kept in RAM
 PURGE_EVERY_S = 3600

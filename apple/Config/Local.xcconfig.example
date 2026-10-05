@@ -6,3 +6,5 @@ DEVELOPMENT_TEAM = ABCDE12345
 // While signing with a free personal team, keep the production bundle ID free for the Ambysto
 // team (bundle IDs are unique across all teams): builds become com.ambysto.steady.dev.
 STEADY_BUNDLE_ID_SUFFIX = .dev
+
+// With the Ambysto organization's team, drop the suffix line (apple/RELEASE.md).
