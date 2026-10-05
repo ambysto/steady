@@ -233,7 +233,7 @@ class Env:
         settings = copy.deepcopy(config.DEFAULT_SETTINGS)
         settings["probes"]["enabled"] = probes   # real probes only when a test asks for fake ones
         mon = Monitor(self.storage, settings, clock=lambda: self.t, ping_fn=self.ping, wifi_fn=lambda: self.wifi,
-                      gateway_fn=lambda: self.gateway, probe_fn=self.probe, route_fn=lambda: self.route)
+                      gateway_fn=lambda: self.gateway, probe_fn=self.probe, route_fn=lambda: self.route, path_fn=lambda: self.route)
         mon.refresh_gateway()
         mon.poll_wifi(baseline=True)
         mon.poll_route(baseline=True)
@@ -357,6 +357,16 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(ev["route_change"]["ts"], BASE)
         self.assertEqual(ev["gateway_change"]["message"], "192.168.3.1 -> 10.8.0.1")   # now, not 30 s later
         self.assertEqual(ev["gateway_change"]["ts"], BASE)
+
+    def test_an_on_link_tunnel_route_without_a_gateway_is_a_route_change(self):
+        # WireGuard-style full tunnel: Internet traffic leaves through an on-link route on the tunnel.
+        self.env.route = {"gateway": None, "interface_index": 44, "metric": 0}
+        self.mon.poll_route()
+        self.assertEqual(self.events()["route_change"]["message"], "if12 -> if44")
+        self.env.route = {"gateway": "192.168.3.1", "interface_index": 12, "metric": 25}
+        self.mon.poll_route()
+        self.assertEqual(sorted(e["message"] for e in self.env.storage.query_events() if e["kind"] == "route_change"),
+                         ["if12 -> if44", "if44 -> if12"])
 
     def test_a_vpn_that_keeps_the_gateway_is_still_a_route_change(self):
         self.env.route = {"gateway": "192.168.3.1", "interface_index": 31, "metric": 5}

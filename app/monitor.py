@@ -287,10 +287,11 @@ class Monitor:
                  probe_fn: Callable[[str, str, float], Any] = run_probe,
                  notify: Callable[[str, str], Any] | None = None,
                  route_fn: Callable[[], dict | None] = winutil.default_route_native,
+                 path_fn: Callable[[], dict | None] = winutil.internet_route_native,
                  dns_fn: Callable[[], dict[int, list[str]] | None] = winutil.dns_servers_native) -> None:
         self.storage = storage
         self._notify = notify
-        self._route_fn, self._dns_fn = route_fn, dns_fn
+        self._route_fn, self._dns_fn, self._path_fn = route_fn, dns_fn, path_fn
         self._last_route: tuple[int, str] | None = None   # (interface index, gateway) of the last default route seen
         self._dns_watch = DnsWatch()
         self.settings = settings if settings is not None else config.load_settings()
@@ -492,18 +493,18 @@ class Monitor:
             self._record(MonitorEvent(int(self._clock()), "gateway_change", f"{old} -> {gw}"))
 
     def poll_route(self, baseline: bool = False) -> None:
-        """Notice the default route moving to another interface (VPN on/off, wired <-> Wi-Fi) within
-        ROUTE_POLL_S: `route_change` carries that moment, which a gateway that stays the same (or is
-        only re-read every `gateway_refresh_s`) cannot. A route that disappears is a lost connection,
-        not a switch; the next route is compared with the last one that existed."""
+        """Notice the route of Internet traffic moving to another interface (VPN on/off, wired <->
+        Wi-Fi) within ROUTE_POLL_S: `route_change` carries that moment, which a gateway that stays
+        the same (or is only re-read every `gateway_refresh_s`) cannot. A route that disappears is a
+        lost connection, not a switch; the next route is compared with the last one that existed."""
         try:
-            route = self._route_fn()
+            route = self._path_fn()
         except Exception as exc:
             self._log_once(f"route:{exc}", "route lookup failed: %r", exc)
             return
         if not route:
             return
-        current = (route["interface_index"], route["gateway"])
+        current = (route["interface_index"], route.get("gateway") or "")   # a tunnel's route is on-link: no gateway
         with self._lock:
             before, self._last_route = self._last_route, current
         if baseline or before is None or before == current:

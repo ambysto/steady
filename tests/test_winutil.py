@@ -253,9 +253,18 @@ class PowerShellIntegrationTests(unittest.TestCase):
         if uplink is None:
             self.assertIsNone(native)  # offline: nothing to compare
             return
+        if native is None and winutil.internet_route_native()["interface_index"] != uplink["interface_index"]:
+            self.skipTest("a full-tunnel VPN's 0.0.0.0/1 routes hide the default route from GetBestRoute")
         self.assertIsNotNone(native)
         self.assertEqual(native["gateway"], uplink["gateway"])
         self.assertEqual(native["interface_index"], uplink["interface_index"])
+
+    def test_internet_route_is_a_real_interface(self):
+        route = winutil.internet_route_native()
+        if route is None:
+            self.skipTest("no route to the Internet (offline)")
+        self.assertGreater(route["interface_index"], 0)
+        self.assertTrue(route["gateway"] is None or route["gateway"].count(".") == 3)
 
     def test_get_gateway_uses_native_without_spawning_powershell(self):
         from unittest import mock

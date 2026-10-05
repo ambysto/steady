@@ -255,6 +255,29 @@ def default_route_native() -> dict[str, Any] | None:
     }
 
 
+def internet_route_native(destination: str = "1.1.1.1") -> dict[str, Any] | None:
+    """The route Internet traffic actually takes: GetBestRoute for a public address.
+
+    The default route alone misses a full-tunnel VPN that leaves 0.0.0.0/0 untouched and adds
+    0.0.0.0/1 + 128.0.0.0/1 (WireGuard clients do): asking for 0.0.0.0 then matches the /1 route
+    and is no default route at all. A public address matches whichever route carries it, so its
+    interface is the VPN's while the VPN is up. `gateway` is None for an on-link route (a tunnel).
+    """
+    try:
+        lib = ctypes.WinDLL("iphlpapi")
+        row = _MibIpForwardRow()
+        address = int.from_bytes(socket.inet_aton(destination), "little")
+        if lib.GetBestRoute(address, 0, ctypes.byref(row)) != 0:
+            return None
+    except (AttributeError, OSError):
+        return None
+    return {
+        "gateway": socket.inet_ntoa(row.dwForwardNextHop.to_bytes(4, "little")) if row.dwForwardNextHop else None,
+        "interface_index": row.dwForwardIfIndex,
+        "metric": row.dwForwardMetric1,
+    }
+
+
 class _SocketAddress(ctypes.Structure):
     _fields_ = [("lpSockaddr", ctypes.c_void_p), ("iSockaddrLength", ctypes.c_int)]
 
