@@ -30,3 +30,6 @@ DerivedData/
 .build/
 .swiftpm/
 apple/Config/Local.xcconfig
+
+# App Store screenshots: made by apple/AppStore/screenshots.sh, not tracked
+apple/AppStore/screenshots/

@@ -7,6 +7,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **App Store listing** (SIC-76): `apple/AppStore/`.
+  - Name, subtitle, description, keywords, promotional text, URLs and App Review notes in English, in fastlane `deliver` layout.
+  - The answers for App Privacy (Data Not Collected) and the age rating (4+).
+  - `screenshots.sh`, which takes the iPhone 6.9" and iPad 13" screenshots on the Simulators from a sample network (`SampleNetwork`, debug builds only, `-StoreScreenshots`), so no real network appears.
 - `scripts/link_calibration.py` (SIC-70): the calibration table for check #13 (share of minutes with the rate at or below 6/12/24/30/54/100 Mbps and router loss ≥ 5%, per period) from a Windows or Mac database. The Mac's Tx thresholds are still to be checked against an hour of good and an hour of poor link.
 - **Translation review sheets** (SIC-65): `scripts/translation_review.py export` writes one CSV per language and `apply` writes the reviewers' suggestions back into `app/locales`.
   - Each row has the English text, the current translation, where it is shown and the placeholders to keep.
@@ -92,6 +96,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 - **The 4 `tests/test_link_calibration.py` tests failed on Windows** (SIC-78) with `PermissionError: [WinError 32]` while deleting the temporary SQLite file, and would have stopped the release workflow, which runs the tests on `windows-latest`. `with sqlite3.connect(...)` only ends a transaction; it does not close the connection, and Windows cannot delete an open file. `scripts/link_calibration.py` (`minutes()`) and the test's `setUp` now use `contextlib.closing`. The whole suite is clean on Windows (724 tests).
 - **`test_naming` failed on CI** (SIC-79) with `UnicodeDecodeError: ... 0xa7` and would have stopped the release workflow. It scanned `scripts/` with `*.py*`, which also matches the `.pyc` files that tests importing a script leave in `scripts/__pycache__` (a Python 3.11 `.pyc` starts with byte `0xa7`). It now scans `*.py` and `*.pyw`. The error never showed on the development machine because `PYTHONDONTWRITEBYTECODE=1` is set there, so no `.pyc` is written; run the suite without that variable to see what CI sees.
+- **Apple app: accessibility and other languages** (SIC-75), checked on the iPhone Simulator in German at the largest accessibility text size and in Japanese:
+  - Measurement rows and check card headers stack at accessibility text sizes instead of breaking words mid-way ("Inter-net", "Ping-Quali-tät"). The Overview summary and the measurement details put one part per line there.
+  - Chart axes cap their text so labels no longer overlap. Chart points read "Internet, 20:38: 47 ms" to VoiceOver, and the Wi‑Fi symbol beside the "Wi‑Fi" text is hidden from it.
+  - A key missing in a language now falls back to English, as on Windows; it showed as "app.name" in Settings in every language but English.
 - Apple app: when a VPN is up and the system refuses to reach the router, the Overview names the VPN ("some VPN apps can allow local network access") instead of saying local network access is off; on a real iPhone a VPN, not the permission, caused the refusal (SIC-73). The problem report says "router refused, vpn up". New key in all 9 catalogs.
 - **Apple app on a real iPhone** (SIC-67), two bugs the Simulator could not show:
   - On mobile data the carrier's gateway was taken for the router, pinged (it never answers: "100% lost") and shown with its addresses. Check #5 would have blamed the local network. Mobile data now has no router to measure, show or use for the DNS check.

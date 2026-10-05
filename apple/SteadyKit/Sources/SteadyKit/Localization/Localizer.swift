@@ -92,7 +92,12 @@ public struct Localizer {
             return bundle.localizedString(forKey: key, value: nil, table: nil)
         }
         let format = localized.localizedString(forKey: key, value: nil, table: nil)
-        // Not translated into this language: fall back to the development language (English).
-        return format == key ? bundle.localizedString(forKey: key, value: nil, table: nil) : format
+        guard format == key else { return format }
+        // Not translated into this language (app.name, a new key): English, as Python's i18n
+        // does. Asking `bundle` itself would ask the user's language again and show the key.
+        guard let english = bundle.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:)) else {
+            return format
+        }
+        return english.localizedString(forKey: key, value: nil, table: nil)
     }
 }

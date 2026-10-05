@@ -1,0 +1,25 @@
+When the Internet feels slow or keeps dropping, the first question is where the fault is: this device's Wi-Fi, the router, or the Internet provider. Ambysto Steady measures all three while it is open and tells you which one it is, in plain words.
+
+LIVE MEASUREMENTS
+• Latency, packet loss and jitter to your router and to two public Internet servers, every second
+• Real connections (TCP) alongside ping, so a provider that merely slows down ping is not mistaken for an outage
+• Connection type, IPv4/IPv6, DNS, metered network and Low Data Mode at a glance
+
+CHECKS THAT EXPLAIN THE CAUSE
+• Ping quality over the last hour: a local Wi-Fi problem, a provider problem, or nothing to fix
+• DNS benchmark: is the DNS server in use slow or failing, compared with well-known public ones?
+• VPN detection: a VPN changes routing and DNS, so results are read with that in mind
+• Bufferbloat test, on request: does latency explode when the line is busy?
+• On the Mac, also: Wi-Fi signal, channel interference from nearby networks, and how often the link collapses
+Each result comes with advice on what to try first.
+
+HISTORY
+Latency and loss over the last hour, day or week, from the measurements kept on your device.
+
+PRIVATE BY DESIGN
+• No account, no tracking, no analytics, no ads
+• Measurements stay on your device for 30 days and are never sent anywhere; you can delete them at any time
+• The app does not read your Wi-Fi network's name or address
+• To report a problem you see the whole report first and send it yourself
+
+Good to know: iPhone and iPad do not let apps run measurements in the background, so Ambysto Steady measures while it is open. It finds the cause of a problem; it cannot make your provider faster.
