@@ -8,8 +8,15 @@ struct MeasurementRow: View {
     let stats: LiveStats
     let text: Localizer
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        // Side by side, the name and the numbers break mid-word at accessibility text sizes
+        // ("Inter-net"); there they go one under the other.
+        let stacked = typeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+                             : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
+        layout {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                 Text(endpoint)
@@ -17,8 +24,10 @@ struct MeasurementRow: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
+            if !stacked {
+                Spacer()
+            }
+            VStack(alignment: stacked ? .leading : .trailing, spacing: 2) {
                 latest
                 if !stats.isEmpty {
                     Text(details)
@@ -27,6 +36,7 @@ struct MeasurementRow: View {
                 }
             }
             .monospacedDigit()
+            .multilineTextAlignment(stacked ? .leading : .trailing)
         }
         .accessibilityElement(children: .combine)
     }
@@ -47,6 +57,6 @@ struct MeasurementRow: View {
         if let jitter = stats.jitter {
             parts.append(text("ui.live.jitter", ["value": .number(jitter)]))
         }
-        return parts.joined(separator: " · ")
+        return parts.joined(separator: typeSize.isAccessibilitySize ? "\n" : " · ")   // one per line when large
     }
 }

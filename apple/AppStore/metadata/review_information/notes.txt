@@ -1,0 +1,7 @@
+Ambysto Steady measures the network connection while it is open; there is no account and no sign-in.
+
+- Local network permission: the app pings the user's router (the default gateway) and asks it for DNS answers, to tell a Wi-Fi problem apart from an Internet provider problem. If the permission is declined, the router is simply left out.
+- The other measurements contact only public services: ICMP and TCP port 443 to 1.1.1.1 and 8.8.8.8, DNS queries to the servers in use and to 1.1.1.1, 8.8.8.8 and 9.9.9.9.
+- Diagnostics > Bufferbloat runs only after the user confirms it: it downloads and uploads up to about 200 MB from speed.cloudflare.com for about 30 seconds.
+- Settings > Report a problem shows a text report; nothing is sent unless the user shares, emails or copies it.
+- Nothing runs in the background. No data is collected (see the privacy policy).

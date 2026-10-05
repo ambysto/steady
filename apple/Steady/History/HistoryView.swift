@@ -57,8 +57,14 @@ struct HistoryView: View {
                     .interpolationMethod(.monotone)
                     .symbol(.circle)
                     .symbolSize(10)   // a lone minute between gaps still shows
+                    // VoiceOver: "Internet, 20:38: 47 ms" rather than the axis titles.
+                    .accessibilityLabel("\(text(point.line.titleKey)), \(point.start.formatted(date: range == .week ? .abbreviated : .omitted, time: .shortened))")
+                    .accessibilityValue("\((value(point) ?? 0).formatted(.number.precision(.fractionLength(0...1)))) \(unit)")
             }
             .chartYAxisLabel(unit)
+            // Axis labels at accessibility sizes overlap on a phone: the chart caps its own text
+            // (the rest of the screen still grows) and the marks stay readable to VoiceOver.
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
             .frame(height: 200)
             .padding(.vertical, 6)
         }
