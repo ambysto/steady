@@ -79,7 +79,7 @@ Start from [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). All architectural decis
 
 ## Code signing and privacy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/) (application pending; until then releases are unsigned).
+Releases are **not code-signed** (this is a free project, and SignPath Foundation declined our first application for lack of public visibility), so Windows SmartScreen may warn on the first launch: choose **More info** → **Run anyway**.
 
 - [Code signing policy](https://steady.ambysto.com/codesigningpolicy) (source: [CODE_SIGNING.md](CODE_SIGNING.md))
 - [Privacy policy](https://steady.ambysto.com/privacy) (source: [PRIVACY.md](PRIVACY.md)) — no data collection; lists every connection the app makes.

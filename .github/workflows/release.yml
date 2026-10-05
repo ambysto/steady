@@ -1,5 +1,5 @@
 # Builds the packaged app on every pushed version tag (v0.1.0, v0.2.0-beta.1, ...) and attaches the
-# zip to a GitHub Release. The build runs from the tagged source only, as SignPath requires.
+# zip to a GitHub Release. The build runs from the tagged source only, with no manual step.
 name: release
 
 on:
@@ -29,8 +29,8 @@ jobs:
       - name: Build and smoke-test the packaged app
         run: python scripts/build.py --smoke
 
-      # Code signing (SIC-50): once SignPath Foundation accepts the project, submit the zip here
-      # with signpath/github-action-submit-signing-request and release the signed artifact instead.
+      # Releases are not code-signed (SIC-50): SignPath Foundation declined the first application.
+      # If signing is added later, sign the zip's contents here and release the signed artifact.
 
       - uses: actions/upload-artifact@v4
         with:
@@ -44,9 +44,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > release-header.md <<'NOTES'
-          Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+          This release is not code-signed, so Windows SmartScreen may warn on first launch: choose **More info**, then **Run anyway**.
 
-          [Code signing policy](https://steady.ambysto.com/codesigningpolicy) | [Privacy policy](https://steady.ambysto.com/privacy)
+          [Code signing](https://steady.ambysto.com/codesigningpolicy) | [Privacy policy](https://steady.ambysto.com/privacy)
           NOTES
           gh release create "$GITHUB_REF_NAME" dist/AmbystoSteady-*-win64.zip --title "Ambysto Steady $GITHUB_REF_NAME" \
             --notes-file release-header.md --generate-notes
