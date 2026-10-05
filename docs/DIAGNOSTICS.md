@@ -61,3 +61,8 @@ Conclusions when choosing thresholds:
 - **#13** separates bad periods (23–88%) from good ones (0.0%) very clearly, so a warn threshold of 20% / info of 5% is reasonable. But it **cannot tell the causes apart** (MLO, 2.4GHz, antenna, interference all give similar results) — so this check is a *symptom* detector and suggests an order of elimination; it does not assert "the antenna is blocked".
 - **#11** treats the history only as *supporting* evidence for the structural evidence (card without Wi‑Fi 7 + router broadcasting 802.11be). The warn threshold is ≥ 25% of minutes and ≥ 5 minutes: only the MLO-on period (52.9%) exceeds it; the non-MLO periods that were still bad (10–19%) do not.
 - Small sample size (one machine, one day): treat the thresholds as a starting point, to be adjusted as more data comes in.
+
+**The Mac (SIC-70).** macOS reports only the transmit rate, so #13 on the Mac judges Tx with the Rx thresholds above until Mac data says otherwise. `scripts/link_calibration.py <database> --period "label=YYYY-MM-DD HH:MM..HH:MM" …` prints, per period, the share of minutes with the rate at or below 6/12/24/30/54/100 Mbps and router loss ≥ 5%, from either platform's database (Rx where it exists, else Tx). To calibrate:
+1. Keep the app open on a Mac for an hour where the link is good.
+2. Keep it open for an hour where the link is poor: far from the router, or behind walls or metal.
+3. Compare the two periods. A good threshold is near 0% in the good hour and clearly above 20% in the poor one.

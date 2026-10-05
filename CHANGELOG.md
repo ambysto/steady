@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- `scripts/link_calibration.py` (SIC-70): the calibration table for check #13 (share of minutes with the rate at or below 6/12/24/30/54/100 Mbps and router loss ≥ 5%, per period) from a Windows or Mac database. The Mac's Tx thresholds are still to be checked against an hour of good and an hour of poor link.
 - **Translation review sheets** (SIC-65): `scripts/translation_review.py export` writes one CSV per language and `apply` writes the reviewers' suggestions back into `app/locales`.
   - Each row has the English text, the current translation, where it is shown and the placeholders to keep.
   - `apply` refuses a sheet with an unknown key or a changed placeholder, and keeps the catalogs' order and line endings.
