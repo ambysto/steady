@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "ルーターにも到達できません。監視の中断により打ち切られました",
   "event.internet_down.wan": "ルーターには到達可能 -> ISP/ルーターの WAN 側",
   "event.internet_down.wan.cut": "ルーターには到達可能 -> ISP/ルーターの WAN 側。監視の中断により打ち切られました",
+  "event.internet_down.local.unstable": "ルーターにも到達できません。不安定: {drops} 回の途切れ",
+  "event.internet_down.wan.unstable": "ルーターには到達可能 -> ISP/ルーターの WAN 側。不安定: {drops} 回の途切れ",
 
   "event.monitor_gap": "{seconds} 秒間サンプルなし（スリープ、ハング、または一時停止）",
   "event.user_action": "ユーザー: {action} — {result}",

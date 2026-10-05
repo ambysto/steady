@@ -219,6 +219,8 @@
   "event.internet_down.local.cut": "router also unreachable; cut short by a monitoring gap",
   "event.internet_down.wan": "router reachable -> ISP/router WAN side",
   "event.internet_down.wan.cut": "router reachable -> ISP/router WAN side; cut short by a monitoring gap",
+  "event.internet_down.local.unstable": "router also unreachable; unstable: {drops} drops",
+  "event.internet_down.wan.unstable": "router reachable -> ISP/router WAN side; unstable: {drops} drops",
 
   "event.monitor_gap": "no samples for {seconds} s (sleep, hang or paused)",
   "event.user_action": "User: {action} — {result}",

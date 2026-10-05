@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "路由器也无法连接；因监控中断而提前结束",
   "event.internet_down.wan": "路由器可连接 -> ISP/路由器 WAN 侧",
   "event.internet_down.wan.cut": "路由器可连接 -> ISP/路由器 WAN 侧；因监控中断而提前结束",
+  "event.internet_down.local.unstable": "路由器也无法连接；不稳定：断线 {drops} 次",
+  "event.internet_down.wan.unstable": "路由器可连接 -> ISP/路由器 WAN 侧；不稳定：断线 {drops} 次",
 
   "event.monitor_gap": "{seconds} 秒内没有样本（睡眠、卡死或已暂停）",
   "event.user_action": "用户：{action} — {result}",

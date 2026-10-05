@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "o roteador também está inacessível; interrompido por uma lacuna no monitoramento",
   "event.internet_down.wan": "roteador acessível -> lado do provedor/WAN do roteador",
   "event.internet_down.wan.cut": "roteador acessível -> lado do provedor/WAN do roteador; interrompido por uma lacuna no monitoramento",
+  "event.internet_down.local.unstable": "o roteador também está inacessível; instável: {drops} quedas",
+  "event.internet_down.wan.unstable": "roteador acessível -> lado do provedor/WAN do roteador; instável: {drops} quedas",
 
   "event.monitor_gap": "sem amostras por {seconds} s (suspensão, travamento ou pausa)",
   "event.user_action": "Usuário: {action} — {result}",

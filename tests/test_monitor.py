@@ -5,7 +5,7 @@ import unittest
 from types import SimpleNamespace
 
 from app import config, i18n, winutil
-from app.monitor import MinuteAggregator, Monitor, OutageTracker
+from app.monitor import MERGE_WINDOW_S, MinuteAggregator, Monitor, OutageTracker
 from app.storage import Storage
 
 
@@ -14,6 +14,7 @@ def en(message):
     return i18n.render(message, "en")
 
 BASE = 600_000  # divisible by 60: start of a minute
+QUIET = [(True, True)] * (MERGE_WINDOW_S + 1)   # long enough for a held Internet outage to be reported
 
 
 class OutageTrackerTests(unittest.TestCase):
@@ -52,7 +53,7 @@ class OutageTrackerTests(unittest.TestCase):
 
     def test_internet_down_router_ok_means_isp_side(self):
         t = OutageTracker()
-        events = self.feed(t, BASE, [(True, False)] * 4 + [(True, True)])
+        events = self.feed(t, BASE, [(True, False)] * 4 + [(True, True)] + QUIET)
         (ev,) = events
         self.assertEqual(ev.kind, "internet_down")
         self.assertIn("ISP", en(ev.message))
@@ -60,23 +61,88 @@ class OutageTrackerTests(unittest.TestCase):
 
     def test_both_down_reports_router_first_and_overlap(self):
         t = OutageTracker()
-        events = self.feed(t, BASE, [(False, False)] * 4 + [(True, True)])
+        events = self.feed(t, BASE, [(False, False)] * 4 + [(True, True)] + QUIET)
         self.assertEqual([e.kind for e in events], ["router_down", "internet_down"])
         self.assertEqual(en(events[1].message), "router also unreachable")
 
     def test_router_failing_mid_internet_outage_counts_as_overlap(self):
         t = OutageTracker()
-        pattern = [(True, False)] * 4 + [(False, False)] + [(True, True)]
+        pattern = [(True, False)] * 4 + [(False, False)] + [(True, True)] + QUIET
         events = self.feed(t, BASE, pattern)
         inet = next(e for e in events if e.kind == "internet_down")
         self.assertEqual(en(inet.message), "router also unreachable")
 
     def test_overlap_resets_for_the_next_outage(self):
         t = OutageTracker()
-        self.feed(t, BASE, [(False, False)] * 4 + [(True, True)])
-        events = self.feed(t, BASE + 10, [(True, False)] * 4 + [(True, True)])
+        self.feed(t, BASE, [(False, False)] * 4 + [(True, True)] + QUIET)
+        events = self.feed(t, BASE + 100, [(True, False)] * 4 + [(True, True)] + QUIET)
         (ev,) = events
         self.assertIn("ISP", en(ev.message))
+
+    def test_drops_close_together_are_one_unstable_episode(self):
+        # 2026-10-05: 30 s down, 37 s back, 6 s down again - one episode, not two events.
+        t = OutageTracker()
+        pattern = ([(True, False)] * 30 + [(True, True)] * 37 + [(True, False)] * 6 + [(True, True)] + QUIET)
+        events = self.feed(t, BASE, pattern)
+        (ev,) = events
+        self.assertEqual(ev.kind, "internet_down")
+        self.assertEqual(ev.duration, 30 + 37 + 6)            # first drop .. last recovery
+        self.assertEqual(ev.ts, BASE + 30 + 37 + 6)           # reported at the last recovery
+        self.assertEqual(en(ev.message), "router reachable -> ISP/router WAN side; unstable: 2 drops")
+
+    def test_active_still_reflects_the_moment_while_an_episode_is_merged(self):
+        t = OutageTracker()
+        self.feed(t, BASE, [(True, False)] * 4 + [(True, True)] * 10)
+        self.assertEqual(t.active(), {})                       # toasts / watchdog see "recovered"
+        self.feed(t, BASE + 14, [(True, False)] * 3)
+        self.assertEqual(t.active(), {"internet": BASE + 14})
+
+    def test_drops_further_apart_than_the_window_stay_separate(self):
+        t = OutageTracker()
+        pattern = ([(True, False)] * 4 + [(True, True)] * (MERGE_WINDOW_S + 5) + [(True, False)] * 4 + [(True, True)] + QUIET)
+        events = self.feed(t, BASE, pattern)
+        self.assertEqual([e.duration for e in events], [4, 4])
+        self.assertTrue(all("unstable" not in en(e.message) for e in events))
+
+    def test_a_drop_shorter_than_the_threshold_does_not_extend_the_episode(self):
+        t = OutageTracker()
+        pattern = [(True, False)] * 4 + [(True, True)] * 10 + [(True, False), (True, False), (True, True)] + QUIET
+        (ev,) = self.feed(t, BASE, pattern)
+        self.assertEqual(ev.duration, 4)
+
+    def test_three_drops_are_counted_and_router_overlap_is_kept(self):
+        t = OutageTracker()
+        pattern = ([(True, False)] * 4 + [(True, True)] * 10 + [(False, False)] * 4 + [(True, True)] * 10
+                   + [(True, False)] * 4 + [(True, True)] + QUIET)
+        events = [e for e in self.feed(t, BASE, pattern) if e.kind == "internet_down"]
+        (ev,) = events
+        self.assertEqual(en(ev.message), "router also unreachable; unstable: 3 drops")
+
+    def test_interrupt_reports_a_held_episode_and_an_open_drop_as_one(self):
+        t = OutageTracker()
+        self.feed(t, BASE, [(True, False)] * 4 + [(True, True)] * 10 + [(True, False)] * 5)
+        (ev,) = t.interrupt(BASE + 19)
+        self.assertEqual(ev.duration, 19)
+        self.assertIn("cut short", en(ev.message))
+        self.assertEqual(t.flush(BASE + 20), [])
+
+    def test_interrupt_reports_a_held_episode_when_nothing_is_open(self):
+        t = OutageTracker()
+        self.feed(t, BASE, [(True, False)] * 4 + [(True, True)] * 3)
+        (ev,) = t.interrupt(BASE + 7)
+        self.assertEqual((ev.ts, ev.duration), (BASE + 4, 4))
+
+    def test_flush_reports_a_held_episode_on_shutdown(self):
+        t = OutageTracker()
+        self.feed(t, BASE, [(True, False)] * 4 + [(True, True)] * 3)
+        (ev,) = t.flush(BASE + 7)
+        self.assertEqual(ev.duration, 4)
+        self.assertEqual(t.flush(BASE + 8), [])
+
+    def test_the_merge_window_can_be_turned_off(self):
+        t = OutageTracker(merge_window_s=0)
+        pattern = [(True, False)] * 4 + [(True, True)] * 3 + [(True, False)] * 4 + [(True, True)] * 3
+        self.assertEqual(len(self.feed(t, BASE, pattern)), 2)
 
     def test_internet_ok_if_any_target_answers_is_callers_job(self):
         # The tracker only sees the combined flag; one flapping flag below threshold is no outage.
@@ -207,7 +273,7 @@ class MonitorTests(unittest.TestCase):
     def test_internet_outage_isp_side(self):
         self.env.run(self.mon, 5)
         self.env.run(self.mon, 4, **{"1.1.1.1": None, "8.8.8.8": None})
-        self.env.run(self.mon, 2, **{"1.1.1.1": 40.0, "8.8.8.8": 50.0})
+        self.env.run(self.mon, 2 + MERGE_WINDOW_S, **{"1.1.1.1": 40.0, "8.8.8.8": 50.0})
         ev = self.events()["internet_down"]
         self.assertEqual(ev["level"], "bad")
         self.assertIn("ISP", en(ev["message"]))
@@ -221,7 +287,7 @@ class MonitorTests(unittest.TestCase):
     def test_router_outage_with_internet_also_down(self):
         self.env.run(self.mon, 3)
         self.env.run(self.mon, 5, **{"192.168.3.1": None, "1.1.1.1": None, "8.8.8.8": None})
-        self.env.run(self.mon, 1, **{"192.168.3.1": 2.0, "1.1.1.1": 40.0, "8.8.8.8": 50.0})
+        self.env.run(self.mon, 2 + MERGE_WINDOW_S, **{"192.168.3.1": 2.0, "1.1.1.1": 40.0, "8.8.8.8": 50.0})
         ev = self.events()
         self.assertIn("192.168.3.1", en(ev["router_down"]["message"]))
         self.assertEqual(en(ev["internet_down"]["message"]), "router also unreachable")
@@ -376,7 +442,7 @@ class ProbeTests(unittest.TestCase):
         self.tick(40, **ALL_ICMP_INTERNET_DOWN)
         self.assertIn("internet", self.mon.snapshot()["outages"])
         self.env.probe_net.clear()
-        self.tick(12, **{"1.1.1.1": 40.0, "8.8.8.8": 50.0})
+        self.tick(12 + MERGE_WINDOW_S, **{"1.1.1.1": 40.0, "8.8.8.8": 50.0})
         ev = self.events()["internet_down"]
         self.assertIn("ISP", en(ev["message"]))
 

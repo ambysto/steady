@@ -217,6 +217,8 @@
   "event.internet_down.local.cut": "router cũng không tới được; bị cắt ngắn do khoảng trống giám sát",
   "event.internet_down.wan": "router vẫn thông -> lỗi phía nhà mạng/WAN của router",
   "event.internet_down.wan.cut": "router vẫn thông -> lỗi phía nhà mạng/WAN của router; bị cắt ngắn do khoảng trống giám sát",
+  "event.internet_down.local.unstable": "router cũng không tới được; không ổn định: {drops} lần đứt",
+  "event.internet_down.wan.unstable": "router vẫn thông -> lỗi phía nhà mạng/WAN của router; không ổn định: {drops} lần đứt",
 
   "event.monitor_gap": "không có mẫu trong {seconds} s (máy ngủ, treo hoặc tạm dừng)",
   "event.user_action": "Người dùng: {action} — {result}",
