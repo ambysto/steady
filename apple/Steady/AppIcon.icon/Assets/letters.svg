@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- A small "A" and "S" (Ambysto Steady) either side of the dot. Filled outlines only: the icon renderer lights
-       open strokes as if they were closed, which shows stray lines. The colour comes from
-       icon.json (graphite in light mode, white in dark and tinted modes). -->
+  <!-- A small "A" and "S" (Ambysto Steady) either side of the dot.
+       Filled outlines only: the icon renderer lights open strokes as if they were closed,
+       which shows stray lines. The colour comes from icon.json (graphite in light mode,
+       white in dark, tinted and clear modes). -->
   <g fill="#FFFFFF">
     <path d="M217.8 750.0 L269.8 630.0 A15.0 15.0 0 0 0 242.2 618.1 L190.2 738.1 A15.0 15.0 0 0 0 217.8 750.0 Z"/>
     <path d="M242.2 630.0 L294.2 750.0 A15.0 15.0 0 0 0 321.8 738.1 L269.8 618.1 A15.0 15.0 0 0 0 242.2 630.0 Z"/>
