@@ -69,6 +69,7 @@
   "diag.interference.groups": "Réseaux par groupe de canaux 5 GHz : {groups}",
   "diag.interference.advice_5g": "Essayez le groupe de canaux {group} (le moins de réseaux ; le canal {channel} est le plus libre).",
   "diag.interference.advice_24g": "Passez en 5 GHz si le signal le permet, ou choisissez celui des canaux 1/6/11 qui est le moins encombré.",
+  "diag.interference.advice_6g": "La bande 6 GHz compte de nombreux canaux : choisissez-en un autre dans les réglages du routeur (ou laissez-le choisir automatiquement), ou réduisez la largeur de canal.",
   "diag.interference.crowded": {"one": "{count} autre réseau sur le canal {channel}", "other": "{count} autres réseaux sur le canal {channel}"},
 
   "diag.drops.title": "Historique des déconnexions (7 jours)",

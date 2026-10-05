@@ -6652,6 +6652,65 @@
         }
       }
     },
+    "diag.interference.advice_6g" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 GHz hat viele Kanäle: in den Router-Einstellungen einen anderen wählen (oder automatisch wählen lassen) oder eine geringere Kanalbreite nutzen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 GHz has many channels: pick another one in the router's settings (or let it choose automatically), or use a narrower channel width."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La banda de 6 GHz tiene muchos canales: elige otro en los ajustes del router (o deja que lo elija automáticamente) o usa un ancho de canal menor."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La bande 6 GHz compte de nombreux canaux : choisissez-en un autre dans les réglages du routeur (ou laissez-le choisir automatiquement), ou réduisez la largeur de canal."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 GHz にはチャンネルが多くあります。ルーターの設定で別のチャンネルを選ぶ（または自動選択にする）か、チャンネル幅を狭くしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 GHz에는 채널이 많습니다. 라우터 설정에서 다른 채널을 고르거나(또는 자동 선택으로 두거나) 채널 폭을 좁히십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A faixa de 6 GHz tem muitos canais: escolha outro nas configurações do roteador (ou deixe a escolha automática), ou use uma largura de canal menor."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Băng 6 GHz có nhiều kênh: chọn kênh khác trong cấu hình router (hoặc để router tự chọn), hoặc dùng độ rộng kênh hẹp hơn."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6 GHz 有很多信道：请在路由器设置中改选其他信道（或设为自动选择），或使用更窄的信道宽度。"
+          }
+        }
+      }
+    },
     "diag.interference.crowded" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -69,6 +69,7 @@
   "diag.interference.groups": "Netzwerke pro 5-GHz-Kanalgruppe: {groups}",
   "diag.interference.advice_5g": "Kanalgruppe {group} ausprobieren (wenigste Netzwerke; Kanal {channel} ist am leersten).",
   "diag.interference.advice_24g": "Auf 5 GHz wechseln, wenn das Signal es zulässt, oder den am wenigsten belegten der Kanäle 1/6/11 wählen.",
+  "diag.interference.advice_6g": "6 GHz hat viele Kanäle: in den Router-Einstellungen einen anderen wählen (oder automatisch wählen lassen) oder eine geringere Kanalbreite nutzen.",
   "diag.interference.crowded": {"one": "{count} weiteres Netzwerk auf Kanal {channel}", "other": "{count} weitere Netzwerke auf Kanal {channel}"},
 
   "diag.drops.title": "Verbindungsabbrüche (7 Tage)",

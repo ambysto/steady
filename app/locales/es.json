@@ -69,6 +69,7 @@
   "diag.interference.groups": "Redes por grupo de canales de 5 GHz: {groups}",
   "diag.interference.advice_5g": "Prueba el grupo de canales {group} (el que tiene menos redes; el canal {channel} es el más libre).",
   "diag.interference.advice_24g": "Pasa a 5 GHz si la señal lo permite, o cambia al canal 1, 6 u 11 que esté menos saturado.",
+  "diag.interference.advice_6g": "La banda de 6 GHz tiene muchos canales: elige otro en los ajustes del router (o deja que lo elija automáticamente) o usa un ancho de canal menor.",
   "diag.interference.crowded": {"one": "{count} otra red en el canal {channel}", "other": "{count} otras redes en el canal {channel}"},
 
   "diag.drops.title": "Historial de desconexiones (7 días)",

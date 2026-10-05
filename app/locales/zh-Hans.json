@@ -69,6 +69,7 @@
   "diag.interference.groups": "各 5 GHz 信道组的网络数：{groups}",
   "diag.interference.advice_5g": "尝试信道组 {group}（网络最少；信道 {channel} 最空）。",
   "diag.interference.advice_24g": "如果信号允许，请改用 5 GHz；或在信道 1/6/11 中选择最不拥挤的一个。",
+  "diag.interference.advice_6g": "6 GHz 有很多信道：请在路由器设置中改选其他信道（或设为自动选择），或使用更窄的信道宽度。",
   "diag.interference.crowded": "信道 {channel} 上有 {count} 个其他网络",
 
   "diag.drops.title": "断线记录（7 天）",

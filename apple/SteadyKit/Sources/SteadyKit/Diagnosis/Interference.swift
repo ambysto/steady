@@ -95,6 +95,8 @@ public enum Interference {
                 "groups": .list(totals.map { .text("\($0.name): \($0.total)") }),
             ])))
             advice = Message("diag.interference.advice_5g", ["group": .text(best.name), "channel": .number(Double(quiet))])
+        } else if band == "6 GHz" {   // many free channels, no 5 GHz to move to (SIC-71)
+            advice = Message("diag.interference.advice_6g")
         } else {
             advice = Message("diag.interference.advice_24g")
         }

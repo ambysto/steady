@@ -69,6 +69,7 @@
   "diag.interference.groups": "5 GHz チャンネルグループごとのネットワーク数: {groups}",
   "diag.interference.advice_5g": "チャンネルグループ {group} をお試しください（ネットワーク数が最少で、チャンネル {channel} が最も空いています）。",
   "diag.interference.advice_24g": "信号が届くなら 5 GHz に移るか、チャンネル 1/6/11 のうち最も混雑していないものに切り替えてください。",
+  "diag.interference.advice_6g": "6 GHz にはチャンネルが多くあります。ルーターの設定で別のチャンネルを選ぶ（または自動選択にする）か、チャンネル幅を狭くしてください。",
   "diag.interference.crowded": "チャンネル {channel} に他のネットワークが{count}件あります",
 
   "diag.drops.title": "切断履歴（7 日間）",
