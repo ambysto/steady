@@ -28,6 +28,22 @@ xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'generic/
 xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
 
+## On an iPhone or iPad from the command line
+
+After the first-time setup above (team in `Local.xcconfig`, Apple account signed in to Xcode, the device paired and in Developer Mode, a development certificate created in Xcode > Settings > Accounts > Manage Certificates), no Xcode window is needed:
+
+```bash
+xcrun devicectl list devices
+xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'id=<UDID>' -derivedDataPath build/device -allowProvisioningUpdates build
+xcrun devicectl device install app --device <UDID> build/device/Build/Products/Debug-iphoneos/Steady.app
+xcrun devicectl device process launch --device <UDID> --terminate-existing com.ambysto.steady.dev
+```
+
+- The first `codesign` asks for the Mac's login password to use the signing key; "Always Allow" stops it asking again.
+- The first launch fails until the device trusts the developer: Settings > General > VPN & Device Management > Apple Development > Trust. The app then asks for local network access; allow it so the router is measured.
+- With a free personal team the app stops opening after 7 days; build and install again.
+- To read the app's log on the Mac (one line per minute and target, no addresses), add `--console --environment-variables '{"OS_ACTIVITY_DT_MODE":"enable"}'` to the launch command. On a Mac build, use `/usr/bin/log show --info --predicate 'subsystem == "com.ambysto.steady"'` (in zsh a bare `log` is a shell builtin).
+
 ## Texts
 
 Every user-visible string comes from `app/locales/*.json`. To add one: add the key to `en.json` and the other 8 catalogs, run `python scripts/locales_to_xcstrings.py`, then render it with `Localizer` (`text("ui.path.connected")`, or a `Message` with parameters). Pass strings to SwiftUI as values (`Text(text(...))`), never as literals, so Xcode does not extract or look up keys on its own.
