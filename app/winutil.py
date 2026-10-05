@@ -232,27 +232,74 @@ class _MibIpForwardRow(ctypes.Structure):
     )]
 
 
-def default_route_native() -> dict[str, Any] | None:
-    """Best IPv4 default route via iphlpapi.GetBestRoute (~0.2 ms, no process).
+_ROW_DWORDS = len(_MibIpForwardRow._fields_)
 
-    Asking for destination 0.0.0.0 can only match 0.0.0.0/0 routes, and Windows picks
-    among them by route metric + interface metric. Returns None when there is no
-    gateway default route or the call fails, so callers can fall back to PowerShell.
+
+def parse_forward_table(buffer: bytes) -> list[dict[str, Any]]:
+    """Rows of a MIB_IPFORWARDTABLE (GetIpForwardTable): a DWORD count, then 14-DWORD rows."""
+    if len(buffer) < 4:
+        return []
+    count = int.from_bytes(buffer[:4], "little")
+    rows = []
+    for i in range(count):
+        offset = 4 + i * 4 * _ROW_DWORDS
+        if offset + 4 * _ROW_DWORDS > len(buffer):
+            break
+        d = [int.from_bytes(buffer[offset + 4 * j:offset + 4 * j + 4], "little") for j in range(_ROW_DWORDS)]
+        rows.append({"dest": d[0], "mask": d[1], "next_hop": d[3], "interface_index": d[4], "metric": d[9]})
+    return rows
+
+
+def best_default_route(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The 0.0.0.0/0 route with a gateway and the lowest metric (the table's metric already
+    includes the interface metric, as `Get-NetRoute` RouteMetric + InterfaceMetric)."""
+    candidates = [r for r in rows if r["dest"] == 0 and r["mask"] == 0 and r["next_hop"] != 0]
+    if not candidates:
+        return None
+    best = min(candidates, key=lambda r: r["metric"])
+    return {
+        "gateway": socket.inet_ntoa(best["next_hop"].to_bytes(4, "little")),
+        "interface_index": best["interface_index"],
+        "metric": best["metric"],
+    }
+
+
+def _forward_table_default_route(lib: Any) -> dict[str, Any] | None:
+    size = ctypes.c_ulong(0)
+    lib.GetIpForwardTable(None, ctypes.byref(size), False)      # ERROR_INSUFFICIENT_BUFFER: wanted size
+    for _ in range(3):                                           # the table can grow between the calls
+        buffer = ctypes.create_string_buffer(size.value + 4096)
+        size = ctypes.c_ulong(len(buffer))
+        if lib.GetIpForwardTable(buffer, ctypes.byref(size), False) == 0:
+            return best_default_route(parse_forward_table(buffer.raw[:size.value]))
+    return None
+
+
+def default_route_native() -> dict[str, Any] | None:
+    """Best IPv4 default route via iphlpapi (~0.2 ms, no process).
+
+    Asking GetBestRoute for destination 0.0.0.0 can only match 0.0.0.0/0 routes, and Windows picks
+    among them by route metric + interface metric. A full-tunnel VPN that adds 0.0.0.0/1 and
+    128.0.0.0/1 instead of replacing 0.0.0.0/0 (WireGuard clients) makes that call match the /1 route,
+    so then the route table is read and its best 0.0.0.0/0 route with a gateway is returned - the
+    physical one, which is what the router, the DNS servers and the network's identity belong to.
+    Returns None when there is no gateway default route or the calls fail, so callers can fall
+    back to PowerShell.
     """
     try:
         lib = ctypes.WinDLL("iphlpapi")
         row = _MibIpForwardRow()
         if lib.GetBestRoute(0, 0, ctypes.byref(row)) != 0:
             return None
+        if row.dwForwardDest == 0 and row.dwForwardMask == 0 and row.dwForwardNextHop != 0:
+            return {
+                "gateway": socket.inet_ntoa(row.dwForwardNextHop.to_bytes(4, "little")),
+                "interface_index": row.dwForwardIfIndex,
+                "metric": row.dwForwardMetric1,
+            }
+        return _forward_table_default_route(lib)
     except (AttributeError, OSError):
         return None
-    if row.dwForwardDest != 0 or row.dwForwardMask != 0 or row.dwForwardNextHop == 0:
-        return None  # not a default route, or on-link (no gateway)
-    return {
-        "gateway": socket.inet_ntoa(row.dwForwardNextHop.to_bytes(4, "little")),
-        "interface_index": row.dwForwardIfIndex,
-        "metric": row.dwForwardMetric1,
-    }
 
 
 def internet_route_native(destination: str = "1.1.1.1") -> dict[str, Any] | None:
