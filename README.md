@@ -79,8 +79,10 @@ Start from [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). All architectural decis
 
 ## Code signing and privacy
 
-- [Code signing policy](CODE_SIGNING.md) — code signing via SignPath Foundation (pending approval).
-- [Privacy policy](PRIVACY.md) — no data collection; lists every connection the app makes.
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/) (application pending; until then releases are unsigned).
+
+- [Code signing policy](https://steady.ambysto.com/codesigningpolicy) (source: [CODE_SIGNING.md](CODE_SIGNING.md))
+- [Privacy policy](https://steady.ambysto.com/privacy) (source: [PRIVACY.md](PRIVACY.md)) — no data collection; lists every connection the app makes.
 
 ## License
 

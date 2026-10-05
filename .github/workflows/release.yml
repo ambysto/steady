@@ -42,4 +42,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/AmbystoSteady-*-win64.zip --title "Ambysto Steady $GITHUB_REF_NAME" --generate-notes
+        run: |
+          cat > release-header.md <<'NOTES'
+          Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+          [Code signing policy](https://steady.ambysto.com/codesigningpolicy) | [Privacy policy](https://steady.ambysto.com/privacy)
+          NOTES
+          gh release create "$GITHUB_REF_NAME" dist/AmbystoSteady-*-win64.zip --title "Ambysto Steady $GITHUB_REF_NAME" \
+            --notes-file release-header.md --generate-notes
