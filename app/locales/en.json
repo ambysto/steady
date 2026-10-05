@@ -638,5 +638,27 @@
 
   "ui.failover.disconnected": "Not connected right now. Switch back to undo the change.",
 
-  "failover.result.in_use": "{path} is already the connection in use; nothing to switch"
+  "failover.result.in_use": "{path} is already the connection in use; nothing to switch",
+
+  "ui.path.checking": "Checking the connection…",
+  "ui.path.connected": "Connected",
+  "ui.path.disconnected": "No connection",
+  "ui.path.requires_connection": "Not connected yet: the system can connect on demand",
+  "ui.path.connection": "Connection",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Wired (Ethernet)",
+  "ui.path.via.cellular": "Mobile data",
+  "ui.path.via.other": "Other network",
+  "ui.path.ip": "IP versions",
+  "ui.path.none": "None",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Available",
+  "ui.path.unavailable": "Unavailable",
+  "ui.path.expensive": "Metered network (mobile data or a personal hotspot)",
+  "ui.path.constrained": "Low Data Mode is on: the system limits background traffic",
+  "ui.path.reason.not_available": "No network is available",
+  "ui.path.reason.cellular_denied": "Mobile data is turned off for this app",
+  "ui.path.reason.wifi_denied": "Wi‑Fi is turned off for this app",
+  "ui.path.reason.local_network_denied": "Local network access is turned off for this app",
+  "ui.path.reason.vpn_inactive": "The required VPN is not connected"
 }

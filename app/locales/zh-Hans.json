@@ -636,5 +636,27 @@
 
   "ui.failover.disconnected": "当前未连接。切换回去即可撤销更改。",
 
-  "failover.result.in_use": "{path} 已是当前使用的连接，无需切换"
+  "failover.result.in_use": "{path} 已是当前使用的连接，无需切换",
+
+  "ui.path.checking": "正在检查连接…",
+  "ui.path.connected": "已连接",
+  "ui.path.disconnected": "无连接",
+  "ui.path.requires_connection": "尚未连接：系统可按需连接",
+  "ui.path.connection": "连接",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "有线（以太网）",
+  "ui.path.via.cellular": "蜂窝数据",
+  "ui.path.via.other": "其他网络",
+  "ui.path.ip": "IP 版本",
+  "ui.path.none": "无",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "可用",
+  "ui.path.unavailable": "不可用",
+  "ui.path.expensive": "按流量计费的网络（蜂窝数据或个人热点）",
+  "ui.path.constrained": "低数据模式已开启：系统会限制后台流量",
+  "ui.path.reason.not_available": "没有可用的网络",
+  "ui.path.reason.cellular_denied": "此应用的蜂窝数据已关闭",
+  "ui.path.reason.wifi_denied": "此应用的 Wi‑Fi 已关闭",
+  "ui.path.reason.local_network_denied": "此应用的本地网络访问已关闭",
+  "ui.path.reason.vpn_inactive": "所需的 VPN 未连接"
 }

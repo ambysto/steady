@@ -636,5 +636,27 @@
 
   "ui.failover.disconnected": "Derzeit nicht verbunden. Zurückwechseln macht die Änderung rückgängig.",
 
-  "failover.result.in_use": "{path} ist bereits die verwendete Verbindung; nichts umzuschalten"
+  "failover.result.in_use": "{path} ist bereits die verwendete Verbindung; nichts umzuschalten",
+
+  "ui.path.checking": "Verbindung wird geprüft…",
+  "ui.path.connected": "Verbunden",
+  "ui.path.disconnected": "Keine Verbindung",
+  "ui.path.requires_connection": "Noch nicht verbunden: Das System kann bei Bedarf verbinden",
+  "ui.path.connection": "Verbindung",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Kabelgebunden (Ethernet)",
+  "ui.path.via.cellular": "Mobile Daten",
+  "ui.path.via.other": "Anderes Netzwerk",
+  "ui.path.ip": "IP-Versionen",
+  "ui.path.none": "Keine",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Verfügbar",
+  "ui.path.unavailable": "Nicht verfügbar",
+  "ui.path.expensive": "Getaktetes Netzwerk (mobile Daten oder persönlicher Hotspot)",
+  "ui.path.constrained": "Datensparmodus ist aktiv: Das System begrenzt den Hintergrundverkehr",
+  "ui.path.reason.not_available": "Kein Netzwerk verfügbar",
+  "ui.path.reason.cellular_denied": "Mobile Daten sind für diese App deaktiviert",
+  "ui.path.reason.wifi_denied": "Wi‑Fi ist für diese App deaktiviert",
+  "ui.path.reason.local_network_denied": "Der Zugriff auf das lokale Netzwerk ist für diese App deaktiviert",
+  "ui.path.reason.vpn_inactive": "Das erforderliche VPN ist nicht verbunden"
 }

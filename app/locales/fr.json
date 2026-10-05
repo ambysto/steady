@@ -636,5 +636,27 @@
 
   "ui.failover.disconnected": "Non connectée pour l’instant. Revenez à la connexion principale pour annuler le changement.",
 
-  "failover.result.in_use": "{path} est déjà la connexion utilisée ; rien à changer"
+  "failover.result.in_use": "{path} est déjà la connexion utilisée ; rien à changer",
+
+  "ui.path.checking": "Vérification de la connexion…",
+  "ui.path.connected": "Connecté",
+  "ui.path.disconnected": "Aucune connexion",
+  "ui.path.requires_connection": "Pas encore connecté : le système peut se connecter à la demande",
+  "ui.path.connection": "Connexion",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Filaire (Ethernet)",
+  "ui.path.via.cellular": "Données cellulaires",
+  "ui.path.via.other": "Autre réseau",
+  "ui.path.ip": "Versions IP",
+  "ui.path.none": "Aucune",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Disponible",
+  "ui.path.unavailable": "Indisponible",
+  "ui.path.expensive": "Réseau facturé à l'usage (données cellulaires ou partage de connexion)",
+  "ui.path.constrained": "Le mode données réduites est activé : le système limite le trafic en arrière-plan",
+  "ui.path.reason.not_available": "Aucun réseau disponible",
+  "ui.path.reason.cellular_denied": "Les données cellulaires sont désactivées pour cette app",
+  "ui.path.reason.wifi_denied": "Le Wi‑Fi est désactivé pour cette app",
+  "ui.path.reason.local_network_denied": "L'accès au réseau local est désactivé pour cette app",
+  "ui.path.reason.vpn_inactive": "Le VPN requis n'est pas connecté"
 }

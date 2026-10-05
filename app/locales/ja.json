@@ -636,5 +636,27 @@
 
   "ui.failover.disconnected": "現在は接続されていません。元に戻すと変更を取り消せます。",
 
-  "failover.result.in_use": "{path} はすでに使用中の接続です。切り替えるものはありません"
+  "failover.result.in_use": "{path} はすでに使用中の接続です。切り替えるものはありません",
+
+  "ui.path.checking": "接続を確認しています…",
+  "ui.path.connected": "接続済み",
+  "ui.path.disconnected": "接続なし",
+  "ui.path.requires_connection": "未接続: 必要に応じてシステムが接続します",
+  "ui.path.connection": "接続",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "有線 (Ethernet)",
+  "ui.path.via.cellular": "モバイルデータ通信",
+  "ui.path.via.other": "その他のネットワーク",
+  "ui.path.ip": "IP バージョン",
+  "ui.path.none": "なし",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "利用可能",
+  "ui.path.unavailable": "利用不可",
+  "ui.path.expensive": "従量制ネットワーク (モバイルデータ通信またはインターネット共有)",
+  "ui.path.constrained": "省データモードがオンです: システムがバックグラウンド通信を制限しています",
+  "ui.path.reason.not_available": "利用できるネットワークがありません",
+  "ui.path.reason.cellular_denied": "このアプリのモバイルデータ通信はオフになっています",
+  "ui.path.reason.wifi_denied": "このアプリの Wi‑Fi はオフになっています",
+  "ui.path.reason.local_network_denied": "このアプリのローカルネットワークへのアクセスはオフになっています",
+  "ui.path.reason.vpn_inactive": "必要な VPN が接続されていません"
 }

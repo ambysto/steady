@@ -636,5 +636,27 @@
 
   "ui.failover.disconnected": "현재 연결되어 있지 않습니다. 되돌리면 변경이 취소됩니다.",
 
-  "failover.result.in_use": "{path}은(는) 이미 사용 중인 연결입니다. 전환할 것이 없습니다"
+  "failover.result.in_use": "{path}은(는) 이미 사용 중인 연결입니다. 전환할 것이 없습니다",
+
+  "ui.path.checking": "연결 확인 중…",
+  "ui.path.connected": "연결됨",
+  "ui.path.disconnected": "연결 없음",
+  "ui.path.requires_connection": "아직 연결되지 않음: 필요할 때 시스템이 연결할 수 있음",
+  "ui.path.connection": "연결",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "유선 (이더넷)",
+  "ui.path.via.cellular": "셀룰러 데이터",
+  "ui.path.via.other": "기타 네트워크",
+  "ui.path.ip": "IP 버전",
+  "ui.path.none": "없음",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "사용 가능",
+  "ui.path.unavailable": "사용 불가",
+  "ui.path.expensive": "데이터 요금제 네트워크 (셀룰러 데이터 또는 개인용 핫스팟)",
+  "ui.path.constrained": "저데이터 모드가 켜져 있음: 시스템이 백그라운드 트래픽을 제한함",
+  "ui.path.reason.not_available": "사용 가능한 네트워크가 없음",
+  "ui.path.reason.cellular_denied": "이 앱의 셀룰러 데이터가 꺼져 있음",
+  "ui.path.reason.wifi_denied": "이 앱의 Wi‑Fi가 꺼져 있음",
+  "ui.path.reason.local_network_denied": "이 앱의 로컬 네트워크 접근이 꺼져 있음",
+  "ui.path.reason.vpn_inactive": "필요한 VPN이 연결되지 않음"
 }

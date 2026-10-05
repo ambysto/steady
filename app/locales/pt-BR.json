@@ -636,5 +636,27 @@
 
   "ui.failover.disconnected": "Não conectada agora. Volte para desfazer a mudança.",
 
-  "failover.result.in_use": "{path} já é a conexão em uso; nada para trocar"
+  "failover.result.in_use": "{path} já é a conexão em uso; nada para trocar",
+
+  "ui.path.checking": "Verificando a conexão…",
+  "ui.path.connected": "Conectado",
+  "ui.path.disconnected": "Sem conexão",
+  "ui.path.requires_connection": "Ainda não conectado: o sistema pode conectar quando necessário",
+  "ui.path.connection": "Conexão",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Cabeada (Ethernet)",
+  "ui.path.via.cellular": "Dados celulares",
+  "ui.path.via.other": "Outra rede",
+  "ui.path.ip": "Versões de IP",
+  "ui.path.none": "Nenhuma",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Disponível",
+  "ui.path.unavailable": "Indisponível",
+  "ui.path.expensive": "Rede tarifada (dados celulares ou acesso pessoal)",
+  "ui.path.constrained": "O Modo de Dados Reduzidos está ativado: o sistema limita o tráfego em segundo plano",
+  "ui.path.reason.not_available": "Nenhuma rede disponível",
+  "ui.path.reason.cellular_denied": "Os dados celulares estão desativados para este app",
+  "ui.path.reason.wifi_denied": "O Wi‑Fi está desativado para este app",
+  "ui.path.reason.local_network_denied": "O acesso à rede local está desativado para este app",
+  "ui.path.reason.vpn_inactive": "A VPN necessária não está conectada"
 }

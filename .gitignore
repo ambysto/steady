@@ -22,3 +22,11 @@ build/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Apple (Xcode, SwiftPM)
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.build/
+.swiftpm/
+apple/Config/Local.xcconfig

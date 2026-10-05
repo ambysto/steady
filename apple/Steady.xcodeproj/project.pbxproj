@@ -1,0 +1,228 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5E0000000000000000000014 /* SteadyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 5E0000000000000000000013 /* SteadyKit */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		5E0000000000000000000004 /* Steady.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Steady.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E0000000000000000000007 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		5E0000000000000000000005 /* Steady */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Steady;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5E000000000000000000000A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E0000000000000000000014 /* SteadyKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5E0000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				5E0000000000000000000005 /* Steady */,
+				5E0000000000000000000006 /* Config */,
+				5E0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5E0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5E0000000000000000000004 /* Steady.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5E0000000000000000000006 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				5E0000000000000000000007 /* Base.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5E0000000000000000000008 /* Steady */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E000000000000000000000C /* Build configuration list for PBXNativeTarget "Steady" */;
+			buildPhases = (
+				5E0000000000000000000009 /* Sources */,
+				5E000000000000000000000A /* Frameworks */,
+				5E000000000000000000000B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5E0000000000000000000005 /* Steady */,
+			);
+			name = Steady;
+			packageProductDependencies = (
+				5E0000000000000000000013 /* SteadyKit */,
+			);
+			productName = Steady;
+			productReference = 5E0000000000000000000004 /* Steady.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5E0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					5E0000000000000000000008 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = 5E000000000000000000000F /* Build configuration list for PBXProject "Steady" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				de,
+				es,
+				fr,
+				ja,
+				ko,
+				"pt-BR",
+				vi,
+				"zh-Hans",
+			);
+			mainGroup = 5E0000000000000000000002;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5E0000000000000000000012 /* XCLocalSwiftPackageReference "SteadyKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5E0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5E0000000000000000000008 /* Steady */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5E000000000000000000000B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5E0000000000000000000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		5E000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		5E000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		5E0000000000000000000010 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5E0000000000000000000007 /* Base.xcconfig */;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5E0000000000000000000011 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 5E0000000000000000000007 /* Base.xcconfig */;
+			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5E000000000000000000000C /* Build configuration list for PBXNativeTarget "Steady" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E000000000000000000000D /* Debug */,
+				5E000000000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E000000000000000000000F /* Build configuration list for PBXProject "Steady" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E0000000000000000000010 /* Debug */,
+				5E0000000000000000000011 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		5E0000000000000000000012 /* XCLocalSwiftPackageReference "SteadyKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = SteadyKit;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5E0000000000000000000013 /* SteadyKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SteadyKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 5E0000000000000000000001 /* Project object */;
+}
