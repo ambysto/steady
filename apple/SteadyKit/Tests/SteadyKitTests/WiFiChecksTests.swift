@@ -101,3 +101,20 @@ struct PhysicalLinkOnTheMacTests {
         #expect(relaunched.physicalLink?.status == .warn)
     }
 }
+
+struct NotAssessedTests {
+    @Test func checksWithNothingToGoOnAreNotAssessed() {
+        #expect(!PingQuality.evaluate(hour: [], recent: []).isAssessed)
+        #expect(!PhysicalLink.evaluate([], now: nil).isAssessed)
+        #expect(!Interference.evaluate(nil, scan: []).isAssessed)
+        #expect(!WiFiSignal.evaluate(nil).isAssessed)
+        #expect(!WiFiSignal.evaluate(WiFiSignal.State(state: "disconnected")).isAssessed)
+        #expect(VPNCheck.evaluate([]).isAssessed)
+        #expect(PingQuality.evaluate(hour: [.init(target: "router", sent: 60, lost: 0)], recent: []).isAssessed)
+    }
+
+    @Test func everyNotAssessedSummaryExists() throws {
+        #expect(CheckResult.notAssessed.isSubset(of: try RepositoryData.englishKeys()))
+    }
+}
+

@@ -227,21 +227,18 @@ public final class LiveMonitor {
     private func updatePhysicalLink() {
         let time = Int(now())
         let start = time - PhysicalLink.historySeconds
-        var wifiRows = wifiMinutes.filter { $0.ts >= start }
-        var pingRows = rows(since: start)
-        if let store {
-            do {
-                wifiRows = try store.wifiMinutes(since: start)
-                pingRows = Self.rows(of: try store.minutes(since: start))
-            } catch {
-                Self.log.error("history unavailable for check #13: \(String(describing: error), privacy: .public)")
+        do {
+            let wifiRows = try store?.wifiMinutes(since: start) ?? wifiMinutes.filter { $0.ts >= start }
+            // iPhone and iPad never have Wi‑Fi rows: no need to read the day's minutes.
+            guard !wifiRows.isEmpty || wifi != nil else {
+                physicalLink = nil
+                return
             }
+            let pingRows = try store.map { Self.rows(of: try $0.minutes(since: start)) } ?? rows(since: start)
+            physicalLink = PhysicalLink.evaluate(PhysicalLink.join(wifi: wifiRows, ping: pingRows), now: time)
+        } catch {
+            Self.log.error("history unavailable for check #13: \(String(describing: error), privacy: .public)")
         }
-        guard !wifiRows.isEmpty || wifi != nil else {
-            physicalLink = nil
-            return
-        }
-        physicalLink = PhysicalLink.evaluate(PhysicalLink.join(wifi: wifiRows, ping: pingRows), now: time)
     }
 
     private func rows(since start: Int) -> [PingQuality.Row] {
