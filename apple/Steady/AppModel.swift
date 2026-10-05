@@ -1,7 +1,7 @@
 import SteadyKit
 import SwiftUI
 
-enum AppTab: Hashable {
+enum AppTab: String, Hashable {
     case overview, diagnostics, history, settings
 }
 
@@ -15,7 +15,9 @@ final class AppModel {
 
     var selectedTab: AppTab = .overview
     private(set) var path: NetworkPath?
-    let monitor = LiveMonitor(store: history)
+    let monitor: LiveMonitor
+    /// App Store screenshots: a sample network instead of measurements (debug builds only).
+    private let isStoreScreenshots: Bool
     private(set) var vpn: CheckResult?
     /// A tunnel interface is up: a VPN, which may keep the router out of reach.
     private(set) var vpnUp = false
@@ -44,8 +46,35 @@ final class AppModel {
 
     var isConnected: Bool { path?.status == .connected }
 
+    init() {
+        #if DEBUG
+        // `-StoreScreenshots [-StoreTab diagnostics]`: the made-up network of apple/AppStore.
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-StoreScreenshots") {
+            isStoreScreenshots = true
+            #if os(macOS)
+            monitor = SampleNetwork.monitor(now: Date().timeIntervalSince1970, wifi: SampleNetwork.wifi)
+            signal = WiFiSignal.evaluate(SampleNetwork.wifi)
+            interference = SampleNetwork.interference
+            #else
+            monitor = SampleNetwork.monitor(now: Date().timeIntervalSince1970, wifi: nil)
+            #endif
+            path = SampleNetwork.path
+            vpn = VPNCheck.evaluate([])
+            dns = SampleNetwork.dns
+            if let index = arguments.firstIndex(of: "-StoreTab"), arguments.indices.contains(index + 1) {
+                selectedTab = AppTab(rawValue: arguments[index + 1]) ?? .overview
+            }
+            return
+        }
+        #endif
+        isStoreScreenshots = false
+        monitor = LiveMonitor(store: Self.history)
+    }
+
     /// Called by each window for as long as it is open; measures while at least one is.
     func run() async {
+        guard !isStoreScreenshots else { return }
         windows += 1
         if measuring == nil {
             measuring = Task { await measure() }

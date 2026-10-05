@@ -62,6 +62,7 @@ struct OverviewView: View {
 /// "1 warning · 4 OK" (or "All checks are OK") with a way to the Diagnostics tab. Checks that
 /// could not judge yet (no data, not on Wi‑Fi) are left out; the Diagnostics tab shows them.
 private struct ChecksSummary: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     let all: [CheckResult]
     let text: Localizer
     let open: () -> Void
@@ -102,6 +103,6 @@ private struct ChecksSummary: View {
                                               (.info, "ui.diag.count.info"), (.ok, "ui.diag.count.ok")]
         return parts.filter { count($0.0) > 0 }
             .map { text($0.1, ["count": .number(Double(count($0.0)))]) }
-            .joined(separator: " · ")
+            .joined(separator: typeSize.isAccessibilitySize ? "\n" : " · ")   // one per line when large
     }
 }

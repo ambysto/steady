@@ -5,6 +5,7 @@ import SwiftUI
 struct DiagnosticsView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmingBufferbloat = false
+    @Environment(\.dynamicTypeSize) private var typeSize
     private let text = Localizer()
 
     var body: some View {
@@ -98,10 +99,10 @@ struct DiagnosticsView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                (typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4)) : AnyLayout(HStackLayout())) {
                     Text(text("diag.bufferbloat.title"))
                         .font(.headline)
-                    Spacer()
+                    Spacer(minLength: 0)
                     Text(text("ui.diag.on_demand"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
