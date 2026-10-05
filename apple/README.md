@@ -49,3 +49,4 @@ A rule is ported from `app/diagnostics.py` together with its vectors in `spec/di
 |---|---|---|---|---|
 | 5 | Ping quality | `PingQuality` | `ping.json` | `LiveMonitor` (ICMP + TCP while the app is open) |
 | 6 | DNS benchmark | `DNSBenchmark` | `dns.json` | `DNSCheck`: system DNS servers from `res_ninit` (the `CResolver` C target, libresolv), raw UDP queries as in `app/dnsprobe.py`; runs when connected and when the router changes, or from its refresh button |
+| 14 | Bufferbloat | `Bufferbloat` | `bufferbloat.json` | `BufferbloatTest`, on demand after a confirmation (moves up to ~200 MB): pings the router and 1.1.1.1 every 0.2 s for 4 s idle, then 10 s while downloading and 10 s while uploading over 4 connections to speed.cloudflare.com (25 MB requests, at most 100 MB per direction), dropping the first 2 s of each loaded phase, as `app/bufferbloat.py` does |

@@ -8,6 +8,9 @@ struct OverviewView: View {
     @State private var monitor = LiveMonitor()
     @State private var dns: CheckResult?
     @State private var dnsRunning = false
+    @State private var bufferbloat: CheckResult?
+    @State private var bufferbloatStage: BufferbloatTest.Stage?
+    @State private var confirmingBufferbloat = false
     private let text = Localizer()
 
     var body: some View {
@@ -39,6 +42,18 @@ struct OverviewView: View {
                     Label(text("ui.diag.running"), systemImage: "hourglass")
                         .foregroundStyle(.secondary)
                 }
+            }
+            Section {
+                bufferbloatCard
+                    // Anchored to the card, so the iPad/Mac popover points at the button that opened it.
+                    .confirmationDialog(text("diag.bufferbloat.title"), isPresented: $confirmingBufferbloat, titleVisibility: .visible) {
+                        Button(text("ui.diag.bufferbloat_run")) {
+                            Task { await runBufferbloat() }
+                        }
+                        Button(text("ui.sheet.cancel"), role: .cancel) {}
+                    } message: {
+                        Text(text("ui.diag.bufferbloat_confirm"))
+                    }
             }
             if let path {
                 Section {
@@ -84,6 +99,61 @@ struct OverviewView: View {
         dnsRunning = true
         dns = await DNSCheck.run(router: path?.routerIPv4)
         dnsRunning = false
+    }
+
+    /// Check #14 runs only on request: it moves up to ~200 MB (docs/DIAGNOSTICS.md).
+    @ViewBuilder private var bufferbloatCard: some View {
+        if let stage = bufferbloatStage {
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text(bufferbloatProgress(stage))
+                    .foregroundStyle(.secondary)
+            }
+        } else if let bufferbloat {
+            CheckResultView(result: bufferbloat, text: text) {
+                Button {
+                    confirmingBufferbloat = true
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                .disabled(dnsTrigger == nil)
+                .accessibilityLabel(text("ui.diag.bufferbloat_run"))
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(text("diag.bufferbloat.title"))
+                        .font(.headline)
+                    Spacer()
+                    Text(text("ui.diag.on_demand"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Button(text("ui.diag.bufferbloat_run")) {
+                    confirmingBufferbloat = true
+                }
+                .disabled(dnsTrigger == nil)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func bufferbloatProgress(_ stage: BufferbloatTest.Stage) -> String {
+        switch stage {
+        case .idle: text("ui.diag.running")
+        case .download: text("ui.diag.running") + " · " + text("diag.bufferbloat.download")
+        case .upload: text("ui.diag.running") + " · " + text("diag.bufferbloat.upload")
+        }
+    }
+
+    private func runBufferbloat() async {
+        bufferbloatStage = .idle
+        let measurement = await BufferbloatTest.run(router: path?.routerIPv4) { stage in
+            await MainActor.run { bufferbloatStage = stage }
+        }
+        bufferbloat = Bufferbloat.evaluate(measurement)
+        bufferbloatStage = nil
     }
 
     private var rerunButton: some View {

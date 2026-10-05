@@ -49,10 +49,17 @@ struct DiagnosisVectorTests {
 
     static let pingCases = cases("ping.json", as: PingInput.self)
     static let dnsCases = cases("dns.json", as: DNSInput.self)
+    static let bufferbloatCases = cases("bufferbloat.json", as: Bufferbloat.Measurement.self)
 
     @Test func vectorsAreLoaded() {
         #expect(Self.pingCases.count >= 10)
         #expect(Self.dnsCases.count >= 10)
+        #expect(Self.bufferbloatCases.count >= 10)
+    }
+
+    @Test(arguments: bufferbloatCases)
+    func bufferbloat(_ vector: VectorFile<Bufferbloat.Measurement>.Case) {
+        check(Bufferbloat.evaluate(vector.input), vector.expected)
     }
 
     @Test(arguments: pingCases)
