@@ -33,6 +33,7 @@ from .storage import Storage
 log = logging.getLogger("stableinternet.monitor")
 
 OUTAGE_THRESHOLD = 3        # consecutive failed ticks before an outage is declared
+ROUTE_POLL_S = 2            # how often the default route is compared (a native call, no process)
 MERGE_WINDOW_S = 60         # Internet drops closer together than this are one unstable episode (ADR-0013)
 GAP_MIN_S = 30              # a pause between ticks longer than this is a monitoring gap (sleep/hang)
 RAW_WINDOW_S = 15 * 60      # raw ping samples kept in RAM
@@ -290,6 +291,7 @@ class Monitor:
         self.storage = storage
         self._notify = notify
         self._route_fn, self._dns_fn = route_fn, dns_fn
+        self._last_route: tuple[int, str] | None = None   # (interface index, gateway) of the last default route seen
         self._dns_watch = DnsWatch()
         self.settings = settings if settings is not None else config.load_settings()
         after_s = float(self.settings.get("notify", {}).get("outage_after_s", 30))
@@ -336,6 +338,7 @@ class Monitor:
         self._stop.clear()
         self.refresh_gateway()
         self.poll_wifi(baseline=True)
+        self.poll_route(baseline=True)
         self._seed_dns()
         self._record(MonitorEvent(int(self._clock()), "monitor_start",
                                   msg("event.monitor_start", gateway=self._targets[ROUTER] or "?", pid=os.getpid())))
@@ -488,6 +491,27 @@ class Monitor:
         if changed:
             self._record(MonitorEvent(int(self._clock()), "gateway_change", f"{old} -> {gw}"))
 
+    def poll_route(self, baseline: bool = False) -> None:
+        """Notice the default route moving to another interface (VPN on/off, wired <-> Wi-Fi) within
+        ROUTE_POLL_S: `route_change` carries that moment, which a gateway that stays the same (or is
+        only re-read every `gateway_refresh_s`) cannot. A route that disappears is a lost connection,
+        not a switch; the next route is compared with the last one that existed."""
+        try:
+            route = self._route_fn()
+        except Exception as exc:
+            self._log_once(f"route:{exc}", "route lookup failed: %r", exc)
+            return
+        if not route:
+            return
+        current = (route["interface_index"], route["gateway"])
+        with self._lock:
+            before, self._last_route = self._last_route, current
+        if baseline or before is None or before == current:
+            return
+        if before[0] != current[0]:
+            self._record(MonitorEvent(int(self._clock()), "route_change", f"if{before[0]} -> if{current[0]}"))
+        self.refresh_gateway()   # a new gateway is picked up now, not up to gateway_refresh_s later
+
     def _seed_dns(self) -> None:
         try:
             stored = self.storage.query_events(kinds=list(DNS_EVENT_KINDS), limit=500)
@@ -576,13 +600,16 @@ class Monitor:
             self._stop.wait(max(delay, 0))
 
     def _slow_loop(self) -> None:
-        next_wifi = next_gw = next_dns = time.monotonic()
+        next_wifi = next_gw = next_dns = next_route = time.monotonic()
         dns_cfg = self.settings.get("dns_watch") or {}
         while not self._stop.is_set():
             now = time.monotonic()
             if dns_cfg.get("enabled") and now >= next_dns:
                 self.check_dns()
                 next_dns = time.monotonic() + float(dns_cfg.get("interval_s", 60))
+            if now >= next_route:
+                self.poll_route()
+                next_route = time.monotonic() + ROUTE_POLL_S
             if now >= next_wifi:
                 self.poll_wifi()
                 next_wifi = time.monotonic() + float(self.settings["wifi_poll_s"])

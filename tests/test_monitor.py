@@ -213,6 +213,7 @@ class Env:
         self.net = {"192.168.3.1": 2.0, "1.1.1.1": 40.0, "8.8.8.8": 50.0}
         self.wifi = wifi()
         self.gateway = "192.168.3.1"
+        self.route = {"gateway": "192.168.3.1", "interface_index": 12, "metric": 25}   # None = no default route
         self.pings = []
         self.probes = []
         self.probe_net = {}   # probe target -> RTT, None = failed; unset targets succeed at 30 ms
@@ -232,9 +233,10 @@ class Env:
         settings = copy.deepcopy(config.DEFAULT_SETTINGS)
         settings["probes"]["enabled"] = probes   # real probes only when a test asks for fake ones
         mon = Monitor(self.storage, settings, clock=lambda: self.t, ping_fn=self.ping, wifi_fn=lambda: self.wifi,
-                      gateway_fn=lambda: self.gateway, probe_fn=self.probe)
+                      gateway_fn=lambda: self.gateway, probe_fn=self.probe, route_fn=lambda: self.route)
         mon.refresh_gateway()
         mon.poll_wifi(baseline=True)
+        mon.poll_route(baseline=True)
         return mon
 
     def run(self, mon, seconds, **net_changes):
@@ -344,6 +346,52 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(ev["wifi_state"]["level"], "warn")
         self.assertEqual(self.mon.snapshot()["targets"]["router"], "10.0.0.1")
         self.assertEqual(ev["gateway_change"]["message"], "192.168.3.1 -> 10.0.0.1")
+
+    def test_a_default_route_on_another_interface_is_recorded_when_it_happens(self):
+        # A full-tunnel VPN starting: the default route moves to the tunnel and the gateway changes.
+        self.env.route = {"gateway": "10.8.0.1", "interface_index": 31, "metric": 5}
+        self.env.gateway = "10.8.0.1"
+        self.mon.poll_route()
+        ev = self.events()
+        self.assertEqual(ev["route_change"]["message"], "if12 -> if31")
+        self.assertEqual(ev["route_change"]["ts"], BASE)
+        self.assertEqual(ev["gateway_change"]["message"], "192.168.3.1 -> 10.8.0.1")   # now, not 30 s later
+        self.assertEqual(ev["gateway_change"]["ts"], BASE)
+
+    def test_a_vpn_that_keeps_the_gateway_is_still_a_route_change(self):
+        self.env.route = {"gateway": "192.168.3.1", "interface_index": 31, "metric": 5}
+        self.mon.poll_route()
+        ev = self.events()
+        self.assertEqual(ev["route_change"]["message"], "if12 -> if31")
+        self.assertNotIn("gateway_change", ev)
+
+    def test_the_same_route_and_the_first_reading_record_nothing(self):
+        self.mon.poll_route()
+        self.mon.poll_route()
+        self.assertNotIn("route_change", self.events())
+
+    def test_a_vanished_route_is_not_a_switch_and_the_same_route_back_is_not_one_either(self):
+        self.env.route = None
+        self.mon.poll_route()
+        self.env.route = {"gateway": "192.168.3.1", "interface_index": 12, "metric": 25}
+        self.mon.poll_route()
+        self.assertNotIn("route_change", self.events())
+
+    def test_another_route_after_a_lost_one_is_a_switch(self):
+        self.env.route = None
+        self.mon.poll_route()
+        self.env.route = {"gateway": "172.20.10.1", "interface_index": 7, "metric": 40}
+        self.env.gateway = "172.20.10.1"
+        self.mon.poll_route()
+        self.assertEqual(self.events()["route_change"]["message"], "if12 -> if7")
+
+    def test_a_failing_route_lookup_never_stops_the_monitor(self):
+        def boom():
+            raise OSError("iphlpapi gone")
+        self.env.route = None
+        self.mon._route_fn = boom
+        self.mon.poll_route()
+        self.assertNotIn("route_change", self.events())
 
     def test_roam_event(self):
         self.env.wifi = wifi(bssid="bb:bb", channel=149)

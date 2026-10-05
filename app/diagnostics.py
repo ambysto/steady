@@ -321,7 +321,7 @@ def _is_probe(target: str) -> bool:
 # Around a switch (VPN on/off, another Wi-Fi network, a new router) pings fail or take two routes,
 # and that says nothing about the line (GitHub issue #2).
 CHANGE_MINUTES = 2
-NETWORK_CHANGE_EVENTS = ("gateway_change", "roam", "wifi_state")   # event kinds of app/monitor.py
+NETWORK_CHANGE_EVENTS = ("gateway_change", "route_change", "roam", "wifi_state")   # event kinds of app/monitor.py
 
 
 def left_out_minutes(changes: Iterable[float]) -> set[int]:

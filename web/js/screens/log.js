@@ -5,7 +5,7 @@ import { $, el, fill, icon } from "../dom.js";
 import { dayLabel, duration, t, timeOf } from "../i18n.js";
 
 const GROUPS = {
-  outages: ["router_down", "internet_down", "monitor_gap", "wifi_state", "roam", "gateway_change"],
+  outages: ["router_down", "internet_down", "monitor_gap", "wifi_state", "roam", "gateway_change", "route_change"],
   watchdog: ["watchdog_action", "watchdog_dry_run", "watchdog_skip", "watchdog_recovered", "watchdog_ineffective",
              "watchdog_tripped", "watchdog_error", "failover_no_backup", "failover_skip", "failover_tripped",
              "failover_dry_run", "failover_available", "failover_failback_available", "failover_switched",

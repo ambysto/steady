@@ -613,6 +613,18 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(result.status, d.OK)
         self.assertEqual(result.details[-1], i18n.msg("diag.ping.left_out", count=2))
 
+    def test_a_vpn_route_change_leaves_out_its_minutes_too(self):
+        with Storage() as db:
+            change = int(NOW) - 600
+            minute_of_change = change - change % 60
+            for i in range(-4, 6):
+                ts = minute_of_change + 60 * i
+                db.add_minute_stat(ts, "router", 60, 30 if ts == minute_of_change else 0)
+            db.add_event(change, "route_change", "if12 -> if31")
+            ctx = d.Context(db, now=NOW)
+            self.assertEqual(ctx.get("network_changes"), [change])
+            self.assertEqual(d.check_ping(ctx).status, d.OK)
+
     def test_without_storage_there_are_no_network_changes(self):
         self.assertEqual(d.Context(now=NOW).get("network_changes"), [])
 
