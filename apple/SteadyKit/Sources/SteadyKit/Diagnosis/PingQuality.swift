@@ -3,7 +3,7 @@
 public enum PingQuality {
     /// One minute of measurements to one target. Targets starting with "tcp_" or "http_" are
     /// TCP/HTTP probes, "router" is the gateway, anything else is an Internet ping target.
-    public struct Row: Sendable, Decodable {
+    public struct Row: Equatable, Sendable, Decodable {
         public var target: String
         public var sent: Int
         public var lost: Int

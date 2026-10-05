@@ -48,8 +48,15 @@ struct LocalizationTests {
             NetworkPath(status: .disconnected, reason: .wifiDenied),
             NetworkPath(status: .disconnected, reason: .localNetworkDenied),
         ]
+        // Keys OverviewView renders directly.
         var used: Set<String> = ["ui.path.checking", "ui.path.connection", "ui.path.ip", "ui.path.dns",
-                                 "ui.overview.router", "ui.nav.overview", "diag.ping.title"]
+                                 "ui.overview.router", "ui.overview.internet", "ui.overview.latency",
+                                 "ui.overview.see_all", "ui.nav.overview", "ui.live.tcp", "ui.live.window_note",
+                                 "ui.live.measuring", "ui.live.no_reply", "ui.live.rtt", "ui.live.loss",
+                                 "ui.live.jitter"]
+        used.formUnion([CheckStatus.ok, .info, .warn, .bad].map { "ui.status." + $0.rawValue })
+        let check = PingQuality.evaluate(hour: [], recent: [])
+        used.formUnion([check.title.key, check.summary.key])
         for path in paths {
             used.insert(path.statusMessage.key)
             used.insert(path.dnsMessage.key)

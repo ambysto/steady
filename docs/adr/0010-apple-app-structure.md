@@ -35,7 +35,8 @@ ADR-0009 settled on one SwiftUI multiplatform app for iPhone, iPad and macOS tha
 
 4. **Localization:** `app/locales/*.json` stays the single source (ADR-0006). `scripts/locales_to_xcstrings.py` (standard library only) writes:
    - `Localizable.xcstrings` — keys under the prefixes listed in the script, every language, `extractionState: manual`. Named placeholders become positional `%N$@` in the order they first appear in English, so translations may reorder words; a literal `%` becomes `%%`. A plural entry (`{"one", "other"}`) becomes a substitution on `count` (`%lld`), so Apple applies each language's own plural rules.
-   - `InfoPlist.xcstrings` — `CFBundleDisplayName` from `app.name`.
+   - `InfoPlist.xcstrings` — Info.plist texts: `CFBundleDisplayName` from `app.name`, permission prompts such as `NSLocalNetworkUsageDescription`.
+   - `Config/Generated.xcconfig` — the English values of those Info.plist texts, included by `Base.xcconfig` (a key must exist in Info.plist for its translations to apply).
    - `SteadyKit/…/MessageCatalog.swift` — for each key, the ordered parameter names with their English format spec (`.1f`, `.0%`…). Swift formats numbers itself (locale decimal separator, as in ADR-0006) and passes every value except a plural `count` as a string.
 
    The generated files are committed and never edited by hand; `tests/test_apple_catalog.py` fails when they are out of date. Diagnosis results are `Message(key, params)` values in Swift too, rendered when displayed.

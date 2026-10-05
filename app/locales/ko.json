@@ -658,5 +658,14 @@
   "ui.path.reason.cellular_denied": "이 앱의 셀룰러 데이터가 꺼져 있음",
   "ui.path.reason.wifi_denied": "이 앱의 Wi‑Fi가 꺼져 있음",
   "ui.path.reason.local_network_denied": "이 앱의 로컬 네트워크 접근이 꺼져 있음",
-  "ui.path.reason.vpn_inactive": "필요한 VPN이 연결되지 않음"
+  "ui.path.reason.vpn_inactive": "필요한 VPN이 연결되지 않음",
+
+  "ui.live.measuring": "측정 중…",
+  "ui.live.no_reply": "응답 없음",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "손실 {loss:.1f}%",
+  "ui.live.jitter": "지터 {value:.1f} ms",
+  "ui.live.tcp": "실제 연결 (TCP)",
+  "ui.live.window_note": "손실과 지터는 대상별 최근 60회 측정 기준입니다. 앱이 열려 있는 동안에만 측정합니다.",
+  "ui.permission.local_network": "Ambysto Steady는 Wi‑Fi 문제와 인터넷 문제를 구분하기 위해 라우터까지의 지연과 패킷 손실을 측정합니다."
 }

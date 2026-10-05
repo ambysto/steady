@@ -658,5 +658,14 @@
   "ui.path.reason.cellular_denied": "Los datos móviles están desactivados para esta app",
   "ui.path.reason.wifi_denied": "El Wi‑Fi está desactivado para esta app",
   "ui.path.reason.local_network_denied": "El acceso a la red local está desactivado para esta app",
-  "ui.path.reason.vpn_inactive": "La VPN necesaria no está conectada"
+  "ui.path.reason.vpn_inactive": "La VPN necesaria no está conectada",
+
+  "ui.live.measuring": "Midiendo…",
+  "ui.live.no_reply": "Sin respuesta",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "{loss:.1f}% perdido",
+  "ui.live.jitter": "jitter {value:.1f} ms",
+  "ui.live.tcp": "Conexión real (TCP)",
+  "ui.live.window_note": "Pérdida y jitter en las últimas 60 mediciones de cada destino. Solo se mide mientras la app está abierta.",
+  "ui.permission.local_network": "Ambysto Steady mide el retardo y la pérdida de paquetes hasta tu router para distinguir los problemas del Wi‑Fi de los de Internet."
 }

@@ -32,6 +32,15 @@ xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'generic/
 
 Every user-visible string comes from `app/locales/*.json`. To add one: add the key to `en.json` and the other 8 catalogs, run `python scripts/locales_to_xcstrings.py`, then render it with `Localizer` (`text("ui.path.connected")`, or a `Message` with parameters). Pass strings to SwiftUI as values (`Text(text(...))`), never as literals, so Xcode does not extract or look up keys on its own.
 
+## Measurements
+
+While the Overview screen is open, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
+
+- iOS gives apps no continuous background time, so nothing is measured while the app is in the background, and the history is kept in memory only (for now).
+- ICMP uses an unprivileged datagram socket **connected** to the target: the macOS App Sandbox refuses to read replies on an unconnected ICMP socket (`EPERM`) unless the app also asks for `network.server`.
+- Pinging the router is local network access: iOS and macOS ask the user once, with the `NSLocalNetworkUsageDescription` text generated from `ui.permission.local_network`.
+- The iOS Simulator does not report the router address, IPv4/IPv6 or DNS support of the path, so the router row is missing there; Internet pings and TCP probes work.
+
 ## Diagnosis rules
 
 A rule is ported from `app/diagnostics.py` together with its vectors in `spec/diagnosis/`. The Swift tests (`DiagnosisVectorTests`) and `tests/test_diagnosis_vectors.py` run the same cases; a change to a rule changes the vectors and both implementations.

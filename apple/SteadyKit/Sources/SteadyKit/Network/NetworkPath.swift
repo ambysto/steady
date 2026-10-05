@@ -32,6 +32,11 @@ public struct NetworkPath: Equatable, Sendable {
     /// Router addresses, as text.
     public var gateways: [String]
 
+    /// The first IPv4 router address: what the monitor pings (ICMP is IPv4 only, as on Windows).
+    public var routerIPv4: String? {
+        gateways.first { $0.contains(".") && !$0.contains(":") }
+    }
+
     public init(status: Status, link: Link? = nil, reason: Reason? = nil, isExpensive: Bool = false,
                 isConstrained: Bool = false, supportsIPv4: Bool = false, supportsIPv6: Bool = false,
                 supportsDNS: Bool = false, gateways: [String] = []) {

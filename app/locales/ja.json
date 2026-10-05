@@ -658,5 +658,14 @@
   "ui.path.reason.cellular_denied": "このアプリのモバイルデータ通信はオフになっています",
   "ui.path.reason.wifi_denied": "このアプリの Wi‑Fi はオフになっています",
   "ui.path.reason.local_network_denied": "このアプリのローカルネットワークへのアクセスはオフになっています",
-  "ui.path.reason.vpn_inactive": "必要な VPN が接続されていません"
+  "ui.path.reason.vpn_inactive": "必要な VPN が接続されていません",
+
+  "ui.live.measuring": "測定中…",
+  "ui.live.no_reply": "応答なし",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "損失 {loss:.1f}%",
+  "ui.live.jitter": "ジッター {value:.1f} ms",
+  "ui.live.tcp": "実際の接続 (TCP)",
+  "ui.live.window_note": "損失とジッターは各宛先の直近 60 回の測定値です。アプリを開いている間だけ測定します。",
+  "ui.permission.local_network": "Ambysto Steady は、Wi‑Fi の問題とインターネットの問題を見分けるために、ルーターまでの遅延とパケット損失を測定します。"
 }

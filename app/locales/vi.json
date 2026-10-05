@@ -658,5 +658,14 @@
   "ui.path.reason.cellular_denied": "Dữ liệu di động đang bị tắt cho ứng dụng này",
   "ui.path.reason.wifi_denied": "Wi‑Fi đang bị tắt cho ứng dụng này",
   "ui.path.reason.local_network_denied": "Quyền truy cập mạng cục bộ đang bị tắt cho ứng dụng này",
-  "ui.path.reason.vpn_inactive": "VPN bắt buộc chưa được kết nối"
+  "ui.path.reason.vpn_inactive": "VPN bắt buộc chưa được kết nối",
+
+  "ui.live.measuring": "Đang đo…",
+  "ui.live.no_reply": "Không phản hồi",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "mất {loss:.1f}%",
+  "ui.live.jitter": "jitter {value:.1f} ms",
+  "ui.live.tcp": "Kết nối thật (TCP)",
+  "ui.live.window_note": "Tỉ lệ mất gói và jitter tính trên 60 lần đo gần nhất của mỗi đích. Chỉ đo khi ứng dụng đang mở.",
+  "ui.permission.local_network": "Ambysto Steady đo độ trễ và tỉ lệ mất gói tới router để phân biệt lỗi Wi‑Fi với lỗi Internet."
 }

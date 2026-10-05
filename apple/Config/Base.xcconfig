@@ -38,7 +38,8 @@ STRING_CATALOG_GENERATE_SYMBOLS = NO
 
 // Info.plist
 GENERATE_INFOPLIST_FILE = YES
-INFOPLIST_KEY_CFBundleDisplayName = Ambysto Steady
+// CFBundleDisplayName and permission texts: Generated.xcconfig (from app/locales).
+#include "Generated.xcconfig"
 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.utilities
 INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES
 INFOPLIST_KEY_UILaunchScreen_Generation = YES

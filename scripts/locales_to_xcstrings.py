@@ -3,7 +3,8 @@
 app/locales stays the single source of user-facing text (ADR-0006). This script writes:
 
   apple/Steady/Resources/Localizable.xcstrings    the keys under PREFIXES, every language
-  apple/Steady/Resources/InfoPlist.xcstrings      CFBundleDisplayName from "app.name"
+  apple/Steady/Resources/InfoPlist.xcstrings      Info.plist texts (INFO_PLIST below), every language
+  apple/Config/Generated.xcconfig                 the English Info.plist texts, which Base.xcconfig includes
   apple/SteadyKit/Sources/SteadyKit/Localization/MessageCatalog.swift
                                                   parameter order and format spec per key
 
@@ -26,11 +27,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LOCALES = ROOT / "app" / "locales"
 RESOURCES = ROOT / "apple" / "Steady" / "Resources"
+XCCONFIG = ROOT / "apple" / "Config" / "Generated.xcconfig"
 SWIFT_CATALOG = ROOT / "apple" / "SteadyKit" / "Sources" / "SteadyKit" / "Localization" / "MessageCatalog.swift"
 
 SOURCE_LANGUAGE = "en"
 # Windows-only groups (tweaks, installer, watchdog, failover...) are left out until the Apple app needs them.
 PREFIXES = ("app.", "time.", "ui.", "diag.")
+# Info.plist key -> catalog key. The key must also be in the Info.plist, so its English text goes
+# into Generated.xcconfig; InfoPlist.xcstrings then translates it.
+INFO_PLIST = {"CFBundleDisplayName": "app.name",
+              "NSLocalNetworkUsageDescription": "ui.permission.local_network"}
 PLACEHOLDER = re.compile(r"\{([A-Za-z_][A-Za-z0-9_]*)(?::([^{}]*))?\}")
 PLURAL_COUNT = "count"
 # Plural categories Apple uses (CLDR) for integer counts; anything else falls back to "other".
@@ -106,10 +112,22 @@ def localizable(catalogs: dict[str, dict]) -> dict:
 
 
 def info_plist(catalogs: dict[str, dict]) -> dict:
-    names = {lang: catalog["app.name"] for lang, catalog in catalogs.items() if "app.name" in catalog}
-    return {"sourceLanguage": SOURCE_LANGUAGE, "version": "1.0",
-            "strings": {"CFBundleDisplayName": {"extractionState": "manual",
-                                                "localizations": {lang: unit(name) for lang, name in names.items()}}}}
+    strings = {}
+    for plist_key, key in INFO_PLIST.items():
+        texts = {lang: catalog[key] for lang, catalog in catalogs.items() if key in catalog}
+        strings[plist_key] = {"extractionState": "manual",
+                              "localizations": {lang: unit(text) for lang, text in texts.items()}}
+    return {"sourceLanguage": SOURCE_LANGUAGE, "strings": strings, "version": "1.0"}
+
+
+def xcconfig(catalogs: dict[str, dict]) -> str:
+    lines = [f"// {HEADER}", "// English Info.plist texts; InfoPlist.xcstrings translates them.", ""]
+    for plist_key, key in INFO_PLIST.items():
+        text = catalogs[SOURCE_LANGUAGE][key]
+        if "//" in text or "$(" in text or "\n" in text:   # a comment, a variable or a line break in an xcconfig
+            raise SystemExit(f"{key}: text cannot be written to an xcconfig: {text!r}")
+        lines.append(f"INFOPLIST_KEY_{plist_key} = {text}")
+    return "\n".join(lines) + "\n"
 
 
 def swift_catalog(catalogs: dict[str, dict]) -> str:
@@ -140,6 +158,7 @@ def outputs() -> dict[Path, str]:
     catalogs = load_catalogs()
     return {RESOURCES / "Localizable.xcstrings": dump(localizable(catalogs)),
             RESOURCES / "InfoPlist.xcstrings": dump(info_plist(catalogs)),
+            XCCONFIG: xcconfig(catalogs),
             SWIFT_CATALOG: swift_catalog(catalogs)}
 
 
