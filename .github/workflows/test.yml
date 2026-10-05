@@ -1,0 +1,40 @@
+# Runs the Python test suite on every pull request and every push to main, on Windows: the app is a
+# Windows app, and some bugs (an open SQLite file cannot be deleted, console encodings) only show
+# there. Mirrors the "Tests" step of release.yml. Deliberately has no path filter: if the check
+# is required for merging, a pull request that only touches apple/ must still get a result.
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same pull request supersedes the run still in progress.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    # The job name is the status check name to require in the branch protection of main.
+    name: Python tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      # PYTHONDONTWRITEBYTECODE is not set here on purpose: with .pyc files written, as for any
+      # user, tests see what they see (this is what hid the test_naming bug on a developer machine).
+      - name: Tests
+        run: python -m unittest discover -s tests -t .
