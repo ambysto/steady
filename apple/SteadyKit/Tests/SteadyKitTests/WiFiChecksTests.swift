@@ -118,3 +118,16 @@ struct NotAssessedTests {
     }
 }
 
+
+@MainActor
+struct SampleNetworkTests {
+    @Test func theScreenshotNetworkIsHealthyAndUsesDocumentationAddresses() {
+        let monitor = SampleNetwork.monitor(now: 1_790_000_040, wifi: SampleNetwork.wifi)
+        #expect(monitor.minutes.count >= 59)
+        #expect(monitor.pingQuality.status == .ok)
+        #expect(monitor.physicalLink?.status == .ok)
+        #expect(SampleNetwork.dns.status == .ok)
+        #expect(SampleNetwork.interference.status == .ok)
+        #expect(SampleNetwork.path.routerIPv4?.hasPrefix("192.0.2.") == true)   // RFC 5737
+    }
+}
