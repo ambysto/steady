@@ -12,6 +12,242 @@
         }
       }
     },
+    "apple.diag.bufferbloat.where_local" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", steigt sogar bis zum Router ⇒ die Warteschlange liegt auf dem Abschnitt Gerät ↔ Router (überlastetes Wi‑Fi oder überlasteter Router)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", rising even to the router ⇒ the queue is on the device ↔ router hop (saturated Wi‑Fi or an overloaded router)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", y aumenta incluso hasta el router ⇒ la cola está en el salto dispositivo ↔ router (Wi‑Fi saturado o router sobrecargado)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", y compris vers le routeur ⇒ la file se trouve sur le saut appareil ↔ routeur (Wi‑Fi saturé ou routeur surchargé)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "。ルーターまでの遅延も上昇しているため、キューは デバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ". 라우터까지도 증가하므로 큐가 기기 ↔ 라우터 구간에 있습니다 (Wi‑Fi 포화 또는 라우터 과부하)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", subindo até no roteador ⇒ a fila está no trecho dispositivo ↔ roteador (Wi‑Fi saturado ou roteador sobrecarregado)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : ", tăng ngay cả tới router ⇒ hàng đợi ở chặng thiết bị ↔ router (Wi‑Fi bão hòa hoặc chính router quá tải)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "，到路由器的延迟也在上升 ⇒ 队列位于设备 ↔ 路由器这一跳（Wi‑Fi 饱和或路由器过载）"
+          }
+        }
+      }
+    },
+    "apple.diag.ping.no_data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nicht genug Messungen (benötigt ≥ 60 Messungen in der letzten Stunde)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not enough measurements yet (needs ≥ 60 samples in the last hour)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aún no hay suficientes mediciones (se necesitan ≥ 60 muestras en la última hora)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pas encore assez de mesures (il faut ≥ 60 échantillons sur la dernière heure)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測定データがまだ不足しています（直近 1 時間に 60 サンプル以上が必要です）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 데이터가 아직 부족합니다 (최근 1시간 동안 샘플 60개 이상 필요)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ainda não há medições suficientes (são necessárias ≥ 60 amostras na última hora)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chưa đủ số liệu đo (cần ≥ 60 mẫu trong giờ qua)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量数据尚不足（最近 1 小时内至少需要 60 个样本）"
+          }
+        }
+      }
+    },
+    "apple.diag.ping.router_loss" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paketverlust zum Router: ein lokales Problem (Gerät ↔ Router / Wi‑Fi)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Packet loss to the router: a local problem (device ↔ router / Wi‑Fi)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pérdida de paquetes hacia el router: un problema local (dispositivo ↔ router / Wi‑Fi)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perte de paquets vers le routeur : problème local (appareil ↔ routeur / Wi‑Fi)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーターへのパケット損失: ローカルの問題です（デバイス ↔ ルーター / Wi‑Fi）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라우터까지 패킷 손실: 로컬 문제 (기기 ↔ 라우터 / Wi‑Fi)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perda de pacotes até o roteador: problema local (dispositivo ↔ roteador / Wi‑Fi)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mất gói tới router: lỗi nội bộ (thiết bị ↔ router / Wi‑Fi)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到路由器的丢包：本地问题（设备 ↔ 路由器 / Wi‑Fi）"
+          }
+        }
+      }
+    },
+    "apple.diag.signal.advice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Router und Mac näher zusammenstellen, 5 GHz nutzen, einen Mesh-Knoten hinzufügen oder ein LAN-Kabel anschließen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move the router and the Mac closer, use 5 GHz, add a mesh node, or plug in a LAN cable."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acerca el router y el Mac, usa 5 GHz, añade un nodo mesh o conecta un cable LAN."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapprochez le routeur et le Mac, utilisez la bande 5 GHz, ajoutez un nœud mesh ou branchez un câble LAN."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーターと Mac を近づける、5 GHz を使う、メッシュノードを追加する、または LAN ケーブルを接続してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라우터와 Mac을 가깝게 두거나, 5 GHz를 사용하거나, 메시 노드를 추가하거나, LAN 케이블을 연결하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aproxime o roteador e o Mac, use 5 GHz, adicione um nó mesh ou ligue um cabo de rede."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dời router/Mac lại gần, dùng 5GHz, thêm mesh, hoặc cắm LAN."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让路由器和 Mac 靠近一些，改用 5 GHz，增加 Mesh 节点，或接上网线。"
+          }
+        }
+      }
+    },
     "diag.ago.days" : {
       "extractionState" : "manual",
       "localizations" : {

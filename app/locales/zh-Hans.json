@@ -667,5 +667,10 @@
   "ui.live.jitter": "抖动 {value:.1f} ms",
   "ui.live.tcp": "真实连接（TCP）",
   "ui.live.window_note": "丢包和抖动按每个目标最近 60 次测量计算。仅在应用打开时测量。",
-  "ui.permission.local_network": "Ambysto Steady 会测量到路由器的延迟和丢包，以区分 Wi‑Fi 问题和互联网问题。"
+  "ui.permission.local_network": "Ambysto Steady 会测量到路由器的延迟和丢包，以区分 Wi‑Fi 问题和互联网问题。",
+
+  "apple.diag.signal.advice": "让路由器和 Mac 靠近一些，改用 5 GHz，增加 Mesh 节点，或接上网线。",
+  "apple.diag.ping.no_data": "测量数据尚不足（最近 1 小时内至少需要 60 个样本）",
+  "apple.diag.ping.router_loss": "到路由器的丢包：本地问题（设备 ↔ 路由器 / Wi‑Fi）",
+  "apple.diag.bufferbloat.where_local": "，到路由器的延迟也在上升 ⇒ 队列位于设备 ↔ 路由器这一跳（Wi‑Fi 饱和或路由器过载）"
 }

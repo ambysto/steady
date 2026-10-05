@@ -32,7 +32,10 @@ SWIFT_CATALOG = ROOT / "apple" / "SteadyKit" / "Sources" / "SteadyKit" / "Locali
 
 SOURCE_LANGUAGE = "en"
 # Windows-only groups (tweaks, installer, watchdog, failover...) are left out until the Apple app needs them.
-PREFIXES = ("app.", "time.", "ui.", "diag.")
+PREFIXES = ("app.", "time.", "ui.", "diag.", "apple.")
+# "apple.<key>" is the Apple platforms' wording of <key> (no "PC", no background monitor); the
+# Swift Localizer picks it instead of <key>. It must take exactly the same parameters.
+APPLE_VARIANT = "apple."
 # Info.plist key -> catalog key. The key must also be in the Info.plist, so its English text goes
 # into Generated.xcconfig; InfoPlist.xcstrings then translates it.
 INFO_PLIST = {"CFBundleDisplayName": "app.name",
@@ -98,7 +101,18 @@ def localization(lang: str, value: str | dict, english: str | dict, positions: d
                                              "variations": {"plural": variations}}}}
 
 
+def check_variants(catalogs: dict[str, dict]) -> None:
+    english = catalogs[SOURCE_LANGUAGE]
+    for key in (k for k in english if k.startswith(APPLE_VARIANT)):
+        base = key[len(APPLE_VARIANT):]
+        if base not in english:
+            raise SystemExit(f"{key}: no {base} to replace")
+        if isinstance(english[key], dict) != isinstance(english[base], dict) or arguments(english[key]) != arguments(english[base]):
+            raise SystemExit(f"{key}: parameters differ from {base}")
+
+
 def localizable(catalogs: dict[str, dict]) -> dict:
+    check_variants(catalogs)
     english = catalogs[SOURCE_LANGUAGE]
     strings = {}
     for key in sorted(k for k in english if k.startswith(PREFIXES)):
@@ -145,6 +159,9 @@ def swift_catalog(catalogs: dict[str, dict]) -> str:
     lines += ["    ]", "", f"    /// Keys whose \"{PLURAL_COUNT}\" argument selects a plural form.",
               "    public static let pluralKeys: Set<String> = ["]
     lines += [f"        {json.dumps(k)}," for k in keys if isinstance(english[k], dict)]
+    lines += ["    ]", "", f"    /// Keys with an Apple wording under \"{APPLE_VARIANT}<key>\", rendered instead of the key itself.",
+              "    public static let appleVariants: Set<String> = ["]
+    lines += [f"        {json.dumps(k[len(APPLE_VARIANT):])}," for k in keys if k.startswith(APPLE_VARIANT)]
     lines += ["    ]", "}", ""]
     return "\n".join(lines)
 

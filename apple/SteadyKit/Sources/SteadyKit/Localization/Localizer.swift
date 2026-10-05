@@ -30,7 +30,10 @@ public struct Localizer {
     }
 
     public func render(_ message: Message) -> String {
-        let format = localizedFormat(message.key)
+        // Messages keep the shared key (Python and Windows use it too); the Apple wording, when
+        // there is one, only changes the text. Parameters are the same by construction.
+        let catalogKey = MessageCatalog.appleVariants.contains(message.key) ? "apple." + message.key : message.key
+        let format = localizedFormat(catalogKey)
         let plural = MessageCatalog.pluralKeys.contains(message.key)
         let arguments: [any CVarArg] = (MessageCatalog.arguments[message.key] ?? []).map { argument in
             let value = message.params[argument.name]

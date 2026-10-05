@@ -667,5 +667,10 @@
   "ui.live.jitter": "지터 {value:.1f} ms",
   "ui.live.tcp": "실제 연결 (TCP)",
   "ui.live.window_note": "손실과 지터는 대상별 최근 60회 측정 기준입니다. 앱이 열려 있는 동안에만 측정합니다.",
-  "ui.permission.local_network": "Ambysto Steady는 Wi‑Fi 문제와 인터넷 문제를 구분하기 위해 라우터까지의 지연과 패킷 손실을 측정합니다."
+  "ui.permission.local_network": "Ambysto Steady는 Wi‑Fi 문제와 인터넷 문제를 구분하기 위해 라우터까지의 지연과 패킷 손실을 측정합니다.",
+
+  "apple.diag.signal.advice": "라우터와 Mac을 가깝게 두거나, 5 GHz를 사용하거나, 메시 노드를 추가하거나, LAN 케이블을 연결하십시오.",
+  "apple.diag.ping.no_data": "측정 데이터가 아직 부족합니다 (최근 1시간 동안 샘플 60개 이상 필요)",
+  "apple.diag.ping.router_loss": "라우터까지 패킷 손실: 로컬 문제 (기기 ↔ 라우터 / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ". 라우터까지도 증가하므로 큐가 기기 ↔ 라우터 구간에 있습니다 (Wi‑Fi 포화 또는 라우터 과부하)"
 }

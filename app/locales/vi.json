@@ -667,5 +667,10 @@
   "ui.live.jitter": "jitter {value:.1f} ms",
   "ui.live.tcp": "Kết nối thật (TCP)",
   "ui.live.window_note": "Tỉ lệ mất gói và jitter tính trên 60 lần đo gần nhất của mỗi đích. Chỉ đo khi ứng dụng đang mở.",
-  "ui.permission.local_network": "Ambysto Steady đo độ trễ và tỉ lệ mất gói tới router để phân biệt lỗi Wi‑Fi với lỗi Internet."
+  "ui.permission.local_network": "Ambysto Steady đo độ trễ và tỉ lệ mất gói tới router để phân biệt lỗi Wi‑Fi với lỗi Internet.",
+
+  "apple.diag.signal.advice": "Dời router/Mac lại gần, dùng 5GHz, thêm mesh, hoặc cắm LAN.",
+  "apple.diag.ping.no_data": "Chưa đủ số liệu đo (cần ≥ 60 mẫu trong giờ qua)",
+  "apple.diag.ping.router_loss": "Mất gói tới router: lỗi nội bộ (thiết bị ↔ router / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ", tăng ngay cả tới router ⇒ hàng đợi ở chặng thiết bị ↔ router (Wi‑Fi bão hòa hoặc chính router quá tải)"
 }

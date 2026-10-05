@@ -667,5 +667,10 @@
   "ui.live.jitter": "jitter {value:.1f} ms",
   "ui.live.tcp": "Conexión real (TCP)",
   "ui.live.window_note": "Pérdida y jitter en las últimas 60 mediciones de cada destino. Solo se mide mientras la app está abierta.",
-  "ui.permission.local_network": "Ambysto Steady mide el retardo y la pérdida de paquetes hasta tu router para distinguir los problemas del Wi‑Fi de los de Internet."
+  "ui.permission.local_network": "Ambysto Steady mide el retardo y la pérdida de paquetes hasta tu router para distinguir los problemas del Wi‑Fi de los de Internet.",
+
+  "apple.diag.signal.advice": "Acerca el router y el Mac, usa 5 GHz, añade un nodo mesh o conecta un cable LAN.",
+  "apple.diag.ping.no_data": "Aún no hay suficientes mediciones (se necesitan ≥ 60 muestras en la última hora)",
+  "apple.diag.ping.router_loss": "Pérdida de paquetes hacia el router: un problema local (dispositivo ↔ router / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ", y aumenta incluso hasta el router ⇒ la cola está en el salto dispositivo ↔ router (Wi‑Fi saturado o router sobrecargado)"
 }

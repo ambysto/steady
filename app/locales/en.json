@@ -669,5 +669,10 @@
   "ui.live.jitter": "jitter {value:.1f} ms",
   "ui.live.tcp": "Real connection (TCP)",
   "ui.live.window_note": "Loss and jitter over each target's last 60 measurements. Measured only while the app is open.",
-  "ui.permission.local_network": "Ambysto Steady measures the delay and packet loss to your router to tell Wi‑Fi problems apart from Internet problems."
+  "ui.permission.local_network": "Ambysto Steady measures the delay and packet loss to your router to tell Wi‑Fi problems apart from Internet problems.",
+
+  "apple.diag.signal.advice": "Move the router and the Mac closer, use 5 GHz, add a mesh node, or plug in a LAN cable.",
+  "apple.diag.ping.no_data": "Not enough measurements yet (needs ≥ 60 samples in the last hour)",
+  "apple.diag.ping.router_loss": "Packet loss to the router: a local problem (device ↔ router / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ", rising even to the router ⇒ the queue is on the device ↔ router hop (saturated Wi‑Fi or an overloaded router)"
 }

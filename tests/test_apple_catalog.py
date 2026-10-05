@@ -28,5 +28,27 @@ class AppleCatalogTests(unittest.TestCase):
                          "  %1$@ — %2$@%%")
 
 
+class AppleVariantTests(unittest.TestCase):
+    """apple.<key> replaces <key> in the Apple app; it must keep the key's parameters (ADR-0010)."""
+
+    def test_every_variant_replaces_an_existing_key_with_the_same_parameters(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("locales_to_xcstrings", SCRIPT)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        catalogs = module.load_catalogs()
+        module.check_variants(catalogs)   # raises SystemExit on a mismatch
+        broken = {"en": {**catalogs["en"], "apple.diag.signal.good": "Good ({dbm} dBm)"}}
+        with self.assertRaises(SystemExit):
+            module.check_variants(broken)
+
+    def test_variants_never_mention_a_pc(self):
+        for path in sorted((ROOT / "app" / "locales").glob("*.json")):
+            catalog = json.loads(path.read_text(encoding="utf-8"))
+            for key, value in catalog.items():
+                if key.startswith("apple."):
+                    self.assertNotRegex(str(value), r"\bPC\b|电脑|monitor\b", f"{path.name}: {key}")
+
+
 if __name__ == "__main__":
     unittest.main()

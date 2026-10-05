@@ -667,5 +667,10 @@
   "ui.live.jitter": "ジッター {value:.1f} ms",
   "ui.live.tcp": "実際の接続 (TCP)",
   "ui.live.window_note": "損失とジッターは各宛先の直近 60 回の測定値です。アプリを開いている間だけ測定します。",
-  "ui.permission.local_network": "Ambysto Steady は、Wi‑Fi の問題とインターネットの問題を見分けるために、ルーターまでの遅延とパケット損失を測定します。"
+  "ui.permission.local_network": "Ambysto Steady は、Wi‑Fi の問題とインターネットの問題を見分けるために、ルーターまでの遅延とパケット損失を測定します。",
+
+  "apple.diag.signal.advice": "ルーターと Mac を近づける、5 GHz を使う、メッシュノードを追加する、または LAN ケーブルを接続してください。",
+  "apple.diag.ping.no_data": "測定データがまだ不足しています（直近 1 時間に 60 サンプル以上が必要です）",
+  "apple.diag.ping.router_loss": "ルーターへのパケット損失: ローカルの問題です（デバイス ↔ ルーター / Wi‑Fi）",
+  "apple.diag.bufferbloat.where_local": "。ルーターまでの遅延も上昇しているため、キューは デバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）"
 }

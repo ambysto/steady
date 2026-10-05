@@ -39,6 +39,8 @@ ADR-0009 settled on one SwiftUI multiplatform app for iPhone, iPad and macOS tha
    - `Config/Generated.xcconfig` — the English values of those Info.plist texts, included by `Base.xcconfig` (a key must exist in Info.plist for its translations to apply).
    - `SteadyKit/…/MessageCatalog.swift` — for each key, the ordered parameter names with their English format spec (`.1f`, `.0%`…). Swift formats numbers itself (locale decimal separator, as in ADR-0006) and passes every value except a plural `count` as a string.
 
+   A key may have an Apple wording under `apple.<key>` (no "PC", no background monitor), with exactly the same parameters; the Swift `Localizer` shows it instead of `<key>`, while stored messages keep the shared key. The script refuses a variant whose parameters differ.
+
    The generated files are committed and never edited by hand; `tests/test_apple_catalog.py` fails when they are out of date. Diagnosis results are `Message(key, params)` values in Swift too, rendered when displayed.
 
 5. **Diagnosis test vectors:** one JSON file per rule in `spec/diagnosis/`, for example `ping.json`:

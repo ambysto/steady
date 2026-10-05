@@ -122,4 +122,12 @@ public enum MessageCatalog {
         "ui.diag.count.warn",
         "ui.overview.window",
     ]
+
+    /// Keys with an Apple wording under "apple.<key>", rendered instead of the key itself.
+    public static let appleVariants: Set<String> = [
+        "diag.bufferbloat.where_local",
+        "diag.ping.no_data",
+        "diag.ping.router_loss",
+        "diag.signal.advice",
+    ]
 }
