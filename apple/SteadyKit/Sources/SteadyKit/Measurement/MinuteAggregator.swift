@@ -1,6 +1,6 @@
 /// Groups samples into per-minute rows, a port of `MinuteAggregator` in app/monitor.py, so the
-/// rules see the same numbers as on Windows: sent, lost, and jitter = mean absolute difference
-/// between consecutive replies, rounded to 0.1 ms.
+/// rules see the same numbers as on Windows: sent, lost, avg (rounded to 0.1 ms), max, and
+/// jitter = mean absolute difference between consecutive replies, rounded to 0.1 ms.
 public struct MinuteAggregator: Sendable {
     public struct Minute: Sendable, Equatable {
         /// Start of the minute, seconds since 1970.
@@ -61,8 +61,11 @@ public struct MinuteAggregator: Sendable {
         guard let minute, !order.isEmpty else { return nil }
         let rows = order.map { target in
             let bucket = buckets[target]!
+            let replies = bucket.replies
             return PingQuality.Row(target: target, sent: bucket.sent, lost: bucket.lost,
-                                   jitter: Self.jitter(bucket.replies).map(Self.roundToTenth))
+                                   jitter: Self.jitter(replies).map(Self.roundToTenth),
+                                   avg: replies.isEmpty ? nil : Self.roundToTenth(replies.reduce(0, +) / Double(replies.count)),
+                                   max: replies.max())
         }
         return Minute(start: minute, rows: rows)
     }

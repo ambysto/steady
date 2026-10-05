@@ -57,6 +57,16 @@ The privacy policies of these services apply to the connections they receive:
 - **Location is not requested.** The app therefore cannot read the name (SSID) or hardware address
   (BSSID) of your Wi‑Fi network, and does not.
 
+## Reporting a problem (iPhone, iPad and Mac)
+
+Settings > Report a problem shows a text report in full before anything can leave your device, and
+the app never sends it: you choose to share it, email it to us or copy it. The report holds the app
+and system versions, the device model (not its name), the app language, the connection state, the
+checks' verdicts, the last hour of per-minute measurement counts, the app's own recent log and short
+summaries of crashes the system reported to the app. It contains no network names, and IP addresses
+are replaced with `<address>` (except the public resolvers listed above). Crash summaries are kept
+on the device only for this purpose.
+
 ## Components from Microsoft and Apple
 
 **Windows.** The app's window uses Microsoft Edge WebView2 and Windows notifications, which are part
