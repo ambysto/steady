@@ -674,6 +674,11 @@
   "apple.diag.ping.no_data": "Chưa đủ số liệu đo (cần ≥ 60 mẫu trong giờ qua)",
   "apple.diag.ping.router_loss": "Mất gói tới router: lỗi nội bộ (thiết bị ↔ router / Wi‑Fi)",
   "apple.diag.bufferbloat.where_local": ", tăng ngay cả tới router ⇒ hàng đợi ở chặng thiết bị ↔ router (Wi‑Fi bão hòa hoặc chính router quá tải)",
+  "apple.diag.common.hidden_ssid": "Mạng xung quanh",
+  "apple.diag.physical_link.bad_minutes": "{bad}/{total} phút ({fraction:.0%}) có tốc độ gửi ≤ 30 Mbps và mất gói tới router ≥ 5%",
+  "apple.diag.physical_link.ok": "Tốc độ gửi và mất gói tới router ổn định",
+  "apple.diag.physical_link.advice": "Kiểm tra không nói được nguyên nhân. Loại trừ trước: nhiễu kênh và cấu hình Wi‑Fi của router (MLO/Wi‑Fi 7, Wi‑Fi modem cũ). Nếu sạch thì nghi thứ xung quanh Mac: kim loại, gập nắp, dock hay màn hình có thể che ăng-ten; đặt Mac ở chỗ thoáng hoặc gần router hơn rồi so lại sau vài giờ.",
+  "apple.diag.physical_link.advice_improved": "Nếu bạn vừa dời Mac/router hoặc đổi cấu hình, theo dõi thêm vài giờ để xác nhận.",
 
   "ui.nav.history": "Lịch sử",
   "ui.overview.all_ok": "Mọi kiểm tra đều ổn",

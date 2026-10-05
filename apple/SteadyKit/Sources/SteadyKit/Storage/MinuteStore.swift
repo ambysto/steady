@@ -3,8 +3,8 @@ import os
 import SQLite3
 
 /// Per-minute measurement rows in SQLite, in the `minute_stats` table of app/storage.py (ADR-0011),
-/// and the times the network route changed, in its `events` table. Used from the main actor only,
-/// by `LiveMonitor`.
+/// the Wi‑Fi interface at the end of each minute (Mac) in its `wifi_stats` table, and the times
+/// the network route changed, in its `events` table. Used from the main actor only, by `LiveMonitor`.
 public final class MinuteStore {
     public struct StoreError: Error, CustomStringConvertible {
         public let description: String
@@ -64,6 +64,17 @@ public final class MinuteStore {
                 jitter REAL,
                 PRIMARY KEY (ts, target)
             ) WITHOUT ROWID;
+            CREATE TABLE IF NOT EXISTS wifi_stats (
+                ts      INTEGER PRIMARY KEY,
+                state   TEXT,
+                ssid    TEXT,
+                bssid   TEXT,
+                channel INTEGER,
+                signal  REAL,
+                rssi    INTEGER,
+                rx_mbps REAL,
+                tx_mbps REAL
+            );
             CREATE TABLE IF NOT EXISTS events (
                 id       INTEGER PRIMARY KEY AUTOINCREMENT,
                 ts       INTEGER NOT NULL,
@@ -153,6 +164,40 @@ public final class MinuteStore {
         return Int(sqlite3_column_int64(statement, 0))
     }
 
+    /// Stores the Wi‑Fi interface at the end of a minute; replaces a row of the same minute, as
+    /// Windows does. Name and BSSID stay empty.
+    public func insert(_ wifi: WiFiMinute) throws {
+        try run("""
+            INSERT OR REPLACE INTO wifi_stats (ts, state, channel, signal, rssi, rx_mbps, tx_mbps)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, [.int(wifi.ts), .text(wifi.state), .double(wifi.channel.map(Double.init)), .double(wifi.signal),
+                  .double(wifi.rssi.map(Double.init)), .double(wifi.rxMbps), .double(wifi.txMbps)])
+    }
+
+    /// Wi‑Fi rows starting at or after `start`, oldest first.
+    public func wifiMinutes(since start: Int) throws -> [WiFiMinute] {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(db, "SELECT ts, state, channel, signal, rssi, rx_mbps, tx_mbps FROM wifi_stats WHERE ts >= ? ORDER BY ts",
+                                 -1, &statement, nil) == SQLITE_OK else { throw lastError() }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_int64(statement, 1, Int64(start))
+        func double(_ column: Int32) -> Double? {
+            sqlite3_column_type(statement, column) == SQLITE_NULL ? nil : sqlite3_column_double(statement, column)
+        }
+        var rows: [WiFiMinute] = []
+        while true {
+            switch sqlite3_step(statement) {
+            case SQLITE_ROW:
+                rows.append(WiFiMinute(ts: Int(sqlite3_column_int64(statement, 0)),
+                                       state: sqlite3_column_text(statement, 1).map { String(cString: $0) } ?? "",
+                                       channel: double(2).map { Int($0) }, signal: double(3), rssi: double(4).map { Int($0) },
+                                       rxMbps: double(5), txMbps: double(6)))
+            case SQLITE_DONE: return rows
+            default: throw lastError()
+            }
+        }
+    }
+
     /// Records that the network route changed at `ts` (seconds since 1970).
     public func addNetworkChange(at ts: Int) throws {
         try run("INSERT INTO events (ts, kind, level, message) VALUES (?, ?, 'info', 'network route changed')",
@@ -177,18 +222,22 @@ public final class MinuteStore {
         }
     }
 
-    /// Deletes every stored minute and event (Settings > Delete history), then rewrites the file
+    /// Deletes every stored minute, Wi‑Fi row and event (Settings > Delete history), then rewrites the file
     /// and empties the WAL so the old rows do not stay behind in free pages.
     public func deleteAll() throws {
-        try execute("DELETE FROM minute_stats; DELETE FROM events; VACUUM; PRAGMA wal_checkpoint(TRUNCATE);")
+        try execute("""
+            DELETE FROM minute_stats; DELETE FROM wifi_stats; DELETE FROM events;
+            VACUUM; PRAGMA wal_checkpoint(TRUNCATE);
+            """)
     }
 
-    /// Deletes minutes and events older than the retention period; returns how many minute rows.
+    /// Deletes rows older than the retention period from every table; returns how many minute rows.
     @discardableResult
     public func purge(now: Double) throws -> Int {
         let cutoff = Int(now - Self.retentionDays * 86400)
         try run("DELETE FROM minute_stats WHERE ts < ?", [.int(cutoff)])
         let minutes = Int(sqlite3_changes(db))
+        try run("DELETE FROM wifi_stats WHERE ts < ?", [.int(cutoff)])
         try run("DELETE FROM events WHERE ts < ?", [.int(cutoff)])
         return minutes
     }

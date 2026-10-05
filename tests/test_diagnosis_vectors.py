@@ -21,6 +21,24 @@ def _measurement(data: dict) -> bufferbloat.Measurement:
         for name in ("idle", "download", "upload")))
 
 
+def _connection(wifi: dict | None) -> winutil.WifiState | None:
+    """Interference vectors give only what the rule reads: state, bssid, channel."""
+    if wifi is None:
+        return None
+    return winutil.WifiState(interface="Wi-Fi", state=wifi["state"], ssid="", bssid=wifi["bssid"], radio_type="",
+                             channel=wifi["channel"], signal=None, rssi=None, rx_mbps=None, tx_mbps=None)
+
+
+def _scan(entries: list[dict]) -> list[winutil.ScanEntry]:
+    return [winutil.ScanEntry(radio_type="", **e) for e in entries]
+
+
+def _minutes(runs: list[dict]) -> list[diagnostics.Minute]:
+    """Link vectors list runs of identical minutes, 60 s apart."""
+    return [diagnostics.Minute(r["from"] + 60 * i, r["rssi"], r["rx_mbps"], r["router_loss_pct"])
+            for r in runs for i in range(r["count"])]
+
+
 # rule name in the vector file -> function computing the result from the case's "input"
 RULES = {
     "ping": lambda data: diagnostics.evaluate_ping(data["rows_1h"], data["rows_5m"], changes=data.get("changes", [])),
@@ -28,6 +46,8 @@ RULES = {
                                                  data["in_use"], data["labels"]),
     "bufferbloat": lambda data: diagnostics.evaluate_bufferbloat(_measurement(data)),
     "vpn": lambda data: diagnostics.evaluate_vpn(data["adapters"]),
+    "interference": lambda data: diagnostics.evaluate_interference(_connection(data["wifi"]), _scan(data["scan"])),
+    "link": lambda data: diagnostics.evaluate_link(_minutes(data["runs"]), now=data["now"]),
     "signal": lambda data: diagnostics.evaluate_signal(
         None if data["wifi"] is None else winutil.WifiState(interface="Wi-Fi", bssid="", **data["wifi"])),
 }

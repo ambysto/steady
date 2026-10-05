@@ -676,6 +676,11 @@
   "apple.diag.ping.no_data": "Not enough measurements yet (needs ≥ 60 samples in the last hour)",
   "apple.diag.ping.router_loss": "Packet loss to the router: a local problem (device ↔ router / Wi‑Fi)",
   "apple.diag.bufferbloat.where_local": ", rising even to the router ⇒ the queue is on the device ↔ router hop (saturated Wi‑Fi or an overloaded router)",
+  "apple.diag.common.hidden_ssid": "Nearby network",
+  "apple.diag.physical_link.bad_minutes": "{bad}/{total} minutes ({fraction:.0%}) had a transmit rate ≤ 30 Mbps and ≥ 5% packet loss to the router",
+  "apple.diag.physical_link.ok": "The transmit rate and packet loss to the router are stable",
+  "apple.diag.physical_link.advice": "This check cannot tell the cause. Rule out first: channel interference and the router's Wi‑Fi settings (MLO/Wi‑Fi 7, an old modem's Wi‑Fi). If those are clean, suspect what is around the Mac: metal, a closed lid, a dock or a display can block its antennas; move it into the open or closer to the router, and compare again after a few hours.",
+  "apple.diag.physical_link.advice_improved": "If you just moved the Mac or the router, or changed a setting, watch a few more hours to confirm.",
 
   "ui.nav.history": "History",
   "ui.overview.all_ok": "All checks are OK",

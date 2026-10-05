@@ -18,10 +18,11 @@ Options considered: SwiftData/Core Data (a second data model to keep in step wit
 4. **Retention 30 days**, like `retention_days` on Windows, purged when measuring starts.
 5. Nothing leaves the device.
 6. **Route changes** (added with SIC-61) go to the Windows `events` table, kind `route_change`, so check #5 leaves out the minutes around them after a relaunch too; purged and deleted with the minutes.
+7. **Wi‑Fi minutes on the Mac** (added with SIC-62) go to the Windows `wifi_stats` table, one row per minute with the reading at its end (state, channel, signal, RSSI, transmit rate), never the name or BSSID, for check #13; purged and deleted with the minutes.
 
 ## Consequences
 
 - ✅ Check #5 uses the last hour across app launches.
 - ✅ One schema for Windows and Apple; later features (charts, before/after) can share queries.
 - ⚠️ Gaps while the app is closed are real gaps, not losses; rules already judge only the samples that exist.
-- ⚠️ `ip`, `avg` and `max` stay empty for now: no rule on Apple platforms reads them yet.
+- ⚠️ `ip` stays empty for now: no rule on Apple platforms reads it. (`avg` and `max` are filled since the History screen.)
