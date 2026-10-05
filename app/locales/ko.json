@@ -695,7 +695,7 @@
   "ui.settings.history_note": "이 기기에 30일 동안 보관되며 어디에도 전송되지 않습니다.",
   "ui.settings.delete_history": "기록 삭제",
   "ui.settings.delete_history_confirm": "저장된 모든 측정을 삭제할까요? 되돌릴 수 없습니다.",
-  "ui.report.title": "문제 신고",
+  "ui.report.title": "문제 보고",
   "ui.report.intro": "이것이 보고서의 전체 내용입니다. 직접 보내지 않는 한 아무것도 전송되지 않습니다. 주소, 네트워크 이름, 개인 데이터는 포함되지 않습니다.",
   "ui.report.describe": "무슨 일이 있었나요? (선택 사항)",
   "ui.report.contents": "보고서 내용",
@@ -703,5 +703,5 @@
   "ui.report.share": "공유",
   "ui.report.copy": "복사",
   "ui.report.copied": "복사됨",
-  "ui.diag.count.info": {"one": "참고 {count}개", "other": "참고 {count}개"}
+  "ui.diag.count.info": {"one": "참고 {count}건", "other": "참고 {count}건"}
 }
