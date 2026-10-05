@@ -673,7 +673,7 @@
   "apple.diag.signal.advice": "ルーターと Mac を近づける、5 GHz を使う、メッシュノードを追加する、または LAN ケーブルを接続してください。",
   "apple.diag.ping.no_data": "測定データがまだ不足しています（直近 1 時間に 60 サンプル以上が必要です）",
   "apple.diag.ping.router_loss": "ルーターへのパケット損失: ローカルの問題です（デバイス ↔ ルーター / Wi‑Fi）",
-  "apple.diag.bufferbloat.where_local": "。ルーターまでの遅延も上昇しているため、キューは デバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）",
+  "apple.diag.bufferbloat.where_local": "。ルーターまでの遅延も上昇しているため、キューはデバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）",
   "apple.diag.common.hidden_ssid": "近くのネットワーク",
   "apple.diag.physical_link.bad_minutes": "{bad}/{total} 分（{fraction:.0%}）で送信レート ≤ 30 Mbps かつルーターへのパケット損失 ≥ 5% でした",
   "apple.diag.physical_link.ok": "送信レートとルーターへのパケット損失は安定しています",

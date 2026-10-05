@@ -664,7 +664,7 @@
   "ui.live.measuring": "正在测量…",
   "ui.live.no_reply": "无响应",
   "ui.live.rtt": "{value:.0f} ms",
-  "ui.live.loss": "丢失 {loss:.1f}%",
+  "ui.live.loss": "丢包 {loss:.1f}%",
   "ui.live.jitter": "抖动 {value:.1f} ms",
   "ui.live.tcp": "真实连接（TCP）",
   "ui.live.window_note": "丢包和抖动按每个目标最近 60 次测量计算。仅在应用打开时测量。",

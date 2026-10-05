@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Translation review sheets** (SIC-65): `scripts/translation_review.py export` writes one CSV per language and `apply` writes the reviewers' suggestions back into `app/locales`.
+  - Each row has the English text, the current translation, where it is shown and the placeholders to keep.
+  - `apply` refuses a sheet with an unknown key or a changed placeholder, and keeps the catalogs' order and line endings.
+  - `docs/TRANSLATING.md` describes the workflow.
+  - First pass on the 63 Apple keys: Korean "report" and the info counter, Chinese "packet loss" and a stray space in Japanese now match the reviewed wording.
 - **Apple app icon** (SIC-64; it replaces a temporary white-on-graphite icon): the Windows icon's Wi‑Fi arcs and dot with a small "A" and "S" (Ambysto Steady), as Icon Composer shapes made of filled outlines (open strokes render with stray lines), in three Icon Composer layers (depth and glass from the system) with an appearance each. Light mode is graphite on an off-white tile, dark mode white on graphite (#2B2B2E). Tinted and clear are white, so the system's tint shows (a dark glyph vanished there). Checked in all 12 renditions for iOS and macOS with `ictool`.
 - **Apple app: ready for TestFlight** (SIC-63, ADR-0013):
   - `apple/scripts/release.sh` archives iOS and macOS from a Mac and, with `--upload`, sends both to App Store Connect. It first checks that the catalogs are generated and the tests pass. The build number is the UTC time (`2026.1005.1830`), and the team ID and API key come from the environment.

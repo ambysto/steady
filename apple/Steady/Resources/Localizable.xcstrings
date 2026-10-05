@@ -42,7 +42,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "。ルーターまでの遅延も上昇しているため、キューは デバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）"
+            "value" : "。ルーターまでの遅延も上昇しているため、キューはデバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）"
           }
         },
         "ko" : {
@@ -15381,7 +15381,7 @@
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "참고 %arg개"
+                      "value" : "참고 %arg건"
                     }
                   }
                 }
@@ -17933,7 +17933,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "丢失 %1$@%%"
+            "value" : "丢包 %1$@%%"
           }
         }
       }
@@ -22809,7 +22809,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "문제 신고"
+            "value" : "문제 보고"
           }
         },
         "pt-BR" : {
