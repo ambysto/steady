@@ -11,7 +11,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5E0000000000000000000004 /* Steady.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Steady.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E0000000000000000000004 /* Ambysto Steady.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Ambysto Steady.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5E0000000000000000000007 /* Base.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Base.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -47,7 +47,7 @@
 		5E0000000000000000000003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5E0000000000000000000004 /* Steady.app */,
+				5E0000000000000000000004 /* Ambysto Steady.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -83,7 +83,7 @@
 				5E0000000000000000000013 /* SteadyKit */,
 			);
 			productName = Steady;
-			productReference = 5E0000000000000000000004 /* Steady.app */;
+			productReference = 5E0000000000000000000004 /* Ambysto Steady.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
