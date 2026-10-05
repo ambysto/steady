@@ -5,7 +5,9 @@ import SwiftUI
 /// router and the Internet while the screen is open, and check #5 over those measurements.
 struct OverviewView: View {
     @State private var path: NetworkPath?
-    @State private var monitor = LiveMonitor()
+    /// Opened once: a @State initial value is evaluated every time the view is re-created.
+    private static let history = try? MinuteStore.standard()
+    @State private var monitor = LiveMonitor(store: history)
     @State private var dns: CheckResult?
     @State private var dnsRunning = false
     @State private var bufferbloat: CheckResult?

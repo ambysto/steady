@@ -1,3 +1,4 @@
+import Foundation
 import Synchronization
 import Testing
 @testable import SteadyKit
@@ -179,5 +180,63 @@ struct WiFiSignalTests {
         #expect(network.params["ssid"] == .message(Message("diag.common.unknown")))
         #expect(rates.params["rx"] == .message(Message("diag.common.unknown")))
         #expect(rates.params["tx"] == .number(720))
+    }
+}
+
+struct MinuteStoreTests {
+    let base = 1_790_000_040
+    let url = FileManager.default.temporaryDirectory.appending(path: "steady-test-\(UUID().uuidString).sqlite")
+
+    func minute(_ start: Int, _ rows: [PingQuality.Row]) -> MinuteAggregator.Minute {
+        MinuteAggregator.Minute(start: start, rows: rows)
+    }
+
+    @Test func minutesSurviveReopening() throws {
+        defer { try? FileManager.default.removeItem(at: url) }
+        do {
+            let store = try MinuteStore(url: url)
+            try store.insert(minute(base, [.init(target: "router", sent: 60, lost: 1, jitter: 1.5),
+                                           .init(target: "cloudflare", sent: 60, lost: 0, jitter: nil)]))
+            try store.insert(minute(base + 60, [.init(target: "router", sent: 60, lost: 0, jitter: 2)]))
+        }
+        let reopened = try MinuteStore(url: url)
+        let minutes = try reopened.minutes(since: base)
+        #expect(minutes.map(\.start) == [base, base + 60])
+        #expect(minutes[0].rows == [.init(target: "cloudflare", sent: 60, lost: 0, jitter: nil),
+                                    .init(target: "router", sent: 60, lost: 1, jitter: 1.5)])
+        #expect(try reopened.minutes(since: base + 1).map(\.start) == [base + 60])
+    }
+
+    @Test func aPartialMinuteWrittenTwiceIsMerged() throws {
+        defer { try? FileManager.default.removeItem(at: url) }
+        let store = try MinuteStore(url: url)
+        try store.insert(minute(base, [.init(target: "router", sent: 20, lost: 1, jitter: 1)]))
+        try store.insert(minute(base, [.init(target: "router", sent: 40, lost: 2, jitter: nil)]))
+        #expect(try store.minutes(since: base)[0].rows == [.init(target: "router", sent: 60, lost: 3, jitter: 1)])
+    }
+
+    @Test func rowsOlderThan30DaysArePurged() throws {
+        defer { try? FileManager.default.removeItem(at: url) }
+        let store = try MinuteStore(url: url)
+        let now = Double(base)
+        try store.insert(minute(base - 31 * 86400, [.init(target: "router", sent: 60, lost: 0)]))
+        try store.insert(minute(base - 29 * 86400, [.init(target: "router", sent: 60, lost: 0)]))
+        #expect(try store.purge(now: now) == 1)
+        #expect(try store.minutes(since: 0).count == 1)
+    }
+
+    @MainActor @Test func aNewMonitorStartsFromTheStoredHour() throws {
+        defer { try? FileManager.default.removeItem(at: url) }
+        let clock = LiveMonitorTests.FakeClock()
+        let first = LiveMonitor(store: try MinuteStore(url: url), now: { clock.now })
+        for _ in 0..<60 {
+            first.record([("router", 3), ("cloudflare", 20), ("google", 21)])
+            clock.advance(1)
+        }
+        first.record([])   // closes the minute, which is saved
+        clock.advance(30)
+        let second = LiveMonitor(store: try MinuteStore(url: url), now: { clock.now })
+        #expect(second.minutes.count == 1)
+        #expect(second.pingQuality.status == .ok)
     }
 }

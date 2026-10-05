@@ -33,6 +33,14 @@ public struct MinuteAggregator: Sendable {
         return closed
     }
 
+    /// Closes the current, possibly partial, minute (app/monitor.py flush), e.g. when measuring stops.
+    public mutating func flush() -> Minute? {
+        guard minute != nil else { return nil }
+        let closed = close()
+        minute = nil
+        return closed
+    }
+
     public mutating func add(_ target: String, rttMs: Double?) {
         if buckets[target] == nil {
             order.append(target)

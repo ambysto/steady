@@ -6,7 +6,8 @@ import os
 /// defaults (app/config.py): ICMP every second with a 900 ms timeout to the router, 1.1.1.1 and
 /// 8.8.8.8; a TCP handshake to port 443 of both every 10 seconds with a 3 s timeout. iOS gives
 /// apps no continuous background time, so measuring stops when `run()` is cancelled or the app
-/// is suspended, and the history lives only in memory for now.
+/// is suspended. Closed minutes go to the `MinuteStore` (ADR-0011), so the last hour survives
+/// the app being closed.
 @MainActor
 @Observable
 public final class LiveMonitor {
@@ -58,9 +59,20 @@ public final class LiveMonitor {
     /// target names and counts only, never addresses.
     private static let log = Logger(subsystem: "com.ambysto.steady", category: "measurement")
     private let now: @Sendable () -> Double
+    private let store: MinuteStore?
 
-    public init(now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 }) {
+    /// - Parameter store: where minutes are kept across launches; nil keeps them in memory only.
+    public init(store: MinuteStore? = nil, now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 }) {
+        self.store = store
         self.now = now
+        guard let store else { return }
+        do {
+            try store.purge(now: now())
+            minutes = try store.minutes(since: Int(now()) - Self.historySeconds)
+            Self.log.info("history: \(self.minutes.count, privacy: .public) minutes of the last hour loaded")
+        } catch {
+            Self.log.error("history unavailable: \(String(describing: error), privacy: .public)")
+        }
     }
 
     public var targets: [Target] {
@@ -77,28 +89,40 @@ public final class LiveMonitor {
         return PingQuality.evaluate(hour: rows(since: time - 3600), recent: rows(since: time - 300))
     }
 
-    /// Measures until the calling task is cancelled.
+    /// Measures until the calling task is cancelled, then keeps the partial minute.
     public func run() async {
         await withDiscardingTaskGroup { group in
             group.addTask { await self.repeatEvery(Self.pingInterval) { await self.pingRound() } }
             group.addTask { await self.repeatEvery(Self.probeInterval) { await self.probeRound() } }
+        }
+        if let partial = aggregator.flush() {
+            keep(partial)
         }
     }
 
     /// Records one round of results: closes the minute when it has passed, then adds the samples.
     func record(_ results: [(target: String, rttMs: Double?)]) {
         if let minute = aggregator.roll(at: now()) {
-            for row in minute.rows {
-                Self.log.info("minute \(minute.start, privacy: .public) \(row.target, privacy: .public): sent \(row.sent, privacy: .public), lost \(row.lost, privacy: .public), jitter \(row.jitter ?? -1, privacy: .public)")
-            }
-            minutes.append(minute)
-            minutes.removeAll { $0.start < minute.start - Self.historySeconds }
+            keep(minute)
         }
         for result in results {
             aggregator.add(result.target, rttMs: result.rttMs)
             var window = samples[result.target] ?? []
             window.append(result.rttMs)
             samples[result.target] = Array(window.suffix(Self.liveWindow))
+        }
+    }
+
+    private func keep(_ minute: MinuteAggregator.Minute) {
+        for row in minute.rows {
+            Self.log.info("minute \(minute.start, privacy: .public) \(row.target, privacy: .public): sent \(row.sent, privacy: .public), lost \(row.lost, privacy: .public), jitter \(row.jitter ?? -1, privacy: .public)")
+        }
+        minutes.append(minute)
+        minutes.removeAll { $0.start < minute.start - Self.historySeconds }
+        do {
+            try store?.insert(minute)
+        } catch {
+            Self.log.error("could not save a minute: \(String(describing: error), privacy: .public)")
         }
     }
 
