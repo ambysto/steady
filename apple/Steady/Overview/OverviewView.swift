@@ -53,9 +53,9 @@ struct OverviewView: View {
         return text(target.kind == .tcp ? "ui.live.tcp" : "ui.overview.internet")
     }
 
-    /// The path's own notes, plus a declined local network permission (the router is not measured).
+    /// The path's own notes, plus why the router is not measured when the system refuses it.
     private func notes(for path: NetworkPath) -> [Message] {
-        path.notes + (model.monitor.routerRefused ? [Message("ui.path.reason.local_network_denied")] : [])
+        path.notes + (model.monitor.refusalNote(vpnUp: model.vpnUp).map { [$0] } ?? [])
     }
 }
 

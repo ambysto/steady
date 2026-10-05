@@ -17,6 +17,8 @@ final class AppModel {
     private(set) var path: NetworkPath?
     let monitor = LiveMonitor(store: history)
     private(set) var vpn: CheckResult?
+    /// A tunnel interface is up: a VPN, which may keep the router out of reach.
+    private(set) var vpnUp = false
     /// Checks #2 and #3: on the Mac only (CoreWLAN).
     private(set) var signal: CheckResult?
     private(set) var interference: CheckResult?
@@ -92,7 +94,9 @@ final class AppModel {
             monitor.networkChanged(to: update)
             monitor.routerAddress = update.routerIPv4
             // Turning a VPN on or off changes the path, so check #8 follows it.
-            vpn = VPNCheck.evaluate(VPNReader.adapters(pathInterfaces: update.interfaces))
+            let adapters = VPNReader.adapters(pathInterfaces: update.interfaces)
+            vpn = VPNCheck.evaluate(adapters)
+            vpnUp = adapters.contains { $0.isTunnel && $0.status == "Up" }
             // Check #6 runs once connected, and again when the router changes.
             let trigger = update.status == .connected ? (update.routerIPv4 ?? "-") : nil
             if trigger != dnsTrigger {

@@ -69,6 +69,7 @@
   "diag.interference.groups": "5 GHz 채널 그룹별 네트워크 수: {groups}",
   "diag.interference.advice_5g": "채널 그룹 {group}을(를) 사용해 보십시오 (네트워크가 가장 적으며, 채널 {channel}이(가) 가장 비어 있습니다).",
   "diag.interference.advice_24g": "신호가 허용하면 5 GHz로 옮기거나, 채널 1/6/11 중 가장 덜 붐비는 채널로 변경하십시오.",
+  "diag.interference.advice_6g": "6 GHz에는 채널이 많습니다. 라우터 설정에서 다른 채널을 고르거나(또는 자동 선택으로 두거나) 채널 폭을 좁히십시오.",
   "diag.interference.crowded": "채널 {channel}에 다른 네트워크 {count}개",
 
   "diag.drops.title": "연결 끊김 기록 (7일)",
@@ -664,6 +665,7 @@
   "ui.path.reason.cellular_denied": "이 앱의 셀룰러 데이터가 꺼져 있음",
   "ui.path.reason.wifi_denied": "이 앱의 Wi‑Fi가 꺼져 있음",
   "ui.path.reason.local_network_denied": "이 앱의 로컬 네트워크 접근이 꺼져 있음",
+  "ui.path.reason.vpn_blocks_router": "VPN 때문에 라우터에 연결할 수 없어 측정하지 않음 (일부 VPN 앱은 로컬 네트워크 접근을 허용할 수 있음)",
   "ui.path.reason.vpn_inactive": "필요한 VPN이 연결되지 않음",
 
   "ui.live.measuring": "측정 중…",

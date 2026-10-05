@@ -56,6 +56,14 @@ public final class LiveMonitor {
     /// The system refuses to send to the router: the local network permission was declined.
     /// The router is then left out (not counted as lost) until a ping gets through again.
     public private(set) var routerRefused = false
+
+    /// Why the router is not measured, when the system refuses to send to it. On a real iPhone a
+    /// declined local network permission did not block pings, but a VPN did (SIC-73), so with a
+    /// tunnel up the VPN is named rather than the permission.
+    public func refusalNote(vpnUp: Bool) -> Message? {
+        guard routerRefused else { return nil }
+        return Message(vpnUp ? "ui.path.reason.vpn_blocks_router" : "ui.path.reason.local_network_denied")
+    }
     private var network: String?
     /// The last route that reached the network.
     private var connectedRoute: String?

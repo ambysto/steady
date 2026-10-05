@@ -241,6 +241,8 @@ def evaluate_interference(wifi: winutil.WifiState | None, scan: list[winutil.Sca
         quiet = min(per_group[best], key=per_group[best].__getitem__)
         details.append(msg("diag.interference.groups", groups=[f"{n}: {c}" for n, c in totals.items()]))
         advice = msg("diag.interference.advice_5g", group=best, channel=quiet)
+    elif band == "6 GHz":   # many free channels, no 5 GHz to move to (SIC-71)
+        advice = msg("diag.interference.advice_6g")
     else:
         advice = msg("diag.interference.advice_24g")
     return CheckResult(**base, status=WARN, summary=msg("diag.interference.crowded", count=len(same),

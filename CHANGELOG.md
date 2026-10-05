@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- `scripts/link_calibration.py` (SIC-70): the calibration table for check #13 (share of minutes with the rate at or below 6/12/24/30/54/100 Mbps and router loss ≥ 5%, per period) from a Windows or Mac database. The Mac's Tx thresholds are still to be checked against an hour of good and an hour of poor link.
 - **Translation review sheets** (SIC-65): `scripts/translation_review.py export` writes one CSV per language and `apply` writes the reviewers' suggestions back into `app/locales`.
   - Each row has the English text, the current translation, where it is shown and the placeholders to keep.
   - `apply` refuses a sheet with an unknown key or a changed placeholder, and keeps the catalogs' order and line endings.
@@ -70,6 +71,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `app/singleton.py`: prevents two monitor instances from running at the same time using a named mutex (no "stale PID" problem as with a PID file). The mutex name is tied to the data folder: only two monitors writing the same `metrics.db` block each other. `python -m app.monitor` exits immediately if another instance is already running; adds `--log-file` (rotating) for running without a console.
 
 ### Changed (2026-10-05)
+- **Check #3 on 6 GHz** (SIC-71), Windows and Apple: a crowded 6 GHz channel got the 2.4 GHz advice ("move to 5 GHz or channels 1/6/11"). It now gets `diag.interference.advice_6g`: another 6 GHz channel, or a narrower width. 1 new shared vector, and the new key in all 9 catalogs.
 - **Check #5 names jitter as jitter** (SIC-66), on Windows and Apple. When a target warns only for jitter above 30 ms, the summary used to say packet loss. It now says latency is unstable:
   - the router: `diag.ping.router_jitter`, with an Apple wording;
   - the Internet with ping only: `diag.ping.wan_jitter`;
@@ -87,6 +89,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Product renamed to Ambysto Steady** ("Stable Internet Connection" is now the tagline). Renamed accordingly: exe `Ambysto Steady.exe`, install folder `%LOCALAPPDATA%\Programs\Ambysto Steady`, shortcuts, the Apps & features entry (key `AmbystoSteady`, Publisher "Ambysto"), task `Ambysto Steady Monitor` (when registering, it removes the old task `StableInternet Monitor` and waits for the old monitor to exit, to avoid contention over the mutex), zip `AmbystoSteady-<version>-win64.zip`, User-Agent `AmbystoSteady/<version>`, 9 languages and documentation. The internal name (`StableInternet`: data folder, mutex, environment variables) is unchanged, so no data has to be migrated.
 
 ### Fixed
+- Apple app: when a VPN is up and the system refuses to reach the router, the Overview names the VPN ("some VPN apps can allow local network access") instead of saying local network access is off; on a real iPhone a VPN, not the permission, caused the refusal (SIC-73). The problem report says "router refused, vpn up". New key in all 9 catalogs.
 - **Apple app on a real iPhone** (SIC-67), two bugs the Simulator could not show:
   - On mobile data the carrier's gateway was taken for the router, pinged (it never answers: "100% lost") and shown with its addresses. Check #5 would have blamed the local network. Mobile data now has no router to measure, show or use for the DNS check.
   - A ping or TCP round that ran while iOS had paused the app (in the background, or locked) counted the pause as round-trip time: jitter of ~2.7 s at 0% loss. A round that takes longer than its timeout plus 0.5 s is now dropped, neither a reply nor a loss. So are rounds that start in the first 5 s after the app comes back, when the first TCP probes failed at once (3.9% "loss", check #5 bad).

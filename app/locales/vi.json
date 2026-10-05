@@ -69,6 +69,7 @@
   "diag.interference.groups": "Số mạng theo nhóm kênh 5GHz: {groups}",
   "diag.interference.advice_5g": "Thử nhóm kênh {group} (ít mạng nhất, kênh {channel} đang trống nhất).",
   "diag.interference.advice_24g": "Chuyển sang 5GHz nếu tín hiệu cho phép, hoặc đổi sang kênh 1/6/11 ít mạng nhất.",
+  "diag.interference.advice_6g": "Băng 6 GHz có nhiều kênh: chọn kênh khác trong cấu hình router (hoặc để router tự chọn), hoặc dùng độ rộng kênh hẹp hơn.",
   "diag.interference.crowded": "{count} mạng khác cùng kênh {channel}",
 
   "diag.drops.title": "Lịch sử rớt mạng (7 ngày)",
@@ -664,6 +665,7 @@
   "ui.path.reason.cellular_denied": "Dữ liệu di động đang bị tắt cho ứng dụng này",
   "ui.path.reason.wifi_denied": "Wi‑Fi đang bị tắt cho ứng dụng này",
   "ui.path.reason.local_network_denied": "Quyền truy cập mạng cục bộ đang bị tắt cho ứng dụng này",
+  "ui.path.reason.vpn_blocks_router": "VPN chặn đường tới router nên không đo router (một số ứng dụng VPN cho phép truy cập mạng cục bộ)",
   "ui.path.reason.vpn_inactive": "VPN bắt buộc chưa được kết nối",
 
   "ui.live.measuring": "Đang đo…",

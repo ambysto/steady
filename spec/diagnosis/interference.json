@@ -928,6 +928,77 @@
         ],
         "advice": ""
       }
+    },
+    {
+      "name": "6 GHz: a crowded channel gets 6 GHz advice, not the 2.4 GHz one",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "bssid": "02:5e:00:9a:40:24",
+          "channel": 37
+        },
+        "scan": [
+          {
+            "ssid": "HomeNet",
+            "bssid": "02:5e:00:9a:40:24",
+            "signal": 50,
+            "band": "6 GHz",
+            "channel": 37
+          },
+          {
+            "ssid": "A",
+            "bssid": "aa:00:00:00:00:01",
+            "signal": 50,
+            "band": "6 GHz",
+            "channel": 37
+          },
+          {
+            "ssid": "B",
+            "bssid": "bb:00:00:00:00:02",
+            "signal": 50,
+            "band": "6 GHz",
+            "channel": 37
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.interference.crowded",
+          "params": {
+            "count": 2,
+            "channel": 37
+          }
+        },
+        "details": [
+          {
+            "key": "diag.interference.current",
+            "params": {
+              "channel": 37,
+              "band": "6 GHz",
+              "count": 2
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "A",
+              "signal": 50
+            }
+          },
+          {
+            "key": "diag.common.network_signal",
+            "params": {
+              "ssid": "B",
+              "signal": 50
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.interference.advice_6g",
+          "params": {}
+        }
+      }
     }
   ]
 }

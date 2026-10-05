@@ -69,6 +69,7 @@
   "diag.interference.groups": "Redes por grupo de canais de 5 GHz: {groups}",
   "diag.interference.advice_5g": "Experimente o grupo de canais {group} (menos redes; o canal {channel} é o mais livre).",
   "diag.interference.advice_24g": "Mude para 5 GHz se o sinal permitir, ou use o canal menos congestionado entre 1, 6 e 11.",
+  "diag.interference.advice_6g": "A faixa de 6 GHz tem muitos canais: escolha outro nas configurações do roteador (ou deixe a escolha automática), ou use uma largura de canal menor.",
   "diag.interference.crowded": {"one": "{count} outra rede no canal {channel}", "other": "{count} outras redes no canal {channel}"},
 
   "diag.drops.title": "Histórico de desconexões (7 dias)",
@@ -664,6 +665,7 @@
   "ui.path.reason.cellular_denied": "Os dados celulares estão desativados para este app",
   "ui.path.reason.wifi_denied": "O Wi‑Fi está desativado para este app",
   "ui.path.reason.local_network_denied": "O acesso à rede local está desativado para este app",
+  "ui.path.reason.vpn_blocks_router": "A VPN deixa o roteador inacessível, por isso ele não é medido (alguns apps de VPN permitem o acesso à rede local)",
   "ui.path.reason.vpn_inactive": "A VPN necessária não está conectada",
 
   "ui.live.measuring": "Medindo…",

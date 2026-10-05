@@ -379,6 +379,14 @@ struct LocalNetworkRefusalTests {
         #expect(monitor.targets.first?.id == "router")
     }
 
+    @Test func theNoteNamesTheVPNWhenATunnelIsUp() {
+        let monitor = LiveMonitor()
+        #expect(monitor.refusalNote(vpnUp: true) == nil)   // nothing refused, nothing to say
+        monitor.record(refusals: [("router", .refused)])
+        #expect(monitor.refusalNote(vpnUp: false) == Message("ui.path.reason.local_network_denied"))
+        #expect(monitor.refusalNote(vpnUp: true) == Message("ui.path.reason.vpn_blocks_router"))
+    }
+
     @Test func refusalErrorsAreRecognised() {
         #expect(ICMPPing.isRefusal(EHOSTUNREACH) && ICMPPing.isRefusal(EPERM))
         #expect(!ICMPPing.isRefusal(ETIMEDOUT))

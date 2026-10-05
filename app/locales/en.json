@@ -71,6 +71,7 @@
   "diag.interference.groups": "Networks per 5 GHz channel group: {groups}",
   "diag.interference.advice_5g": "Try channel group {group} (fewest networks; channel {channel} is the emptiest).",
   "diag.interference.advice_24g": "Move to 5 GHz if the signal allows, or switch to whichever of channels 1/6/11 is least crowded.",
+  "diag.interference.advice_6g": "6 GHz has many channels: pick another one in the router's settings (or let it choose automatically), or use a narrower channel width.",
   "diag.interference.crowded": {"one": "{count} other network on channel {channel}", "other": "{count} other networks on channel {channel}"},
 
   "diag.drops.title": "Disconnect history (7 days)",
@@ -666,6 +667,7 @@
   "ui.path.reason.cellular_denied": "Mobile data is turned off for this app",
   "ui.path.reason.wifi_denied": "Wi‑Fi is turned off for this app",
   "ui.path.reason.local_network_denied": "Local network access is turned off for this app",
+  "ui.path.reason.vpn_blocks_router": "The VPN keeps the router out of reach, so it is not measured (some VPN apps can allow local network access)",
   "ui.path.reason.vpn_inactive": "The required VPN is not connected",
 
   "ui.live.measuring": "Measuring…",
