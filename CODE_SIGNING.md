@@ -1,41 +1,33 @@
 # Code signing policy
 
-Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
-[SignPath Foundation](https://signpath.org/).
+> **Status: releases are not code-signed.** Ambysto Steady is a free, open-source project and does
+> not currently use a code-signing certificate. Windows SmartScreen may therefore show an
+> "unknown publisher" warning the first time you open it.
 
-> Status: application to SignPath Foundation pending. Until it is accepted, releases are not yet
-> signed and Windows SmartScreen may warn when the app is opened for the first time.
+SignPath Foundation, which provides free certificates to open-source projects, declined our first
+application in October 2026 because the project does not yet have enough public visibility. Signing
+may be added later; this page will say so when it happens.
 
-## What is signed
+## Opening an unsigned release
 
-The Windows build of **Ambysto Steady** (`Ambysto Steady.exe` and the files of the release zip)
-published on [GitHub Releases](https://github.com/ambysto/steady/releases) and on
-[ambysto.com](https://ambysto.com). Only binaries built from this repository by its
-[release workflow](.github/workflows/release.yml) on GitHub Actions are submitted for signing; the
-build runs from the tagged source with no manual step in between.
+When Windows shows "Windows protected your PC", choose **More info** → **Run anyway**. Only do this
+for files you downloaded from the official
+[GitHub Releases](https://github.com/ambysto/steady/releases) page.
 
-## Team roles
+## What you can check instead
 
-| Role | Who |
-|---|---|
-| Committers and reviewers | Members of the [ambysto](https://github.com/ambysto) GitHub account with write access to this repository |
-| Approvers | Owner of the [ambysto](https://github.com/ambysto) GitHub account |
-
-Every signing request is approved manually by an approver for each release.
+- The release zip is built by the repository's
+  [release workflow](.github/workflows/release.yml) on GitHub Actions from the tagged source, with
+  the tests and a smoke test run first. Nothing is added by hand.
+- The source is public under the GNU General Public License v3.0, so you can read exactly what the
+  app does, or build it yourself with `python scripts/build.py`.
+- The [privacy policy](PRIVACY.md) lists every network connection the app makes. It has no
+  telemetry, analytics or advertising.
 
 ## Privacy policy
 
 See the [privacy policy](PRIVACY.md): the program sends no personal data and has no telemetry,
 analytics or advertising.
-
-## Verify a download
-
-Right-click `Ambysto Steady.exe` → **Properties** → **Digital Signatures**: the signer is
-SignPath Foundation. In PowerShell:
-
-```powershell
-Get-AuthenticodeSignature "Ambysto Steady.exe"
-```
 
 ## Reporting
 
