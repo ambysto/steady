@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Added
+- **Apple app icon, final design** (SIC-64): the same Wi‑Fi arcs, dot and "A"/"S", now in three Icon Composer layers (depth and glass from the system) with an appearance each. Light mode is graphite on an off-white tile, dark mode white on graphite (#2B2B2E). Tinted and clear are white, so the system's tint shows (a dark glyph vanished there). Checked in all 12 renditions for iOS and macOS with `ictool`.
 - **Apple app: ready for TestFlight** (SIC-63, ADR-0013):
   - `apple/scripts/release.sh` archives iOS and macOS from a Mac and, with `--upload`, sends both to App Store Connect. It first checks that the catalogs are generated and the tests pass. The build number is the UTC time (`2026.1005.1830`), and the team ID and API key come from the environment.
   - A privacy manifest (no tracking, no collected data, none of the APIs that need a reason).

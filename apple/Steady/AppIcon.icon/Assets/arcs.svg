@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The Windows icon's three Wi-Fi arcs (app/desktop.py draw_icon), centred. Filled outlines only: the icon renderer lights
+       open strokes as if they were closed, which shows stray lines. The colour comes from
+       icon.json (graphite in light mode, white in dark and tinted modes). -->
+  <g fill="#FFFFFF">
+    <path d="M207.9 390.9 A430.1 430.1 0 0 1 816.1 390.9 L755.8 451.3 A344.7 344.7 0 0 0 268.2 451.3 Z"/>
+    <path d="M302.0 485.1 A297.0 297.0 0 0 1 722.0 485.1 L661.6 545.4 A211.6 211.6 0 0 0 362.4 545.4 Z"/>
+    <path d="M396.1 579.2 A163.8 163.8 0 0 1 627.9 579.2 L567.5 639.5 A78.5 78.5 0 0 0 456.5 639.5 Z"/>
+  </g>
+</svg>

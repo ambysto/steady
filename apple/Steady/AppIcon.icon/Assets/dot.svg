@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The Wi-Fi dot, a little smaller than on Windows so it does not touch the inner arc. Filled outlines only: the icon renderer lights
+       open strokes as if they were closed, which shows stray lines. The colour comes from
+       icon.json (graphite in light mode, white in dark and tinted modes). -->
+  <g fill="#FFFFFF">
+    <path d="M448.0 695.0 A64.0 64.0 0 1 0 576.0 695.0 A64.0 64.0 0 1 0 448.0 695.0 Z"/>
+  </g>
+</svg>
