@@ -40,7 +40,7 @@ LOCALIZATION_PREFERS_STRING_CATALOGS = YES
 SWIFT_EMIT_LOC_STRINGS = NO
 STRING_CATALOG_GENERATE_SYMBOLS = NO
 
-// App icon: Steady/AppIcon.icon (Icon Composer; the Windows icon's Wi-Fi arcs on a dark gray tile)
+// App icon: Steady/AppIcon.icon (Icon Composer; light, dark and tinted appearances)
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 
 // Info.plist
