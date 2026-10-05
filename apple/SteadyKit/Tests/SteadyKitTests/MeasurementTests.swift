@@ -260,6 +260,36 @@ struct VPNReaderTests {
     }
 }
 
+struct PausedRoundTests {
+    @Test func aRoundLongerThanItsTimeoutIsDropped() {
+        // As seen on an iPhone after a moment in the background: one reply "took" seconds.
+        #expect(LiveMonitor.ranOnTime(.milliseconds(905), timeout: .milliseconds(900)))
+        #expect(LiveMonitor.ranOnTime(.milliseconds(1400), timeout: .milliseconds(900)))
+        #expect(!LiveMonitor.ranOnTime(.seconds(4), timeout: .milliseconds(900)))
+        #expect(!LiveMonitor.ranOnTime(.seconds(12), timeout: .seconds(3)))
+    }
+    @MainActor @Test func roundsRightAfterAResumeDoNotCount() {
+        // As seen on an iPhone: the first TCP probes after the app came back failed at once.
+        let monitor = LiveMonitor()
+        #expect(monitor.isSettled())
+        monitor.resumed()
+        #expect(!monitor.isSettled())
+        #expect(monitor.isSettled(at: .now + LiveMonitor.settleTime))
+    }
+}
+
+struct CellularRouterTests {
+    @Test func mobileDataHasNoRouterToMeasure() {
+        // As seen on an iPhone over 5G: the path's gateway is the carrier's and never answers.
+        let cellular = NetworkPath(status: .connected, link: .cellular, gateways: ["198.51.100.10"], interfaces: ["pdp_ip0"])
+        #expect(cellular.routers.isEmpty && cellular.routerIPv4 == nil)
+        let wifi = NetworkPath(status: .connected, link: .wifi, gateways: ["fe80::1", "192.0.2.1"], interfaces: ["en0"])
+        #expect(wifi.routerIPv4 == "192.0.2.1")
+        let hotspot = NetworkPath(status: .connected, link: .wifi, isExpensive: true, gateways: ["172.20.10.1"], interfaces: ["en0"])
+        #expect(hotspot.routerIPv4 == "172.20.10.1")   // a phone's hotspot is a router on the local network
+    }
+}
+
 @MainActor
 struct NetworkChangeTests {
     @Test func liveSamplesRestartWhenTheRouteChangesButHistoryStays() {

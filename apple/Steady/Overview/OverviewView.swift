@@ -31,7 +31,7 @@ struct OverviewView: View {
                 Section {
                     LabeledContent(text("ui.path.connection"), value: path.linkMessage.map { text($0) } ?? "—")
                     LabeledContent(text("ui.overview.router"),
-                                   value: path.gateways.isEmpty ? "—" : path.gateways.joined(separator: ", "))
+                                   value: path.routers.isEmpty ? "—" : path.routers.joined(separator: ", "))
                     LabeledContent(text("ui.path.ip"), value: text.render(path.ipVersions))
                     LabeledContent(text("ui.path.dns"), value: text(path.dnsMessage))
                 }

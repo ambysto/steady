@@ -41,9 +41,15 @@ public struct NetworkPath: Equatable, Sendable {
         "\(status)|\(interfaces.first ?? "")|\(routerIPv4 ?? "")"
     }
 
+    /// The routers of the local network. Mobile data has none: its gateway is the carrier's,
+    /// which does not answer pings and says nothing about the user's own network.
+    public var routers: [String] {
+        link == .cellular ? [] : gateways
+    }
+
     /// The first IPv4 router address: what the monitor pings (ICMP is IPv4 only, as on Windows).
     public var routerIPv4: String? {
-        gateways.first { $0.contains(".") && !$0.contains(":") }
+        routers.first { $0.contains(".") && !$0.contains(":") }
     }
 
     public init(status: Status, link: Link? = nil, reason: Reason? = nil, isExpensive: Bool = false,
