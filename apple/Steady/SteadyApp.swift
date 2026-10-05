@@ -8,6 +8,6 @@ struct SteadyApp: App {
                 OverviewView()
             }
         }
-        .defaultSize(width: 480, height: 560)
+        .defaultSize(width: 520, height: 820)
     }
 }

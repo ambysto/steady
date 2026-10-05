@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 /// Measures the router and the Internet while the app is open, with the Windows monitor's
 /// defaults (app/config.py): ICMP every second with a 900 ms timeout to the router, 1.1.1.1 and
@@ -53,6 +54,9 @@ public final class LiveMonitor {
     public private(set) var samples: [String: [Double?]] = [:]
     public private(set) var minutes: [MinuteAggregator.Minute] = []
     private var aggregator = MinuteAggregator()
+    /// One line per closed minute and target (`log stream --predicate 'subsystem == "com.ambysto.steady"'`):
+    /// target names and counts only, never addresses.
+    private static let log = Logger(subsystem: "com.ambysto.steady", category: "measurement")
     private let now: @Sendable () -> Double
 
     public init(now: @escaping @Sendable () -> Double = { Date().timeIntervalSince1970 }) {
@@ -84,6 +88,9 @@ public final class LiveMonitor {
     /// Records one round of results: closes the minute when it has passed, then adds the samples.
     func record(_ results: [(target: String, rttMs: Double?)]) {
         if let minute = aggregator.roll(at: now()) {
+            for row in minute.rows {
+                Self.log.info("minute \(minute.start, privacy: .public) \(row.target, privacy: .public): sent \(row.sent, privacy: .public), lost \(row.lost, privacy: .public), jitter \(row.jitter ?? -1, privacy: .public)")
+            }
             minutes.append(minute)
             minutes.removeAll { $0.start < minute.start - Self.historySeconds }
         }

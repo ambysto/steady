@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import Testing
 @testable import SteadyKit
 
@@ -60,8 +61,8 @@ struct LocalizationTests {
         for path in paths {
             used.insert(path.statusMessage.key)
             used.insert(path.dnsMessage.key)
-            path.linkMessage.map { used.insert($0.key) }
-            path.reasonMessage.map { used.insert($0.key) }
+            if let link = path.linkMessage { used.insert(link.key) }
+            if let reason = path.reasonMessage { used.insert(reason.key) }
             path.notes.forEach { used.insert($0.key) }
             if case .message(let none) = path.ipVersions { used.insert(none.key) }
         }
@@ -74,5 +75,25 @@ struct LocalizationTests {
         let lowData = NetworkPath(status: .connected, link: .wifi, isConstrained: true, supportsIPv4: true, supportsIPv6: true)
         #expect(lowData.notes == [Message("ui.path.constrained")])
         #expect(lowData.ipVersions == .text("IPv4 · IPv6"))
+    }
+}
+
+struct AddressFormatTests {
+    /// NWInterface has no public initializer: take the loopback interface from a path monitor.
+    static func loopback() async -> NWInterface? {
+        for await path in NWPathMonitor(requiredInterfaceType: .loopback) {
+            return path.availableInterfaces.first
+        }
+        return nil
+    }
+
+    @Test func ipv4AndIPv6AreShownOnceWithTheirScope() async throws {
+        let v4 = try #require(IPv4Address("192.0.2.1"))
+        #expect(NetworkPath.address(.ipv4(v4)) == "192.0.2.1")
+        #expect(NetworkPath.address(.ipv6(try #require(IPv6Address("2001:db8::1")))) == "2001:db8::1")
+        let interface = try #require(await Self.loopback())
+        let linkLocal = try #require(IPv6Address("fe80::1"))
+        let scoped = try #require(IPv6Address(linkLocal.rawValue, interface))
+        #expect(NetworkPath.address(.ipv6(scoped)) == "fe80::1%\(interface.name)")
     }
 }

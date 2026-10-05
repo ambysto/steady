@@ -1,3 +1,4 @@
+import Foundation
 import Network
 
 /// What the system reports about the current route to the network (`NWPath`), reduced to plain
@@ -82,7 +83,31 @@ extension NetworkPath {
 
     private static func address(_ endpoint: NWEndpoint) -> String? {
         guard case .hostPort(let host, _) = endpoint else { return nil }
-        return "\(host)"
+        return address(host)
+    }
+
+    /// "192.0.2.1", or "fe80::1%en0" with the scope once: the Host's own description repeats
+    /// the interface name ("fe80::1%en0%en0").
+    static func address(_ host: NWEndpoint.Host) -> String {
+        switch host {
+        case .ipv4(let address):
+            return numeric(address.rawValue, family: AF_INET) ?? "\(address)"
+        case .ipv6(let address):
+            let text = numeric(address.rawValue, family: AF_INET6) ?? "\(address)".components(separatedBy: "%")[0]
+            return address.interface.map { "\(text)%\($0.name)" } ?? text
+        case .name(let name, _):
+            return name
+        @unknown default:
+            return "\(host)"
+        }
+    }
+
+    private static func numeric(_ bytes: Data, family: Int32) -> String? {
+        var buffer = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+        let ok = bytes.withUnsafeBytes { raw in
+            inet_ntop(family, raw.baseAddress, &buffer, socklen_t(buffer.count)) != nil
+        }
+        return ok ? String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self) : nil
     }
 
     /// Path updates for as long as the caller keeps iterating; the first value arrives at once.
