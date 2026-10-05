@@ -636,5 +636,41 @@
 
   "ui.failover.disconnected": "현재 연결되어 있지 않습니다. 되돌리면 변경이 취소됩니다.",
 
-  "failover.result.in_use": "{path}은(는) 이미 사용 중인 연결입니다. 전환할 것이 없습니다"
+  "failover.result.in_use": "{path}은(는) 이미 사용 중인 연결입니다. 전환할 것이 없습니다",
+
+  "ui.path.checking": "연결 확인 중…",
+  "ui.path.connected": "연결됨",
+  "ui.path.disconnected": "연결 없음",
+  "ui.path.requires_connection": "아직 연결되지 않음: 필요할 때 시스템이 연결할 수 있음",
+  "ui.path.connection": "연결",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "유선 (이더넷)",
+  "ui.path.via.cellular": "셀룰러 데이터",
+  "ui.path.via.other": "기타 네트워크",
+  "ui.path.ip": "IP 버전",
+  "ui.path.none": "없음",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "사용 가능",
+  "ui.path.unavailable": "사용 불가",
+  "ui.path.expensive": "데이터 요금제 네트워크 (셀룰러 데이터 또는 개인용 핫스팟)",
+  "ui.path.constrained": "저데이터 모드가 켜져 있음: 시스템이 백그라운드 트래픽을 제한함",
+  "ui.path.reason.not_available": "사용 가능한 네트워크가 없음",
+  "ui.path.reason.cellular_denied": "이 앱의 셀룰러 데이터가 꺼져 있음",
+  "ui.path.reason.wifi_denied": "이 앱의 Wi‑Fi가 꺼져 있음",
+  "ui.path.reason.local_network_denied": "이 앱의 로컬 네트워크 접근이 꺼져 있음",
+  "ui.path.reason.vpn_inactive": "필요한 VPN이 연결되지 않음",
+
+  "ui.live.measuring": "측정 중…",
+  "ui.live.no_reply": "응답 없음",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "손실 {loss:.1f}%",
+  "ui.live.jitter": "지터 {value:.1f} ms",
+  "ui.live.tcp": "실제 연결 (TCP)",
+  "ui.live.window_note": "손실과 지터는 대상별 최근 60회 측정 기준입니다. 앱이 열려 있는 동안에만 측정합니다.",
+  "ui.permission.local_network": "Ambysto Steady는 Wi‑Fi 문제와 인터넷 문제를 구분하기 위해 라우터까지의 지연과 패킷 손실을 측정합니다.",
+
+  "apple.diag.signal.advice": "라우터와 Mac을 가깝게 두거나, 5 GHz를 사용하거나, 메시 노드를 추가하거나, LAN 케이블을 연결하십시오.",
+  "apple.diag.ping.no_data": "측정 데이터가 아직 부족합니다 (최근 1시간 동안 샘플 60개 이상 필요)",
+  "apple.diag.ping.router_loss": "라우터까지 패킷 손실: 로컬 문제 (기기 ↔ 라우터 / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ". 라우터까지도 증가하므로 큐가 기기 ↔ 라우터 구간에 있습니다 (Wi‑Fi 포화 또는 라우터 과부하)"
 }

@@ -636,5 +636,41 @@
 
   "ui.failover.disconnected": "Hiện không kết nối. Bấm chuyển về để hoàn tác thay đổi.",
 
-  "failover.result.in_use": "{path} đã là kết nối đang dùng; không có gì để chuyển"
+  "failover.result.in_use": "{path} đã là kết nối đang dùng; không có gì để chuyển",
+
+  "ui.path.checking": "Đang kiểm tra kết nối…",
+  "ui.path.connected": "Đã kết nối",
+  "ui.path.disconnected": "Không có kết nối",
+  "ui.path.requires_connection": "Chưa kết nối: hệ thống có thể tự kết nối khi cần",
+  "ui.path.connection": "Kết nối",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Mạng dây (Ethernet)",
+  "ui.path.via.cellular": "Dữ liệu di động",
+  "ui.path.via.other": "Mạng khác",
+  "ui.path.ip": "Phiên bản IP",
+  "ui.path.none": "Không có",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Khả dụng",
+  "ui.path.unavailable": "Không khả dụng",
+  "ui.path.expensive": "Mạng tính phí theo dung lượng (dữ liệu di động hoặc điểm truy cập cá nhân)",
+  "ui.path.constrained": "Chế độ dữ liệu thấp đang bật: hệ thống hạn chế lưu lượng chạy nền",
+  "ui.path.reason.not_available": "Không có mạng nào khả dụng",
+  "ui.path.reason.cellular_denied": "Dữ liệu di động đang bị tắt cho ứng dụng này",
+  "ui.path.reason.wifi_denied": "Wi‑Fi đang bị tắt cho ứng dụng này",
+  "ui.path.reason.local_network_denied": "Quyền truy cập mạng cục bộ đang bị tắt cho ứng dụng này",
+  "ui.path.reason.vpn_inactive": "VPN bắt buộc chưa được kết nối",
+
+  "ui.live.measuring": "Đang đo…",
+  "ui.live.no_reply": "Không phản hồi",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "mất {loss:.1f}%",
+  "ui.live.jitter": "jitter {value:.1f} ms",
+  "ui.live.tcp": "Kết nối thật (TCP)",
+  "ui.live.window_note": "Tỉ lệ mất gói và jitter tính trên 60 lần đo gần nhất của mỗi đích. Chỉ đo khi ứng dụng đang mở.",
+  "ui.permission.local_network": "Ambysto Steady đo độ trễ và tỉ lệ mất gói tới router để phân biệt lỗi Wi‑Fi với lỗi Internet.",
+
+  "apple.diag.signal.advice": "Dời router/Mac lại gần, dùng 5GHz, thêm mesh, hoặc cắm LAN.",
+  "apple.diag.ping.no_data": "Chưa đủ số liệu đo (cần ≥ 60 mẫu trong giờ qua)",
+  "apple.diag.ping.router_loss": "Mất gói tới router: lỗi nội bộ (thiết bị ↔ router / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ", tăng ngay cả tới router ⇒ hàng đợi ở chặng thiết bị ↔ router (Wi‑Fi bão hòa hoặc chính router quá tải)"
 }

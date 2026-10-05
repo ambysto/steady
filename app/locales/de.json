@@ -636,5 +636,41 @@
 
   "ui.failover.disconnected": "Derzeit nicht verbunden. Zurückwechseln macht die Änderung rückgängig.",
 
-  "failover.result.in_use": "{path} ist bereits die verwendete Verbindung; nichts umzuschalten"
+  "failover.result.in_use": "{path} ist bereits die verwendete Verbindung; nichts umzuschalten",
+
+  "ui.path.checking": "Verbindung wird geprüft…",
+  "ui.path.connected": "Verbunden",
+  "ui.path.disconnected": "Keine Verbindung",
+  "ui.path.requires_connection": "Noch nicht verbunden: Das System kann bei Bedarf verbinden",
+  "ui.path.connection": "Verbindung",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Kabelgebunden (Ethernet)",
+  "ui.path.via.cellular": "Mobile Daten",
+  "ui.path.via.other": "Anderes Netzwerk",
+  "ui.path.ip": "IP-Versionen",
+  "ui.path.none": "Keine",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Verfügbar",
+  "ui.path.unavailable": "Nicht verfügbar",
+  "ui.path.expensive": "Getaktetes Netzwerk (mobile Daten oder persönlicher Hotspot)",
+  "ui.path.constrained": "Datensparmodus ist aktiv: Das System begrenzt den Hintergrundverkehr",
+  "ui.path.reason.not_available": "Kein Netzwerk verfügbar",
+  "ui.path.reason.cellular_denied": "Mobile Daten sind für diese App deaktiviert",
+  "ui.path.reason.wifi_denied": "Wi‑Fi ist für diese App deaktiviert",
+  "ui.path.reason.local_network_denied": "Der Zugriff auf das lokale Netzwerk ist für diese App deaktiviert",
+  "ui.path.reason.vpn_inactive": "Das erforderliche VPN ist nicht verbunden",
+
+  "ui.live.measuring": "Wird gemessen…",
+  "ui.live.no_reply": "Keine Antwort",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "{loss:.1f}% verloren",
+  "ui.live.jitter": "Jitter {value:.1f} ms",
+  "ui.live.tcp": "Echte Verbindung (TCP)",
+  "ui.live.window_note": "Verlust und Jitter über die letzten 60 Messungen je Ziel. Gemessen wird nur, solange die App geöffnet ist.",
+  "ui.permission.local_network": "Ambysto Steady misst Verzögerung und Paketverlust zum Router, um Wi‑Fi-Probleme von Internetproblemen zu unterscheiden.",
+
+  "apple.diag.signal.advice": "Router und Mac näher zusammenstellen, 5 GHz nutzen, einen Mesh-Knoten hinzufügen oder ein LAN-Kabel anschließen.",
+  "apple.diag.ping.no_data": "Noch nicht genug Messungen (benötigt ≥ 60 Messungen in der letzten Stunde)",
+  "apple.diag.ping.router_loss": "Paketverlust zum Router: ein lokales Problem (Gerät ↔ Router / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ", steigt sogar bis zum Router ⇒ die Warteschlange liegt auf dem Abschnitt Gerät ↔ Router (überlastetes Wi‑Fi oder überlasteter Router)"
 }

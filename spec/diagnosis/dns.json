@@ -1,0 +1,1555 @@
+{
+  "rule": "dns",
+  "check": 6,
+  "reference": "app/diagnostics.py evaluate_dns",
+  "description": "DNS benchmark (docs/DIAGNOSTICS.md #6). bench: one entry per server in the order measured (servers in use first, then the router, then public resolvers), each with sent, replies, failures and the round-trip times (ms) of the answers that count. in_use: the system's DNS servers, primary first. labels: server -> in_use | in_use_router | router | public.",
+  "cases": [
+    {
+      "name": "no server measured",
+      "input": {
+        "bench": [],
+        "in_use": [],
+        "labels": {}
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.no_servers",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "the DNS in use was not measured",
+      "input": {
+        "bench": [
+          {
+            "server": "9.9.9.9",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.unknown_in_use",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "9.9.9.9",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "DNS in use is the fastest",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              25,
+              25,
+              25,
+              25,
+              25
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              40,
+              40,
+              40,
+              40,
+              40
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 25
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "within 20 ms of the fastest is fine",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              40,
+              40,
+              40,
+              40,
+              40
+            ]
+          },
+          {
+            "server": "9.9.9.9",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              35,
+              35,
+              35,
+              35,
+              35
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "9.9.9.9",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 35
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: exactly 20 ms slower is still ok",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              50,
+              50,
+              50,
+              50,
+              50
+            ]
+          },
+          {
+            "server": "9.9.9.9",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 50
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "9.9.9.9",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "30 ms slower than a public DNS: consider it",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              60,
+              60,
+              60,
+              60,
+              60
+            ]
+          },
+          {
+            "server": "9.9.9.9",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "9.9.9.9",
+            "gap": 30
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 60
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "9.9.9.9",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_consider",
+          "params": {
+            "server": "9.9.9.9"
+          }
+        }
+      }
+    },
+    {
+      "name": "the secondary DNS in use is faster: promote it",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              70,
+              70,
+              70,
+              70,
+              70
+            ]
+          },
+          {
+            "server": "198.51.100.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              45,
+              45,
+              45,
+              45,
+              45
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53",
+          "198.51.100.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use",
+          "198.51.100.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "198.51.100.53",
+            "gap": 25
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 70
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "198.51.100.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 45
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_promote",
+          "params": {
+            "server": "198.51.100.53"
+          }
+        }
+      }
+    },
+    {
+      "name": "the router answers fastest from its cache",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              70,
+              70,
+              70,
+              70,
+              70
+            ]
+          },
+          {
+            "server": "192.0.2.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              7,
+              7,
+              7,
+              7,
+              7
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              40,
+              40,
+              40,
+              40,
+              40
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use",
+          "192.0.2.1": "router"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "192.0.2.1",
+            "gap": 63
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 70
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.router",
+                "params": {}
+              },
+              "server": "192.0.2.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 7
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_router_cache",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "the router is the DNS in use",
+      "input": {
+        "bench": [
+          {
+            "server": "192.0.2.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              8,
+              8,
+              8,
+              8,
+              8
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              40,
+              40,
+              40,
+              40,
+              40
+            ]
+          }
+        ],
+        "in_use": [
+          "192.0.2.1"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "192.0.2.1": "in_use_router"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use_router",
+                "params": {}
+              },
+              "server": "192.0.2.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 8
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "one timeout on the DNS in use",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 4,
+            "failures": 1,
+            "rtts_ms": [
+              40,
+              40,
+              40,
+              40
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.dns.broken",
+          "params": {
+            "servers": [
+              "203.0.113.53"
+            ]
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40.0
+                }
+              },
+              "failures": 1,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_broken",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "both DNS in use fail: listed together",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 3,
+            "failures": 2,
+            "rtts_ms": [
+              40,
+              40,
+              40
+            ]
+          },
+          {
+            "server": "198.51.100.53",
+            "sent": 5,
+            "replies": 0,
+            "failures": 5,
+            "rtts_ms": []
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53",
+          "198.51.100.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use",
+          "198.51.100.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.dns.broken",
+          "params": {
+            "servers": [
+              "203.0.113.53",
+              "198.51.100.53"
+            ]
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40
+                }
+              },
+              "failures": 2,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "198.51.100.53",
+              "median": {
+                "key": "diag.dns.no_reply",
+                "params": {}
+              },
+              "failures": 5,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_broken",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "a failing public DNS is only a detail line",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              40,
+              40,
+              40,
+              40,
+              40
+            ]
+          },
+          {
+            "server": "9.9.9.9",
+            "sent": 5,
+            "replies": 0,
+            "failures": 5,
+            "rtts_ms": []
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 40
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "9.9.9.9",
+              "median": {
+                "key": "diag.dns.no_reply",
+                "params": {}
+              },
+              "failures": 5,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "a fast public DNS with one failure is not a candidate",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              60,
+              60,
+              60,
+              60,
+              60
+            ]
+          },
+          {
+            "server": "8.8.8.8",
+            "sent": 5,
+            "replies": 4,
+            "failures": 1,
+            "rtts_ms": [
+              20,
+              20,
+              20,
+              20
+            ]
+          },
+          {
+            "server": "9.9.9.9",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              45,
+              45,
+              45,
+              45,
+              45
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 60
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "8.8.8.8",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 20.0
+                }
+              },
+              "failures": 1,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "9.9.9.9",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 45
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "median of an even count is the mean of the middle two",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 4,
+            "replies": 4,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              50,
+              70,
+              90
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 4,
+            "replies": 4,
+            "failures": 0,
+            "rtts_ms": [
+              10,
+              20,
+              30,
+              40
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "1.1.1.1",
+            "gap": 35.0
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 60.0
+                }
+              },
+              "failures": 0,
+              "sent": 4
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 25.0
+                }
+              },
+              "failures": 0,
+              "sent": 4
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_consider",
+          "params": {
+            "server": "1.1.1.1"
+          }
+        }
+      }
+    },
+    {
+      "name": "Python rounding: a 30.05 ms median is 30.1, so 20.1 ms slower than 10 ms",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 1,
+            "replies": 1,
+            "failures": 0,
+            "rtts_ms": [
+              30.05
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 1,
+            "replies": 1,
+            "failures": 0,
+            "rtts_ms": [
+              10.0
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "1.1.1.1",
+            "gap": 20.1
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30.1
+                }
+              },
+              "failures": 0,
+              "sent": 1
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 10.0
+                }
+              },
+              "failures": 0,
+              "sent": 1
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_consider",
+          "params": {
+            "server": "1.1.1.1"
+          }
+        }
+      }
+    },
+    {
+      "name": "Python rounding: a 0.35 ms median is 0.3",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 3,
+            "replies": 3,
+            "failures": 0,
+            "rtts_ms": [
+              0.35,
+              0.35,
+              0.35
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 1,
+            "replies": 1,
+            "failures": 0,
+            "rtts_ms": [
+              0.3
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.dns.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 0.3
+                }
+              },
+              "failures": 0,
+              "sent": 3
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 0.3
+                }
+              },
+              "failures": 0,
+              "sent": 1
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "equal medians: the first measured wins",
+      "input": {
+        "bench": [
+          {
+            "server": "203.0.113.53",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              80,
+              80,
+              80,
+              80,
+              80
+            ]
+          },
+          {
+            "server": "1.1.1.1",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          },
+          {
+            "server": "8.8.8.8",
+            "sent": 5,
+            "replies": 5,
+            "failures": 0,
+            "rtts_ms": [
+              30,
+              30,
+              30,
+              30,
+              30
+            ]
+          }
+        ],
+        "in_use": [
+          "203.0.113.53"
+        ],
+        "labels": {
+          "1.1.1.1": "public",
+          "8.8.8.8": "public",
+          "9.9.9.9": "public",
+          "203.0.113.53": "in_use"
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.dns.slower",
+          "params": {
+            "server": "1.1.1.1",
+            "gap": 50
+          }
+        },
+        "details": [
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.in_use",
+                "params": {}
+              },
+              "server": "203.0.113.53",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 80
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "1.1.1.1",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          },
+          {
+            "key": "diag.dns.line",
+            "params": {
+              "label": {
+                "key": "diag.dns.role.public",
+                "params": {}
+              },
+              "server": "8.8.8.8",
+              "median": {
+                "key": "diag.common.ms",
+                "params": {
+                  "value": 30
+                }
+              },
+              "failures": 0,
+              "sent": 5
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.dns.advice_consider",
+          "params": {
+            "server": "1.1.1.1"
+          }
+        }
+      }
+    }
+  ]
+}

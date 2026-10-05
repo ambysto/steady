@@ -1,6 +1,8 @@
 # Phone & tablet version (iOS / Android) — preparatory analysis
 
-> Status: **research, not decided** (2026-10-04). Points marked ⚠️ must be verified with a prototype on real devices before committing.
+> Status: **research** (2026-10-04). Points marked ⚠️ must be verified with a prototype on real devices before committing.
+>
+> **Superseded in part:** the technology choice is settled by [ADR-0009](adr/0009-native-apple-and-android-apps.md) (native SwiftUI and Kotlin, not Capacitor/TypeScript) and the Apple app's structure by [ADR-0010](adr/0010-apple-app-structure.md). Sections 4 and 6 below describe the earlier Capacitor plan; the platform analysis in sections 1–3 and 5 still applies.
 
 ## 1. The user's problem
 

@@ -1,0 +1,72 @@
+# Ambysto Steady for iPhone, iPad and Mac
+
+One SwiftUI multiplatform app (ADR-0009). Layout, versions, signing and how texts and rules are shared with the Windows version: [ADR-0010](../docs/adr/0010-apple-app-structure.md). What iOS allows compared with Android and Windows: [docs/MOBILE.md](../docs/MOBILE.md).
+
+| Path | Content |
+|---|---|
+| `Steady.xcodeproj` | One app target `Steady`: iPhone, iPad, native Mac. Minimum iOS/iPadOS/macOS 26.0 |
+| `Steady/` | SwiftUI views. `Resources/*.xcstrings` are generated, do not edit them in Xcode. `AppIcon.icon` is the app icon (Icon Composer): a dark gray tile (#2B2B2E, like the Terminal app's icon) with the Windows icon's white Wi‑Fi arcs (`app/desktop.py` `draw_icon`) and a small "A" and "S" as one SVG layer; the system adds the shape and the glass. Shapes in that SVG are filled outlines, not strokes (the renderer lights open strokes as closed shapes and shows stray lines). A temporary icon until a designed one |
+| `SteadyKit/` | Swift package with everything testable: localization runtime, network path model, diagnosis rules |
+| `Config/Base.xcconfig` | Shared build settings; `Local.xcconfig` (not tracked) adds your team ID |
+
+Requirements: Xcode 27 or later on a Mac.
+
+## First-time setup
+
+1. Copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` and set `DEVELOPMENT_TEAM`. With a free personal team keep `STEADY_BUNDLE_ID_SUFFIX = .dev`, so the app is `com.ambysto.steady.dev` and the production ID stays free for the Ambysto team.
+2. Xcode > Settings > Accounts: sign in with the Apple ID of that team.
+3. Open `Steady.xcodeproj`, choose the `Steady` scheme and a destination (My Mac, a connected iPad...).
+
+On an iPad or iPhone, the first run also needs Developer Mode (Settings > Privacy & Security) and, with a personal team, trusting the developer profile (Settings > General > VPN & Device Management). Apps signed by a personal team expire after 7 days; run them again from Xcode.
+
+## Everyday commands
+
+```bash
+swift test --package-path apple/SteadyKit                 # rules and localization, no simulator needed
+python scripts/locales_to_xcstrings.py                     # after any change in app/locales/*.json
+xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
+```
+
+## On an iPhone or iPad from the command line
+
+After the first-time setup above (team in `Local.xcconfig`, Apple account signed in to Xcode, the device paired and in Developer Mode, a development certificate created in Xcode > Settings > Accounts > Manage Certificates), no Xcode window is needed:
+
+```bash
+xcrun devicectl list devices
+xcodebuild -project apple/Steady.xcodeproj -scheme Steady -destination 'id=<UDID>' -derivedDataPath build/device -allowProvisioningUpdates build
+xcrun devicectl device install app --device <UDID> build/device/Build/Products/Debug-iphoneos/Steady.app
+xcrun devicectl device process launch --device <UDID> --terminate-existing com.ambysto.steady.dev
+```
+
+- The first `codesign` asks for the Mac's login password to use the signing key; "Always Allow" stops it asking again.
+- The first launch fails until the device trusts the developer: Settings > General > VPN & Device Management > Apple Development > Trust. The app then asks for local network access; allow it so the router is measured.
+- With a free personal team the app stops opening after 7 days; build and install again.
+- To read the app's log on the Mac (one line per minute and target, no addresses), add `--console --environment-variables '{"OS_ACTIVITY_DT_MODE":"enable"}'` to the launch command. On a Mac build, use `/usr/bin/log show --info --predicate 'subsystem == "com.ambysto.steady"'` (in zsh a bare `log` is a shell builtin).
+
+## Texts
+
+Every user-visible string comes from `app/locales/*.json`. To add one: add the key to `en.json` and the other 8 catalogs, run `python scripts/locales_to_xcstrings.py`, then render it with `Localizer` (`text("ui.path.connected")`, or a `Message` with parameters). Pass strings to SwiftUI as values (`Text(text(...))`), never as literals, so Xcode does not extract or look up keys on its own.
+
+## Measurements
+
+While the Overview screen is open, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
+
+- iOS gives apps no continuous background time, so nothing is measured while the app is in the background.
+- Minutes are stored in SQLite (`Application Support/History/metrics.sqlite`, the folder excluded from backups, the `minute_stats` table of the Windows app, 30 days, excluded from backups; [ADR-0011](../docs/adr/0011-apple-measurement-history.md)), so check #5 keeps the last hour across launches. A partial minute is saved when measuring stops and merged if the app reopens within the same minute.
+- ICMP uses an unprivileged datagram socket **connected** to the target: the macOS App Sandbox refuses to read replies on an unconnected ICMP socket (`EPERM`) unless the app also asks for `network.server`.
+- Pinging the router is local network access: iOS and macOS ask the user once, with the `NSLocalNetworkUsageDescription` text generated from `ui.permission.local_network`. When it is declined the system refuses the send (`EHOSTUNREACH`/`EPERM`/`EACCES`): the router is left out of the live numbers and of the DNS check, not counted as lost, and the Overview says local network access is off.
+- When the route changes (connected or not, the preferred interface such as `en0` → `utun5` when a VPN starts, the router), the live numbers start afresh so they do not mix two routes. The hourly history and check #5 keep those minutes for now (issue #2).
+- The iOS Simulator does not report the router address, IPv4/IPv6 or DNS support of the path, so the router row is missing there; Internet pings and TCP probes work.
+
+## Diagnosis rules
+
+A rule is ported from `app/diagnostics.py` together with its vectors in `spec/diagnosis/`. The Swift tests (`DiagnosisVectorTests`) and `tests/test_diagnosis_vectors.py` run the same cases; a change to a rule changes the vectors and both implementations.
+
+| # | Check | Swift | Vectors | Inputs on Apple platforms |
+|---|---|---|---|---|
+| 5 | Ping quality | `PingQuality` | `ping.json` | `LiveMonitor` (ICMP + TCP while the app is open) |
+| 6 | DNS benchmark | `DNSBenchmark` | `dns.json` | `DNSCheck`: system DNS servers from `res_ninit` (the `CResolver` C target, libresolv), raw UDP queries as in `app/dnsprobe.py`; runs when connected and when the router changes, or from its refresh button |
+| 2 | Wi‑Fi signal | `WiFiSignal` | `signal.json` | Mac only: `WiFiReader` (CoreWLAN, works in the sandbox) every 5 s; RSSI, channel, PHY mode and transmit rate. The network name needs location permission and the receive rate is not available, so both show as unknown. iOS has no API for the signal |
+| 8 | VPN | `VPNCheck` | `vpn.json` | `VPNReader`, on every path change: tunnel interfaces (`utun`, `ipsec`, `ppp`, `tap`, `tun`) that have scoped network settings or that the path uses. The system keeps several `utun` interfaces of its own, so their mere presence means nothing. Apps cannot see other VPN configurations, so "installed but off" never shows |
+| 14 | Bufferbloat | `Bufferbloat` | `bufferbloat.json` | `BufferbloatTest`, on demand after a confirmation (moves up to ~200 MB): pings the router and 1.1.1.1 every 0.2 s for 4 s idle, then 10 s while downloading and 10 s while uploading over 4 connections to speed.cloudflare.com (25 MB requests, at most 100 MB per direction), dropping the first 2 s of each loaded phase, as `app/bufferbloat.py` does |

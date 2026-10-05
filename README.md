@@ -52,6 +52,8 @@ StableInternet/
 │   └── adr/              Architecture Decision Records
 ├── app/                  Python source code (backend)
 ├── web/                  UI (HTML/CSS/JS)
+├── apple/                iPhone, iPad and Mac app (SwiftUI), see apple/README.md
+├── spec/diagnosis/       Diagnosis test vectors shared by every platform
 ├── scripts/              Utility scripts (launcher, installation)
 ├── tests/                Tests
 └── data/                 Runtime data (not committed): settings, backup, metrics

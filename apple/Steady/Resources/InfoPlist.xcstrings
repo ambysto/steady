@@ -1,0 +1,76 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady"
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady misst Verzögerung und Paketverlust zum Router, um Wi‑Fi-Probleme von Internetproblemen zu unterscheiden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady measures the delay and packet loss to your router to tell Wi‑Fi problems apart from Internet problems."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady mide el retardo y la pérdida de paquetes hasta tu router para distinguir los problemas del Wi‑Fi de los de Internet."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady mesure le délai et la perte de paquets vers votre routeur pour distinguer les problèmes de Wi‑Fi des problèmes d'Internet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady は、Wi‑Fi の問題とインターネットの問題を見分けるために、ルーターまでの遅延とパケット損失を測定します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady는 Wi‑Fi 문제와 인터넷 문제를 구분하기 위해 라우터까지의 지연과 패킷 손실을 측정합니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Ambysto Steady mede o atraso e a perda de pacotes até o seu roteador para distinguir problemas de Wi‑Fi de problemas de Internet."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady đo độ trễ và tỉ lệ mất gói tới router để phân biệt lỗi Wi‑Fi với lỗi Internet."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambysto Steady 会测量到路由器的延迟和丢包，以区分 Wi‑Fi 问题和互联网问题。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

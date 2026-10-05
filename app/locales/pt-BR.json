@@ -636,5 +636,41 @@
 
   "ui.failover.disconnected": "Não conectada agora. Volte para desfazer a mudança.",
 
-  "failover.result.in_use": "{path} já é a conexão em uso; nada para trocar"
+  "failover.result.in_use": "{path} já é a conexão em uso; nada para trocar",
+
+  "ui.path.checking": "Verificando a conexão…",
+  "ui.path.connected": "Conectado",
+  "ui.path.disconnected": "Sem conexão",
+  "ui.path.requires_connection": "Ainda não conectado: o sistema pode conectar quando necessário",
+  "ui.path.connection": "Conexão",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "Cabeada (Ethernet)",
+  "ui.path.via.cellular": "Dados celulares",
+  "ui.path.via.other": "Outra rede",
+  "ui.path.ip": "Versões de IP",
+  "ui.path.none": "Nenhuma",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "Disponível",
+  "ui.path.unavailable": "Indisponível",
+  "ui.path.expensive": "Rede tarifada (dados celulares ou acesso pessoal)",
+  "ui.path.constrained": "O Modo de Dados Reduzidos está ativado: o sistema limita o tráfego em segundo plano",
+  "ui.path.reason.not_available": "Nenhuma rede disponível",
+  "ui.path.reason.cellular_denied": "Os dados celulares estão desativados para este app",
+  "ui.path.reason.wifi_denied": "O Wi‑Fi está desativado para este app",
+  "ui.path.reason.local_network_denied": "O acesso à rede local está desativado para este app",
+  "ui.path.reason.vpn_inactive": "A VPN necessária não está conectada",
+
+  "ui.live.measuring": "Medindo…",
+  "ui.live.no_reply": "Sem resposta",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "{loss:.1f}% perdido",
+  "ui.live.jitter": "jitter {value:.1f} ms",
+  "ui.live.tcp": "Conexão real (TCP)",
+  "ui.live.window_note": "Perda e jitter nas últimas 60 medições de cada destino. A medição só acontece com o app aberto.",
+  "ui.permission.local_network": "O Ambysto Steady mede o atraso e a perda de pacotes até o seu roteador para distinguir problemas de Wi‑Fi de problemas de Internet.",
+
+  "apple.diag.signal.advice": "Aproxime o roteador e o Mac, use 5 GHz, adicione um nó mesh ou ligue um cabo de rede.",
+  "apple.diag.ping.no_data": "Ainda não há medições suficientes (são necessárias ≥ 60 amostras na última hora)",
+  "apple.diag.ping.router_loss": "Perda de pacotes até o roteador: problema local (dispositivo ↔ roteador / Wi‑Fi)",
+  "apple.diag.bufferbloat.where_local": ", subindo até no roteador ⇒ a fila está no trecho dispositivo ↔ roteador (Wi‑Fi saturado ou roteador sobrecarregado)"
 }

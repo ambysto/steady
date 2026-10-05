@@ -636,5 +636,41 @@
 
   "ui.failover.disconnected": "現在は接続されていません。元に戻すと変更を取り消せます。",
 
-  "failover.result.in_use": "{path} はすでに使用中の接続です。切り替えるものはありません"
+  "failover.result.in_use": "{path} はすでに使用中の接続です。切り替えるものはありません",
+
+  "ui.path.checking": "接続を確認しています…",
+  "ui.path.connected": "接続済み",
+  "ui.path.disconnected": "接続なし",
+  "ui.path.requires_connection": "未接続: 必要に応じてシステムが接続します",
+  "ui.path.connection": "接続",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "有線 (Ethernet)",
+  "ui.path.via.cellular": "モバイルデータ通信",
+  "ui.path.via.other": "その他のネットワーク",
+  "ui.path.ip": "IP バージョン",
+  "ui.path.none": "なし",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "利用可能",
+  "ui.path.unavailable": "利用不可",
+  "ui.path.expensive": "従量制ネットワーク (モバイルデータ通信またはインターネット共有)",
+  "ui.path.constrained": "省データモードがオンです: システムがバックグラウンド通信を制限しています",
+  "ui.path.reason.not_available": "利用できるネットワークがありません",
+  "ui.path.reason.cellular_denied": "このアプリのモバイルデータ通信はオフになっています",
+  "ui.path.reason.wifi_denied": "このアプリの Wi‑Fi はオフになっています",
+  "ui.path.reason.local_network_denied": "このアプリのローカルネットワークへのアクセスはオフになっています",
+  "ui.path.reason.vpn_inactive": "必要な VPN が接続されていません",
+
+  "ui.live.measuring": "測定中…",
+  "ui.live.no_reply": "応答なし",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "損失 {loss:.1f}%",
+  "ui.live.jitter": "ジッター {value:.1f} ms",
+  "ui.live.tcp": "実際の接続 (TCP)",
+  "ui.live.window_note": "損失とジッターは各宛先の直近 60 回の測定値です。アプリを開いている間だけ測定します。",
+  "ui.permission.local_network": "Ambysto Steady は、Wi‑Fi の問題とインターネットの問題を見分けるために、ルーターまでの遅延とパケット損失を測定します。",
+
+  "apple.diag.signal.advice": "ルーターと Mac を近づける、5 GHz を使う、メッシュノードを追加する、または LAN ケーブルを接続してください。",
+  "apple.diag.ping.no_data": "測定データがまだ不足しています（直近 1 時間に 60 サンプル以上が必要です）",
+  "apple.diag.ping.router_loss": "ルーターへのパケット損失: ローカルの問題です（デバイス ↔ ルーター / Wi‑Fi）",
+  "apple.diag.bufferbloat.where_local": "。ルーターまでの遅延も上昇しているため、キューは デバイス ↔ ルーター間にあります（Wi‑Fi の飽和またはルーターの過負荷）"
 }

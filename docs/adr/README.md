@@ -13,3 +13,5 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0007](0007-measured-impact.md) | Measuring the impact of a change with before/after monitor data | Accepted |
 | [0008](0008-failover.md) | Failover to a backup path using interface metrics | Accepted |
 | [0009](0009-native-apple-and-android-apps.md) | Native apps: SwiftUI for Apple platforms, Kotlin for Android, sharing data rather than code | Accepted |
+| [0010](0010-apple-app-structure.md) | Apple app structure, generated String Catalog and shared diagnosis test vectors | Accepted |
+| [0011](0011-apple-measurement-history.md) | The Apple app keeps its measurement history in SQLite, in the Windows schema | Accepted |

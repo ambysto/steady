@@ -1,0 +1,2160 @@
+{
+  "rule": "ping",
+  "check": 5,
+  "reference": "app/diagnostics.py evaluate_ping",
+  "description": "Ping quality over one hour of monitor data (docs/DIAGNOSTICS.md #5). Rows are per-minute aggregates: target, sent, lost, optional jitter (ms). Targets starting with tcp_ or http_ are TCP/HTTP probes; 'router' is the gateway; anything else is an Internet ping target. Thresholds: >= 60 samples per ping target, >= 20 per probe.",
+  "cases": [
+    {
+      "name": "no data at all",
+      "input": {
+        "rows_1h": [],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.ping.no_data",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "too few samples: 59 pings, 19 probe rounds",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 59,
+            "lost": 0
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 19,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.ping.no_data",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "everything clean",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": [
+          {
+            "target": "router",
+            "sent": 300,
+            "lost": 0,
+            "jitter": 1.0
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": {
+                "key": "diag.ping.recent",
+                "params": {
+                  "loss": 0.0
+                }
+              }
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "router loses 2% (warn)",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 72,
+            "jitter": 2.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 2.0,
+              "lost": 72,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 2.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "router loses 5% (bad)",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 180,
+            "jitter": 2.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": [
+          {
+            "target": "router",
+            "sent": 300,
+            "lost": 30
+          }
+        ]
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 5.0,
+              "lost": 180,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 2.0
+                }
+              },
+              "recent": {
+                "key": "diag.ping.recent",
+                "params": {
+                  "loss": 10.0
+                }
+              }
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "Internet ping loses 5% but probes are clean: ICMP rate-limited",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 180,
+            "jitter": 3.0
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.0
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.ping.icmp_limited",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 5.0,
+              "lost": 180,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_icmp_limited",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "Internet ping and the best probe lose 4%: ISP/WAN",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 180
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 150
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 15
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 20
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.ping.wan_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 5.0,
+              "lost": 180,
+              "sent": 3600,
+              "jitter": "",
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 4.166666666666667,
+              "lost": 150,
+              "sent": 3600,
+              "jitter": "",
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 4.166666666666667,
+              "lost": 15,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 5.555555555555555,
+              "lost": 20,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_wan",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "Internet ping loses 2%, no probe data: ping only",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 72
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.wan_loss_ping_only",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 2.0,
+              "lost": 72,
+              "sent": 3600,
+              "jitter": "",
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": "",
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_wan",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "high jitter on the Internet only, no probes",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 45.0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.wan_loss_ping_only",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 45.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_wan",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "high jitter on the router",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 35.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 35.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "one probe target blocks port 443, another is clean",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 360
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 100.0,
+              "lost": 360,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "probes only, ping blocked entirely (fewer than 60 pings)",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 10,
+            "lost": 0
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "rows of one target summed across minutes",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 60,
+            "lost": 1,
+            "jitter": 1.0
+          },
+          {
+            "target": "router",
+            "sent": 60,
+            "lost": 2,
+            "jitter": 3.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 120,
+            "lost": 0,
+            "jitter": 2.0
+          }
+        ],
+        "rows_5m": [
+          {
+            "target": "router",
+            "sent": 60,
+            "lost": 2
+          }
+        ]
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 2.5,
+              "lost": 3,
+              "sent": 120,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 2.0
+                }
+              },
+              "recent": {
+                "key": "diag.ping.recent",
+                "params": {
+                  "loss": 3.3333333333333335
+                }
+              }
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 120,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 2.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: router loses exactly 1% (ok)",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 36,
+            "jitter": 1.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 1.0,
+              "lost": 36,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: router loses exactly 3% (warn, not bad)",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 108,
+            "jitter": 1.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 3.0,
+              "lost": 108,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: router loses 3.5% (bad)",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 126,
+            "jitter": 1.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.ping.router_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 3.5,
+              "lost": 126,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_router",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: jitter exactly 30 ms is not high",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 30.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "tcp_google",
+            "sent": 360,
+            "lost": 0
+          },
+          {
+            "target": "http_cloudflare",
+            "sent": 360,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 30.0
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "http_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 360
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: best probe loses exactly 1% still counts as working",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 180
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 180
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 400,
+            "lost": 4
+          },
+          {
+            "target": "tcp_google",
+            "sent": 400,
+            "lost": 40
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.ping.icmp_limited",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 5.0,
+              "lost": 180,
+              "sent": 3600,
+              "jitter": "",
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 5.0,
+              "lost": 180,
+              "sent": 3600,
+              "jitter": "",
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 1.0,
+              "lost": 4,
+              "sent": 400
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 10.0,
+              "lost": 40,
+              "sent": 400
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_icmp_limited",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: exactly 60 pings and 20 probe rounds are enough",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 60,
+            "lost": 0
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 20,
+            "lost": 0
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 60,
+              "jitter": "",
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 20
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "jitter averaging exactly 30 ms (needs an exact sum, as statistics.fmean) is not high",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 36.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 22.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 29.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 36.3
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 38.9
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 21.1
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.4
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 21.5
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 25.8
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 22.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 32.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 30.0
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 31.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 33.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 27.4
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 22.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 30.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 28.4
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 37.6
+          },
+          {
+            "target": "cloudflare",
+            "sent": 60,
+            "lost": 0,
+            "jitter": 32.6
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.ping.ok",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 1320,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 30.0
+                }
+              },
+              "recent": ""
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "probes lose 1.5% while ping is clean",
+      "input": {
+        "rows_1h": [
+          {
+            "target": "router",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 1.2
+          },
+          {
+            "target": "cloudflare",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 3.4
+          },
+          {
+            "target": "google",
+            "sent": 3600,
+            "lost": 0,
+            "jitter": 4.1
+          },
+          {
+            "target": "tcp_cloudflare",
+            "sent": 400,
+            "lost": 6
+          },
+          {
+            "target": "tcp_google",
+            "sent": 400,
+            "lost": 8
+          }
+        ],
+        "rows_5m": []
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.ping.wan_loss",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "router",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 1.2
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "cloudflare",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 3.4
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.line",
+            "params": {
+              "target": "google",
+              "loss": 0.0,
+              "lost": 0,
+              "sent": 3600,
+              "jitter": {
+                "key": "diag.ping.jitter",
+                "params": {
+                  "jitter": 4.1
+                }
+              },
+              "recent": ""
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_cloudflare",
+              "loss": 1.5,
+              "lost": 6,
+              "sent": 400
+            }
+          },
+          {
+            "key": "diag.ping.probe_line",
+            "params": {
+              "target": "tcp_google",
+              "loss": 2.0,
+              "lost": 8,
+              "sent": 400
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.ping.advice_wan",
+          "params": {}
+        }
+      }
+    }
+  ]
+}

@@ -636,5 +636,41 @@
 
   "ui.failover.disconnected": "当前未连接。切换回去即可撤销更改。",
 
-  "failover.result.in_use": "{path} 已是当前使用的连接，无需切换"
+  "failover.result.in_use": "{path} 已是当前使用的连接，无需切换",
+
+  "ui.path.checking": "正在检查连接…",
+  "ui.path.connected": "已连接",
+  "ui.path.disconnected": "无连接",
+  "ui.path.requires_connection": "尚未连接：系统可按需连接",
+  "ui.path.connection": "连接",
+  "ui.path.via.wifi": "Wi‑Fi",
+  "ui.path.via.wired": "有线（以太网）",
+  "ui.path.via.cellular": "蜂窝数据",
+  "ui.path.via.other": "其他网络",
+  "ui.path.ip": "IP 版本",
+  "ui.path.none": "无",
+  "ui.path.dns": "DNS",
+  "ui.path.available": "可用",
+  "ui.path.unavailable": "不可用",
+  "ui.path.expensive": "按流量计费的网络（蜂窝数据或个人热点）",
+  "ui.path.constrained": "低数据模式已开启：系统会限制后台流量",
+  "ui.path.reason.not_available": "没有可用的网络",
+  "ui.path.reason.cellular_denied": "此应用的蜂窝数据已关闭",
+  "ui.path.reason.wifi_denied": "此应用的 Wi‑Fi 已关闭",
+  "ui.path.reason.local_network_denied": "此应用的本地网络访问已关闭",
+  "ui.path.reason.vpn_inactive": "所需的 VPN 未连接",
+
+  "ui.live.measuring": "正在测量…",
+  "ui.live.no_reply": "无响应",
+  "ui.live.rtt": "{value:.0f} ms",
+  "ui.live.loss": "丢失 {loss:.1f}%",
+  "ui.live.jitter": "抖动 {value:.1f} ms",
+  "ui.live.tcp": "真实连接（TCP）",
+  "ui.live.window_note": "丢包和抖动按每个目标最近 60 次测量计算。仅在应用打开时测量。",
+  "ui.permission.local_network": "Ambysto Steady 会测量到路由器的延迟和丢包，以区分 Wi‑Fi 问题和互联网问题。",
+
+  "apple.diag.signal.advice": "让路由器和 Mac 靠近一些，改用 5 GHz，增加 Mesh 节点，或接上网线。",
+  "apple.diag.ping.no_data": "测量数据尚不足（最近 1 小时内至少需要 60 个样本）",
+  "apple.diag.ping.router_loss": "到路由器的丢包：本地问题（设备 ↔ 路由器 / Wi‑Fi）",
+  "apple.diag.bufferbloat.where_local": "，到路由器的延迟也在上升 ⇒ 队列位于设备 ↔ 路由器这一跳（Wi‑Fi 饱和或路由器过载）"
 }
