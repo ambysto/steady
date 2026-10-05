@@ -11,6 +11,9 @@ struct OverviewView: View {
     @State private var bufferbloat: CheckResult?
     @State private var bufferbloatStage: BufferbloatTest.Stage?
     @State private var confirmingBufferbloat = false
+    #if os(macOS)
+    @State private var signal: CheckResult?
+    #endif
     private let text = Localizer()
 
     var body: some View {
@@ -28,6 +31,13 @@ struct OverviewView: View {
             } footer: {
                 Text(text("ui.live.window_note"))
             }
+            #if os(macOS)
+            if let signal {
+                Section {
+                    CheckResultView(result: signal, text: text)
+                }
+            }
+            #endif
             Section {
                 CheckResultView(result: monitor.pingQuality, text: text)
             }
@@ -83,6 +93,15 @@ struct OverviewView: View {
         .task {
             await monitor.run()
         }
+        #if os(macOS)
+        .task {
+            // Check #2 on the Mac only (CoreWLAN); re-read every 5 s like the Windows monitor.
+            while !Task.isCancelled {
+                signal = WiFiSignal.evaluate(WiFiReader.current())
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
+        #endif
         .task(id: dnsTrigger) {
             guard dnsTrigger != nil else { return }
             await runDNS()

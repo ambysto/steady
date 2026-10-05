@@ -8,7 +8,7 @@ import math
 import unittest
 from pathlib import Path
 
-from app import bufferbloat, diagnostics, dnsprobe
+from app import bufferbloat, diagnostics, dnsprobe, winutil
 
 SPEC = Path(__file__).resolve().parent.parent / "spec" / "diagnosis"
 
@@ -27,6 +27,8 @@ RULES = {
     "dns": lambda data: diagnostics.evaluate_dns([dnsprobe.ServerBenchmark(**b) for b in data["bench"]],
                                                  data["in_use"], data["labels"]),
     "bufferbloat": lambda data: diagnostics.evaluate_bufferbloat(_measurement(data)),
+    "signal": lambda data: diagnostics.evaluate_signal(
+        None if data["wifi"] is None else winutil.WifiState(interface="Wi-Fi", bssid="", **data["wifi"])),
 }
 COMPARED = ("status", "summary", "details", "advice")
 

@@ -51,10 +51,22 @@ struct DiagnosisVectorTests {
     static let dnsCases = cases("dns.json", as: DNSInput.self)
     static let bufferbloatCases = cases("bufferbloat.json", as: Bufferbloat.Measurement.self)
 
+    struct SignalInput: Decodable, Sendable {
+        var wifi: WiFiSignal.State?
+    }
+
+    static let signalCases = cases("signal.json", as: SignalInput.self)
+
     @Test func vectorsAreLoaded() {
         #expect(Self.pingCases.count >= 10)
         #expect(Self.dnsCases.count >= 10)
         #expect(Self.bufferbloatCases.count >= 10)
+        #expect(Self.signalCases.count >= 8)
+    }
+
+    @Test(arguments: signalCases)
+    func signal(_ vector: VectorFile<SignalInput>.Case) {
+        check(WiFiSignal.evaluate(vector.input.wifi), vector.expected)
     }
 
     @Test(arguments: bufferbloatCases)

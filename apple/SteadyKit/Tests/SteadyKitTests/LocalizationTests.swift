@@ -58,7 +58,8 @@ struct LocalizationTests {
                                  "ui.diag.bufferbloat_run", "ui.diag.bufferbloat_confirm", "ui.sheet.cancel",
                                  "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload"]
         used.formUnion([CheckStatus.ok, .info, .warn, .bad].map { "ui.status." + $0.rawValue })
-        for check in [PingQuality.evaluate(hour: [], recent: []), DNSBenchmark.evaluate([], inUse: [], roles: [:])] {
+        for check in [PingQuality.evaluate(hour: [], recent: []), DNSBenchmark.evaluate([], inUse: [], roles: [:]),
+                      WiFiSignal.evaluate(nil)] {
             used.formUnion([check.title.key, check.summary.key])
         }
         for path in paths {
@@ -98,5 +99,10 @@ struct AddressFormatTests {
         let linkLocal = try #require(IPv6Address("fe80::1"))
         let scoped = try #require(IPv6Address(linkLocal.rawValue, interface))
         #expect(NetworkPath.address(.ipv6(scoped)) == "fe80::1%\(interface.name)")
+        // As the kernel hands it over: interface index 11 embedded in bytes 2–3.
+        var embedded = linkLocal.rawValue
+        embedded[3] = 0x0B
+        let kernel = try #require(IPv6Address(embedded, interface))
+        #expect(NetworkPath.address(.ipv6(kernel)) == "fe80::1%\(interface.name)")
     }
 }

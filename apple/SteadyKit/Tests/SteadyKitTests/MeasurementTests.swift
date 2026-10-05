@@ -160,3 +160,24 @@ struct DNSProbeTests {
         #expect(!DNSBenchmark.isUsable("not an address"))
     }
 }
+
+struct WiFiSignalTests {
+    @Test func qualityFollowsWindowsMapping() {
+        #expect(WiFiSignal.State.quality(rssi: -50) == 100)
+        #expect(WiFiSignal.State.quality(rssi: -75) == 50)
+        #expect(WiFiSignal.State.quality(rssi: -110) == 0)
+    }
+
+    @Test func unreadableValuesRenderAsUnknown() {
+        let mac = WiFiSignal.State(state: "connected", channel: 40, radioType: "802.11ax", signal: 88, rssi: -56, txMbps: 720)
+        let result = WiFiSignal.evaluate(mac)
+        #expect(result.status == .ok)
+        guard case .message(let network) = result.details[0], case .message(let rates) = result.details[2] else {
+            Issue.record("unexpected details \(result.details)")
+            return
+        }
+        #expect(network.params["ssid"] == .message(Message("diag.common.unknown")))
+        #expect(rates.params["rx"] == .message(Message("diag.common.unknown")))
+        #expect(rates.params["tx"] == .number(720))
+    }
+}

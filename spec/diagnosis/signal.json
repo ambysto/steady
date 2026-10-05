@@ -1,0 +1,384 @@
+{
+  "rule": "signal",
+  "check": 2,
+  "reference": "app/diagnostics.py evaluate_signal",
+  "description": "Wi-Fi signal (docs/DIAGNOSTICS.md #2). wifi: null when there is no Wi-Fi card, else the interface state: state, ssid, channel, radio_type, signal (percent), rssi (dBm), rx_mbps, tx_mbps. Thresholds: RSSI >= -60 ok, -61..-70 warn, < -70 bad.",
+  "cases": [
+    {
+      "name": "no Wi-Fi card",
+      "input": {
+        "wifi": null
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.common.no_wifi_card",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "Wi-Fi not connected",
+      "input": {
+        "wifi": {
+          "state": "disconnected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": null,
+          "rssi": null,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.signal.not_connected",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "connected but no RSSI reported",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": null,
+          "rssi": null,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.signal.not_connected",
+          "params": {}
+        },
+        "details": [],
+        "advice": ""
+      }
+    },
+    {
+      "name": "strong signal",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": 100,
+          "rssi": -45,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.signal.good",
+          "params": {
+            "rssi": -45
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "HomeNet",
+              "channel": 40,
+              "radio": "802.11ax"
+            }
+          },
+          "RSSI -45 dBm (100%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 720,
+              "tx": 720
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: -60 dBm is good",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": 80,
+          "rssi": -60,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.signal.good",
+          "params": {
+            "rssi": -60
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "HomeNet",
+              "channel": 40,
+              "radio": "802.11ax"
+            }
+          },
+          "RSSI -60 dBm (80%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 720,
+              "tx": 720
+            }
+          }
+        ],
+        "advice": ""
+      }
+    },
+    {
+      "name": "boundary: -61 dBm is fair",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": 78,
+          "rssi": -61,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.signal.fair",
+          "params": {
+            "rssi": -61
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "HomeNet",
+              "channel": 40,
+              "radio": "802.11ax"
+            }
+          },
+          "RSSI -61 dBm (78%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 720,
+              "tx": 720
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.signal.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: -70 dBm is still fair",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": 60,
+          "rssi": -70,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "warn",
+        "summary": {
+          "key": "diag.signal.fair",
+          "params": {
+            "rssi": -70
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "HomeNet",
+              "channel": 40,
+              "radio": "802.11ax"
+            }
+          },
+          "RSSI -70 dBm (60%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 720,
+              "tx": 720
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.signal.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "boundary: -71 dBm is weak",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": 58,
+          "rssi": -71,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.signal.weak",
+          "params": {
+            "rssi": -71
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "HomeNet",
+              "channel": 40,
+              "radio": "802.11ax"
+            }
+          },
+          "RSSI -71 dBm (58%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 720,
+              "tx": 720
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.signal.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "very weak signal on 2.4 GHz",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "HomeNet",
+          "channel": 6,
+          "radio_type": "802.11n",
+          "signal": 32,
+          "rssi": -84,
+          "rx_mbps": 26,
+          "tx_mbps": 13
+        }
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.signal.weak",
+          "params": {
+            "rssi": -84
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "HomeNet",
+              "channel": 6,
+              "radio": "802.11n"
+            }
+          },
+          "RSSI -84 dBm (32%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 26,
+              "tx": 13
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.signal.advice",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "hidden network name",
+      "input": {
+        "wifi": {
+          "state": "connected",
+          "ssid": "",
+          "channel": 40,
+          "radio_type": "802.11ax",
+          "signal": 84,
+          "rssi": -58,
+          "rx_mbps": 720,
+          "tx_mbps": 720
+        }
+      },
+      "expected": {
+        "status": "ok",
+        "summary": {
+          "key": "diag.signal.good",
+          "params": {
+            "rssi": -58
+          }
+        },
+        "details": [
+          {
+            "key": "diag.signal.network",
+            "params": {
+              "ssid": "",
+              "channel": 40,
+              "radio": "802.11ax"
+            }
+          },
+          "RSSI -58 dBm (84%)",
+          {
+            "key": "diag.signal.rates",
+            "params": {
+              "rx": 720,
+              "tx": 720
+            }
+          }
+        ],
+        "advice": ""
+      }
+    }
+  ]
+}

@@ -93,7 +93,14 @@ extension NetworkPath {
         case .ipv4(let address):
             return numeric(address.rawValue, family: AF_INET) ?? "\(address)"
         case .ipv6(let address):
-            let text = numeric(address.rawValue, family: AF_INET6) ?? "\(address)".components(separatedBy: "%")[0]
+            var bytes = address.rawValue
+            if bytes.count == 16, bytes[0] == 0xFE, bytes[1] & 0xC0 == 0x80 {
+                // fe80::/10: the kernel embeds the interface index in bytes 2–3 ("fe80:b::1");
+                // those bits are zero on the wire, and the scope is shown as "%en0" instead.
+                bytes[2] = 0
+                bytes[3] = 0
+            }
+            let text = numeric(bytes, family: AF_INET6) ?? "\(address)".components(separatedBy: "%")[0]
             return address.interface.map { "\(text)%\($0.name)" } ?? text
         case .name(let name, _):
             return name
