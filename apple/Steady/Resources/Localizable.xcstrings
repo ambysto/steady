@@ -425,6 +425,65 @@
         }
       }
     },
+    "apple.diag.ping.router_jitter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instabile Latenz zum Router (Jitter über 30 ms): ein lokales Problem (Gerät ↔ Router / Wi‑Fi)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unstable latency to the router (jitter above 30 ms): a local problem (device ↔ router / Wi‑Fi)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latencia inestable hacia el router (jitter por encima de 30 ms): un problema local (dispositivo ↔ router / Wi‑Fi)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latence instable vers le routeur (gigue au-dessus de 30 ms) : problème local (appareil ↔ routeur / Wi‑Fi)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーターへの遅延が不安定です（ジッター 30 ms 超）: ローカルの問題です（デバイス ↔ ルーター / Wi‑Fi）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라우터까지 지연이 불안정함 (지터 30 ms 초과): 로컬 문제 (기기 ↔ 라우터 / Wi‑Fi)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latência instável até o roteador (jitter acima de 30 ms): problema local (dispositivo ↔ roteador / Wi‑Fi)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Độ trễ tới router không ổn định (jitter trên 30 ms): lỗi nội bộ (thiết bị ↔ router / Wi‑Fi)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到路由器的延迟不稳定（抖动超过 30 ms）：本地问题（设备 ↔ 路由器 / Wi‑Fi）"
+          }
+        }
+      }
+    },
     "apple.diag.ping.router_loss" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9003,6 +9062,65 @@
         }
       }
     },
+    "diag.ping.icmp_jitter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pings ins Internet haben eine schwankende Latenz, aber TCP/HTTP-Verbindungen sind in Ordnung: ICMP wird nachrangig behandelt, das ist kein Ausfall"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pings to the Internet have unstable latency but TCP/HTTP connections are fine: ICMP is deprioritized, this is not an outage"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los pings a Internet tienen una latencia inestable pero las conexiones TCP/HTTP van bien: ICMP tiene baja prioridad, no es una caída"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les pings vers Internet ont une latence instable mais les connexions TCP/HTTP sont correctes : l'ICMP est traité en basse priorité, ce n'est pas une panne"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インターネットへの ping の遅延は不安定ですが、TCP/HTTP 接続は正常です。ICMP の優先度が低く扱われており、障害ではありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인터넷으로의 ping은 지연이 불안정하지만 TCP/HTTP 연결은 정상입니다: ICMP가 낮은 우선순위로 처리된 것이며 장애가 아닙니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os pings para a Internet têm latência instável, mas as conexões TCP/HTTP estão normais: o ICMP tem baixa prioridade, não é uma queda"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ping ra Internet có độ trễ không ổn định nhưng kết nối TCP/HTTP ổn: ICMP bị xếp ưu tiên thấp, không phải mất mạng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到互联网的 ping 延迟不稳定，但 TCP/HTTP 连接正常：ICMP 被降低优先级，并非断网"
+          }
+        }
+      }
+    },
     "diag.ping.icmp_limited" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9649,6 +9767,65 @@
         }
       }
     },
+    "diag.ping.router_jitter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instabile Latenz zum Router (Jitter über 30 ms): ein lokales Problem (PC ↔ Router / Wi‑Fi)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unstable latency to the router (jitter above 30 ms): a local problem (PC ↔ router / Wi‑Fi)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latencia inestable hacia el router (jitter por encima de 30 ms): un problema local (PC ↔ router / Wi‑Fi)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latence instable vers le routeur (gigue au-dessus de 30 ms) : problème local (PC ↔ routeur / Wi‑Fi)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーターへの遅延が不安定です（ジッター 30 ms 超）: ローカルの問題です（PC ↔ ルーター / Wi‑Fi）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라우터까지 지연이 불안정함 (지터 30 ms 초과): 로컬 문제 (PC ↔ 라우터 / Wi‑Fi)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latência instável até o roteador (jitter acima de 30 ms): problema local (PC ↔ roteador / Wi‑Fi)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Độ trễ tới router không ổn định (jitter trên 30 ms): lỗi nội bộ (PC ↔ router / Wi‑Fi)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到路由器的延迟不稳定（抖动超过 30 ms）：本地问题（电脑 ↔ 路由器 / Wi‑Fi）"
+          }
+        }
+      }
+    },
     "diag.ping.router_loss" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9763,6 +9940,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ping 质量"
+          }
+        }
+      }
+    },
+    "diag.ping.wan_jitter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Router ist in Ordnung, aber die Latenz ins Internet schwankt (nur Ping, noch keine TCP/HTTP-Daten): ein Problem beim Provider/WAN oder ICMP wird nachrangig behandelt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The router is fine but latency to the Internet is unstable (ping only, no TCP/HTTP data yet): an ISP/WAN problem, or ICMP is deprioritized"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El router funciona bien pero la latencia hacia Internet es inestable (solo ping, aún sin datos TCP/HTTP): un problema del ISP/WAN, o ICMP tiene baja prioridad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le routeur fonctionne mais la latence vers Internet est instable (ping uniquement, pas encore de données TCP/HTTP) : problème côté FAI/WAN, ou ICMP traité en basse priorité"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーターは正常ですが、インターネットへの遅延が不安定です（ping のみで TCP/HTTP のデータはまだありません）: ISP/WAN の問題か、ICMP の優先度が低く扱われています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라우터는 정상이지만 인터넷까지 지연이 불안정합니다 (ping만 측정, TCP/HTTP 데이터는 아직 없음): ISP/WAN 문제이거나 ICMP 우선순위가 낮게 처리됨"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O roteador está bem, mas a latência até a Internet está instável (apenas ping, ainda sem dados de TCP/HTTP): problema no provedor/WAN, ou o ICMP tem baixa prioridade"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Router tốt nhưng độ trễ ra Internet không ổn định (chỉ có số đo ping, chưa có TCP/HTTP): lỗi phía ISP/WAN, hoặc ICMP bị xếp ưu tiên thấp"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路由器正常，但到互联网的延迟不稳定（仅有 ping 数据，暂无 TCP/HTTP 数据）：ISP/WAN 问题，或 ICMP 被降低优先级"
           }
         }
       }

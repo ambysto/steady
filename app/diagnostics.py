@@ -345,9 +345,12 @@ def evaluate_ping(rows_1h: list[dict], rows_5m: list[dict], min_sent: int = 60,
         return CheckResult(**base, status=INFO, summary=msg("diag.ping.no_data"), details=note)
     recent = _aggregate(rows_5m)
     statuses: dict[str, str] = {}
+    lossy: set[str] = set()   # targets whose loss alone warns; the others warn for jitter only
     details: list[Message] = []
     for target, a in sorted(icmp_hour.items(), key=lambda kv: (kv[0] != "router", kv[0])):
         st = _loss_status(a["loss"])
+        if st in (WARN, BAD):
+            lossy.add(target)
         if a["jitter"] is not None and a["jitter"] > 30:
             st = worst([st, WARN])
         statuses[target] = st
@@ -373,14 +376,16 @@ def evaluate_ping(rows_1h: list[dict], rows_5m: list[dict], min_sent: int = 60,
                 statuses[t] = INFO
     overall = worst(list(statuses.values()) + ([_loss_status(probe_best)] if probe_best is not None else []))
 
+    # Unstable latency without loss is said as such, not as packet loss (SIC-66).
+    internet_lossy = any(t != "router" for t in lossy)
     if router in (WARN, BAD):
-        summary = msg("diag.ping.router_loss")
+        summary = msg("diag.ping.router_loss" if "router" in lossy else "diag.ping.router_jitter")
     elif icmp_limited:
-        summary = msg("diag.ping.icmp_limited")
+        summary = msg("diag.ping.icmp_limited" if internet_lossy else "diag.ping.icmp_jitter")
     elif probe_best is not None and probe_best > 1.0:
         summary = msg("diag.ping.wan_loss")
     elif icmp_internet in (WARN, BAD):
-        summary = msg("diag.ping.wan_loss_ping_only")
+        summary = msg("diag.ping.wan_loss_ping_only" if internet_lossy else "diag.ping.wan_jitter")
     else:
         summary = msg("diag.ping.ok")
     advice: Message = ""

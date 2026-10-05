@@ -140,6 +140,7 @@ public enum MessageCatalog {
         "diag.physical_link.bad_minutes",
         "diag.physical_link.ok",
         "diag.ping.no_data",
+        "diag.ping.router_jitter",
         "diag.ping.router_loss",
         "diag.signal.advice",
     ]
