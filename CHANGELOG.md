@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-06
+
+This is the first section of this file: it lists the project's work from the start, including what 0.1.0 shipped. New since 0.1.0 on Windows: the desktop window uses the native frame (Snap Layouts, resizing), a new app icon, a watchdog that stays out of the way when another connection carries the traffic, safer failover, and a code signing and privacy policy. The Apple app lives in `apple/` and is not part of this download.
+
 ### Added
 - **Tests run on every pull request and every push to `main`** (SIC-81, `.github/workflows/test.yml`): the Python suite on `windows-latest`, the same command as the release workflow's test step, with no path filter and with older runs of the same pull request cancelled. Until now the suite ran only when a version tag was pushed, which let two Windows-only bugs sit unnoticed (SIC-78, SIC-79). The check is named **Python tests (Windows)**; once it has run, it is made a required check for merging into `main`. No macOS or Swift job: the Swift tests stay a local step on the Mac.
 - **App Store listing** (SIC-76): `apple/AppStore/`.
