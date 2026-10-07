@@ -22,7 +22,10 @@ from . import USER_AGENT
 DOWN_URL = "https://speed.cloudflare.com/__down?bytes=25000000"
 UP_URL = "https://speed.cloudflare.com/__up"
 RAMP_S = 2.0          # samples taken while the line is still picking up speed are dropped
-MAX_BYTES = 100_000_000
+PING_TIMEOUT_MS = 900  # a ping lost under load waited at least this long
+# A load phase runs for LOAD_S; MAX_BYTES only stops it on a very fast line, to bound the data used.
+# (It was 100 MB until 2026-10-07: every phase then read 80 Mbps on a line that uploads ~230.)
+MAX_BYTES = 1_000_000_000
 LOAD_S = 10.0
 # The most a load phase can report: it stops at MAX_BYTES, so a faster line reads as this.
 LOAD_CEILING_MBPS = MAX_BYTES * 8 / LOAD_S / 1e6
@@ -38,6 +41,9 @@ class Phase:
     rtts: dict[str, list[float | None]] = field(default_factory=dict)   # target label -> samples
     mbps: float | None = None
     error: str = ""
+    capped: bool = False                        # the load stopped at its byte limit: the line may be faster
+    refused: int | None = None                  # HTTP status when the test server refused the load
+    retry_after_s: float | None = None          # how long the server asked us to wait, when it said
 
 
 @dataclass
@@ -48,6 +54,22 @@ class Measurement:
 
 
 # --- the load generators ---------------------------------------------------------------------
+
+class ServerRefused(OSError):
+    """The test server refused the load (HTTP 429/403): a limit on its side, not a property of the line.
+    speed.cloudflare.com does this per address after a few runs and says when to come back."""
+
+    def __init__(self, status: int, retry_after_s: float | None) -> None:
+        super().__init__(f"HTTP {status}")
+        self.status, self.retry_after_s = status, retry_after_s
+
+
+def _retry_after(value: str | None) -> float | None:
+    try:
+        return max(0.0, float(value)) if value else None
+    except ValueError:   # an HTTP date: rare, and a rough "later" is enough
+        return None
+
 
 def _connect(url: str, timeout: float) -> tuple[http.client.HTTPConnection, str]:
     parts = urlsplit(url)
@@ -62,14 +84,18 @@ def http_download(url: str, seconds: float, stop: threading.Event, connections: 
     total, lock = [0], threading.Lock()
     deadline = time.monotonic() + seconds
     errors: list[str] = []
+    refused: list[ServerRefused] = []
 
     def worker() -> None:
-        while not stop.is_set() and time.monotonic() < deadline and total[0] < max_bytes:
+        while not stop.is_set() and time.monotonic() < deadline and total[0] < max_bytes and not refused:
             conn = None
             try:
                 conn, path = _connect(url, 5)
                 conn.request("GET", path, headers={"User-Agent": USER_AGENT, "Connection": "close"})
                 resp = conn.getresponse()
+                if resp.status in (403, 429):
+                    refused.append(ServerRefused(resp.status, _retry_after(resp.getheader("Retry-After"))))
+                    return
                 if resp.status != 200:
                     errors.append(f"HTTP {resp.status}")
                     return
@@ -89,6 +115,8 @@ def http_download(url: str, seconds: float, stop: threading.Event, connections: 
     threads = [threading.Thread(target=worker, daemon=True) for _ in range(connections)]
     [t.start() for t in threads]
     [t.join(seconds + 8) for t in threads]
+    if refused:   # even after some data: the load was not kept up, so the phase measured a part-time load
+        raise refused[0]
     if total[0] == 0 and errors:
         raise OSError(errors[0])
     return total[0]
@@ -147,12 +175,16 @@ def http_upload(url: str, seconds: float, stop: threading.Event, connections: in
 # --- measuring ---------------------------------------------------------------------------------
 
 def _sample(ping: Ping, targets: dict[str, str], seconds: float, interval: float,
-            sleep: Callable[[float], None], clock: Callable[[], float]) -> dict[str, list[float | None]]:
-    """Ping every target once per `interval` for `seconds` (targets pinged in parallel)."""
+            sleep: Callable[[float], None], clock: Callable[[], float],
+            starts: list[float] | None = None) -> dict[str, list[float | None]]:
+    """Ping every target once per `interval` for `seconds` (targets pinged in parallel). `starts`, if
+    given, receives the clock time each round began: under load a round can take most of a second."""
     out: dict[str, list[float | None]] = {label: [] for label in targets}
     end = clock() + seconds
     while clock() < end:
         started = clock()
+        if starts is not None:
+            starts.append(started)
         threads = []
         results: dict[str, float | None] = {}
 
@@ -174,9 +206,10 @@ def _sample(ping: Ping, targets: dict[str, str], seconds: float, interval: float
 
 
 def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: Load, *, idle_s: float = 4,
-            load_s: float = LOAD_S, interval: float = 0.2, ramp_s: float = RAMP_S,
+            load_s: float = LOAD_S, interval: float = 0.2, ramp_s: float = RAMP_S, max_bytes: int = MAX_BYTES,
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic) -> Measurement:
-    """download=None skips the download phase (a measured tweak only needs the upload, ADR-0016)."""
+    """download=None skips the download phase (a measured tweak only needs the upload, ADR-0016).
+    `max_bytes` is the byte limit the loads stop at; a phase that reaches it is marked `capped`."""
     idle = Phase("idle", _sample(ping, targets, idle_s, interval, sleep, clock))
 
     def loaded(name: str, load: Load) -> Phase:
@@ -187,20 +220,27 @@ def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: 
         def run() -> None:
             try:
                 moved[0] = load(load_s, stop)
+            except ServerRefused as exc:
+                failure.append(f"{type(exc).__name__}: {exc}")
+                phase.refused, phase.retry_after_s = exc.status, exc.retry_after_s
             except Exception as exc:
                 failure.append(f"{type(exc).__name__}: {exc}")
 
         thread = threading.Thread(target=run, daemon=True)
         started = clock()
         thread.start()
-        samples = _sample(ping, targets, load_s, interval, sleep, clock)
+        starts: list[float] = []
+        samples = _sample(ping, targets, load_s, interval, sleep, clock, starts)
         stop.set()
         thread.join(10)
         elapsed = max(clock() - started, 1e-6)
-        drop = int(ramp_s / interval)
-        phase.rtts = {label: s[drop:] if len(s) > drop else [] for label, s in samples.items()}
+        # Drop the ramp by time, not by count: on a bloated line each round waits for slow or lost pings,
+        # so a fixed count of rounds can cover most of the phase.
+        keep = next((i for i, t in enumerate(starts) if t - started >= ramp_s), len(starts))
+        phase.rtts = {label: s[keep:] for label, s in samples.items()}
         phase.mbps = moved[0] * 8 / elapsed / 1e6
         phase.error = failure[0] if failure else ""
+        phase.capped = moved[0] >= max_bytes
         return phase
 
     skipped = Phase("download", error="skipped")
@@ -209,16 +249,19 @@ def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: 
 
 def upload_summary(m: Measurement, label: str = "internet") -> dict[str, float | int] | None:
     """The upload phase of `m` reduced to what a measured tweak keeps (ADR-0016): upload Mbps, median
-    idle and loaded latency to `label`, number of loaded samples. None when the load did not run."""
+    idle and loaded latency to `label`, samples answered and attempted. A ping lost under load counts
+    as PING_TIMEOUT_MS, a lower bound: on a badly bloated line the slowest pings are the lost ones.
+    None when the load did not run or there is no idle baseline."""
     if m.upload.mbps is None or (m.upload.error and not m.upload.mbps):
         return None
     idle = [s for s in m.idle.rtts.get(label, []) if s is not None]
     loaded = m.upload.rtts.get(label, [])
     got = [s for s in loaded if s is not None]
-    if not idle or not got:
+    if not idle or not loaded:
         return None
+    floored = [PING_TIMEOUT_MS if s is None else max(s, 0.0) for s in loaded]
     return {"upload_mbps": round(float(m.upload.mbps), 2), "idle_ms": round(statistics.median(idle), 1),
-            "loaded_ms": round(statistics.median(got), 1), "samples": len(got),
+            "loaded_ms": round(statistics.median(floored), 1), "samples": len(got), "attempted": len(loaded),
             "loss_pct": round(100.0 * (len(loaded) - len(got)) / len(loaded), 1)}
 
 
@@ -235,6 +278,6 @@ def real_ping() -> Ping:
         p = getattr(local, "p", None)
         if p is None:
             p = local.p = icmp.Pinger()
-        r = p.ping(address, 900)
+        r = p.ping(address, PING_TIMEOUT_MS)
         return r.rtt_ms if r.ok else None
     return ping

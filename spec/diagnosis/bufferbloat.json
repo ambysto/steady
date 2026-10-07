@@ -2,7 +2,7 @@
   "rule": "bufferbloat",
   "check": 14,
   "reference": "app/diagnostics.py evaluate_bufferbloat",
-  "description": "Bufferbloat (docs/DIAGNOSTICS.md #14). Three phases (idle, download, upload); each lists the ping samples per target in measuring order (null = lost; the first 2 s of a loaded phase already dropped), the load reached in Mbps (null while idle) and the load error, if any.",
+  "description": "Bufferbloat (docs/DIAGNOSTICS.md #14). Three phases (idle, download, upload); each lists the ping samples per target in measuring order (null = lost; the first 2 s of a loaded phase already dropped), the load reached in Mbps (null while idle) and the load error, if any. Optional per loaded phase: capped (the load stopped at its byte limit, so the line may be faster), refused (HTTP status when the test server refused the load) and retry_after_s (the wait it asked for). A direction that was not measured or not fully loaded cannot make the result ok.",
   "cases": [
     {
       "name": "healthy line: no advice",
@@ -7418,9 +7418,9 @@
         }
       },
       "expected": {
-        "status": "ok",
+        "status": "info",
         "summary": {
-          "key": "diag.bufferbloat.ok",
+          "key": "diag.bufferbloat.ok_incomplete",
           "params": {
             "delta": 5.0
           }
@@ -7476,7 +7476,1854 @@
             }
           }
         ],
-        "advice": ""
+        "advice": {
+          "key": "diag.bufferbloat.advice_incomplete",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "download refused by the test server: no ok from the upload alone",
+      "input": {
+        "idle": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": ""
+        },
+        "download": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": "ServerRefused: HTTP 429",
+          "refused": 429,
+          "retry_after_s": 1780
+        },
+        "upload": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": 50.0,
+          "error": ""
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.bufferbloat.ok_incomplete",
+          "params": {
+            "delta": 5.0
+          }
+        },
+        "details": [
+          {
+            "key": "diag.bufferbloat.idle",
+            "params": {
+              "values": [
+                "router 3 ms",
+                "internet 20 ms"
+              ]
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "router",
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 4.0,
+              "p95": 4.0,
+              "delta": 1.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "internet",
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 25.0,
+              "p95": 25.0,
+              "delta": 5.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.refused",
+            "params": {
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "status": 429,
+              "minutes": 30
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.bufferbloat.advice_incomplete",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "refused without Retry-After: try again later",
+      "input": {
+        "idle": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": ""
+        },
+        "download": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": 50.0,
+          "error": ""
+        },
+        "upload": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": "ServerRefused: HTTP 403",
+          "refused": 403
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.bufferbloat.ok_incomplete",
+          "params": {
+            "delta": 5.0
+          }
+        },
+        "details": [
+          {
+            "key": "diag.bufferbloat.idle",
+            "params": {
+              "values": [
+                "router 3 ms",
+                "internet 20 ms"
+              ]
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "router",
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 4.0,
+              "p95": 4.0,
+              "delta": 1.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "internet",
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 25.0,
+              "p95": 25.0,
+              "delta": 5.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.refused_later",
+            "params": {
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "status": 403
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.bufferbloat.advice_incomplete",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "both directions refused: no result, wait for the server",
+      "input": {
+        "idle": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": ""
+        },
+        "download": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": "ServerRefused: HTTP 429",
+          "refused": 429,
+          "retry_after_s": 30
+        },
+        "upload": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": "ServerRefused: HTTP 429",
+          "refused": 429,
+          "retry_after_s": 90
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.bufferbloat.no_result",
+          "params": {}
+        },
+        "details": [
+          {
+            "key": "diag.bufferbloat.idle",
+            "params": {
+              "values": [
+                "router 3 ms",
+                "internet 20 ms"
+              ]
+            }
+          },
+          {
+            "key": "diag.bufferbloat.refused",
+            "params": {
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "status": 429,
+              "minutes": 1
+            }
+          },
+          {
+            "key": "diag.bufferbloat.refused",
+            "params": {
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "status": 429,
+              "minutes": 2
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.bufferbloat.advice_later",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "a load stopped at its byte limit cannot vouch for ok",
+      "input": {
+        "idle": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": ""
+        },
+        "download": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": 50.0,
+          "error": ""
+        },
+        "upload": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": 800.0,
+          "error": "",
+          "capped": true
+        }
+      },
+      "expected": {
+        "status": "info",
+        "summary": {
+          "key": "diag.bufferbloat.ok_incomplete",
+          "params": {
+            "delta": 5.0
+          }
+        },
+        "details": [
+          {
+            "key": "diag.bufferbloat.idle",
+            "params": {
+              "values": [
+                "router 3 ms",
+                "internet 20 ms"
+              ]
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "router",
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 4.0,
+              "p95": 4.0,
+              "delta": 1.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "internet",
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 25.0,
+              "p95": 25.0,
+              "delta": 5.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "router",
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 800.0,
+              "median": 4.0,
+              "p95": 4.0,
+              "delta": 1.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "internet",
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 800.0,
+              "median": 25.0,
+              "p95": 25.0,
+              "delta": 5.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.at_ceiling",
+            "params": {
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 800.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.bufferbloat.advice_incomplete",
+          "params": {}
+        }
+      }
+    },
+    {
+      "name": "a rise seen at the byte limit is still reported",
+      "input": {
+        "idle": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3,
+                3
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20,
+                20
+              ]
+            }
+          ],
+          "mbps": null,
+          "error": ""
+        },
+        "download": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25,
+                25
+              ]
+            }
+          ],
+          "mbps": 50.0,
+          "error": ""
+        },
+        "upload": {
+          "rtts": [
+            {
+              "label": "router",
+              "samples": [
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4,
+                4
+              ]
+            },
+            {
+              "label": "internet",
+              "samples": [
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200,
+                200
+              ]
+            }
+          ],
+          "mbps": 800.0,
+          "error": "",
+          "capped": true
+        }
+      },
+      "expected": {
+        "status": "bad",
+        "summary": {
+          "key": "diag.bufferbloat.rise",
+          "params": {
+            "amount": {
+              "key": "diag.bufferbloat.by",
+              "params": {
+                "delta": 180.0
+              }
+            },
+            "where": {
+              "key": "diag.bufferbloat.where_wan",
+              "params": {}
+            }
+          }
+        },
+        "details": [
+          {
+            "key": "diag.bufferbloat.idle",
+            "params": {
+              "values": [
+                "router 3 ms",
+                "internet 20 ms"
+              ]
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "router",
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 4.0,
+              "p95": 4.0,
+              "delta": 1.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "internet",
+              "phase": {
+                "key": "diag.bufferbloat.download",
+                "params": {}
+              },
+              "mbps": 50.0,
+              "median": 25.0,
+              "p95": 25.0,
+              "delta": 5.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "router",
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 800.0,
+              "median": 4.0,
+              "p95": 4.0,
+              "delta": 1.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.line",
+            "params": {
+              "label": "internet",
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 800.0,
+              "median": 200.0,
+              "p95": 200.0,
+              "delta": 180.0,
+              "loss": 0.0
+            }
+          },
+          {
+            "key": "diag.bufferbloat.at_ceiling",
+            "params": {
+              "phase": {
+                "key": "diag.bufferbloat.upload",
+                "params": {}
+              },
+              "mbps": 800.0
+            }
+          }
+        ],
+        "advice": {
+          "key": "diag.bufferbloat.advice",
+          "params": {}
+        }
       }
     }
   ]

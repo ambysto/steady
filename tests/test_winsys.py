@@ -3,7 +3,7 @@ import sys
 import unittest
 from types import SimpleNamespace
 
-from app import winsys
+from app import winsys, winutil
 from app.winutil import run_powershell
 
 NASTY = ["Wi-Fi", "a'b", "a’b‘c", "$(Remove-Item x)", "`n`r", 'q"q', "Tên card ‑ Wi‑Fi 2", "; exit 1"]
@@ -99,6 +99,19 @@ class SsidBandsTests(unittest.TestCase):
 
     def test_none_only_when_that_interface_is_not_connected(self):
         self.assertIsNone(self.system(self.iface(state="disconnected")).wifi_ssid_bands("Wi-Fi"))
+
+    def test_translated_netsh_output_is_unknown_not_disconnected(self):
+        # French labels: the parsers key on English ones, find no interface, and the band stays unknown.
+        french = (
+            "Il y a 1 interface sur le système :\n\n"
+            "    Nom                    : Wi-Fi\n"
+            "    État                   : connecté\n"
+            "    SSID                   : HomeNet\n"
+            "    BSSID                  : 02:5e:00:9a:40:24\n"
+            "    Bande                  : 5 GHz\n")
+        states = [winutil.wifi_state_from(f) for f in winutil.parse_netsh_interfaces(french)]
+        sys_ = winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_states=lambda: states, scan=lambda: [])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi"), winsys.WifiBands("", "", frozenset()))
 
     def test_an_interface_netsh_does_not_list_is_unknown_not_disconnected(self):
         self.assertEqual(self.system().wifi_ssid_bands("Wi-Fi"), winsys.WifiBands("", "", frozenset()))
@@ -245,10 +258,10 @@ class NetworkStackSystemTests(unittest.TestCase):
             sys_.offload_global_set("PacketCoalescingFilter", "Disabled; calc")
 
     def test_dns_interface_reads_the_uplink_and_spots_a_vpn(self):
-        row = {"Index": 6, "Guid": "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}", "Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
+        row = {"Index": 6, "Guid": "{00000000-0000-4000-8000-0000000000AA}", "Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
                "Suffix": "", "Domain": False, "Up": ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter", "WARP Cloudflare WARP Interface Tunnel"]}
         info = self.system(rows=[row]).dns_interface()
-        self.assertEqual(info, {"index": 6, "guid": "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}", "alias": "Wi-Fi",
+        self.assertEqual(info, {"index": 6, "guid": "{00000000-0000-4000-8000-0000000000AA}", "alias": "Wi-Fi",
                                 "servers": ["1.1.1.1", "8.8.8.8"], "static": True, "static_v6": False, "suffix": "",
                                 "domain_joined": False, "vpn_up": True})
         row["Up"] = ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter"]
@@ -262,11 +275,11 @@ class NetworkStackSystemTests(unittest.TestCase):
         scripts = []
         sys_ = winsys.WindowsSystem(ps=FakePs(), ps_json=lambda script, **k: scripts.append(script) or [],
                                     run=None, route=lambda: self.fail("the uplink must not be asked"))
-        guid = "{A407D7A1-D1F3-4322-88DC-940E2CE6E38F}"
+        guid = "{00000000-0000-4000-8000-0000000000BB}"
         self.assertIsNone(sys_.dns_interface(guid))
         self.assertIn("InterfaceGuid -eq", scripts[0])
         self.assertNotIn("Get-NetAdapter -InterfaceIndex", scripts[0])
-        for bad in ("A407D7A1-D1F3-4322-88DC-940E2CE6E38F", "{x'; calc; '}", ""):
+        for bad in ("00000000-0000-4000-8000-0000000000BB", "{x'; calc; '}", ""):
             with self.assertRaises(ValueError):
                 sys_.dns_interface(bad)
         self.assertNotIn("calc", "".join(scripts))

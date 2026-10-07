@@ -100,7 +100,7 @@ SSID 1 : NeighborB 5G
     Network type            : Infrastructure
     Authentication          : WPA2-Personal
     Encryption              : CCMP
-    BSSID 1                 : C4:2C:7B:D0:E5:29
+    BSSID 1                 : C4:2C:7B:00:50:29
          Signal             : 72%
          Radio type         : 802.11ax
          Band               : 5 GHz
@@ -161,7 +161,7 @@ class ScanParseTests(unittest.TestCase):
     def test_fields_and_lowercased_bssid(self):
         e = self.entries[0]
         self.assertEqual((e.ssid, e.bssid, e.signal, e.radio_type, e.band, e.channel),
-                         ("NeighborB 5G", "c4:2c:7b:d0:e5:29", 72, "802.11ax", "5 GHz", 36))
+                         ("NeighborB 5G", "c4:2c:7b:00:50:29", 72, "802.11ax", "5 GHz", 36))
 
     def test_hidden_ssid_and_multiple_bssids_share_ssid(self):
         hidden = [e for e in self.entries if e.ssid == ""]

@@ -106,14 +106,14 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
 ## Finding: the ISP modem still broadcasts Wi‑Fi even though it is bridged (13:40)
 
 - User: the ISP modem has been switched to **bridge**, "OldModemNet" is the old network; **the modem and the BE3 are placed right next to each other**.
-- The SSIDs OldModemNet / CNBN / NeighborNet / a hidden SSID share the MAC family `c4/c6:2c:7b:…` ⇒ most likely **all broadcast by the old modem** (bridge only disables the routing function, not the Wi‑Fi radio). They occupy **5G channel 36** and **2.4G channel 4**.
+- The SSIDs OldModemNet / OtherNet / NeighborNet / a hidden SSID share the MAC family `c4/c6:2c:7b:…` ⇒ most likely **all broadcast by the old modem** (bridge only disables the routing function, not the Wi‑Fi radio). They occupy **5G channel 36** and **2.4G channel 4**.
 - Two transmitters placed right next to each other ⇒ (a) channel contention when on the same channel; (b) **blocking/desensitizing the BE3's receiver** even on different channels, because the modem's signal is too strong at a distance of a few cm.
 - Proposal: turn off Wi‑Fi on the modem (WLAN button / admin page via the OldModemNet SSID / ask the ISP hotline) + place the BE3 ≥ 1–2 m away from the modem, in a high, open spot, facing the PC. ⇒ **EXP-008**.
 
 ## EXP-008 — Turn off the old modem's Wi‑Fi + move the BE3 > 1 m away from the modem
 
 - **When:** before 13:54 (+07), done by the user; antennas **not yet** tilted.
-- **Scan at 13:54:** OldModemNet, CNBN and the hidden SSID `c6:2c:7b:d8:ea:99` **have disappeared** ⇒ confirms they were broadcast by the modem. **NeighborNet** (`c4:2c:7b:d4:ea:9a`, channel 36, 63%) **is still there** ⇒ either the modem's 5G radio is not fully off, or NeighborNet is a different device.
+- **Scan at 13:54:** OldModemNet, OtherNet and the hidden SSID `c6:2c:7b:00:40:99` **have disappeared** ⇒ confirms they were broadcast by the modem. **NeighborNet** (`c4:2c:7b:00:40:9a`, channel 36, 63%) **is still there** ⇒ either the modem's 5G radio is not fully off, or NeighborNet is a different device.
 - **New BE3 SSIDs appeared:** `HomeNet_5G` (02:5e:00:9a:40:24, ch157), `HomeNet_Wi-Fi5` (…:40:31, ch11), `HomeNet_5G_Wi-Fi5` (…:40:32, ch157) ⇒ the user has split the bands and/or enabled the Wi‑Fi 5 compatibility network on the BE3 (needs confirmation). The PC is currently on `HomeNet_5G`.
 - **Signal worse after moving:** **−78 … −80 dBm (39–45%)**, compared with −76 before moving and −66 this morning. Rx still 6 Mbps in 8/10 minutes (13:40–13:50).
 - **Incidents:** router_down 154s (13:49), 152s (13:51), and 3 times 5s (13:52–13:54); the PC roamed via 2.4G ch11 and then back to 5G.
@@ -244,6 +244,118 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
 - **Takeaways:** the rate Windows stores is exactly the rate asked for (no rounding at these values); a policy created in the default store shows up in the `ActiveStore` immediately, under a lower-case name (`-eq` in PowerShell ignores case, so the removal still finds it). Whether the limit lowers latency under upload remains to be measured on a line that has upload bufferbloat — the tweak records that itself (`tweak_verified`).
 - **Correction (same day):** "no upload bufferbloat" is not established. A load phase stops at 100 MB, so it cannot report more than 80 Mbps, and on this PC every phase measured that day read 79–80 Mbps (EXP-016/017, SIC-93): the queue was probably never full, so the 25 ms rise says little. The tweak now also refuses a measurement at that ceiling instead of taking it for the line's capacity.
 
+## EXP-016 — Speed tweaks: which ones can be measured on this PC (2026-10-07)
+
+The speed changes made by hand on 2026-08-31 were applied together and measured before the antenna fault (EXP-014) was found, so none of them has its own result. They are now tweaks in the app. This entry records, per tweak, what a before/after measurement on this PC can show. Read-only inventory at 09:20 (+07), app at `main` 87cc23c (`python -m app.tweaks list`, `Get-NetAdapterAdvancedProperty`, `Get-NetAdapterRsc`, `Get-NetOffloadGlobalSetting`):
+
+| Tweak | State on this PC | Result / what is needed |
+|---|---|---|
+| `wifi_prefer_5g` | ON | **Nothing to measure here:** the MediaTek driver's own default for Preferred Band is already "Prefer 5GHz band". The tweak only changes something on drivers whose default is "No Preference". |
+| `wifi_tx_power_max` | ON | **Nothing to measure here:** the driver's default Transmit Power Level is already "Highest". |
+| `rsc_off` | not supported | **Not applicable:** the card reports no RSC hardware (`RscHardwareCapabilities` IPv4/IPv6 = False). The "RSC off" done by hand on 08-31 never had an effect on this card. |
+| `packet_coalescing_off` | ON (global `PacketCoalescingFilter` = Disabled) | Measured in EXP-018: no clear difference (upload only). |
+| `tcp_ecn` | ON (set by hand 08-31) | Measured in EXP-017: no clear difference. |
+| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Measured in EXP-021: about 3× slower than the router's DNS.** Now experimental. |
+| `upload_shaping` (upload limit) | built after this inventory (PR #25) | **Measured in EXP-019: better** (p95 under upload about halved, loss 26–33% → 10–12%). EXP-015's refusal was an artifact of the old 80 Mbps load limit. |
+| MTU from path MTU (`mtu_pmtu`) | built after this inventory (PR #40) | **Measured in EXP-020:** refused at 1500 (path MTU discovery works); 1492 vs 1500 shows no latency difference and ~9% more upload. |
+
+Conditions seen at the same time:
+
+- A WireGuard tunnel is up. Check #15 measures the tunnel's routes, not the ISP's, and `dns_fastest` is not meant to be offered with a VPN ⇒ **the tunnel must be off for every measurement below.**
+- DNS benchmark (check #6, cached names): the router answers in **8 ms**; the hand-set DoH servers in **45–52 ms**. A cold-cache test is needed before saying `dns_fastest` helps here; it may be slower than DHCP DNS.
+- Bufferbloat (check #14): +4 ms under load at ~79 Mbps, verdict OK. There is little headroom for ECN or an upload limit to show a gain.
+
+**Protocol for the remaining tweaks.** These change speed or latency at once, so they are measured with short interleaved runs, not with the 24-hour windows of [ADR-0007](adr/0007-measured-impact.md) (those suit stability outcomes such as outages). Each step that writes to the PC runs only after the owner agrees to it.
+
+1. Tunnel off, nothing else using the line, same hour of the day for A and B.
+2. State A = Windows/driver default, state B = the tweak enabled from the app. Run **A, B, A, B**; in each run: `python -m app.diagnostics --bufferbloat --no-save` and `python -m app.diagnostics --only 5,6,15 --no-save`; for `dns_fastest` also a cold-cache lookup of 20 names that are not in the router's cache.
+3. Better only when B beats both A runs on the tweak's own metric (DNS: median lookup; ECN, packet coalescing: added latency and loss under load; MTU: path MTU result and loss of large packets) by more than the A-to-A difference. Otherwise "no clear difference" ⇒ the tweak stays experimental or is dropped, and [TWEAKS.md](TWEAKS.md) says so.
+4. Leave the winning state on; after 24 hours the app's effect report ([ADR-0007](adr/0007-measured-impact.md)) checks that stability did not get worse.
+
+## EXP-017 — `tcp_ecn`: A/B/A/B (2026-10-07 09:50, +07)
+
+- **Done with:** an elevated helper script that sets the value, waits 15 s, and runs `python -m app.diagnostics --bufferbloat` and `--only 6,15` (`--json --no-save`). The tunnel was off. A = `netsh int tcp set global ecncapability=default`, which reads back as **Disabled** on this Windows build. B = `enabled` (the hand-set value). Put back to Enabled at the end.
+
+  | Round | ECN | Idle router / Internet | p95 under download, router / Internet (loss) | p95 under upload, router / Internet (loss) | DNS median |
+  |---|---|---|---|---|---|
+  | 1 | A off | 5 / 48 ms | 20 / 57 ms (0% / 15%) | 124 / 206 ms (5% / 13%) | 47 ms |
+  | 2 | B on | 4 / 47 ms | 64 / 98 ms (5% / 12%) | 136 / 165 ms (15% / 23%) | 59 ms |
+  | 3 | A off | 5 / 85 ms | 58 / 96 ms (2% / 8%) | 200 / 165 ms (3% / 10%) | 40 ms |
+  | 4 | B on | 4 / 47 ms | 53 / 97 ms (2% / 5%) | 97 / 187 ms (5% / 14%) | 42 ms |
+
+  The median added latency under load was 0 ms in every round.
+- **Result: no clear difference.** The two A runs differ from each other as much as A differs from B.
+- **Caveat:** the load was only ~80 Mbps (see below), so the queue that ECN acts on was probably never full.
+- `tcp_ecn` stays **experimental**, and the hand-set value stays on until a test that fills the line exists.
+
+## EXP-018 — `packet_coalescing_off`: A/B/A/B (2026-10-07 09:55, +07)
+
+- **Done with:** the same script. A = `Set-NetOffloadGlobalSetting -PacketCoalescingFilter Enabled`; B = `Disabled` (the hand-set value). Put back to Disabled at the end.
+- **The download load failed in all 4 rounds** with `HTTP 429` from speed.cloudflare.com (rate-limited after the ECN runs), so only upload was measured. Coalescing acts on received packets, so upload is the less relevant direction.
+
+  | Round | Coalescing filter | p95 under upload, router / Internet (loss) | Check #14 verdict |
+  |---|---|---|---|
+  | 1 | A on | 95 / 205 ms (3% / 16%) | ok |
+  | 2 | B off | 71 / 110 ms (2% / 18%) | ok |
+  | 3 | A on | 266 / 205 ms (12% / 21%) | bad |
+  | 4 | B off | 117 / 225 ms (8% / 21%) | bad |
+
+- **Result: no clear difference, and the measurement is incomplete** (no download phase). The line got worse for both states between rounds 2 and 3, which is drift, not the setting.
+- `packet_coalescing_off` stays **experimental**, with the hand-set value left as it was.
+
+**What these two runs showed about the measuring tool** (more important than the tweaks):
+
+- The bufferbloat check caps each 10-second load phase at `MAX_BYTES` = 100 MB, i.e. **80 Mbps**. Every phase here ran at 79–80 Mbps, so on a faster line the check never fills the queue and reports "OK" without having tested it. The upload limit (`upload_shaping`, ADR-0016) inherits the blind spot: its value is the measured upload speed times a margin, so on a line faster than 80 Mbps it either says "not needed" (as in EXP-015) or, when latency already rises at 80 Mbps, sets a limit below what the line can carry.
+- After about 6 runs in 10 minutes, speed.cloudflare.com answers `HTTP 429` to the download, and the check carries on with upload only.
+- Internet ICMP loss of 5–23% under load matches the ICMP-only loss seen in EXP-014, so loss under load is a weak signal on this line.
+
+## EXP-019 — `upload_shaping`: A/B/A/B (2026-10-07 11:20, +07)
+
+- **Done with:** an elevated helper script, with the tunnel off and the app at `main` fa7507f (with the 1 GB load limit of SIC-93 and the review fixes of #36). A = no limit (`python -m app.tweaks disable upload_shaping --apply`); B = `enable upload_shaping --apply`: the tool measures the upload, sets 85% of it, measures again, and adds six unthrottled policies for the local network. Each round then runs `python -m app.diagnostics --bufferbloat`. The tweak was turned off at the end; no QoS policy was left.
+- **What the tool itself measured on enable:** limit 197.1 Mbps (upload 232 Mbps), rise under upload **96 → 17 ms**; second time limit 192.0 Mbps (upload 226 Mbps), **148 → 18 ms**.
+
+  | Round | Limit | Upload | Internet under upload: added / p95 / loss | Router under upload: added / p95 / loss |
+  |---|---|---|---|---|
+  | 1 | A none | 156 Mbps | +91 ms / 340 ms / 33% | +76 ms / 217 ms / 31% |
+  | 2 | B 197 Mbps | 154 Mbps | −38 ms* / 163 ms / 10% | −2 ms / 34 ms / 2% |
+  | 3 | A none | 244 Mbps | +32 ms / 317 ms / 26% | +16 ms / 193 ms / 8% |
+  | 4 | B 192 Mbps | 170 Mbps | +9 ms / 122 ms / 12% | +13 ms / 110 ms / 8% |
+
+  *The idle reading of round 2 was disturbed (Internet 93 ms instead of ~50), so its "added" figure is not meaningful; its p95 and loss are.
+- **Result: better.** With the limit, p95 latency under upload is about halved, loss drops from 26–33% to 10–12%, and the median rise falls to the noise; the tool's own before/after agrees (96 → 17 ms, 148 → 18 ms). The cost is ~15% of the peak upload speed. The queue builds on the PC ↔ router hop (the router target rises as much as the Internet one), which is where a limit set on the PC helps.
+- `upload_shaping` stays at **medium** risk; it has earned its place on this line.
+- **Left on** (11:4x, with the owner's agreement): limit 191.8 Mbps (85% of 225.7), the tool's own check 104 → 52 ms.
+
+## EXP-020 — MTU 1500 vs 1492, and `mtu_pmtu` (2026-10-07 11:25, +07)
+
+- **Done with:** the same script. A = `netsh interface ipv4 set subinterface "Wi-Fi" mtu=1500 store=persistent` (the Windows default), B = 1492 (the hand-set value of 08-31). Each round: check #16 and `--bufferbloat` (the download was refused by the test server, HTTP 429, so upload only). Put back to 1492 at the end.
+- **`mtu_pmtu` at 1500:** refused, "routers answer 'packet too big' (the path allows 1492 of 1500 bytes), so connections already adapt by themselves; nothing was changed". Check #16 agrees (info at 1500, ok at 1492). This is the intended behavior.
+
+  | Round | MTU | Upload | Internet under upload: added / p95 / loss |
+  |---|---|---|---|
+  | 1 | A 1500 | 223 Mbps | +82 ms / 281 ms / 26% |
+  | 2 | B 1492 | 243 Mbps | +69 ms / 289 ms / 36% |
+  | 3 | A 1500 | 212 Mbps | +46 ms / 279 ms / 21% |
+  | 4 | B 1492 | 241 Mbps | +41 ms / 212 ms / 22% |
+
+- **Result: latency, no clear difference; upload throughput about 9% higher at 1492** in both B rounds (243 / 241 vs 223 / 212 Mbps, a gap larger than the A-to-A spread). Two rounds each is thin evidence. A plausible cause: every new upload connection at 1500 has to learn the path MTU from a "too big" reply first.
+- The hand-set 1492 stays. `mtu_pmtu` refusing when path MTU discovery works is right for latency, but it may leave a small throughput gain unused; worth re-checking with more rounds before changing the rule.
+
+## EXP-021 — `dns_fastest` vs the router's DNS (2026-10-07 11:29, +07)
+
+- **Done with:** the same script. A = DNS from DHCP (the router), B = `python -m app.tweaks enable dns_fastest --apply` (it benchmarked and chose 8.8.8.8, 149.112.112.112, 8.8.4.4, then 8.8.8.8, 1.1.1.1, 8.8.4.4 with DoH). Per round, after `Clear-DnsClientCache`: 40 lookups of names that cannot be cached anywhere (a random label under 8 large domains, so every resolver recurses) and 20 popular names, timed through the Windows resolver. The hand-set DNS (static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 with DoH) and all DoH entries were put back exactly at the end.
+
+  | Round | DNS | Uncached: median / p90 | Popular: median / p90 |
+  |---|---|---|---|
+  | 1 | A router | 79 / 117 ms | 29 / 63 ms |
+  | 2 | B `dns_fastest` | 285 / 384 ms | 77 / 84 ms |
+  | 3 | A router | 86 / 102 ms | 12 / 75 ms |
+  | 4 | B `dns_fastest` | 260 / 502 ms | 73 / 158 ms |
+
+- **Result: worse, by about 3×.** The router (the ISP's resolver behind it) answers uncached names in ~80 ms and popular ones in 12–29 ms; the public servers over DoH take ~270 ms and ~75 ms. The tweak's benchmark only ranks the public providers against each other and never against the DNS already in use, so it "chooses the fastest" of a slower group.
+- `dns_fastest` is now **experimental** ([TWEAKS.md](TWEAKS.md)); it should compare against the current DNS and refuse when it is not faster (follow-up item). The hand-set public DNS on this PC is the same kind of setup as B, so it is slow too: the router's DNS is the better choice here.
+- **This PC now uses the router's DNS** (DHCP; with the owner's agreement). The DoH entries were left as they were; they are not used with the router's DNS.
+
 ## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 
 - **Context:** the PC is **upstairs**, the BE3 router is **downstairs**, a LAN cable cannot be run ⇒ explains the signal of only −66…−80 dBm.
@@ -280,13 +392,13 @@ The user reports dropping **more often than before replacing the router**. Histo
 |---|---|---|---|
 | OldModemNet 5G | 53 | 09-08 | 10-02 13:58 |
 | OldModemNet (2.4G) | 7 | 09-21 | 10-02 13:59 |
-| CNBN | 4 | 10-02 13:47 | 10-02 13:54 |
+| OtherNet | 4 | 10-02 13:47 | 10-02 13:54 |
 | NeighborNet | 8 | 10-02 13:57 | 10-02 15:35 |
 | **HomeNet (BE3)** | 10 | **10-02 15:26** | now |
 
 Disconnects (8003) per day: 09-08: 1 · 09-10: 8 · 09-11: 1 · 09-21: 5 · 09-26: 3 · 09-27: 3 · 09-28: 1 · 10-01: 6 · **10-02: 36** (mostly from switching back and forth between 4 networks while installing the new router) · 10-03: 2.
 
-⇒ **The BE3 was put into use on the afternoon of 2026-10-02.** Before that the PC used "OldModemNet 5G". The OldModemNet / CNBN / NeighborNet networks share the MAC family `c4/c6:2c:7b:…` (same device/vendor) and **NeighborNet + a hidden SSID are on channel 36** — exactly the channel the BE3 picked automatically.
+⇒ **The BE3 was put into use on the afternoon of 2026-10-02.** Before that the PC used "OldModemNet 5G". The OldModemNet / OtherNet / NeighborNet networks share the MAC family `c4/c6:2c:7b:…` (same device/vendor) and **NeighborNet + a hidden SSID are on channel 36** — exactly the channel the BE3 picked automatically.
 
 Hypotheses for why it is worse than the old router (ordered by likelihood):
 1. **Wi‑Fi 7 (BE3) ↔ MediaTek MT7922 card (Wi‑Fi 6E) compatibility**: Rx collapsing to 6 Mbps while the signal is still good is a typical sign of a rate-control / new-feature bug (11be, OFDMA, TWT…) between router and driver. ⇒ try disabling `be` on the BE3's 5G (EXP-003b).

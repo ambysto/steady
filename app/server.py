@@ -162,6 +162,9 @@ class Api:
         self.jobs = Jobs(clock)
         self._sync = sync_jobs
         self._settings_lock = threading.Lock()
+        # Measurements that load the line (check #14, a measured tweak) must never overlap: each would
+        # see about half the bandwidth, and a measured tweak would derive half the cap it should.
+        self._line_lock = threading.Lock()
         self._tweak_cache: dict[str, Any] = {"states": None, "refreshed_at": None}
         self._last_bufferbloat: list[dict] = []   # on-demand results are not saved as runs
         self._autostart_status = autostart_status or self._default_autostart_status
@@ -406,13 +409,16 @@ class Api:
         def work() -> list:
             from . import calibration
             states = [asdict(s) for s in self._tweak_manager().states()]
-            if any(s.get("measurement") for s in states):
+            if any(s.get("measured") and s.get("enabled") for s in states):
                 try:
                     network = self._network_id()
                 except Exception:
                     network = None
                 for s in states:
-                    s["stale"] = calibration.staleness(s.get("measurement"), network, self._clock())
+                    if s.get("measured") and s.get("enabled") and not s.get("measurement"):
+                        s["stale"] = ["no_record"]   # on, but where its value came from is unknown
+                    else:
+                        s["stale"] = calibration.staleness(s.get("measurement"), network, self._clock())
             self._tweak_cache.update(states=states, refreshed_at=self._clock())
             return states
         return self.jobs.submit("tweak_states", work, single="tweak_states", sync=self._sync)
@@ -439,7 +445,10 @@ class Api:
 
     def start_bufferbloat(self, **_: Any) -> dict:
         """Generates real traffic (~30 s), so only on explicit request; the result is not stored as a run."""
-        return self.jobs.submit("bufferbloat", self._run_bufferbloat, single="bufferbloat", sync=self._sync)
+        def work() -> dict:
+            with self._line_lock:
+                return self._run_bufferbloat()
+        return self.jobs.submit("bufferbloat", work, single="bufferbloat", sync=self._sync)
 
     def set_tweak(self, tweak_id: str, body: Any, **_: Any) -> dict:
         tweak_id = unquote(tweak_id)
@@ -486,7 +495,11 @@ class Api:
         def record(kind: str, message: Any, level: str) -> None:
             self.storage.add_event(int(self._clock()), kind, message, level=level)
 
-        result = tweaks.enable_measured(mgr, tweak_id, lambda: self._measure_tweak(tweak_id), enable, record)
+        def measure() -> dict | None:
+            with self._line_lock:
+                return self._measure_tweak(tweak_id)
+
+        result = tweaks.enable_measured(mgr, tweak_id, measure, enable, record)
         return {**result, "elevated": not admin}
 
     def action(self, name: str, **_: Any) -> dict:

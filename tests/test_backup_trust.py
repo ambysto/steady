@@ -48,6 +48,22 @@ class RealCaptureStillRestoresTests(unittest.TestCase):
         self.assertTrue(mgr.disable("power_wireless_max").ok)
         self.assertEqual(s.power[(tweaks.SUB_WIRELESS, tweaks.SET_WIRELESS)], (3, 3))
 
+    def test_every_capture_passes_its_own_check(self):
+        """What capture() writes is what check_original() must accept, for every tweak FakeSystem can capture."""
+        s = FakeSystem()
+        s.qos_exempt["StableInternet-Upload-Local1"] = "10.0.0.0/8"
+        checked = []
+        for t in catalog():
+            try:
+                original = t.capture(s)
+            except (tweaks.Unsupported, KeyError):
+                continue
+            with self.subTest(t.id):
+                t.check_original(s, original)
+                checked.append(t.id)
+        self.assertIn("upload_shaping", checked)
+        self.assertIn("mtu_pmtu", checked)
+
     def test_a_dns_capture_passes_the_check(self):
         s = FakeSystem()
         s.dns.update(servers=["10.0.0.53", "192.168.1.1"], static=True)
@@ -148,6 +164,33 @@ class TamperedBackupTests(unittest.TestCase):
         t = next(t for t in catalog() if t.id == "upload_shaping")
         t.check_original(FakeSystem(), {"policy": tweaks.UPLOAD_POLICY, "rate_bps": None})
         t.check_original(FakeSystem(), {"policy": tweaks.UPLOAD_POLICY, "rate_bps": 42_500_000})
+
+    def test_upload_exemptions_are_only_the_tools_own(self):
+        good = {"policy": tweaks.UPLOAD_POLICY, "rate_bps": None, "exempt": ["StableInternet-Upload-Local1"]}
+        t = next(t for t in catalog() if t.id == "upload_shaping")
+        t.check_original(FakeSystem(), good)
+        t.check_original(FakeSystem(), {"policy": tweaks.UPLOAD_POLICY, "rate_bps": None})   # before exemptions
+        for exempt in (["Backup-Agent"], ["StableInternet-Upload-Local7"], ["StableInternet-Upload-Local1"] * 2,
+                       "StableInternet-Upload-Local1", [1]):
+            with self.subTest(exempt=exempt):
+                self.refused("upload_shaping", dict(good, exempt=exempt))
+
+    def test_the_mtu_backup_names_a_guid_and_an_mtu_derive_could_lower_from(self):
+        good = {"guid": WIFI_GUID, "interface_index": 6, "alias": "Wi-Fi", "mtu": 1500}
+        next(t for t in catalog() if t.id == "mtu_pmtu").check_original(FakeSystem(), good)
+        for change in ({"mtu": 9000}, {"mtu": 576}, {"mtu": "1500"}, {"guid": "Wi-Fi"}, {"guid": None},
+                       {"interface_index": 0}, {"alias": 5}):
+            with self.subTest(change=change):
+                self.refused("mtu_pmtu", dict(good, **change))
+        self.refused("mtu_pmtu", {"policy": tweaks.UPLOAD_POLICY, "rate_bps": None})   # another tweak's shape
+
+    def test_a_property_is_judged_by_its_keyword_not_its_display_name(self):
+        s = FakeSystem()
+        s.props["Wi-Fi"][0].update(DisplayName="Économie d'énergie", RegistryKeyword="LowPowerEnable")   # translated
+        t = next(t for t in catalog() if t.id == "wifi_power_saving")
+        t.check_original(s, {"adapter": "Wi-Fi", "keyword": "LowPowerEnable", "value": "2"})
+        self.refused("wifi_power_saving", {"adapter": "Wi-Fi", "keyword": "*LowPowerEnable", "value": "2"}, s)
+        self.refused("wifi_power_saving", {"adapter": "Wi-Fi", "keyword": "*WakeOnMagicPacket", "value": "1"}, s)
 
     # -- DNS ----------------------------------------------------------------------------------
 

@@ -14,10 +14,12 @@ SPEC = Path(__file__).resolve().parent.parent / "spec" / "diagnosis"
 
 
 def _measurement(data: dict) -> bufferbloat.Measurement:
-    """Vector phases list the targets in order ([{label, samples}]); Python keeps them in a dict."""
+    """Vector phases list the targets in order ([{label, samples}]); Python keeps them in a dict.
+    capped / refused / retry_after_s are optional and default to a load that ran normally."""
     return bufferbloat.Measurement(*(
         bufferbloat.Phase(name, {t["label"]: t["samples"] for t in data[name]["rtts"]},
-                          data[name]["mbps"], data[name]["error"])
+                          data[name]["mbps"], data[name]["error"], capped=data[name].get("capped", False),
+                          refused=data[name].get("refused"), retry_after_s=data[name].get("retry_after_s"))
         for name in ("idle", "download", "upload")))
 
 
