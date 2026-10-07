@@ -28,6 +28,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `tcp_ecn` is read through `Get-NetTCPSetting`, so it works on a non-English Windows (the `netsh show` labels are translated), and turning it off without a backup sets Windows' own `default` instead of `disabled`.
 - A tweak's reason (no fast DNS servers, a VPN...) now stays in the UI language when a change fails, and a failed `dns_fastest` change is no longer reported as an unexpected DNS change by the monitor.
 - Diagnostics check numbers and keys are tested to be unique.
+- `dns_fastest` with a saved backup of another interface (docked onto Ethernet, a VPN as the uplink, no route) now shows as **on** with the warning "On for another network connection", so the switch can turn it off and restore that interface; before, the switch was disabled or offered a turn-on that was refused. New hook `Tweak.backup_reading`.
+- `dns_fastest` puts back a vanished DoH entry only when apply was using that address; a backup written before the GUID was recorded still restores (the restore check no longer includes the interface).
 
 ## [0.3.0] - 2026-10-07
 

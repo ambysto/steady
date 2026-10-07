@@ -391,6 +391,7 @@
   "tweak.reason.dns_no_fast_servers": "安定して応答する公開 DNS プロバイダーが 2 つ見つからなかったため、何も変更していません",
   "tweak.reason.no_default_dns": "バックアップがなく、元の DNS 設定が不明です",
   "tweak.reason.dns_other_interface": "保存されたバックアップは別のネットワーク接続のものです。その接続を使っている間に、先にオフにしてください",
+  "tweak.reason.dns_backup_elsewhere": "現在使用中ではない別のネットワーク接続（{name}）でオンになっています。オフにすると、その接続の DNS が元に戻ります",
   "tweak.reason.dns_interface_gone": "DNS を変更したネットワーク接続は現在利用できません（取り外されたか削除されました）",
   "tweak.reason.no_doh": "この Windows は DNS over HTTPS に対応していません（Windows 11 または新しい Windows 10 が必要です）",
 
