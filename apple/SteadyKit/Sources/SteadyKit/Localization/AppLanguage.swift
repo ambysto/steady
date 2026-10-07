@@ -28,6 +28,16 @@ public enum AppLanguage {
         return String(first).uppercased(with: locale) + name.dropFirst()
     }
 
+    /// The locale for dates, times and the system's own controls once a language is chosen: that
+    /// language with the system's region and preferences (24-hour time, first weekday), as a
+    /// per-app language set in the system Settings does. Picking English in Vietnam keeps 21:13.
+    public static func locale(language: String, system: Locale = .autoupdatingCurrent) -> Locale {
+        var components = Locale.Components(locale: system)
+        components.languageComponents = Locale.Language.Components(identifier: language)
+        components.region = system.region   // the line above clears it
+        return Locale(components: components)
+    }
+
     /// The catalog language to show for a stored choice. "auto", or a language no longer in the
     /// bundle (one picked before it was removed), follows the user's preferred languages and
     /// falls back to English.
