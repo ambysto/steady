@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "Adapter la MTU à la ligne",
   "tweak.mtu_path.note": "Évite la perte de gros paquets sur les lignes PPPoE (pages qui restent à moitié chargées)",
   "tweak.mtu_path.source": "MTU du chemin {mtu} mesurée le {date}",
+  "tweak.tcp_ecn.name": "Activer l'ECN TCP",
+  "tweak.tcp_ecn.note": "Permet aux routeurs qui marquent les paquets (QoS intelligent) de signaler la congestion sans les abandonner. Certains vieux équipements intermédiaires gèrent mal l'ECN : désactivez-le si certains sites se bloquent",
+  "tweak.rsc_off.name": "Désactiver le Receive Segment Coalescing",
+  "tweak.rsc_off.note": "Le RSC fusionne les paquets reçus pour économiser du processeur, au prix de la latence. Beaucoup de cartes Wi‑Fi ne l'ont pas",
+  "tweak.packet_coalescing_off.name": "Désactiver le regroupement des paquets reçus",
+  "tweak.packet_coalescing_off.note": "Empêche Windows de retenir les paquets reçus pour réveiller moins souvent le processeur, ce qui peut ajouter de la latence. L'effet sur le débit n'est pas démontré",
 
   "tweak.reason.no_wifi_card": "Aucune carte Wi‑Fi trouvée",
   "tweak.reason.no_matching_value": "« {property} » n'a aucune valeur adaptée (disponibles : {values})",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "La mesure d'envoi date de plus de 30 jours ; relancez le test de bufferbloat",
   "tweak.reason.measure_again.path_mtu": "La mesure de la MTU du chemin date de plus de 30 jours ; relancez le diagnostic",
   "tweak.reason.drift": "{source}. La ligne semble avoir changé : désactivez ce tweak, mesurez à nouveau, puis réactivez-le",
+  "tweak.reason.no_rsc": "Cette carte n'a pas de Receive Segment Coalescing",
+  "tweak.reason.no_default_packet_coalescing": "Aucune sauvegarde, et la valeur par défaut de Windows varie selon les PC",
 
   "tweak.result.read_failed": "Impossible de lire l'état : {error}",
   "tweak.result.unsupported": "Non pris en charge sur ce PC : {reason}",

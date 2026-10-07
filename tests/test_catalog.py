@@ -49,7 +49,7 @@ def manager(system=None):
 class CatalogMatchesDocsTests(unittest.TestCase):
     def test_ids_and_risks_match_docs_tweaks_md(self):
         docs = doc_tweaks()
-        self.assertEqual(len(docs), 15, docs)
+        self.assertEqual(len(docs), 18, docs)
         self.assertEqual({t.id: t.risk for t in tweaks.CATALOG}, docs)
 
     def test_ids_are_unique_and_names_vietnamese_present(self):
@@ -63,10 +63,20 @@ class CatalogMatchesDocsTests(unittest.TestCase):
         self.assertTrue(by["tcp_timedwait"].needs_reboot)              # 🔁
         self.assertFalse(any(t.needs_reboot for t in tweaks.CATALOG if t.id != "tcp_timedwait"))
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_roaming", "wifi_bw20_5g",
-                    "wifi_mode_ac", "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "ipv6_off"):
+                    "wifi_mode_ac", "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "ipv6_off", "rsc_off"):
             self.assertTrue(by[tid].disrupts_network, tid)             # 🔌
+        for tid in ("tcp_ecn", "packet_coalescing_off"):
+            self.assertFalse(by[tid].disrupts_network, tid)
         for t in tweaks.CATALOG:
             self.assertTrue(t.needs_admin, t.id)                       # 🛡
+
+    def test_stack_switches_are_experimental_and_only_packet_coalescing_refuses_a_default(self):
+        by = {t.id: t for t in tweaks.CATALOG}
+        for tid in ("tcp_ecn", "rsc_off", "packet_coalescing_off"):
+            self.assertEqual(by[tid].risk, "experimental", tid)       # SIC-88: never suggested by check #10
+        self.assertTrue(by["tcp_ecn"].has_default_restore)
+        self.assertTrue(by["rsc_off"].has_default_restore)
+        self.assertFalse(by["packet_coalescing_off"].has_default_restore)
 
     def test_powercfg_guids_match_the_manual_scripts(self):
         script = Path(config.ROOT, "scripts", "manual", "apply-lowrisk.ps1").read_text(encoding="utf-8")

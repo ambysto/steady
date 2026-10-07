@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "MTU an die Leitung anpassen",
   "tweak.mtu_path.note": "Verhindert den Verlust großer Pakete auf PPPoE-Leitungen (Seiten, die halb geladen hängen bleiben)",
   "tweak.mtu_path.source": "Pfad-MTU {mtu} am {date} gemessen",
+  "tweak.tcp_ecn.name": "TCP-ECN einschalten",
+  "tweak.tcp_ecn.note": "Lässt Router, die Pakete markieren (Smart-QoS), Überlast melden, statt Pakete zu verwerfen. Manche alten Zwischengeräte behandeln ECN falsch: ausschalten, wenn einzelne Websites hängen",
+  "tweak.rsc_off.name": "Receive Segment Coalescing ausschalten",
+  "tweak.rsc_off.note": "RSC fasst empfangene Pakete zusammen, um CPU-Zeit zu sparen, auf Kosten der Latenz. Viele Wi‑Fi-Karten haben es nicht",
+  "tweak.packet_coalescing_off.name": "Zusammenfassen empfangener Pakete ausschalten",
+  "tweak.packet_coalescing_off.note": "Verhindert, dass Windows empfangene Pakete zurückhält, um die CPU seltener zu wecken, was die Latenz erhöhen kann. Die Wirkung auf die Geschwindigkeit ist nicht belegt",
 
   "tweak.reason.no_wifi_card": "Keine Wi‑Fi-Karte gefunden",
   "tweak.reason.no_matching_value": "„{property}“ hat keinen passenden Wert (verfügbar: {values})",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "Die Upload-Messung ist älter als 30 Tage; den Bufferbloat-Test erneut ausführen",
   "tweak.reason.measure_again.path_mtu": "Die Pfad-MTU-Messung ist älter als 30 Tage; die Diagnose erneut ausführen",
   "tweak.reason.drift": "{source}. Die Leitung scheint sich geändert zu haben: Dies ausschalten, neu messen und dann wieder einschalten",
+  "tweak.reason.no_rsc": "Diese Karte hat kein Receive Segment Coalescing",
+  "tweak.reason.no_default_packet_coalescing": "Keine Sicherung, und der Windows-Standardwert unterscheidet sich je nach PC",
 
   "tweak.result.read_failed": "Der Zustand kann nicht gelesen werden: {error}",
   "tweak.result.unsupported": "Auf diesem PC nicht unterstützt: {reason}",

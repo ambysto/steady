@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "Ajustar la MTU a la línea",
   "tweak.mtu_path.note": "Evita que se pierdan paquetes grandes en líneas PPPoE (páginas que se quedan a medio cargar)",
   "tweak.mtu_path.source": "MTU de la ruta {mtu} medida el {date}",
+  "tweak.tcp_ecn.name": "Activar TCP ECN",
+  "tweak.tcp_ecn.note": "Permite que los routers que marcan paquetes (QoS inteligente) avisen de la congestión sin descartarlos. Algunos equipos intermedios antiguos gestionan mal ECN: desactívalo si algunos sitios se quedan colgados",
+  "tweak.rsc_off.name": "Desactivar Receive Segment Coalescing",
+  "tweak.rsc_off.note": "RSC combina los paquetes recibidos para ahorrar CPU, a costa de la latencia. Muchas tarjetas Wi‑Fi no lo tienen",
+  "tweak.packet_coalescing_off.name": "Desactivar la combinación de paquetes recibidos",
+  "tweak.packet_coalescing_off.note": "Evita que Windows retenga los paquetes recibidos para despertar la CPU con menos frecuencia, lo que puede añadir latencia. El efecto en la velocidad no está comprobado",
 
   "tweak.reason.no_wifi_card": "No se encontró ninguna tarjeta Wi‑Fi",
   "tweak.reason.no_matching_value": "'{property}' no tiene un valor adecuado (disponibles: {values})",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "La medición de subida tiene más de 30 días; vuelve a ejecutar la prueba de bufferbloat",
   "tweak.reason.measure_again.path_mtu": "La medición de la MTU de la ruta tiene más de 30 días; vuelve a ejecutar el diagnóstico",
   "tweak.reason.drift": "{source}. La línea parece haber cambiado: desactiva esto, vuelve a medir y actívalo de nuevo",
+  "tweak.reason.no_rsc": "Esta tarjeta no tiene Receive Segment Coalescing",
+  "tweak.reason.no_default_packet_coalescing": "No hay copia de seguridad y el valor predeterminado de Windows varía según el PC",
 
   "tweak.result.read_failed": "No se puede leer el estado: {error}",
   "tweak.result.unsupported": "No compatible con este PC: {reason}",

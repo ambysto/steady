@@ -7,8 +7,8 @@ import tempfile
 import unittest
 
 from app import config, i18n, tweaks
-from app.tweaks import (AdapterPropertyTweak, BindingTweak, NoDefaultRestore, PowerCfgTweak, RegistryDwordTweak,
-                        TweakManager)
+from app.tweaks import (AdapterPropertyTweak, BindingTweak, NoDefaultRestore, PacketCoalescingOffTweak, PowerCfgTweak,
+                        RegistryDwordTweak, RscOffTweak, TcpEcnTweak, TweakManager)
 from app.winsys import SystemWriteError
 
 CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\0011"
@@ -46,6 +46,9 @@ class FakeSystem:
         self.network = {"key": "6|192.0.2.1|HomeNet", "interface_index": 6}
         self.qos = {}                 # policy name -> bits per second
         self.mtu = {6: 1500}
+        self.ecn = "disabled"
+        self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
+        self.coalescing = "Enabled"
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -90,6 +93,18 @@ class FakeSystem:
     def interface_mtu_get(self, index):
         self._r("interface_mtu_get", index)
         return self.mtu[index]
+
+    def tcp_ecn_get(self):
+        self._r("tcp_ecn_get")
+        return self.ecn
+
+    def rsc_get(self, adapter):
+        self._r("rsc_get", adapter)
+        return copy.deepcopy(self.rsc.get(adapter))
+
+    def packet_coalescing_get(self):
+        self._r("packet_coalescing_get")
+        return self.coalescing
 
     # writes
     def _w(self, name, *args):
@@ -141,12 +156,27 @@ class FakeSystem:
         if self._w("interface_mtu_set", index, mtu):
             self.mtu[index] = mtu
 
+    def tcp_ecn_set(self, value):
+        if self._w("tcp_ecn_set", value):
+            self.ecn = value
+
+    def rsc_set(self, adapter, ipv4, ipv6):
+        if self._w("rsc_set", adapter, ipv4, ipv6):
+            for key, value in (("ipv4", ipv4), ("ipv6", ipv6)):
+                if value is not None:
+                    self.rsc[adapter][key] = value
+
+    def packet_coalescing_set(self, value):
+        if self._w("packet_coalescing_set", value):
+            self.coalescing = value
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
-        return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.qos, self.mtu))
+        return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.qos, self.mtu, self.ecn, self.rsc,
+                               self.coalescing))
 
 
 def power_saving():
@@ -601,6 +631,100 @@ class PersistenceTests(unittest.TestCase):
         out = TweakManager(s, all_tweaks(), is_admin=lambda: True).enable("device_power_off")
         self.assertFalse(out.ok)
         self.assertEqual(s.writes(), [])
+
+
+class StackSwitchTests(unittest.TestCase):
+    """SIC-88: experimental network-stack switches (TCP ECN, RSC, packet coalescing)."""
+
+    @staticmethod
+    def stack():
+        return [TcpEcnTweak("tcp_ecn", "ECN", "experimental"), RscOffTweak("rsc_off", "RSC", "experimental"),
+                PacketCoalescingOffTweak("packet_coalescing_off", "Coalescing", "experimental")]
+
+    def mgr(self, system=None, backup=None):
+        return manager(system, backup, tweak_list=self.stack())
+
+    def test_ecn_round_trip_restores_the_captured_value(self):
+        mgr, s, backup, _ = self.mgr()
+        before = s.snapshot()
+        self.assertTrue(mgr.enable("tcp_ecn").ok)
+        self.assertEqual(s.ecn, "enabled")
+        self.assertEqual(backup.data["tcp_ecn"]["original"], {"value": "disabled"})
+        self.assertTrue(mgr.disable("tcp_ecn").ok)
+        self.assertEqual(s.snapshot(), before)
+        self.assertEqual(backup.data, {})
+
+    def test_ecn_without_backup_goes_back_to_default(self):
+        mgr, s, _, _ = self.mgr()
+        s.ecn = "enabled"
+        self.assertTrue(mgr.state("tcp_ecn").can_restore_without_backup)
+        self.assertTrue(mgr.disable("tcp_ecn").ok)
+        self.assertEqual(s.ecn, "default")
+        self.assertEqual([w[1:] for w in s.writes()], [("tcp_ecn_set", ("default",))])
+
+    def test_rsc_disables_only_the_enabled_families_and_restores_the_flags(self):
+        mgr, s, backup, _ = self.mgr()
+        s.rsc["Wi-Fi"]["ipv6"] = False                      # a card with IPv6 RSC already off
+        before = s.snapshot()
+        self.assertTrue(mgr.enable("rsc_off").ok)
+        self.assertEqual(s.rsc["Wi-Fi"]["ipv4"], False)
+        self.assertEqual([w[1:] for w in s.writes()], [("rsc_set", ("Wi-Fi", False, None))])
+        self.assertEqual(backup.data["rsc_off"]["original"], {"adapter": "Wi-Fi", "ipv4": True, "ipv6": False})
+        self.assertTrue(mgr.disable("rsc_off").ok)
+        self.assertEqual(s.snapshot(), before)             # IPv6 was off before and stays off
+        self.assertTrue(mgr.state("rsc_off").disrupts_network)
+
+    def test_rsc_without_backup_enables_what_the_card_supports(self):
+        mgr, s, _, _ = self.mgr()
+        s.rsc["Wi-Fi"].update(ipv4=False, ipv6=False, ipv6_supported=False)
+        self.assertTrue(mgr.state("rsc_off").enabled)
+        out = mgr.disable("rsc_off")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual(s.rsc["Wi-Fi"]["ipv4"], True)
+        self.assertEqual(s.rsc["Wi-Fi"]["ipv6"], False)    # never asked the card for IPv6 RSC it lacks
+        self.assertEqual([w[1:] for w in s.writes()], [("rsc_set", ("Wi-Fi", True, None))])
+
+    def test_rsc_unsupported_is_not_an_error(self):
+        mgr, s, _, _ = self.mgr()
+        s.rsc.clear()                                      # no RSC object for the card
+        st = mgr.state("rsc_off")
+        self.assertEqual((st.supported, st.enabled, st.error), (False, False, None))
+        self.assertIn("Receive Segment Coalescing", vi(st.reason))
+        s.rsc["Wi-Fi"] = {"ipv4": False, "ipv6": False, "ipv4_supported": False, "ipv6_supported": False}
+        st = mgr.state("rsc_off")                          # the dev PC's Wi-Fi card: RSC exists but is unsupported
+        self.assertEqual((st.supported, st.error), (False, None))
+        out = mgr.enable("rsc_off")
+        self.assertFalse(out.ok)
+        self.assertEqual(s.writes(), [])
+        s.adapter = None
+        self.assertFalse(mgr.state("rsc_off").supported)
+
+    def test_packet_coalescing_round_trip_with_backup(self):
+        mgr, s, backup, _ = self.mgr()
+        s.coalescing = "Default"
+        self.assertTrue(mgr.enable("packet_coalescing_off").ok)
+        self.assertEqual(s.coalescing, "Disabled")
+        self.assertTrue(mgr.disable("packet_coalescing_off").ok)
+        self.assertEqual(s.coalescing, "Default")
+
+    def test_packet_coalescing_has_no_default_restore(self):
+        mgr, s, _, _ = self.mgr()
+        s.coalescing = "Disabled"                          # set by hand, no backup
+        self.assertFalse(mgr.state("packet_coalescing_off").can_restore_without_backup)
+        out = mgr.disable("packet_coalescing_off")
+        self.assertFalse(out.ok)
+        self.assertEqual(s.writes(), [])
+        self.assertEqual(s.coalescing, "Disabled")
+        with self.assertRaises(NoDefaultRestore):
+            PacketCoalescingOffTweak("x_off", "x", "experimental").restore(s, None)
+
+    def test_a_write_that_has_no_effect_rolls_back(self):
+        mgr, s, backup, _ = self.mgr()
+        s.noop.add("tcp_ecn_set")
+        out = mgr.enable("tcp_ecn")
+        self.assertFalse(out.ok)
+        self.assertEqual(s.ecn, "disabled")
+        self.assertEqual(backup.data, {})
 
 
 class CatalogTests(unittest.TestCase):

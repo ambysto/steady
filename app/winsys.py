@@ -1,8 +1,8 @@
 """System access for tweaks - the only module that writes to the machine.
 
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
-active plan, adapter protocol bindings, the app's own QoS upload policy and an interface's IPv4
-MTU (ADR-0015). Every write raises SystemWriteError on failure;
+active plan, adapter protocol bindings, the app's own QoS upload policy, an interface's IPv4
+MTU (ADR-0015), the global TCP ECN capability, an adapter's RSC and the global packet coalescing filter. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -26,6 +26,9 @@ _POWER_RE = re.compile(r"Current (AC|DC) Power Setting Index:\s*0x([0-9a-fA-F]+)
 _QOS_NAME_RE = re.compile(r"^[A-Za-z0-9]+$")
 MTU_MIN, MTU_MAX = 576, 9216      # sanity only (restoring may need a jumbo-frame original); tweaks set 1280-1500
 UPLOAD_LIMIT_MIN, UPLOAD_LIMIT_MAX = 2_000_000, 1_000_000_000   # bits per second
+ECN_VALUES = ("enabled", "disabled", "default")                 # netsh int tcp ... ecncapability=
+PACKET_COALESCING_VALUES = ("Enabled", "Disabled", "Default")   # Set-NetOffloadGlobalSetting -PacketCoalescingFilter
+_ECN_RE = re.compile(r"^\s*ECN Capability\s*:\s*(\S+)", re.I | re.M)
 
 
 class SystemReadError(RuntimeError):
@@ -66,6 +69,9 @@ class System(Protocol):
     def current_network(self) -> dict[str, Any] | None: ...
     def qos_throttle_get(self, name: str) -> int | None: ...
     def interface_mtu_get(self, interface_index: int) -> int: ...
+    def tcp_ecn_get(self) -> str: ...
+    def rsc_get(self, adapter: str) -> dict[str, bool] | None: ...
+    def packet_coalescing_get(self) -> str: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -77,6 +83,9 @@ class System(Protocol):
     def qos_throttle_set(self, name: str, bits_per_second: int) -> None: ...
     def qos_policy_remove(self, name: str) -> None: ...
     def interface_mtu_set(self, interface_index: int, mtu: int) -> None: ...
+    def tcp_ecn_set(self, value: str) -> None: ...
+    def rsc_set(self, adapter: str, ipv4: bool | None, ipv6: bool | None) -> None: ...
+    def packet_coalescing_set(self, value: str) -> None: ...
 
 
 def _check_qos_name(name: str) -> str:
@@ -89,6 +98,12 @@ def _check_mtu(mtu: int) -> int:
     if not MTU_MIN <= int(mtu) <= MTU_MAX:
         raise ValueError(f"MTU out of range: {mtu}")
     return int(mtu)
+
+
+def _check_choice(value: str, allowed: tuple[str, ...], what: str) -> str:
+    if value not in allowed:
+        raise ValueError(f"bad {what}: {value!r}")
+    return value
 
 
 def _as_list(value: Any) -> list[str]:
@@ -228,6 +243,39 @@ class WindowsSystem:
             raise SystemReadError(f"no IPv4 interface {idx}")
         return int(rows[0]["NlMtu"])
 
+    def tcp_ecn_get(self) -> str:
+        """The "ECN Capability" of `netsh int tcp show global`: enabled, disabled or default."""
+        proc = self._run(["netsh", "int", "tcp", "show", "global"], capture_output=True, timeout=30,
+                         creationflags=CREATE_NO_WINDOW)
+        text = proc.stdout.decode(_oem_codepage(), errors="replace") if isinstance(proc.stdout, bytes) else proc.stdout
+        m = _ECN_RE.search(text or "")
+        if proc.returncode != 0 or not m:
+            raise SystemReadError("cannot read the TCP ECN capability")
+        return m.group(1).lower()
+
+    def rsc_get(self, adapter: str) -> dict[str, bool] | None:
+        """Receive Segment Coalescing of an adapter: enabled flags and what the hardware supports
+        ({"ipv4", "ipv6", "ipv4_supported", "ipv6_supported"}); None when Windows has no RSC
+        object for it (many Wi-Fi drivers have none)."""
+        rows = self._ps_json(
+            f"Get-NetAdapterRsc -Name {ps_literal(adapter)} -ErrorAction SilentlyContinue | Select-Object "
+            "@{n='IPv4';e={[bool]$_.IPv4Enabled}}, @{n='IPv6';e={[bool]$_.IPv6Enabled}}, "
+            "@{n='IPv4Supported';e={[bool]$_.RscHardwareCapabilities.IPv4Supported}}, "
+            "@{n='IPv6Supported';e={[bool]$_.RscHardwareCapabilities.IPv6Supported}}")
+        if not rows:
+            return None
+        r = rows[0]
+        return {"ipv4": bool(r["IPv4"]), "ipv6": bool(r["IPv6"]),
+                "ipv4_supported": bool(r["IPv4Supported"]), "ipv6_supported": bool(r["IPv6Supported"])}
+
+    def packet_coalescing_get(self) -> str:
+        """PacketCoalescingFilter of Get-NetOffloadGlobalSetting: Enabled, Disabled or Default."""
+        rows = self._ps_json("Get-NetOffloadGlobalSetting -ErrorAction Stop | "
+                             "Select-Object @{n='Value';e={[string]$_.PacketCoalescingFilter}}")
+        if not rows or not rows[0].get("Value"):
+            raise SystemReadError("cannot read the packet coalescing filter")
+        return str(rows[0]["Value"])
+
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
         idx = int(interface_index)
@@ -324,3 +372,25 @@ class WindowsSystem:
         idx = int(interface_index)
         self._ps_write(f"Set-NetIPInterface -InterfaceIndex {idx} -AddressFamily IPv4 -NlMtuBytes {_check_mtu(mtu)} "
                        "-ErrorAction Stop", f"setting the MTU of interface {idx}")
+
+    def tcp_ecn_set(self, value: str) -> None:
+        arg = f"ecncapability={_check_choice(value, ECN_VALUES, 'ECN value')}"
+        try:
+            proc = self._run(["netsh", "int", "tcp", "set", "global", arg], capture_output=True, timeout=30,
+                             creationflags=CREATE_NO_WINDOW)
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise SystemWriteError(f"setting TCP ECN to {value} failed: {exc}") from exc
+        if proc.returncode != 0:
+            raise SystemWriteError(f"netsh int tcp set global {arg} exited {proc.returncode}")
+
+    def rsc_set(self, adapter: str, ipv4: bool | None, ipv6: bool | None) -> None:
+        """Turn RSC on or off per address family; None leaves that family alone."""
+        steps = [f"{'Enable' if on else 'Disable'}-NetAdapterRsc -Name {ps_literal(adapter)} {flag} -ErrorAction Stop"
+                 for flag, on in (("-IPv4", ipv4), ("-IPv6", ipv6)) if on is not None]
+        if steps:
+            self._ps_write("; ".join(steps), f"setting RSC on {adapter}")
+
+    def packet_coalescing_set(self, value: str) -> None:
+        self._ps_write("Set-NetOffloadGlobalSetting -PacketCoalescingFilter "
+                       f"{_check_choice(value, PACKET_COALESCING_VALUES, 'packet coalescing value')} -ErrorAction Stop",
+                       f"setting the packet coalescing filter to {value}")

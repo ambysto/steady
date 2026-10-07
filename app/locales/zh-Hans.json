@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "让 MTU 匹配线路",
   "tweak.mtu_path.note": "避免 PPPoE 线路上的大数据包丢失（网页只加载一半就卡住）",
   "tweak.mtu_path.source": "{date} 测得路径 MTU {mtu}",
+  "tweak.tcp_ecn.name": "开启 TCP ECN",
+  "tweak.tcp_ecn.note": "让会给数据包打标记的路由器（智能 QoS）无需丢包就能通知拥塞。部分老旧中间设备无法正确处理 ECN：如果某些网站卡住，请将其关闭",
+  "tweak.rsc_off.name": "关闭接收段合并（RSC）",
+  "tweak.rsc_off.note": "RSC 会合并收到的数据包以节省 CPU，代价是增加延迟。许多 Wi‑Fi 网卡并不具备此功能",
+  "tweak.packet_coalescing_off.name": "关闭接收数据包合并",
+  "tweak.packet_coalescing_off.note": "阻止 Windows 为减少唤醒 CPU 的次数而扣留收到的数据包，这样做可能增加延迟。对速度的影响尚未得到证实",
 
   "tweak.reason.no_wifi_card": "未找到 Wi‑Fi 网卡",
   "tweak.reason.no_matching_value": "“{property}”没有合适的值（可用值：{values}）",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "上传测量已超过 30 天；请重新运行 bufferbloat 测试",
   "tweak.reason.measure_again.path_mtu": "路径 MTU 测量已超过 30 天；请重新运行诊断",
   "tweak.reason.drift": "{source}。线路似乎已变化：请关闭此项，重新测量后再开启",
+  "tweak.reason.no_rsc": "此网卡没有接收段合并（RSC）功能",
+  "tweak.reason.no_default_packet_coalescing": "没有备份，且 Windows 的默认值因电脑而异",
 
   "tweak.result.read_failed": "无法读取状态：{error}",
   "tweak.result.unsupported": "此电脑不支持：{reason}",

@@ -112,6 +112,131 @@ class ScriptConstructionTests(unittest.TestCase):
             sys_.registry_set_dword(r"SOFTWARE\x", "v", -1)
 
 
+NETSH_TCP_GLOBAL = """
+Querying active state...
+
+TCP Global Parameters
+----------------------------------------------
+Receive-Side Scaling State          : enabled 
+Receive Window Auto-Tuning Level    : normal 
+Add-On Congestion Control Provider  : default 
+ECN Capability                      : enabled 
+RFC 1323 Timestamps                 : disabled 
+Initial RTO                         : 2000 
+Receive Segment Coalescing State    : enabled 
+Non Sack Rtt Resiliency             : disabled 
+Max SYN Retransmissions             : 4 
+Fast Open                           : enabled 
+Fast Open Fallback                  : enabled 
+HyStart                             : enabled 
+Proportional Rate Reduction         : enabled 
+Pacing Profile                      : off 
+
+"""
+
+
+class StackSwitchSystemTests(unittest.TestCase):
+    """TCP ECN (netsh), RSC and the packet coalescing filter (PowerShell), SIC-88."""
+
+    @staticmethod
+    def netsh(text="", returncode=0, calls=None):
+        def run(args, **kw):
+            if calls is not None:
+                calls.append(args)
+            return SimpleNamespace(returncode=returncode, stdout=text.encode("cp437"))
+        return winsys.WindowsSystem(ps=FakePs(), ps_json=lambda *a, **k: [], run=run)
+
+    def test_ecn_is_parsed_from_the_real_netsh_output(self):
+        calls = []
+        self.assertEqual(self.netsh(NETSH_TCP_GLOBAL, calls=calls).tcp_ecn_get(), "enabled")
+        self.assertEqual(calls, [["netsh", "int", "tcp", "show", "global"]])
+        for value in ("disabled", "default"):
+            text = NETSH_TCP_GLOBAL.replace("ECN Capability                      : enabled",
+                                            f"ECN Capability                      : {value}")
+            self.assertEqual(self.netsh(text).tcp_ecn_get(), value)
+
+    def test_ecn_read_fails_loudly_on_unexpected_output(self):
+        for text, code in (("", 0), ("The following command was not found: int tcp show global.", 1),
+                           (NETSH_TCP_GLOBAL.replace("ECN Capability", "ECN Fähigkeit"), 0),
+                           (NETSH_TCP_GLOBAL, 1)):
+            with self.assertRaises(winsys.SystemReadError):
+                self.netsh(text, code).tcp_ecn_get()
+
+    def test_ecn_write_command_and_validation(self):
+        calls = []
+        sys_ = self.netsh(calls=calls)
+        sys_.tcp_ecn_set("enabled")
+        sys_.tcp_ecn_set("default")
+        self.assertEqual(calls, [["netsh", "int", "tcp", "set", "global", "ecncapability=enabled"],
+                                 ["netsh", "int", "tcp", "set", "global", "ecncapability=default"]])
+        for bad in ("Enabled ", "enabled disabled", "on", "", "enabled & calc"):
+            with self.assertRaises(ValueError):
+                sys_.tcp_ecn_set(bad)
+        self.assertEqual(len(calls), 2)
+        with self.assertRaises(winsys.SystemWriteError):
+            self.netsh(returncode=1).tcp_ecn_set("enabled")
+
+    def test_rsc_read_script_and_result(self):
+        scripts = []
+
+        def ps_json(script, **kw):
+            scripts.append(script)
+            return rows
+        sys_ = winsys.WindowsSystem(ps=FakePs(), ps_json=ps_json, run=None)
+        rows = [{"IPv4": False, "IPv6": False, "IPv4Supported": False, "IPv6Supported": False}]
+        self.assertEqual(sys_.rsc_get("Wi-Fi"), {"ipv4": False, "ipv6": False, "ipv4_supported": False,
+                                                 "ipv6_supported": False})
+        self.assertIn("Get-NetAdapterRsc", scripts[0])
+        self.assertIn("RscHardwareCapabilities", scripts[0])
+        self.assertNotIn("Wi-Fi", scripts[0])               # only base64
+        rows = [{"IPv4": True, "IPv6": False, "IPv4Supported": True, "IPv6Supported": True}]
+        self.assertEqual(sys_.rsc_get("Wi-Fi")["ipv4"], True)
+        rows = []                                          # "no object" (SilentlyContinue): driver without RSC
+        self.assertIsNone(sys_.rsc_get("Wi-Fi"))
+
+    def test_rsc_write_scripts(self):
+        ps = FakePs()
+        sys_ = winsys.WindowsSystem(ps=ps, ps_json=lambda *a, **k: [], run=None)
+        sys_.rsc_set("Wi-Fi", False, False)
+        sys_.rsc_set("Wi-Fi", True, None)
+        sys_.rsc_set("Wi-Fi", None, None)
+        self.assertEqual(len(ps.scripts), 2)                # nothing to do, nothing run
+        self.assertEqual(ps.scripts[0].count("Disable-NetAdapterRsc"), 2)
+        self.assertIn("-IPv4", ps.scripts[0])
+        self.assertIn("-IPv6", ps.scripts[0])
+        self.assertIn("Enable-NetAdapterRsc", ps.scripts[1])
+        self.assertNotIn("-IPv6", ps.scripts[1])
+        for nasty in NASTY[1:]:
+            sys_.rsc_set(nasty, False, False)
+            self.assertNotIn(nasty, ps.scripts[-1])
+
+    def test_rsc_write_failure_is_a_write_error(self):
+        def failing(script, **kw):
+            raise winsys.PowerShellError("Disable-NetAdapterRsc : not supported")
+        sys_ = winsys.WindowsSystem(ps=failing, ps_json=lambda *a, **k: [], run=None)
+        with self.assertRaises(winsys.SystemWriteError):
+            sys_.rsc_set("Wi-Fi", False, None)
+
+    def test_packet_coalescing_read_and_write(self):
+        scripts = []
+        sys_ = winsys.WindowsSystem(ps=FakePs(), ps_json=lambda s, **k: scripts.append(s) or [{"Value": "Disabled"}],
+                                    run=None)
+        self.assertEqual(sys_.packet_coalescing_get(), "Disabled")
+        self.assertIn("Get-NetOffloadGlobalSetting", scripts[0])
+        self.assertIn("[string]", scripts[0])
+        with self.assertRaises(winsys.SystemReadError):
+            winsys.WindowsSystem(ps=FakePs(), ps_json=lambda *a, **k: [], run=None).packet_coalescing_get()
+        ps = FakePs()
+        sys_ = winsys.WindowsSystem(ps=ps, ps_json=lambda *a, **k: [], run=None)
+        sys_.packet_coalescing_set("Disabled")
+        sys_.packet_coalescing_set("Default")
+        self.assertIn("Set-NetOffloadGlobalSetting -PacketCoalescingFilter Disabled ", ps.scripts[0])
+        for bad in ("disabled", "Disabled; calc", "", "NotSet"):
+            with self.assertRaises(ValueError):
+                sys_.packet_coalescing_set(bad)
+        self.assertEqual(len(ps.scripts), 2)
+
+
 @unittest.skipUnless(sys.platform == "win32", "needs PowerShell")
 class PsLiteralRoundTripTests(unittest.TestCase):
     def test_nasty_strings_survive_unchanged(self):

@@ -7,7 +7,7 @@ See docs/adr/0003-tweak-framework.md. In short:
            default if the tweak has one, otherwise refuse and leave things alone
 
 Tweaks are declarations built from four primitive kinds (adapter advanced property,
-HKLM DWORD, powercfg AC/DC index, adapter binding), plus measured tweaks whose value comes
+HKLM DWORD, powercfg AC/DC index, adapter binding), a few network-stack switches, plus measured tweaks whose value comes
 from a calibration of the network in use (ADR-0015). The catalog itself lives in CATALOG.
 
     python -m app.tweaks list
@@ -281,6 +281,100 @@ class BindingTweak(Tweak):
         return (original["adapter"], original["component"], bool(original["enabled"]))
 
 
+class TcpEcnTweak(Tweak):
+    """Global TCP ECN capability, via netsh (Set-NetTCPSetting is read-only for some fields on
+    Windows 11). `default` is a known-safe value to go back to when there is no backup."""
+
+    def read(self, sys_: System) -> Reading:
+        value = sys_.tcp_ecn_get()
+        return Reading(True, value == "enabled", value)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return {"value": sys_.tcp_ecn_get()}
+
+    def apply(self, sys_: System) -> None:
+        sys_.tcp_ecn_set("enabled")
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        sys_.tcp_ecn_set("default" if original is None else str(original["value"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return str(original["value"])
+
+
+class RscOffTweak(Tweak):
+    """Receive Segment Coalescing of the Wi-Fi card turned off. Many Wi-Fi drivers have no RSC
+    at all: then the tweak is unsupported, not broken. Windows' default is on."""
+
+    def __init__(self, id: str, name: Message, risk: str, **kw: Any) -> None:
+        kw.setdefault("disrupts_network", True)   # changing RSC restarts the adapter
+        super().__init__(id, name, risk, **kw)
+
+    @staticmethod
+    def _resolve(sys_: System) -> tuple[str, dict[str, bool]]:
+        adapter = _wifi_adapter(sys_)
+        state = sys_.rsc_get(adapter)
+        if state is None or not (state["ipv4_supported"] or state["ipv6_supported"]
+                                 or state["ipv4"] or state["ipv6"]):
+            raise Unsupported(msg("tweak.reason.no_rsc"))
+        return adapter, state
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            _, state = self._resolve(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        return Reading(True, not state["ipv4"] and not state["ipv6"], {"ipv4": state["ipv4"], "ipv6": state["ipv6"]})
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        adapter, state = self._resolve(sys_)
+        return {"adapter": adapter, "ipv4": state["ipv4"], "ipv6": state["ipv6"]}
+
+    def apply(self, sys_: System) -> None:
+        adapter, state = self._resolve(sys_)
+        sys_.rsc_set(adapter, False if state["ipv4"] else None, False if state["ipv6"] else None)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            adapter, state = self._resolve(sys_)
+            sys_.rsc_set(adapter, True if state["ipv4_supported"] else None,
+                         True if state["ipv6_supported"] else None)
+            return
+        adapter, want4, want6 = original["adapter"], bool(original["ipv4"]), bool(original["ipv6"])
+        state = sys_.rsc_get(adapter)
+        if state is None:
+            raise Unsupported(msg("tweak.reason.no_rsc"))
+        sys_.rsc_set(adapter, want4 if state["ipv4"] != want4 else None, want6 if state["ipv6"] != want6 else None)
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return (original["adapter"], bool(original["ipv4"]), bool(original["ipv6"]))
+
+
+class PacketCoalescingOffTweak(Tweak):
+    """Global receive packet coalescing filter turned off. The Windows default differs between
+    editions and devices, so without a backup there is nothing safe to go back to."""
+
+    has_default_restore = False
+
+    def read(self, sys_: System) -> Reading:
+        value = sys_.packet_coalescing_get()
+        return Reading(True, value == "Disabled", value)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return {"value": sys_.packet_coalescing_get()}
+
+    def apply(self, sys_: System) -> None:
+        sys_.packet_coalescing_set("Disabled")
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_packet_coalescing"))
+        sys_.packet_coalescing_set(str(original["value"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return str(original["value"])
+
+
 class MeasuredTweak(Tweak):
     """A tweak whose target comes from a calibration of the network in use (ADR-0015).
     Never applied without one; the value is clamped here, whatever calibration.json says,
@@ -417,7 +511,8 @@ class PathMtuTweak(MeasuredTweak):
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
-                 "binding_get", "current_network", "qos_throttle_get", "interface_mtu_get")
+                 "binding_get", "current_network", "qos_throttle_get", "interface_mtu_get", "tcp_ecn_get",
+                 "rsc_get", "packet_coalescing_get")
 
 
 class _CachedReads:
@@ -781,6 +876,11 @@ def build_catalog(load_calibration: Callable[[], dict] = config.load_calibration
                            group=GROUP_STACK, needs_reboot=True, note=_note("tcp_timedwait")),
         BindingTweak("ipv6_off", _name("ipv6_off"), "experimental", component="ms_tcpip6", enabled=False,
                      group=GROUP_STACK, note=_note("ipv6_off")),
+        # Experimental: changed by hand together with many others, so no single effect is known (SIC-88)
+        TcpEcnTweak("tcp_ecn", _name("tcp_ecn"), "experimental", group=GROUP_STACK, note=_note("tcp_ecn")),
+        RscOffTweak("rsc_off", _name("rsc_off"), "experimental", group=GROUP_STACK, note=_note("rsc_off")),
+        PacketCoalescingOffTweak("packet_coalescing_off", _name("packet_coalescing_off"), "experimental",
+                                 group=GROUP_STACK, note=_note("packet_coalescing_off")),
         # 3b. Measured: the value comes from a calibration of the network in use (ADR-0015)
         UploadLimitTweak("upload_shaping", _name("upload_shaping"), "medium", group=GROUP_STACK,
                          note=_note("upload_shaping"), load_calibration=load_calibration),

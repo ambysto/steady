@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "MTU를 회선에 맞추기",
   "tweak.mtu_path.note": "PPPoE 회선에서 큰 패킷이 손실되는 문제를 막습니다 (페이지가 절반만 로드되고 멈추는 현상)",
   "tweak.mtu_path.source": "경로 MTU {mtu}, {date}에 측정",
+  "tweak.tcp_ecn.name": "TCP ECN 켜기",
+  "tweak.tcp_ecn.note": "패킷에 표시를 남기는 라우터(스마트 QoS)가 패킷을 버리지 않고 혼잡을 알릴 수 있게 합니다. 일부 오래된 중간 장비는 ECN을 잘못 처리합니다. 일부 사이트가 멈추면 끄십시오",
+  "tweak.rsc_off.name": "Receive Segment Coalescing 끄기",
+  "tweak.rsc_off.note": "RSC는 수신 패킷을 합쳐 CPU를 아끼는 대신 지연 시간이 늘어납니다. 많은 Wi‑Fi 카드에는 이 기능이 없습니다",
+  "tweak.packet_coalescing_off.name": "수신 패킷 병합 끄기",
+  "tweak.packet_coalescing_off.note": "CPU를 덜 깨우려고 Windows가 수신 패킷을 붙잡아 두는 것을 막습니다. 이는 지연 시간을 늘릴 수 있습니다. 속도에 미치는 효과는 검증되지 않았습니다",
 
   "tweak.reason.no_wifi_card": "Wi‑Fi 카드를 찾을 수 없습니다",
   "tweak.reason.no_matching_value": "'{property}'에 적합한 값이 없습니다 (사용 가능: {values})",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "업로드 측정이 30일이 지났습니다. 버퍼블로트 테스트를 다시 실행하십시오",
   "tweak.reason.measure_again.path_mtu": "경로 MTU 측정이 30일이 지났습니다. 진단을 다시 실행하십시오",
   "tweak.reason.drift": "{source}. 회선이 바뀐 것 같습니다. 이 최적화를 끄고 다시 측정한 다음 켜십시오",
+  "tweak.reason.no_rsc": "이 카드에는 Receive Segment Coalescing이 없습니다",
+  "tweak.reason.no_default_packet_coalescing": "백업이 없고 Windows 기본값은 PC마다 다릅니다",
 
   "tweak.result.read_failed": "상태를 읽을 수 없습니다: {error}",
   "tweak.result.unsupported": "이 PC에서 지원되지 않음: {reason}",

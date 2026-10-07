@@ -330,6 +330,12 @@
   "tweak.mtu_path.name": "Match the MTU to the line",
   "tweak.mtu_path.note": "Stops large packets from being lost on PPPoE lines (pages that hang half-loaded)",
   "tweak.mtu_path.source": "Path MTU {mtu} measured on {date}",
+  "tweak.tcp_ecn.name": "Turn on TCP ECN",
+  "tweak.tcp_ecn.note": "Lets routers that mark packets (smart QoS) signal congestion without dropping them. Some old middleboxes mishandle ECN: turn it off if some sites stall",
+  "tweak.rsc_off.name": "Turn off Receive Segment Coalescing",
+  "tweak.rsc_off.note": "RSC merges received packets to save CPU time, at the cost of latency. Many Wi‑Fi cards do not have it",
+  "tweak.packet_coalescing_off.name": "Turn off receive packet coalescing",
+  "tweak.packet_coalescing_off.note": "Stops Windows from holding received packets back to wake the CPU less often, which can add latency. The effect on speed is unproven",
 
   "tweak.reason.no_wifi_card": "No Wi‑Fi card found",
   "tweak.reason.no_matching_value": "'{property}' has no suitable value (available: {values})",
@@ -349,6 +355,8 @@
   "tweak.reason.measure_again.upload_mbps": "The upload measurement is older than 30 days; run the bufferbloat test again",
   "tweak.reason.measure_again.path_mtu": "The path MTU measurement is older than 30 days; run the diagnostics again",
   "tweak.reason.drift": "{source}. The line seems to have changed: turn this off, measure again, then turn it on",
+  "tweak.reason.no_rsc": "This card has no Receive Segment Coalescing",
+  "tweak.reason.no_default_packet_coalescing": "No backup, and the Windows default differs between PCs",
 
   "tweak.result.read_failed": "Cannot read the state: {error}",
   "tweak.result.unsupported": "Not supported on this PC: {reason}",

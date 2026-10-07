@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "MTU を回線に合わせる",
   "tweak.mtu_path.note": "PPPoE 回線で大きなパケットが失われるのを防ぎます（ページが途中までしか読み込まれず止まる現象）",
   "tweak.mtu_path.source": "パス MTU {mtu} を {date} に測定",
+  "tweak.tcp_ecn.name": "TCP ECN をオンにする",
+  "tweak.tcp_ecn.note": "パケットにマークを付けるルーター（スマート QoS）が、パケットを破棄せずに輻輳を知らせられるようにします。古い中間機器の一部は ECN を正しく扱えません。一部のサイトが止まる場合はオフにしてください",
+  "tweak.rsc_off.name": "Receive Segment Coalescing をオフにする",
+  "tweak.rsc_off.note": "RSC は受信パケットをまとめて CPU 負荷を減らしますが、その分レイテンシが増えます。多くの Wi‑Fi カードには搭載されていません",
+  "tweak.packet_coalescing_off.name": "受信パケットの結合をオフにする",
+  "tweak.packet_coalescing_off.note": "CPU を起こす回数を減らすために Windows が受信パケットを保留するのをやめます。保留はレイテンシを増やすことがあります。速度への効果は実証されていません",
 
   "tweak.reason.no_wifi_card": "Wi‑Fi カードが見つかりません",
   "tweak.reason.no_matching_value": "「{property}」に適した値がありません（選択可能: {values}）",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "アップロードの測定から 30 日以上経過しています。バッファブロートのテストをもう一度実行してください",
   "tweak.reason.measure_again.path_mtu": "パス MTU の測定から 30 日以上経過しています。診断をもう一度実行してください",
   "tweak.reason.drift": "{source}。回線が変わった可能性があります。この調整をオフにして測定し直し、再びオンにしてください",
+  "tweak.reason.no_rsc": "このカードには Receive Segment Coalescing がありません",
+  "tweak.reason.no_default_packet_coalescing": "バックアップがなく、Windows の既定値は PC によって異なります",
 
   "tweak.result.read_failed": "状態を読み取れません: {error}",
   "tweak.result.unsupported": "この PC ではサポートされていません: {reason}",

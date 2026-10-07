@@ -328,6 +328,12 @@
   "tweak.mtu_path.name": "Khớp MTU với đường truyền",
   "tweak.mtu_path.note": "Hết mất gói lớn trên đường PPPoE (trang web treo khi mới tải được một nửa)",
   "tweak.mtu_path.source": "Path MTU {mtu} đo ngày {date}",
+  "tweak.tcp_ecn.name": "Bật TCP ECN",
+  "tweak.tcp_ecn.note": "Cho phép router đánh dấu gói (QoS thông minh) để báo nghẽn thay vì bỏ gói. Một số thiết bị trung gian cũ xử lý ECN sai: hãy tắt nếu một số trang bị treo",
+  "tweak.rsc_off.name": "Tắt Receive Segment Coalescing",
+  "tweak.rsc_off.note": "RSC gộp các gói nhận được để tiết kiệm CPU, đổi lại tăng độ trễ. Nhiều card Wi‑Fi không có tính năng này",
+  "tweak.packet_coalescing_off.name": "Tắt gộp gói nhận (packet coalescing)",
+  "tweak.packet_coalescing_off.note": "Ngăn Windows giữ các gói nhận được lại để đánh thức CPU ít hơn, việc này có thể làm tăng độ trễ. Tác dụng lên tốc độ chưa được kiểm chứng",
 
   "tweak.reason.no_wifi_card": "không tìm thấy card Wi‑Fi",
   "tweak.reason.no_matching_value": "'{property}' không có giá trị phù hợp (có: {values})",
@@ -347,6 +353,8 @@
   "tweak.reason.measure_again.upload_mbps": "Lần đo tải lên đã quá 30 ngày; hãy chạy lại kiểm tra bufferbloat",
   "tweak.reason.measure_again.path_mtu": "Lần đo Path MTU đã quá 30 ngày; hãy chạy lại chẩn đoán",
   "tweak.reason.drift": "{source}. Đường truyền có vẻ đã thay đổi: tắt mục này, đo lại rồi bật lại",
+  "tweak.reason.no_rsc": "Card này không có Receive Segment Coalescing",
+  "tweak.reason.no_default_packet_coalescing": "Không có bản sao lưu, và giá trị mặc định của Windows khác nhau giữa các máy",
 
   "tweak.result.read_failed": "không đọc được trạng thái: {error}",
   "tweak.result.unsupported": "Không hỗ trợ trên máy này: {reason}",
