@@ -50,12 +50,13 @@ struct DiagnosticsView: View {
                     // Anchored to the card, so the iPad/Mac popover points at the button that opened it.
                     .confirmationDialog(text("diag.bufferbloat.title"), isPresented: $confirmingBufferbloat,
                                         titleVisibility: .visible) {
-                        Button(text("ui.diag.bufferbloat_run")) {
+                        Button(text(runKey)) {
                             model.runBufferbloat()
                         }
                         Button(text("ui.sheet.cancel"), role: .cancel) {}
                     } message: {
-                        Text(text("ui.diag.bufferbloat_confirm"))
+                        Text(text(model.bufferbloatMetered ? "ui.diag.bufferbloat_confirm_metered"
+                                                           : "ui.diag.bufferbloat_confirm"))
                     }
             }
         }
@@ -79,7 +80,7 @@ struct DiagnosticsView: View {
     }
 
     /// Check #14 runs only on request: it moves about 250 MB per 100 Mbps of line
-    /// speed, at most 2 GB (docs/DIAGNOSTICS.md).
+    /// speed, at most 2 GB (docs/DIAGNOSTICS.md); 500 MB on a metered path, nothing in Low Data Mode.
     @ViewBuilder private var bufferbloatCard: some View {
         if let stage = model.bufferbloatStage {
             HStack(spacing: 10) {
@@ -95,8 +96,8 @@ struct DiagnosticsView: View {
                     Image(systemName: "arrow.clockwise")
                 }
                 .buttonStyle(.borderless)
-                .disabled(!model.isConnected)
-                .accessibilityLabel(text("ui.diag.bufferbloat_run"))
+                .disabled(!canRunBufferbloat)
+                .accessibilityLabel(text(runKey))
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {
@@ -108,13 +109,26 @@ struct DiagnosticsView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                Button(text("ui.diag.bufferbloat_run")) {
+                Button(text(runKey)) {
                     confirmingBufferbloat = true
                 }
-                .disabled(!model.isConnected)
+                .disabled(!canRunBufferbloat)
+                if model.bufferbloatLimit == nil {
+                    Text(text("ui.diag.bufferbloat_constrained"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 4)
         }
+    }
+
+    private var canRunBufferbloat: Bool {
+        model.isConnected && model.bufferbloatLimit != nil
+    }
+
+    private var runKey: String {
+        model.bufferbloatMetered ? "ui.diag.bufferbloat_run_metered" : "ui.diag.bufferbloat_run"
     }
 
     private func progress(_ stage: BufferbloatTest.Stage) -> String {

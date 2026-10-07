@@ -689,6 +689,9 @@
 
   "ui.diag.never": "尚未运行过诊断",
   "ui.diag.bufferbloat_confirm": "这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。",
+  "ui.diag.bufferbloat_run_metered": "测量（约 30 秒，最多使用 500 MB 移动数据）",
+  "ui.diag.bufferbloat_confirm_metered": "你正在使用移动数据或个人热点。这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传，最多使用 500 MB 套餐流量。快于 200 Mbps 的线路将显示为测量不完整。",
+  "ui.diag.bufferbloat_constrained": "低数据模式下不可用：测量会使用数百 MB。关闭低数据模式后即可运行。",
   "ui.diag.measure": "测量",
 
   "ui.common.on": "开",

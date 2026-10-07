@@ -104,11 +104,19 @@ final class AppModel {
         dnsTask = Task { await measureDNS() }
     }
 
+    /// The byte limit check #14 would use on the current path; nil in Low Data Mode.
+    var bufferbloatLimit: Int64? {
+        BufferbloatTest.byteLimit(expensive: path?.isExpensive ?? false, constrained: path?.isConstrained ?? false)
+    }
+
+    /// The current path is metered (mobile data, a personal hotspot): check #14 uses a lower limit.
+    var bufferbloatMetered: Bool { path?.isExpensive ?? false }
+
     func runBufferbloat() {
-        guard bufferbloatTask == nil else { return }
+        guard bufferbloatTask == nil, let limit = bufferbloatLimit else { return }
         bufferbloatTask = Task {
             bufferbloatStage = .idle
-            let measurement = await BufferbloatTest.run(router: path?.routerIPv4) { stage in
+            let measurement = await BufferbloatTest.run(router: path?.routerIPv4, maxBytes: limit) { stage in
                 await MainActor.run { self.bufferbloatStage = stage }
             }
             bufferbloat = Bufferbloat.evaluate(measurement)

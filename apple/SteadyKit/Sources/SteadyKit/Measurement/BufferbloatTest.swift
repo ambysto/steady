@@ -16,14 +16,25 @@ public enum BufferbloatTest {
     static let connections = 4
     /// Each direction runs for `loadSeconds` and stops early only here (MAX_BYTES in app/bufferbloat.py,
     /// 800 Mbps over 10 s); a phase that reaches it is marked `capped`, as the line may be faster.
-    static let maxBytes: Int64 = 1_000_000_000
+    public static let maxBytes: Int64 = 1_000_000_000
+    /// The limit on a metered path (mobile data, a personal hotspot): 250 MB each way, 500 MB in all,
+    /// so a line above 200 Mbps reads as capped (the result is then "incomplete", never a false "ok").
+    static let meteredMaxBytes: Int64 = 250_000_000
+
+    /// The byte limit for each direction on a path; nil when the test should not run at all
+    /// (Low Data Mode: the user asked the system to save data).
+    public static func byteLimit(expensive: Bool, constrained: Bool) -> Int64? {
+        constrained ? nil : expensive ? meteredMaxBytes : maxBytes
+    }
     /// speed.cloudflare.com refuses a single request above ~25 MB, so workers repeat 25 MB requests.
     static let bytesPerRequest = 25_000_000
 
     /// - Parameters:
     ///   - router: IPv4 address of the router, pinged alongside the Internet when known.
+    ///   - maxBytes: the limit for each direction, from `byteLimit(expensive:constrained:)`.
     ///   - stage: called as each phase starts.
-    public static func run(router: String?, stage: @escaping @Sendable (Stage) async -> Void = { _ in }) async
+    public static func run(router: String?, maxBytes: Int64 = maxBytes,
+                           stage: @escaping @Sendable (Stage) async -> Void = { _ in }) async
         -> Bufferbloat.Measurement {
         var targets: [(label: String, address: String)] = []
         if let router { targets.append(("router", router)) }
@@ -32,9 +43,9 @@ public enum BufferbloatTest {
         await stage(.idle)
         let idle = Bufferbloat.Phase(rtts: await sample(targets, seconds: idleSeconds).samples)
         await stage(.download)
-        let download = await loaded(targets, upload: false)
+        let download = await loaded(targets, upload: false, maxBytes: maxBytes)
         await stage(.upload)
-        let upload = await loaded(targets, upload: true)
+        let upload = await loaded(targets, upload: true, maxBytes: maxBytes)
         return Bufferbloat.Measurement(idle: idle, download: download, upload: upload)
     }
 
@@ -75,8 +86,9 @@ public enum BufferbloatTest {
         return samples.map { Bufferbloat.Samples(label: $0.label, samples: Array($0.samples.dropFirst(keep))) }
     }
 
-    static func loaded(_ targets: [(label: String, address: String)], upload: Bool) async -> Bufferbloat.Phase {
-        let load = LoadGenerator(upload: upload)
+    static func loaded(_ targets: [(label: String, address: String)], upload: Bool,
+                       maxBytes: Int64) async -> Bufferbloat.Phase {
+        let load = LoadGenerator(upload: upload, maxBytes: maxBytes)
         let clock = ContinuousClock()
         let started = clock.now
         let loadTask = Task { await load.run(seconds: loadSeconds) }

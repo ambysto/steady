@@ -17121,6 +17121,124 @@
         }
       }
     },
+    "ui.diag.bufferbloat_confirm_metered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du nutzt mobile Daten oder einen persönlichen Hotspot. Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen; es werden höchstens 500 MB deines Datenvolumens verbraucht. Eine Leitung schneller als 200 Mbps wird als unvollständig gemessen angezeigt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are on mobile data or a personal hotspot. This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds and uses at most 500 MB of your data plan. A line faster than 200 Mbps reads as incomplete."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estás usando datos móviles o un punto de acceso personal. Esto descarga y sube desde speed.cloudflare.com a toda velocidad durante unos 30 segundos y usa como máximo 500 MB de tu plan de datos. Una línea de más de 200 Mbps se indica como medición incompleta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous utilisez les données mobiles ou un partage de connexion. Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes et utilise au plus 500 Mo de votre forfait. Une ligne plus rapide que 200 Mbps est indiquée comme mesure incomplète."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "モバイルデータ通信またはインターネット共有を使用中です。speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行い、データプランを最大 500 MB 使用します。200 Mbps を超える回線は測定不完全と表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모바일 데이터 또는 개인용 핫스팟을 사용 중입니다. speed.cloudflare.com에서 약 30초 동안 최대 속도로 다운로드하고 업로드하며, 데이터 요금제에서 최대 500 MB를 사용합니다. 200 Mbps보다 빠른 회선은 측정이 불완전하다고 표시됩니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você está usando dados móveis ou um acesso pessoal. Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos e usa no máximo 500 MB do seu plano de dados. Uma linha mais rápida que 200 Mbps aparece como medição incompleta."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bạn đang dùng dữ liệu di động hoặc điểm phát cá nhân. Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây và dùng tối đa 500 MB dung lượng gói cước. Đường truyền nhanh hơn 200 Mbps sẽ được báo là đo chưa đầy đủ."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你正在使用移动数据或个人热点。这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传，最多使用 500 MB 套餐流量。快于 200 Mbps 的线路将显示为测量不完整。"
+          }
+        }
+      }
+    },
+    "ui.diag.bufferbloat_constrained" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Modus „Wenig Daten“ nicht verfügbar: Die Messung verbraucht Hunderte MB. Schalte „Wenig Daten“ aus, um sie auszuführen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not available in Low Data Mode: the measurement uses hundreds of MB. Turn Low Data Mode off to run it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No disponible en el modo de datos reducidos: la medición usa cientos de MB. Desactiva el modo de datos reducidos para ejecutarla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indisponible en mode Données réduites : la mesure utilise plusieurs centaines de Mo. Désactivez le mode Données réduites pour la lancer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "省データモードでは使用できません。測定には数百 MB を使用します。実行するには省データモードをオフにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저데이터 모드에서는 사용할 수 없습니다. 측정에 수백 MB가 사용됩니다. 실행하려면 저데이터 모드를 끄십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Indisponível no Modo Pouco Dados: a medição usa centenas de MB. Desative o Modo Pouco Dados para executá-la."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không dùng được khi bật Chế độ dữ liệu thấp: phép đo dùng hàng trăm MB. Tắt Chế độ dữ liệu thấp để chạy."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "低数据模式下不可用：测量会使用数百 MB。关闭低数据模式后即可运行。"
+          }
+        }
+      }
+    },
     "ui.diag.bufferbloat_run" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17176,6 +17294,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "测量（约 30 秒，线路快时最多使用 2 GB）"
+          }
+        }
+      }
+    },
+    "ui.diag.bufferbloat_run_metered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messen (ca. 30 s, bis zu 500 MB mobile Daten)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measure (about 30 s, up to 500 MB of mobile data)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medir (unos 30 s, hasta 500 MB de datos móviles)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mesurer (environ 30 s, jusqu'à 500 Mo de données mobiles)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測定（約 30 秒、モバイルデータ最大 500 MB）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 (약 30초, 모바일 데이터 최대 500 MB)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medir (cerca de 30 s, até 500 MB de dados móveis)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đo (khoảng 30 giây, tối đa 500 MB dữ liệu di động)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量（约 30 秒，最多使用 500 MB 移动数据）"
           }
         }
       }

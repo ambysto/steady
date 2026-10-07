@@ -45,6 +45,13 @@ struct BufferbloatLoadTests {
         #expect(BufferbloatTest.droppingRamp(samples, starts: [0, 0.2, 0.4, 0.6, 0.8])[0].samples.isEmpty)
     }
 
+    @Test func aMeteredPathGetsALowerLimitAndLowDataModeNone() {
+        #expect(BufferbloatTest.byteLimit(expensive: false, constrained: false) == 1_000_000_000)
+        #expect(BufferbloatTest.byteLimit(expensive: true, constrained: false) == 250_000_000)
+        #expect(BufferbloatTest.byteLimit(expensive: true, constrained: true) == nil)
+        #expect(BufferbloatTest.byteLimit(expensive: false, constrained: true) == nil)
+    }
+
     @Test func theCeilingMatchesPython() {
         #expect(BufferbloatTest.maxBytes == 1_000_000_000)   // MAX_BYTES in app/bufferbloat.py
     }

@@ -689,6 +689,9 @@
 
   "ui.diag.never": "Aucun diagnostic n'a encore été exécuté",
   "ui.diag.bufferbloat_confirm": "Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes : environ 250 Mo par tranche de 100 Mbps de débit, 2 Go au maximum.",
+  "ui.diag.bufferbloat_run_metered": "Mesurer (environ 30 s, jusqu'à 500 Mo de données mobiles)",
+  "ui.diag.bufferbloat_confirm_metered": "Vous utilisez les données mobiles ou un partage de connexion. Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes et utilise au plus 500 Mo de votre forfait. Une ligne plus rapide que 200 Mbps est indiquée comme mesure incomplète.",
+  "ui.diag.bufferbloat_constrained": "Indisponible en mode Données réduites : la mesure utilise plusieurs centaines de Mo. Désactivez le mode Données réduites pour la lancer.",
   "ui.diag.measure": "Mesurer",
 
   "ui.common.on": "Activé",

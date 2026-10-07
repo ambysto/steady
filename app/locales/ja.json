@@ -689,6 +689,9 @@
 
   "ui.diag.never": "診断はまだ実行されていません",
   "ui.diag.bufferbloat_confirm": "speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行います。回線速度 100 Mbps あたり約 250 MB、最大 2 GB です。",
+  "ui.diag.bufferbloat_run_metered": "測定（約 30 秒、モバイルデータ最大 500 MB）",
+  "ui.diag.bufferbloat_confirm_metered": "モバイルデータ通信またはインターネット共有を使用中です。speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行い、データプランを最大 500 MB 使用します。200 Mbps を超える回線は測定不完全と表示されます。",
+  "ui.diag.bufferbloat_constrained": "省データモードでは使用できません。測定には数百 MB を使用します。実行するには省データモードをオフにしてください。",
   "ui.diag.measure": "測定",
 
   "ui.common.on": "オン",

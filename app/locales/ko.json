@@ -689,6 +689,9 @@
 
   "ui.diag.never": "아직 진단을 실행하지 않았습니다",
   "ui.diag.bufferbloat_confirm": "speed.cloudflare.com에서 약 30초 동안 최대 속도로 다운로드하고 업로드합니다. 회선 속도 100 Mbps당 약 250 MB, 최대 2 GB입니다.",
+  "ui.diag.bufferbloat_run_metered": "측정 (약 30초, 모바일 데이터 최대 500 MB)",
+  "ui.diag.bufferbloat_confirm_metered": "모바일 데이터 또는 개인용 핫스팟을 사용 중입니다. speed.cloudflare.com에서 약 30초 동안 최대 속도로 다운로드하고 업로드하며, 데이터 요금제에서 최대 500 MB를 사용합니다. 200 Mbps보다 빠른 회선은 측정이 불완전하다고 표시됩니다.",
+  "ui.diag.bufferbloat_constrained": "저데이터 모드에서는 사용할 수 없습니다. 측정에 수백 MB가 사용됩니다. 실행하려면 저데이터 모드를 끄십시오.",
   "ui.diag.measure": "측정",
 
   "ui.common.on": "켜짐",
