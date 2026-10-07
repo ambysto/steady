@@ -30,7 +30,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from . import calibration, config, dnsprobe, i18n, winutil
+from . import bufferbloat, calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
 from .winsys import _ADAPTER_GUID_RE, OFFLOAD_VALUES, TCP_GLOBAL_VALUES, System
 
@@ -106,6 +106,12 @@ class Tweak:
 
     def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
         """Why turning the tweak on must wait while `original` is the saved backup (None: nothing in the way)."""
+        return None
+
+    def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
+        """What to show while the saved backup `original` belongs to a subject read() does not look at (it
+        reports the tweak off or unsupported there): a reading with enabled=True makes the switch turn the
+        tweak off, which restores that backup. None: nothing to add."""
         return None
 
     def check_original(self, sys_: System, original: Any) -> None:
@@ -597,6 +603,7 @@ class DnsFastestTweak(Tweak):
         super().__init__(id, name, risk, **kw)
         self._benchmark, self._captive, self._clock = benchmark, captive, clock
         self._captive_seen: tuple[float, bool] | None = None
+        self._applied: set[str] = set()   # the servers apply() had set, as restore() last saw them
 
     @staticmethod
     def _info(sys_: System, guid: str | None = None) -> dict[str, Any]:
@@ -664,12 +671,16 @@ class DnsFastestTweak(Tweak):
         return self._snapshot(self._info(sys_), self._doh(sys_))
 
     def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
-        snapshot = self._snapshot(self._info(sys_, original["guid"]), self._doh(sys_))
+        info = self._info(sys_, original.get("guid"))
+        snapshot = self._snapshot(info, self._doh(sys_))
         for address, now in snapshot["doh"].items():   # an entry somebody else changed is not ours to compare
             was = original["doh"][address]
             same = (now["present"], now["auto_upgrade"], now["fallback_to_udp"]) == \
                    (was["present"], was["auto_upgrade"], was["fallback_to_udp"])
-            if not same and not (now["present"] and _looks_ours(now)) and not (was["present"] and not now["present"]):
+            # "apply was using it" is what restore() decided before it wrote the servers back
+            ours = (now["present"] and _looks_ours(now)) or (was["present"] and not now["present"]
+                                                             and address in self._applied)
+            if not same and not ours:
                 snapshot["doh"][address] = dict(was)
         return snapshot
 
@@ -678,6 +689,25 @@ class DnsFastestTweak(Tweak):
         if info is not None and original.get("guid") and info["guid"] != original["guid"]:
             return msg("tweak.reason.dns_other_interface")
         return None
+
+    def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
+        """The backup is another interface's (or the uplink cannot be read at all): the interface that was changed
+        still has the tweak's DNS, so the switch must offer to turn it off. Gone adapter: nothing to restore."""
+        guid = original.get("guid")
+        if not guid:
+            return None
+        try:
+            here = sys_.dns_interface()
+        except Exception:
+            here = None
+        if here is not None and here["guid"] == guid:
+            return None          # read() already looked at it
+        try:
+            info = self._info(sys_, guid)
+        except Unsupported:
+            return None
+        return Reading(True, True, {"servers": info["servers"], "static": info["static"]},
+                       warning=msg("tweak.reason.dns_backup_elsewhere", name=info["alias"]))
 
     def apply(self, sys_: System) -> None:
         info = self._info(sys_)
@@ -693,16 +723,19 @@ class DnsFastestTweak(Tweak):
     def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
         if original is None:
             raise NoDefaultRestore(msg("tweak.reason.no_default_dns"))
-        info = self._info(sys_, original["guid"])   # the interface that was changed, wherever it is now
+        info = self._info(sys_, original.get("guid"))   # the interface that was changed, wherever it is now
+        self._applied = {s for s in info["servers"] if s in DOH_ADDRESSES}   # read before the servers are written back
         wanted = list(original["servers"]) if original["static"] else None
         if (wanted is None and info["static"]) or (wanted is not None and (not info["static"] or info["servers"] != wanted)):
             sys_.dns_servers_set(info["index"], wanted)
         doh = self._doh(sys_)
         for address, was in original["doh"].items():
             now = doh.get(address)
-            if was["present"] and now is None:   # the entry vanished: put it back
-                # Always the provider's own template: a URL from the file could send DNS anywhere (ADR-0017).
-                sys_.doh_set(address, DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]), bool(was["fallback_to_udp"]))
+            if was["present"] and now is None:   # the entry vanished: put it back, if apply was using it
+                if address in self._applied:
+                    # Always the provider's own template: a URL from the file could send DNS anywhere (ADR-0017).
+                    sys_.doh_set(address, DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
+                                 bool(was["fallback_to_udp"]))
             elif was["present"]:
                 if (now["auto_upgrade"], now["fallback_to_udp"]) != (was["auto_upgrade"], was["fallback_to_udp"]) \
                         and _looks_ours(now):
@@ -712,7 +745,8 @@ class DnsFastestTweak(Tweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         # DHCP servers come and go with the lease: only "static" and a static list must come back.
-        return (original.get("guid"), bool(original["static"]),
+        # (the interface is not part of it: recapture() looks it up by the GUID of the backup)
+        return (bool(original["static"]),
                 tuple(original["servers"]) if original["static"] else None,
                 tuple(sorted((a, bool(d["present"]), bool(d["auto_upgrade"]) if d["present"] else None,
                               bool(d["fallback_to_udp"]) if d["present"] else None)
@@ -721,9 +755,9 @@ class DnsFastestTweak(Tweak):
     MAX_SERVERS = 8
 
     def check_original(self, sys_: System, original: Any) -> None:
-        _fields(original, {"guid", "interface_index", "static", "servers", "doh"})
-        _require(isinstance(original["guid"], str) and _ADAPTER_GUID_RE.match(original["guid"]) is not None,
-                 f"{original['guid']!r} is not an interface GUID")
+        _fields(original, {"interface_index", "static", "servers", "doh"}, frozenset({"guid"}))   # no guid: older backup
+        guid = original.get("guid", "{00000000-0000-0000-0000-000000000000}")
+        _require(isinstance(guid, str) and _ADAPTER_GUID_RE.match(guid) is not None, f"{guid!r} is not an interface GUID")
         _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
         _require(isinstance(original["static"], bool), "static is not true or false")
         servers = original["servers"]
@@ -808,6 +842,10 @@ class UploadShapingTweak(MeasuredTweak):
         mbps, samples = float(measurement["upload_mbps"]), int(measurement["samples"])
         if mbps < calibration.MIN_UPLOAD_MBPS or samples < calibration.MIN_SAMPLES:
             raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=samples))
+        # The measurement stops at a fixed volume, so near its ceiling it shows its own limit, not the line's.
+        ceiling = bufferbloat.LOAD_CEILING_MBPS
+        if mbps >= calibration.AT_CEILING * ceiling:
+            raise Refused(msg("tweak.upload_shaping.refused.ceiling", mbps=mbps, ceiling=ceiling))
         rise = calibration.rise_ms(measurement)
         if rise < calibration.NOT_NEEDED_MS:
             raise Refused(msg("tweak.upload_shaping.refused.not_needed", rise=max(rise, 0.0)))
@@ -966,6 +1004,11 @@ class TweakManager:
         except Exception as exc:
             r, error = Reading(False, False, None, msg("tweak.reason.unreadable")), f"{type(exc).__name__}: {exc}"
         entry = (backups or {}).get(t.id)
+        if isinstance(entry, dict) and not r.enabled:
+            try:   # a saved backup that read() cannot see (another interface): let the switch restore it
+                r = t.backup_reading(sys_, entry["original"]) or r
+            except Exception:
+                pass
         measurement = entry.get("measurement") if isinstance(entry, dict) and r.enabled else None
         has_backup = None if backups is None else t.id in backups
         on_by_default = r.enabled and r.driver_default and has_backup is False

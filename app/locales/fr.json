@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "Mesure d’abord votre débit montant, puis le limite à 85 % pour que la file d’attente reste sur le PC plutôt que dans le modem. Envoi uniquement : le sens descendant ne peut être limité que sur le routeur (SQM)",
   "tweak.upload_shaping.value": "limité à {limit:.1f} Mbit/s (85 % des {upload:.1f} Mbit/s d’envoi mesurés)",
   "tweak.upload_shaping.refused.weak": "La mesure n’a pas assez chargé la ligne ({mbps:.1f} Mbit/s, {samples} échantillons) ; réessayez",
+  "tweak.upload_shaping.refused.ceiling": "La mesure a atteint sa propre limite ({mbps:.1f} sur {ceiling:.0f} Mbit/s) : la ligne est peut-être plus rapide que ce qu’elle peut mesurer ; rien n’a été modifié",
   "tweak.upload_shaping.refused.not_needed": "La latence n’augmente que de {rise:.0f} ms pendant l’envoi ; rien à corriger, donc rien n’a été modifié",
   "tweak.upload_shaping.refused.bounds": "Une limite de {cap:.1f} Mbit/s est hors de la plage sûre ({low:.0f}–{high:.0f} Mbit/s) ; rien n’a été modifié",
 
@@ -388,6 +389,7 @@
   "tweak.reason.dns_no_fast_servers": "La mesure n'a pas trouvé deux fournisseurs de DNS public qui répondent de façon fiable ; rien n'a été modifié",
   "tweak.reason.no_default_dns": "Pas de sauvegarde ; les réglages DNS d'origine sont inconnus",
   "tweak.reason.dns_other_interface": "la sauvegarde enregistrée appartient à une autre connexion réseau. Désactivez-le d'abord, tant que cette connexion est utilisée",
+  "tweak.reason.dns_backup_elsewhere": "Activé pour une autre connexion réseau ({name}), pas celle utilisée en ce moment. Désactivez-le pour rétablir le DNS de cette connexion",
   "tweak.reason.dns_interface_gone": "La connexion réseau dont le DNS a été modifié n'est pas disponible pour le moment (débranchée ou retirée)",
   "tweak.reason.no_doh": "Ce Windows ne prend pas en charge le DNS sur HTTPS (Windows 11 ou un Windows 10 récent requis)",
 

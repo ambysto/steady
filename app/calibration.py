@@ -16,9 +16,12 @@ import re
 import time
 from typing import Any, Callable
 
+from . import bufferbloat
+
 MAX_AGE_S = 600                 # the elevated helper refuses an older measurement
 STALE_AFTER_S = 30 * 86400      # the UI asks to measure again after this
 MIN_UPLOAD_MBPS = 1.0           # below this the load did not really load the line
+AT_CEILING = 0.95               # this close to the load's own limit, the line may be faster
 MIN_SAMPLES = 8                 # loaded latency samples needed
 NOT_NEEDED_MS = 30              # rise under load below this: nothing to fix (diagnostics "ok")
 HELPED_MIN_DROP_MS, HELPED_MIN_DROP = 20.0, 0.30

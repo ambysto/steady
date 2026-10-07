@@ -242,6 +242,7 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
 
 - **After:** no QoS policy in either store; the machine is as before.
 - **Takeaways:** the rate Windows stores is exactly the rate asked for (no rounding at these values); a policy created in the default store shows up in the `ActiveStore` immediately, under a lower-case name (`-eq` in PowerShell ignores case, so the removal still finds it). Whether the limit lowers latency under upload remains to be measured on a line that has upload bufferbloat — the tweak records that itself (`tweak_verified`).
+- **Correction (same day):** "no upload bufferbloat" is not established. A load phase stops at 100 MB, so it cannot report more than 80 Mbps, and on this PC every phase measured that day read 79–80 Mbps (EXP-016/017, SIC-93): the queue was probably never full, so the 25 ms rise says little. The tweak now also refuses a measurement at that ceiling instead of taking it for the line's capacity.
 
 ## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 

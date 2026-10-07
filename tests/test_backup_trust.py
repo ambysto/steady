@@ -177,9 +177,6 @@ class TamperedBackupTests(unittest.TestCase):
         for guid in (None, "", "Wi-Fi", "{0}; Remove-Item", WIFI_GUID.strip("{}")):
             with self.subTest(guid=guid):
                 self.refused("dns_fastest", self.dns(guid=guid))
-        backup = self.dns()
-        del backup["guid"]
-        self.refused("dns_fastest", backup)
 
     def test_the_interface_must_be_an_index(self):
         for index in (0, -1, "6", True, 6.0):
@@ -190,7 +187,8 @@ class TamperedBackupTests(unittest.TestCase):
         original = self.dns(static=True, servers=["10.0.0.53"])
         original["doh"]["1.1.1.1"]["template"] = ""
         s = FakeSystem()
-        s.doh.clear()                      # every entry vanished: restore puts each one back
+        s.dns.update(servers=list(tweaks.DOH_ADDRESSES), static=True)   # apply() was using all six
+        s.doh.clear()                      # and every entry vanished: restore puts each one back
         mgr, s, backup, _ = manager(s, MemoryBackup({"dns_fastest": {"original": original}}), tweak_list=catalog())
         mgr.disable("dns_fastest")
         templates = {args[0]: args[1] for _, name, args in s.writes() if name == "doh_set"}

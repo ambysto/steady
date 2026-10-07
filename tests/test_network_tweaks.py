@@ -432,6 +432,71 @@ class DnsFastestOtherInterfaceTests(unittest.TestCase):
         self.assertTrue(out.ok, out.message)
         self.assertEqual(backup.data, {})
 
+    def test_the_switch_shows_the_backup_of_another_interface_as_on_so_it_can_be_turned_off(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        self.dock(s)
+        st = mgr.state("dns_fastest")                       # the uplink is the Ethernet, which is not on
+        self.assertEqual((st.supported, st.enabled, st.has_backup), (True, True, True))
+        self.assertIn("another network connection (Wi-Fi)", text(st.warning))
+        self.assertIn("another network connection", i18n.render(st.warning, "en"))
+        self.assertTrue(i18n.render(st.warning, "vi") and i18n.render(st.warning, "vi") != text(st.warning))
+        self.assertTrue(mgr.disable("dns_fastest").ok)      # what the switch does when it is clicked
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, text(st.warning), backup.data), (False, "", {}))
+
+    def test_the_switch_also_offers_the_restore_while_offline(self):
+        mgr, s, _, _, _ = self.enabled_on_wifi()
+        s.uplink = None                                     # the Wi-Fi adapter exists, there is no route
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.supported, st.enabled), (True, True))
+        s.uplink_read_error = True                          # or the uplink cannot be read
+        self.assertEqual(mgr.state("dns_fastest").enabled, True)
+
+    def test_nothing_is_offered_when_the_adapter_of_the_backup_is_gone(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        s.dns, s.uplink = None, None
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, st.error), (False, None))
+        self.assertIn("dns_fastest", backup.data)
+
+    def test_a_backup_of_the_uplink_itself_adds_nothing(self):
+        mgr, s, _, _, _ = self.enabled_on_wifi()
+        s.dns.update(servers=["192.168.1.1"], static=False)   # somebody went back to DHCP by hand, same interface
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, text(st.warning)), (False, ""))
+
+    def test_a_backup_from_before_the_guid_still_restores(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        del backup.data["dns_fastest"]["original"]["guid"]    # written by a build that did not know the GUID
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual((s.dns["static"], backup.data), (False, {}))
+
+    def test_a_vanished_doh_entry_comes_back_only_if_apply_was_using_it(self):
+        mgr, s, _, _, _ = self.enabled_on_wifi()
+        s.doh.pop("1.1.1.1")                                # one apply chose
+        s.doh.pop("9.9.9.9")                                # one it never touched
+        before = len(s.writes())
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertIn("1.1.1.1", s.doh)
+        self.assertNotIn("9.9.9.9", s.doh)
+        touched = {args[0] for _, name, args in s.writes()[before:] if name.startswith("doh")}
+        self.assertNotIn("9.9.9.9", touched)
+
+    def test_a_vanished_entry_of_an_original_server_is_not_a_mismatch(self):
+        # The original static DNS was 9.9.9.9 (with its DoH entry); apply chose other servers; the entry of 9.9.9.9
+        # vanished meanwhile. Restore does not re-add it (apply never used it), and the check afterwards agrees.
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        s.dns.update(servers=["9.9.9.9"], static=True)
+        s.doh["9.9.9.9"].update(auto_upgrade=True, fallback_to_udp=True)
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        s.doh.pop("9.9.9.9")
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertNotIn("9.9.9.9", s.doh)
+        self.assertEqual((s.dns["servers"], backup.data), (["9.9.9.9"], {}))
+
     def test_an_adapter_that_is_gone_keeps_the_backup_and_says_why(self):
         mgr, s, backup, events, _ = self.enabled_on_wifi()
         s.dns = None                                      # the Wi-Fi adapter is removed

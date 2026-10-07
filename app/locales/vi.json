@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "Đo upload trước rồi giới hạn ở 85% để hàng đợi nằm trên máy thay vì trong modem. Chỉ chiều upload: chiều download chỉ giới hạn được ở router (SQM)",
   "tweak.upload_shaping.value": "giới hạn {limit:.1f} Mbps (85% của {upload:.1f} Mbps upload đo được)",
   "tweak.upload_shaping.refused.weak": "Phép đo chưa tải đủ đường truyền ({mbps:.1f} Mbps, {samples} mẫu); hãy thử lại",
+  "tweak.upload_shaping.refused.ceiling": "Phép đo chạm giới hạn của chính nó ({mbps:.1f} trên {ceiling:.0f} Mbps) nên đường truyền có thể nhanh hơn mức đo được; không thay đổi gì",
   "tweak.upload_shaping.refused.not_needed": "Độ trễ chỉ tăng {rise:.0f} ms khi upload; không có gì cần sửa nên không thay đổi gì",
   "tweak.upload_shaping.refused.bounds": "Mức giới hạn {cap:.1f} Mbps nằm ngoài khoảng an toàn ({low:.0f}–{high:.0f} Mbps); không thay đổi gì",
 
@@ -388,6 +389,7 @@
   "tweak.reason.dns_no_fast_servers": "Phép đo không tìm được hai nhà cung cấp DNS công khai trả lời ổn định; chưa đổi gì",
   "tweak.reason.no_default_dns": "Không có bản sao lưu; không biết thiết lập DNS ban đầu",
   "tweak.reason.dns_other_interface": "bản sao lưu DNS ban đầu thuộc kết nối mạng khác. Hãy tắt tùy chọn này trước, khi kết nối đó đang được dùng",
+  "tweak.reason.dns_backup_elsewhere": "Đang bật cho kết nối mạng khác ({name}), không phải kết nối đang dùng. Hãy tắt để trả DNS của kết nối đó về như cũ",
   "tweak.reason.dns_interface_gone": "Kết nối mạng đã bị đổi DNS hiện không có (đã rút hoặc gỡ)",
   "tweak.reason.no_doh": "Windows này không hỗ trợ DNS qua HTTPS (cần Windows 11 hoặc Windows 10 bản mới)",
 

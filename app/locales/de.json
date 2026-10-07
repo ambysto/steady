@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
   "tweak.upload_shaping.value": "begrenzt auf {limit:.1f} Mbit/s (85 % der gemessenen {upload:.1f} Mbit/s Upload)",
   "tweak.upload_shaping.refused.weak": "Die Messung hat die Leitung nicht genug ausgelastet ({mbps:.1f} Mbit/s, {samples} Messwerte); bitte erneut versuchen",
+  "tweak.upload_shaping.refused.ceiling": "Die Messung hat ihr eigenes Limit erreicht ({mbps:.1f} von {ceiling:.0f} Mbit/s), die Leitung ist womöglich schneller als messbar; nichts wurde geändert",
   "tweak.upload_shaping.refused.not_needed": "Die Latenz steigt beim Upload nur um {rise:.0f} ms; nichts zu beheben, daher wurde nichts geändert",
   "tweak.upload_shaping.refused.bounds": "Eine Grenze von {cap:.1f} Mbit/s liegt außerhalb des sicheren Bereichs ({low:.0f}–{high:.0f} Mbit/s); nichts wurde geändert",
 
@@ -388,6 +389,7 @@
   "tweak.reason.dns_no_fast_servers": "Der Benchmark hat keine zwei öffentlichen DNS-Anbieter gefunden, die zuverlässig antworten; es wurde nichts geändert",
   "tweak.reason.no_default_dns": "Kein Backup; die ursprünglichen DNS-Einstellungen sind unbekannt",
   "tweak.reason.dns_other_interface": "die gespeicherten ursprünglichen DNS-Einstellungen gehören zu einer anderen Netzwerkverbindung. Zuerst ausschalten, solange diese Verbindung verwendet wird",
+  "tweak.reason.dns_backup_elsewhere": "Für eine andere Netzwerkverbindung ({name}) eingeschaltet, nicht für die aktuell verwendete. Ausschalten, um den DNS dieser Verbindung wiederherzustellen",
   "tweak.reason.dns_interface_gone": "Die Netzwerkverbindung, deren DNS geändert wurde, ist gerade nicht verfügbar (getrennt oder entfernt)",
   "tweak.reason.no_doh": "Dieses Windows unterstützt kein DNS over HTTPS (ab Windows 11 oder einem aktuellen Windows 10)",
 
