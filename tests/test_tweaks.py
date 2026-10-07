@@ -9,7 +9,7 @@ import unittest
 from app import config, i18n, tweaks
 from app.tweaks import (AdapterPropertyTweak, BindingTweak, NoDefaultRestore, PowerCfgTweak, RegistryDwordTweak,
                         TweakManager)
-from app.winsys import SystemWriteError
+from app.winsys import SystemWriteError, WifiBands
 
 CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\0011"
 
@@ -43,7 +43,7 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
-        self.ssid_bands = ("HomeNet", frozenset({"2.4 GHz", "5 GHz"}))   # None: not on Wi-Fi
+        self.ssid_bands = WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz", "5 GHz"}))   # None: not on Wi-Fi
         self.tcp_global = {"ecncapability": "disabled"}
         self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
         self.offload = {"PacketCoalescingFilter": "Enabled"}
@@ -106,8 +106,8 @@ class FakeSystem:
         self._r("doh_get")
         return copy.deepcopy(self.doh)
 
-    def wifi_ssid_bands(self):
-        self._r("wifi_ssid_bands")
+    def wifi_ssid_bands(self, adapter):
+        self._r("wifi_ssid_bands", adapter)
         return self.ssid_bands
 
     # writes

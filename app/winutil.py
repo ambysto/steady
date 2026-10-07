@@ -150,6 +150,7 @@ class WifiState:
     rx_mbps: int | None
     tx_mbps: int | None
     profile: str = ""   # Wi-Fi profile in use (empty when disconnected)
+    band: str = ""      # "2.4 GHz", "5 GHz", "6 GHz" (Windows 11); "" when netsh does not say
 
     @property
     def connected(self) -> bool:
@@ -169,6 +170,7 @@ def wifi_state_from(fields: dict[str, str]) -> WifiState:
         rx_mbps=_to_int(fields.get("Receive rate (Mbps)")),
         tx_mbps=_to_int(fields.get("Transmit rate (Mbps)")),
         profile=fields.get("Profile", ""),
+        band=fields.get("Band", ""),
     )
 
 

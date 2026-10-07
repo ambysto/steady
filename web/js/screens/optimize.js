@@ -22,9 +22,11 @@ function tweakRow(ctx, st) {
   if (st.needs_admin && st.supported) pills.push(el("span", { class: "pill" }, icon("lock"), t("ui.optimize.needs_admin")));
   if (st.disrupts_network) pills.push(el("span", { class: "pill" }, t("ui.optimize.disrupts")));
   if (st.needs_reboot) pills.push(el("span", { class: "pill warn" }, t("ui.optimize.needs_reboot")));
-  const note = !st.supported ? `${t("ui.optimize.not_supported")}${st.reason ? ` — ${st.reason}` : ""}` : st.error || st.note;
+  // On only because the driver ships that way: the tool wrote nothing, so there is nothing to switch off.
+  const note = !st.supported ? `${t("ui.optimize.not_supported")}${st.reason ? ` — ${st.reason}` : ""}`
+    : st.on_by_default ? st.reason : st.error || st.note;
   const sw = switchEl(st.enabled, {
-    disabled: !st.supported || busy, label: st.name,
+    disabled: !st.supported || st.on_by_default || busy, label: st.name,
     onToggle: async node => {
       busy = true;
       root().querySelectorAll(".switch").forEach(s => { s.disabled = true; });
