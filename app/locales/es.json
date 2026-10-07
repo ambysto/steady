@@ -416,6 +416,7 @@
   "tweak.reason.dns_static_v6": "El adaptador de red tiene un servidor DNS IPv6 estático, que la restauración borraría",
   "tweak.reason.dns_captive": "La red parece un portal cautivo (una página de inicio de sesión)",
   "tweak.reason.dns_no_fast_servers": "La medición no encontró dos proveedores de DNS público que respondan de forma fiable; no se cambió nada",
+  "tweak.reason.dns_not_faster": "El DNS en uso ({current}) no es claramente más lento que el DNS público más rápido ({server}): nombres comunes {current_ms:.0f} frente a {public_ms:.0f} ms, nombres aún no almacenados en caché {current_uncached_ms:.0f} frente a {public_uncached_ms:.0f} ms; no se cambió nada",
   "tweak.reason.no_default_dns": "Sin copia de seguridad; se desconoce la configuración DNS original",
   "tweak.reason.dns_other_interface": "la copia de seguridad guardada pertenece a otra conexión de red. Desactívalo primero, mientras esa conexión esté en uso",
   "tweak.reason.dns_backup_elsewhere": "Activado para otra conexión de red ({name}), no la que se usa ahora. Desactívalo para devolver el DNS de esa conexión",

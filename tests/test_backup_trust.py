@@ -12,7 +12,7 @@ LUA = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
 
 
 def catalog():
-    return tweaks.build_catalog(dns_benchmark=lambda servers: [], captive=lambda: False)
+    return tweaks.build_catalog(dns_benchmark=lambda servers, names=None: [], captive=lambda: False)
 
 
 def text(message):

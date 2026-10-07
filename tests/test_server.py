@@ -22,6 +22,12 @@ class FakeMonitor:
 class FakeManager:
     def __init__(self):
         self.calls = []
+        self.refusal = None   # what preflight() answers: why turning a tweak on would not help
+
+    def preflight(self, tweak_id):
+        self.get(tweak_id)   # like the real manager: KeyError for an unknown id, before anything else
+        self.calls.append(("preflight", tweak_id))
+        return self.refusal
 
     def states(self):
         return []   # tests that need states replace this with real TweakState objects
@@ -352,8 +358,20 @@ class WriteApiTests(ServerTestCase):
     def test_tweak_without_admin_goes_through_uac(self):
         job = self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": True})[1]
         self.assertEqual(self.elevations, [("tweak-enable", "wifi_power_saving")])
-        self.assertEqual(self.manager.calls, [])
+        self.assertEqual(self.manager.calls, [("preflight", "wifi_power_saving")])   # asked before UAC, nothing written
         self.assertTrue(job["result"]["cancelled"])
+
+    def test_a_preflight_refusal_needs_no_uac_prompt(self):
+        self.manager.refusal = i18n.msg("tweak.reason.dns_no_fast_servers")
+        job = self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": True})[1]
+        self.assertEqual((self.elevations, self.manager.calls), ([], [("preflight", "wifi_power_saving")]))
+        self.assertFalse(job["result"]["ok"])
+        self.assertFalse(job["result"]["changed"])
+
+    def test_turning_off_is_not_preflighted(self):
+        self.manager.refusal = i18n.msg("tweak.reason.dns_no_fast_servers")
+        self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": False})
+        self.assertEqual(self.elevations, [("tweak-disable", "wifi_power_saving")])
 
     def test_tweak_with_admin_runs_directly(self):
         self.admin = True

@@ -416,6 +416,7 @@
   "tweak.reason.dns_static_v6": "Card mạng có DNS IPv6 đặt tay, khôi phục sẽ xóa mất nó",
   "tweak.reason.dns_captive": "Mạng này giống trang đăng nhập Wi‑Fi (captive portal)",
   "tweak.reason.dns_no_fast_servers": "Phép đo không tìm được hai nhà cung cấp DNS công khai trả lời ổn định; chưa đổi gì",
+  "tweak.reason.dns_not_faster": "DNS đang dùng ({current}) không chậm hơn rõ rệt so với DNS công cộng nhanh nhất ({server}): tên phổ biến {current_ms:.0f} so với {public_ms:.0f} ms, tên chưa có trong cache {current_uncached_ms:.0f} so với {public_uncached_ms:.0f} ms; không thay đổi gì",
   "tweak.reason.no_default_dns": "Không có bản sao lưu; không biết thiết lập DNS ban đầu",
   "tweak.reason.dns_other_interface": "bản sao lưu DNS ban đầu thuộc kết nối mạng khác. Hãy tắt tùy chọn này trước, khi kết nối đó đang được dùng",
   "tweak.reason.dns_backup_elsewhere": "Đang bật cho kết nối mạng khác ({name}), không phải kết nối đang dùng. Hãy tắt để trả DNS của kết nối đó về như cũ",

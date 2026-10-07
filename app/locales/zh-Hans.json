@@ -416,6 +416,7 @@
   "tweak.reason.dns_static_v6": "网卡上有手动设置的 IPv6 DNS 服务器，恢复时会被清除",
   "tweak.reason.dns_captive": "此网络看起来是强制门户（登录页面）",
   "tweak.reason.dns_no_fast_servers": "测量没有找到两家响应稳定的公共 DNS 服务商；未做任何更改",
+  "tweak.reason.dns_not_faster": "正在使用的 DNS（{current}）并不明显慢于最快的公共 DNS（{server}）：常用域名 {current_ms:.0f} 对 {public_ms:.0f} ms，尚未缓存的域名 {current_uncached_ms:.0f} 对 {public_uncached_ms:.0f} ms；未做任何更改",
   "tweak.reason.no_default_dns": "没有备份；不知道原来的 DNS 设置",
   "tweak.reason.dns_other_interface": "已保存的备份属于另一个网络连接。请在使用该连接时先将其关闭",
   "tweak.reason.dns_backup_elsewhere": "已为另一个网络连接（{name}）开启，而不是当前使用的连接。将其关闭即可恢复该连接的 DNS",

@@ -416,6 +416,7 @@
   "tweak.reason.dns_static_v6": "La carte réseau a un serveur DNS IPv6 statique, que la restauration effacerait",
   "tweak.reason.dns_captive": "Le réseau ressemble à un portail captif (une page de connexion)",
   "tweak.reason.dns_no_fast_servers": "La mesure n'a pas trouvé deux fournisseurs de DNS public qui répondent de façon fiable ; rien n'a été modifié",
+  "tweak.reason.dns_not_faster": "Le DNS utilisé ({current}) n'est pas nettement plus lent que le DNS public le plus rapide ({server}) : noms courants {current_ms:.0f} contre {public_ms:.0f} ms, noms pas encore en cache {current_uncached_ms:.0f} contre {public_uncached_ms:.0f} ms ; rien n'a été modifié",
   "tweak.reason.no_default_dns": "Pas de sauvegarde ; les réglages DNS d'origine sont inconnus",
   "tweak.reason.dns_other_interface": "la sauvegarde enregistrée appartient à une autre connexion réseau. Désactivez-le d'abord, tant que cette connexion est utilisée",
   "tweak.reason.dns_backup_elsewhere": "Activé pour une autre connexion réseau ({name}), pas celle utilisée en ce moment. Désactivez-le pour rétablir le DNS de cette connexion",

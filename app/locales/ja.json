@@ -416,6 +416,7 @@
   "tweak.reason.dns_static_v6": "ネットワークアダプターに固定の IPv6 DNS サーバーがあり、元に戻すと消えてしまいます",
   "tweak.reason.dns_captive": "このネットワークはキャプティブポータル（サインインページ）のようです",
   "tweak.reason.dns_no_fast_servers": "安定して応答する公開 DNS プロバイダーが 2 つ見つからなかったため、何も変更していません",
+  "tweak.reason.dns_not_faster": "使用中の DNS（{current}）は最速の公開 DNS（{server}）より明らかに遅くはありません: よく使われる名前 {current_ms:.0f} ms 対 {public_ms:.0f} ms、未キャッシュの名前 {current_uncached_ms:.0f} ms 対 {public_uncached_ms:.0f} ms。何も変更していません",
   "tweak.reason.no_default_dns": "バックアップがなく、元の DNS 設定が不明です",
   "tweak.reason.dns_other_interface": "保存されたバックアップは別のネットワーク接続のものです。その接続を使っている間に、先にオフにしてください",
   "tweak.reason.dns_backup_elsewhere": "現在使用中ではない別のネットワーク接続（{name}）でオンになっています。オフにすると、その接続の DNS が元に戻ります",

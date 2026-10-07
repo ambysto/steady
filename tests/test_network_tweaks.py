@@ -23,14 +23,32 @@ FAST_CLOUDFLARE = {"1.1.1.1": 10, "1.0.0.1": 15, "8.8.8.8": 20, "8.8.4.4": 25, "
 
 
 class Network:
-    """What the tests change: the benchmark answer and whether the network looks like a captive portal."""
+    """What the tests change: the benchmark answer and whether the network looks like a captive portal.
 
-    def __init__(self, bench=None, captive=False):
+    `current` (server -> median ms, None for a server that does not answer) adds the DNS in use to the
+    benchmark; `uncached` gives the medians for names nobody has cached (default: the common ones). The
+    DNS in use is left out unless given, which counts as broken, so switching is allowed."""
+
+    def __init__(self, bench=None, captive=False, current=None, uncached=None):
         self.bench, self.captive, self.benchmarks, self.captive_checks = bench or bench_of(FAST_CLOUDFLARE), captive, 0, 0
+        self.current, self.uncached, self.uncached_runs = current or {}, uncached, 0
 
-    def benchmark(self, servers):
-        self.benchmarks += 1
-        return self.bench
+    def benchmark(self, servers, names=dnsprobe.DEFAULT_NAMES):
+        common = names == dnsprobe.DEFAULT_NAMES
+        self.benchmarks += common
+        self.uncached_runs += not common
+        ms = {b.server: b.median_ms for b in self.bench if not b.failures}
+        ms.update(self.current)
+        if not common and self.uncached is not None:
+            ms.update(self.uncached)
+        out = [b for b in self.bench if b.server in servers and (common or self.uncached is None)]
+        known = {b.server for b in out}
+        for server in servers:
+            if server not in known and server in ms:
+                value = ms[server]
+                out.append(dnsprobe.ServerBenchmark(server, 5, 5 if value is not None else 0, 0 if value is not None else 5,
+                                                    [] if value is None else [value] * 5))
+        return out
 
     def is_captive(self):
         self.captive_checks += 1
@@ -193,6 +211,99 @@ class ChooseServersTests(unittest.TestCase):
     def test_unknown_servers_in_the_benchmark_are_ignored(self):
         extra = dnsprobe.ServerBenchmark("192.168.1.1", 5, 5, 0, [1.0] * 5)
         self.assertEqual(tweaks.choose_dns_servers(bench_of(FAST_CLOUDFLARE) + [extra])[0], "1.1.1.1")
+
+
+def one(server, ms, failures=0):
+    return dnsprobe.ServerBenchmark(server, 5, 5 - failures, failures, [] if ms is None else [ms] * (5 - failures))
+
+
+class DnsBaselineTests(unittest.TestCase):
+    """SIC-96: a public DNS replaces the one in use only when it is clearly faster (EXP-021)."""
+    ROUTER, PUBLIC = "192.168.1.1", "8.8.8.8"
+
+    def check(self, mine, theirs, current=None):
+        current = [self.ROUTER] if current is None else current
+        common = {self.ROUTER: one(self.ROUTER, mine[0]), self.PUBLIC: one(self.PUBLIC, theirs[0])}
+        uncached = {self.ROUTER: one(self.ROUTER, mine[1]), self.PUBLIC: one(self.PUBLIC, theirs[1])}
+        tweaks.check_public_dns_faster(current, self.PUBLIC, common, uncached)
+
+    def test_the_dev_pc_case_is_refused(self):
+        # EXP-021 / SIC-96 measurement: the router answers common names from its cache in ~7 ms.
+        with self.assertRaises(tweaks.DnsNotFaster) as ctx:
+            self.check(mine=(7.0, 95.0), theirs=(43.0, 53.0))
+        self.assertIn("8.8.8.8", text(ctx.exception.message))
+        self.assertIn("nothing was changed", text(ctx.exception.message))
+
+    def test_clearly_faster_on_both_kinds_of_names_switches(self):
+        self.check(mine=(60.0, 200.0), theirs=(20.0, 80.0))
+
+    def test_faster_on_one_kind_only_is_not_enough(self):
+        for mine, theirs in (((60.0, 80.0), (20.0, 90.0)), ((20.0, 200.0), (25.0, 60.0))):
+            with self.assertRaises(tweaks.DnsNotFaster, msg=(mine, theirs)):
+                self.check(mine, theirs)
+
+    def test_the_margin_needs_both_the_ratio_and_the_milliseconds(self):
+        self.check(mine=(50.0, 50.0), theirs=(40.0, 40.0))            # exactly 80% and 10 ms less: enough
+        for mine, theirs in (((50.0, 50.0), (40.5, 40.0)),            # 81%
+                             ((30.0, 30.0), (21.0, 21.0))):           # 70%, but only 9 ms less
+            with self.assertRaises(tweaks.DnsNotFaster, msg=(mine, theirs)):
+                self.check(mine, theirs)
+
+    def test_a_broken_dns_in_use_is_always_worth_replacing(self):
+        common = {self.ROUTER: one(self.ROUTER, 5.0, failures=1), self.PUBLIC: one(self.PUBLIC, 40.0)}
+        uncached = {self.ROUTER: one(self.ROUTER, 5.0), self.PUBLIC: one(self.PUBLIC, 40.0)}
+        tweaks.check_public_dns_faster([self.ROUTER], self.PUBLIC, common, uncached)            # lost a query
+        tweaks.check_public_dns_faster([self.ROUTER], self.PUBLIC, {self.PUBLIC: one(self.PUBLIC, 40.0)},
+                                       {self.PUBLIC: one(self.PUBLIC, 40.0)})                   # never answered
+        tweaks.check_public_dns_faster([], self.PUBLIC, {}, {})                                 # no DNS at all
+
+    def test_a_second_server_in_use_that_fails_counts_as_broken(self):
+        backup_dns = "192.168.1.2"
+        common = {self.ROUTER: one(self.ROUTER, 5.0), backup_dns: one(backup_dns, None, failures=5),
+                  self.PUBLIC: one(self.PUBLIC, 40.0)}
+        uncached = {self.ROUTER: one(self.ROUTER, 5.0), self.PUBLIC: one(self.PUBLIC, 40.0)}
+        tweaks.check_public_dns_faster([self.ROUTER, backup_dns], self.PUBLIC, common, uncached)
+
+    def test_uncached_names_are_new_every_time_and_under_the_large_domains(self):
+        a, b = tweaks.uncached_names(), tweaks.uncached_names()
+        self.assertEqual(len(a), len(tweaks.UNCACHED_DOMAINS))
+        self.assertTrue(set(a).isdisjoint(b))
+        self.assertTrue(all(n.split(".", 1)[1] in tweaks.UNCACHED_DOMAINS for n in a))
+
+    def router_faster(self):
+        # The fake Wi-Fi uses DHCP DNS 192.168.1.1, faster than every public server on common names.
+        return Network(current={"192.168.1.1": 5.0}, uncached={"192.168.1.1": 90.0, "1.1.1.1": 85.0})
+
+    def test_enable_is_refused_and_writes_nothing_when_the_dns_in_use_is_faster(self):
+        net = self.router_faster()
+        mgr, s, backup, _, _ = setup(["dns_fastest"], network=net)
+        before = s.snapshot()
+        out = mgr.enable("dns_fastest")
+        self.assertFalse(out.ok)
+        self.assertIn("192.168.1.1", text(out.message))
+        self.assertEqual(s.snapshot(), before)
+        self.assertEqual(backup.data, {})
+        self.assertEqual((net.benchmarks, net.uncached_runs), (1, 1))
+
+    def test_preflight_says_why_before_any_uac_prompt(self):
+        net = self.router_faster()
+        mgr, s, _, _, _ = setup(["dns_fastest"], network=net)
+        before = s.snapshot()
+        reason = mgr.preflight("dns_fastest")
+        self.assertIsNotNone(reason)
+        self.assertIn("is not clearly slower", text(reason))
+        self.assertEqual(s.snapshot(), before)
+
+    def test_preflight_lets_a_worthwhile_switch_through(self):
+        net = Network(current={"192.168.1.1": 60.0}, uncached={"192.168.1.1": 200.0, "1.1.1.1": 60.0})
+        mgr, *_ = setup(["dns_fastest"], network=net)
+        self.assertIsNone(mgr.preflight("dns_fastest"))
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+
+    def test_preflight_is_quiet_for_a_tweak_that_is_on_or_cannot_apply(self):
+        mgr, s, *_ = setup(["dns_fastest"], network=self.router_faster())
+        s.dns["vpn_up"] = True
+        self.assertIsNone(mgr.preflight("dns_fastest"))   # not supported: enable() reports it itself
 
 
 class DnsFastestTests(unittest.TestCase):
