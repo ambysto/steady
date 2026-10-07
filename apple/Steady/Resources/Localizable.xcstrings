@@ -2127,6 +2127,124 @@
         }
       }
     },
+    "diag.bufferbloat.shaped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload von dieser App auf %1$@ Mbit/s begrenzt (Optimieren), daher wird durch die Begrenzung hindurch gemessen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limited by this app to %1$@ Mbps (Optimize), so this is measured through the limit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subida limitada por esta app a %1$@ Mbps (Optimizar), así que esto se mide a través del límite"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi limité par cette app à %1$@ Mbit/s (Optimiser) : la mesure passe donc par cette limite"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロードはこのアプリにより %1$@ Mbps に制限されています（最適化）。この測定はその制限を通して行われています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 앱이 업로드를 %1$@ Mbps로 제한하고 있어(최적화) 이 측정은 그 제한을 거쳐 이루어졌습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limitado por este app a %1$@ Mbps (Otimizar), então esta medição passa pelo limite"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload đang bị ứng dụng giới hạn ở %1$@ Mbps (Tối ưu), nên phép đo này đi qua mức giới hạn đó"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传已被本应用限制为 %1$@ Mbps（优化），因此本次测量经过了该限制"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.shaped_at_limit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload von dieser App auf %1$@ Mbit/s begrenzt, und der Upload hat sie erreicht (%2$@ Mbit/s): Wenn Ihr Tarif schneller geworden ist, schalten Sie die Begrenzung aus und wieder ein, um die Leitung zu messen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limited by this app to %1$@ Mbps and the upload reached it (%2$@ Mbps): if your plan got faster, turn the limit off and on again to measure the line"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subida limitada por esta app a %1$@ Mbps y la subida lo alcanzó (%2$@ Mbps): si tu plan es ahora más rápido, desactiva y vuelve a activar el límite para medir la línea"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi limité par cette app à %1$@ Mbit/s, et l’envoi l’a atteinte (%2$@ Mbit/s) : si votre forfait est devenu plus rapide, désactivez puis réactivez la limite pour mesurer la ligne"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロードはこのアプリにより %1$@ Mbps に制限されており、その上限に達しました（%2$@ Mbps）。プランが速くなった場合は、制限をオフにしてから再度オンにして回線を測定してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 앱이 업로드를 %1$@ Mbps로 제한하고 있으며 업로드가 그 한도에 도달했습니다(%2$@ Mbps). 요금제가 빨라졌다면 제한을 껐다가 다시 켜서 회선을 측정하세요"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limitado por este app a %1$@ Mbps e o upload chegou ao limite (%2$@ Mbps): se o seu plano ficou mais rápido, desative e ative o limite de novo para medir a linha"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload đang bị ứng dụng giới hạn ở %1$@ Mbps và đã chạm mức đó (%2$@ Mbps): nếu gói cước đã nhanh hơn, hãy tắt rồi bật lại giới hạn để đo đường truyền"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传已被本应用限制为 %1$@ Mbps，且上传已达到该限制（%2$@ Mbps）：如果你的套餐变快了，请关闭再开启该限制以测量线路"
+          }
+        }
+      }
+    },
     "diag.bufferbloat.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21478,6 +21596,65 @@
         }
       }
     },
+    "ui.optimize.stale.no_record" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Messung gespeichert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No measurement on record"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay medición guardada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune mesure enregistrée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存された測定結果がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장된 측정 결과 없음"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma medição registrada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có phép đo lưu lại"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有保存的测量结果"
+          }
+        }
+      }
+    },
     "ui.optimize.stale.old" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -26670,55 +26847,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang (bis zu 100 MB), vor und nach der Änderung, und wird nicht angewendet, wenn nichts zu beheben ist."
+            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils bis zu 100 MB) und wird nicht angewendet, wenn nichts zu beheben ist."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” measures your upload for about 15 seconds (up to 100 MB), before and after the change, and is not applied if there is nothing to fix."
+            "value" : "“%1$@” measures your upload for about 15 seconds before the change and again after it (up to 100 MB each time), and is not applied if there is nothing to fix."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«%1$@» mide tu subida durante unos 15 segundos (hasta 100 MB), antes y después del cambio, y no se aplica si no hay nada que corregir."
+            "value" : "«%1$@» mide tu subida durante unos 15 segundos antes del cambio y otra vez después (hasta 100 MB cada vez), y no se aplica si no hay nada que corregir."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes (jusqu’à 100 Mo), avant et après la modification, et n’est pas appliqué s’il n’y a rien à corriger."
+            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (jusqu’à 100 Mo à chaque fois), et n’est pas appliqué s’il n’y a rien à corriger."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「%1$@」は変更の前後にアップロードを約 15 秒（最大 100 MB）測定し、直すことがなければ適用しません。"
+            "value" : "「%1$@」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回最大 100 MB）。直すことがなければ適用しません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "'%1$@'은(는) 변경 전후로 업로드를 약 15초(최대 100MB) 측정하며, 고칠 것이 없으면 적용하지 않습니다."
+            "value" : "'%1$@'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 최대 100MB), 고칠 것이 없으면 적용하지 않습니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” mede seu upload por cerca de 15 segundos (até 100 MB), antes e depois da mudança, e não é aplicado se não houver nada a corrigir."
+            "value" : "“%1$@” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (até 100 MB a cada vez), e não é aplicado se não houver nada a corrigir."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” sẽ đo upload khoảng 15 giây (tối đa 100 MB), trước và sau khi thay đổi, và không áp dụng nếu không có gì cần sửa."
+            "value" : "“%1$@” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần tối đa 100 MB), và không áp dụng nếu không có gì cần sửa."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@”会在更改前后各测量约 15 秒上传（最多 100 MB），没有需要修复的问题时不会应用。"
+            "value" : "“%1$@”会在更改前测量约 15 秒上传，更改后再测量一次（每次最多 100 MB），没有需要修复的问题时不会应用。"
           }
         }
       }

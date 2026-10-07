@@ -22,7 +22,7 @@ MAX_AGE_S = 600                 # the elevated helper refuses an older measureme
 STALE_AFTER_S = 30 * 86400      # the UI asks to measure again after this
 MIN_UPLOAD_MBPS = 1.0           # below this the load did not really load the line
 AT_CEILING = 0.95               # this close to the load's own limit, the line may be faster
-MIN_SAMPLES = 8                 # loaded latency samples needed
+MIN_SAMPLES = 8                 # loaded latency samples attempted (a lost one counts: it is a symptom)
 NOT_NEEDED_MS = 30              # rise under load below this: nothing to fix (diagnostics "ok")
 HELPED_MIN_DROP_MS, HELPED_MIN_DROP = 20.0, 0.30
 _NETWORK_RE = re.compile(r"^[0-9a-f]{16}$")
@@ -65,9 +65,12 @@ def check_upload(m: Any, now: float) -> dict[str, Any]:
                            "idle_ms": _number(m, "idle_ms", 0, 60_000),
                            "loaded_ms": _number(m, "loaded_ms", 0, 60_000),
                            "loss_pct": _number(m, "loss_pct", 0, 100)}
-    samples, measured_at = m.get("samples"), m.get("measured_at")
-    if isinstance(samples, bool) or not isinstance(samples, int) or not 0 <= samples <= 100_000:
-        raise ValueError(f"measurement samples out of range: {samples!r}")
+    samples, attempted, measured_at = m.get("samples"), m.get("attempted"), m.get("measured_at")
+    for key, value in (("samples", samples), ("attempted", attempted)):
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 100_000:
+            raise ValueError(f"measurement {key} out of range: {value!r}")
+    if samples > attempted:
+        raise ValueError("more samples answered than attempted")
     if isinstance(measured_at, bool) or not isinstance(measured_at, int):
         raise ValueError("measurement has no time")
     if not now - MAX_AGE_S <= measured_at <= now + 60:
@@ -75,7 +78,7 @@ def check_upload(m: Any, now: float) -> dict[str, Any]:
     network = m.get("network")
     if network is not None and not (isinstance(network, str) and _NETWORK_RE.match(network)):
         raise ValueError("bad network id")
-    out.update(samples=samples, measured_at=measured_at, network=network)
+    out.update(samples=samples, attempted=attempted, measured_at=measured_at, network=network)
     return out
 
 

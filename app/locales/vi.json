@@ -223,6 +223,8 @@
   "diag.bufferbloat.by": "thêm {delta:.0f} ms",
   "diag.bufferbloat.rise": "Độ trễ ra Internet tăng {amount} khi đường truyền bận{where}",
   "diag.bufferbloat.advice": "Bật SQM / QoS thông minh (fq_codel hoặc CAKE) trên router và đặt giới hạn tải lên/xuống thấp hơn băng thông thật khoảng 5–10%. Nếu router không có SQM, giảm tốc độ tải lên của ứng dụng gây tải.",
+  "diag.bufferbloat.shaped": "Upload đang bị ứng dụng giới hạn ở {limit:.1f} Mbps (Tối ưu), nên phép đo này đi qua mức giới hạn đó",
+  "diag.bufferbloat.shaped_at_limit": "Upload đang bị ứng dụng giới hạn ở {limit:.1f} Mbps và đã chạm mức đó ({mbps:.1f} Mbps): nếu gói cước đã nhanh hơn, hãy tắt rồi bật lại giới hạn để đo đường truyền",
 
   "diag.route.title": "Đường đi tới các đích ở xa",
   "diag.route.no_data": "Không so sánh được đường đi: có chưa đến 3 trang tham chiếu trả lời",
@@ -340,7 +342,7 @@
   "tweak.ipv6_off.name": "Tắt IPv6 trên Wi‑Fi",
   "tweak.ipv6_off.note": "Chỉ thử khi nghi IPv6/DNS IPv6 của router gây chậm",
   "tweak.upload_shaping.name": "Giới hạn tốc độ upload để giữ độ trễ thấp khi tải nặng",
-  "tweak.upload_shaping.note": "Đo upload trước rồi giới hạn ở 85% để hàng đợi nằm trên máy thay vì trong modem. Chỉ chiều upload: chiều download chỉ giới hạn được ở router (SQM)",
+  "tweak.upload_shaping.note": "Đo upload trước rồi giới hạn ở 85% để hàng đợi nằm trên máy thay vì trong modem. Lưu lượng trong mạng nội bộ (NAS, truyền màn hình) không bị giới hạn. Chỉ chiều upload: chiều download chỉ giới hạn được ở router (SQM)",
   "tweak.upload_shaping.value": "giới hạn {limit:.1f} Mbps (85% của {upload:.1f} Mbps upload đo được)",
   "tweak.upload_shaping.refused.weak": "Phép đo chưa tải đủ đường truyền ({mbps:.1f} Mbps, {samples} mẫu); hãy thử lại",
   "tweak.upload_shaping.refused.ceiling": "Phép đo chạm giới hạn của chính nó ({mbps:.1f} trên {ceiling:.0f} Mbps) nên đường truyền có thể nhanh hơn mức đo được; không thay đổi gì",
@@ -520,12 +522,13 @@
   "ui.optimize.measured.upload_shaping": "Giới hạn {limit:.1f} Mbps — 85% của {upload:.1f} Mbps upload đo ngày {date}",
   "ui.optimize.stale.other_network": "Đo trên mạng khác",
   "ui.optimize.stale.old": "Phép đo đã cũ",
+  "ui.optimize.stale.no_record": "Không có phép đo lưu lại",
   "ui.optimize.stale.hint": "Tắt rồi bật lại để đo mạng này",
 
   "ui.sheet.experimental.title": "Bật tối ưu thử nghiệm?",
   "ui.sheet.experimental.body": "“{name}” có thể làm giảm tốc độ hoặc có tác dụng phụ. Giá trị gốc được sao lưu, bạn có thể tắt lại bất cứ lúc nào.",
   "ui.sheet.measured.title": "Đo đường truyền trước?",
-  "ui.sheet.measured.body": "“{name}” sẽ đo upload khoảng 15 giây (tối đa 100 MB), trước và sau khi thay đổi, và không áp dụng nếu không có gì cần sửa.",
+  "ui.sheet.measured.body": "“{name}” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần tối đa 100 MB), và không áp dụng nếu không có gì cần sửa.",
   "ui.sheet.cancel": "Hủy",
   "ui.sheet.confirm": "Bật",
 

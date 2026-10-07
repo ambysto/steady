@@ -15,6 +15,8 @@ public enum MessageCatalog {
         "diag.bufferbloat.no_load": [MessageArgument("phase", nil), MessageArgument("error", nil)],
         "diag.bufferbloat.ok": [MessageArgument("delta", ".0f")],
         "diag.bufferbloat.rise": [MessageArgument("amount", nil), MessageArgument("where", nil)],
+        "diag.bufferbloat.shaped": [MessageArgument("limit", ".1f")],
+        "diag.bufferbloat.shaped_at_limit": [MessageArgument("limit", ".1f"), MessageArgument("mbps", ".1f")],
         "diag.bufferbloat.weak_load": [MessageArgument("phase", nil), MessageArgument("mbps", ".1f")],
         "diag.cli.compared": [MessageArgument("time", nil)],
         "diag.cli.header": [MessageArgument("time", nil), MessageArgument("status", nil)],

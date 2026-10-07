@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 from typing import Any, Callable, Iterable
 
-from . import config, dnsprobe, i18n, pmtu, probe, winutil
+from . import calibration, config, dnsprobe, i18n, pmtu, probe, winutil
 from .i18n import msg
 from .storage import Storage
 
@@ -1035,8 +1035,28 @@ CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
 ]
 
 
+def shaping_notes(m: "Any", state: dict | None) -> list[Message]:
+    """With the app's upload limit on, check #14 measures through it: say so, and when the upload
+    reaches the limit, the line may have become faster (a new plan) and the limit should be re-measured."""
+    current = state.get("current") if state and state.get("enabled") else None
+    limit = current.get("limit_mbps") if isinstance(current, dict) else None
+    if not limit:
+        return []
+    mbps = m.upload.mbps
+    if mbps is not None and mbps >= calibration.AT_CEILING * limit:
+        return [msg("diag.bufferbloat.shaped_at_limit", limit=float(limit), mbps=float(mbps))]
+    return [msg("diag.bufferbloat.shaped", limit=float(limit))]
+
+
 def check_bufferbloat(ctx: Context) -> CheckResult:
-    return evaluate_bufferbloat(ctx.get("bufferbloat"))
+    m = ctx.get("bufferbloat")
+    result = evaluate_bufferbloat(m)
+    try:
+        states = ctx.get("tweak_states") or {}
+    except Exception:
+        states = {}   # the note is extra; the measurement stands without it
+    notes = shaping_notes(m, states.get("upload_shaping"))
+    return replace(result, details=list(result.details) + notes) if notes else result
 
 
 # Checks that generate real traffic: never part of the default run, only when asked for by number.

@@ -223,6 +223,8 @@
   "diag.bufferbloat.by": "en {delta:.0f} ms",
   "diag.bufferbloat.rise": "La latencia hacia Internet aumenta {amount} cuando la línea está ocupada{where}",
   "diag.bufferbloat.advice": "Activa SQM / QoS inteligente (fq_codel o CAKE) en el router y fija los límites de subida y bajada un 5–10% por debajo del ancho de banda real. Si el router no tiene SQM, reduce la velocidad de subida de la aplicación que causa la carga.",
+  "diag.bufferbloat.shaped": "Subida limitada por esta app a {limit:.1f} Mbps (Optimizar), así que esto se mide a través del límite",
+  "diag.bufferbloat.shaped_at_limit": "Subida limitada por esta app a {limit:.1f} Mbps y la subida lo alcanzó ({mbps:.1f} Mbps): si tu plan es ahora más rápido, desactiva y vuelve a activar el límite para medir la línea",
 
   "diag.route.title": "Ruta hacia destinos lejanos",
   "diag.route.no_data": "No se pueden comparar las rutas: respondieron menos de 3 sitios de referencia",
@@ -340,7 +342,7 @@
   "tweak.ipv6_off.name": "Desactivar IPv6 en Wi‑Fi",
   "tweak.ipv6_off.note": "Pruébalo solo si sospechas que el IPv6 del router o el DNS por IPv6 ralentiza la conexión",
   "tweak.upload_shaping.name": "Limitar la velocidad de subida para mantener baja la latencia con carga",
-  "tweak.upload_shaping.note": "Primero mide tu subida y luego la limita al 85 % para que la cola se forme en el PC y no en el módem. Solo subida: la bajada solo se puede limitar en el router (SQM)",
+  "tweak.upload_shaping.note": "Primero mide tu subida y luego la limita al 85 % para que la cola se forme en el PC y no en el módem. El tráfico a tu red local (NAS, transmisión a la TV) no se limita. Solo subida: la bajada solo se puede limitar en el router (SQM)",
   "tweak.upload_shaping.value": "limitada a {limit:.1f} Mbps (85 % de los {upload:.1f} Mbps de subida medidos)",
   "tweak.upload_shaping.refused.weak": "La medición no cargó lo suficiente la línea ({mbps:.1f} Mbps, {samples} muestras); inténtalo de nuevo",
   "tweak.upload_shaping.refused.ceiling": "La medición llegó a su propio límite ({mbps:.1f} de {ceiling:.0f} Mbps), así que la línea puede ser más rápida de lo que puede medir; no se cambió nada",
@@ -520,12 +522,13 @@
   "ui.optimize.measured.upload_shaping": "Limitada a {limit:.1f} Mbps: 85 % de los {upload:.1f} Mbps de subida medidos el {date}",
   "ui.optimize.stale.other_network": "Medido en otra red",
   "ui.optimize.stale.old": "La medición es antigua",
+  "ui.optimize.stale.no_record": "No hay medición guardada",
   "ui.optimize.stale.hint": "Desactívalo y vuelve a activarlo para medir esta red",
 
   "ui.sheet.experimental.title": "¿Activar una optimización experimental?",
   "ui.sheet.experimental.body": "«{name}» puede reducir la velocidad o tener efectos secundarios. El valor original se guarda en una copia de seguridad, así que puedes desactivarla en cualquier momento.",
   "ui.sheet.measured.title": "¿Medir primero tu conexión?",
-  "ui.sheet.measured.body": "«{name}» mide tu subida durante unos 15 segundos (hasta 100 MB), antes y después del cambio, y no se aplica si no hay nada que corregir.",
+  "ui.sheet.measured.body": "«{name}» mide tu subida durante unos 15 segundos antes del cambio y otra vez después (hasta 100 MB cada vez), y no se aplica si no hay nada que corregir.",
   "ui.sheet.cancel": "Cancelar",
   "ui.sheet.confirm": "Activar",
 

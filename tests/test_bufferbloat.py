@@ -3,7 +3,7 @@ import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from app import bufferbloat as bb
+from app import bufferbloat as bb, i18n
 from tests.localized import DiagnosticsIn
 from app.bufferbloat import Measurement, Phase
 
@@ -38,6 +38,17 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(d.evaluate_bufferbloat(meas(up_inet=200)).tweak, "upload_shaping")
         self.assertIsNone(d.evaluate_bufferbloat(meas(down_inet=300)).tweak)    # download: only the router can
         self.assertIsNone(d.evaluate_bufferbloat(meas()).tweak)
+
+    def test_with_the_upload_limit_on_check_14_says_it_measures_through_it(self):
+        on = {"enabled": True, "current": {"limit_mbps": 34.0, "local_exempt": True}}
+        m = meas()
+        m.upload.mbps = 20.0
+        self.assertEqual(d.shaping_notes(m, None), [])
+        self.assertEqual(d.shaping_notes(m, {"enabled": False, "current": None}), [])
+        self.assertEqual(i18n.render(d.shaping_notes(m, on)[0], "en"),
+                         "Upload limited by this app to 34.0 Mbps (Optimize), so this is measured through the limit")
+        m.upload.mbps = 33.5                          # at the limit: the line may have become faster
+        self.assertIn("turn the limit off and on again", i18n.render(d.shaping_notes(m, on)[0], "en"))
 
     def test_healthy_summary_and_no_advice(self):
         r = d.evaluate_bufferbloat(meas())

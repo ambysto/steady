@@ -30,7 +30,8 @@ function tweakRow(ctx, st) {
   const m = st.enabled ? st.measurement : null;
   const measuredFrom = m && m.value ? t(`ui.optimize.measured.${st.id}`, {
     limit: m.value / 1e6, upload: m.upload_mbps, date: timeOf(m.measured_at, { withDate: true }) }) : null;
-  for (const why of (m && st.stale) || []) pills.push(el("span", { class: "pill warn" }, t(`ui.optimize.stale.${why}`)));
+  const stale = st.enabled ? st.stale || [] : [];
+  for (const why of stale) pills.push(el("span", { class: "pill warn" }, t(`ui.optimize.stale.${why}`)));
   const sw = switchEl(st.enabled, {
     disabled: !st.supported || st.on_by_default || busy, label: st.name,
     onToggle: async node => {
@@ -46,7 +47,7 @@ function tweakRow(ctx, st) {
     el("div", { class: "main" }, el("div", { class: "label" }, st.name),
       note ? el("div", { class: "secondary" }, note) : null,
       measuredFrom ? el("div", { class: "secondary" }, measuredFrom) : null,
-      m && st.stale?.length ? el("div", { class: "secondary" }, t("ui.optimize.stale.hint")) : null,
+      stale.length ? el("div", { class: "secondary" }, t("ui.optimize.stale.hint")) : null,
       el("div", { class: "meta" }, pills),
       st.enabled ? effectBox(data.impact?.[st.id]) : null),
     sw);

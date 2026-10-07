@@ -223,6 +223,8 @@
   "diag.bufferbloat.by": "{delta:.0f} ms ほど上昇します",
   "diag.bufferbloat.rise": "回線が混雑すると、インターネットへのレイテンシが{amount}{where}",
   "diag.bufferbloat.advice": "ルーターで SQM / スマート QoS（fq_codel または CAKE）をオンにし、アップロード/ダウンロードの上限を実際の帯域より 5～10% 低く設定してください。ルーターに SQM がない場合は、負荷の原因となっているアプリのアップロード速度を下げてください。",
+  "diag.bufferbloat.shaped": "アップロードはこのアプリにより {limit:.1f} Mbps に制限されています（最適化）。この測定はその制限を通して行われています",
+  "diag.bufferbloat.shaped_at_limit": "アップロードはこのアプリにより {limit:.1f} Mbps に制限されており、その上限に達しました（{mbps:.1f} Mbps）。プランが速くなった場合は、制限をオフにしてから再度オンにして回線を測定してください",
 
   "diag.route.title": "遠方の宛先への経路",
   "diag.route.no_data": "経路を比較できません：応答した参照サイトが 3 つ未満です",
@@ -340,7 +342,7 @@
   "tweak.ipv6_off.name": "Wi‑Fi の IPv6 をオフにする",
   "tweak.ipv6_off.note": "ルーターの IPv6 や IPv6 DNS が速度低下の原因と疑われる場合のみお試しください",
   "tweak.upload_shaping.name": "アップロード速度を制限して高負荷時の遅延を低く保つ",
-  "tweak.upload_shaping.note": "まずアップロードを測定し、その 85% に制限して、キューがモデムではなく PC 側にたまるようにします。アップロードのみ：ダウンロード方向はルーター（SQM）でしか制限できません",
+  "tweak.upload_shaping.note": "まずアップロードを測定し、その 85% に制限して、キューがモデムではなく PC 側にたまるようにします。ローカルネットワーク（NAS、キャスト）への通信は制限しません。アップロードのみ：ダウンロード方向はルーター（SQM）でしか制限できません",
   "tweak.upload_shaping.value": "{limit:.1f} Mbps に制限（測定したアップロード {upload:.1f} Mbps の 85%）",
   "tweak.upload_shaping.refused.weak": "測定で回線に十分な負荷がかかりませんでした（{mbps:.1f} Mbps、サンプル {samples} 個）。もう一度お試しください",
   "tweak.upload_shaping.refused.ceiling": "測定が自身の上限に達しました（{ceiling:.0f} Mbps 中 {mbps:.1f}）。回線は測定できる速度より速い可能性があります。何も変更していません",
@@ -520,12 +522,13 @@
   "ui.optimize.measured.upload_shaping": "{limit:.1f} Mbps に制限 — {date} に測定したアップロード {upload:.1f} Mbps の 85%",
   "ui.optimize.stale.other_network": "別のネットワークで測定",
   "ui.optimize.stale.old": "測定結果が古くなっています",
+  "ui.optimize.stale.no_record": "保存された測定結果がありません",
   "ui.optimize.stale.hint": "このネットワークを測定するには、オフにしてから再度オンにしてください",
 
   "ui.sheet.experimental.title": "実験的な調整をオンにしますか？",
   "ui.sheet.experimental.body": "「{name}」は速度の低下や副作用を引き起こす可能性があります。元の値はバックアップされるため、いつでもオフにできます。",
   "ui.sheet.measured.title": "先に接続を測定しますか？",
-  "ui.sheet.measured.body": "「{name}」は変更の前後にアップロードを約 15 秒（最大 100 MB）測定し、直すことがなければ適用しません。",
+  "ui.sheet.measured.body": "「{name}」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回最大 100 MB）。直すことがなければ適用しません。",
   "ui.sheet.cancel": "キャンセル",
   "ui.sheet.confirm": "オンにする",
 

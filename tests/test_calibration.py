@@ -18,9 +18,10 @@ def en(message):
     return i18n.render(message, "en")
 
 
-def upload(mbps=40.0, idle=20.0, loaded=200.0, samples=40, at=NOW, network=NET, loss=0.0):
+def upload(mbps=40.0, idle=20.0, loaded=200.0, samples=40, at=NOW, network=NET, loss=0.0, attempted=None):
     return {"kind": "upload", "upload_mbps": mbps, "idle_ms": idle, "loaded_ms": loaded, "samples": samples,
-            "loss_pct": loss, "measured_at": int(at), "network": network}
+            "attempted": samples if attempted is None else attempted, "loss_pct": loss, "measured_at": int(at),
+            "network": network}
 
 
 def shaping():
@@ -58,7 +59,7 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(out["upload_mbps"], 40.0)
 
     def test_rejects_malformed_or_old(self):
-        bad = [None, [], {"kind": "download"}, upload(mbps=-1), upload(mbps=True), upload(idle="20"),
+        bad = [None, [], {"kind": "download"}, upload(samples=10, attempted=5), {**upload(), "attempted": None}, upload(mbps=-1), upload(mbps=True), upload(idle="20"),
                upload(loaded=float("nan")), upload(samples=3.5), upload(samples=True), upload(loss=101),
                upload(at=NOW - calibration.MAX_AGE_S - 1), upload(at=NOW + 3600), upload(network="ZZ"),
                {**upload(), "measured_at": None}]
@@ -90,6 +91,11 @@ class CheckTests(unittest.TestCase):
 
 
 class DeriveTests(unittest.TestCase):
+    def test_weak_counts_samples_attempted_not_answered(self):
+        self.assertEqual(shaping().derive(upload(samples=0, attempted=12, loaded=900.0)), 34_000_000)
+        with self.assertRaises(Refused):
+            shaping().derive(upload(samples=5, attempted=5))
+
     def test_cap_is_85_percent_rounded_down(self):
         self.assertEqual(shaping().derive(upload(mbps=40.0)), 34_000_000)
         self.assertEqual(shaping().derive(upload(mbps=17.77)), 15_100_000)   # 15.1045 -> 15.1
@@ -115,6 +121,95 @@ class DeriveTests(unittest.TestCase):
         self.assertIn("rises only 25 ms", en(ctx.exception.message))
 
 
+class HeavyBloatTests(unittest.TestCase):
+    """The lines the tweak exists for: pings of a second or more under upload (1880 ms on 2026-08-31)."""
+
+    def run_phase(self, rtt_ms):
+        """A 10 s upload phase on a fake clock where each round waits for its ping (lost after 900 ms)."""
+        clock = [0.0]
+
+        def ping(addr):
+            got = rtt_ms(clock[0])
+            clock[0] += min(got, 900) / 1000
+            return None if got > 900 else got
+
+        def sleep(seconds):
+            clock[0] += seconds
+        m = bufferbloat.measure(ping, {"internet": "1.1.1.1"}, None, lambda seconds, stop: 50_000_000,
+                                idle_s=0.0, load_s=10.0, sleep=sleep, clock=lambda: clock[0])
+        m.idle.rtts["internet"] = [20.0] * 20
+        return m
+
+    def test_ramp_is_dropped_by_time_not_by_count(self):
+        m = self.run_phase(lambda t: 1200.0)          # every round waits 0.9 s: ~11 rounds in 10 s
+        self.assertGreaterEqual(len(m.upload.rtts["internet"]), 8)   # only the first ~2 s are gone
+        summary = bufferbloat.upload_summary(m)
+        self.assertEqual(summary["samples"], 0)         # every ping lost ...
+        self.assertEqual(summary["loaded_ms"], 900.0)   # ... which is the worst bloat, not missing data
+
+    def test_the_2026_08_31_kind_of_line_gets_a_cap(self):
+        m = self.run_phase(lambda t: 400.0 + 1500.0 * ((t * 7) % 1.0))   # 400-1900 ms
+        record = calibration.upload_record(bufferbloat.upload_summary(m), NET, NOW)
+        mbps = record["upload_mbps"]
+        self.assertEqual(shaping().derive(record), int(mbps * 1e6 * 0.85) // 100_000 * 100_000)
+
+
+class LocalNetworkTests(unittest.TestCase):
+    """The throttle matches all traffic (-Default): the LAN gets its own unthrottled policies."""
+
+    def test_local_networks_are_exempted_before_the_throttle(self):
+        mgr, s, _, _ = manager()
+        mgr.enable("upload_shaping", upload())
+        writes = [(name, args[0]) for _, name, args in s.writes()]
+        self.assertEqual(writes[-1], ("qos_policy_set", "StableInternet-Upload"))
+        self.assertEqual(sorted(s.qos_exempt.values()), sorted(tweaks.LOCAL_DESTINATIONS))
+        self.assertTrue(all(name.startswith("StableInternet-Upload-Local") for name in s.qos_exempt))
+
+    def test_a_missing_exemption_rolls_the_whole_thing_back(self):
+        mgr, s, backup, _ = manager()
+        s.noop.add("qos_exempt_set")                  # Windows accepted the call but nothing appeared
+        out = mgr.enable("upload_shaping", upload())
+        self.assertFalse(out.ok)
+        self.assertEqual((s.qos, s.qos_exempt), ({"Backup-Agent": 5_000_000}, {}))
+        self.assertNotIn("upload_shaping", backup.data)
+
+    def test_disable_removes_throttle_first_then_exemptions_and_nothing_else(self):
+        mgr, s, _, _ = manager()
+        before = s.snapshot()
+        mgr.enable("upload_shaping", upload())
+        n = len(s.writes())
+        self.assertTrue(mgr.disable("upload_shaping").ok)
+        removed = [args[0] for _, name, args in s.writes()[n:] if name == "qos_policy_remove"]
+        self.assertEqual(removed[0], "StableInternet-Upload")
+        self.assertEqual(len(removed), 1 + len(tweaks.LOCAL_DESTINATIONS))
+        self.assertEqual(s.snapshot(), before)
+
+    def test_without_backup_every_tool_policy_goes(self):
+        mgr, s, _, _ = manager()
+        s.qos["StableInternet-Upload"] = 15_000_000
+        s.qos_exempt["StableInternet-Upload-Local3"] = "192.168.0.0/16"
+        self.assertTrue(mgr.disable("upload_shaping").ok)
+        self.assertEqual((s.qos, s.qos_exempt), ({"Backup-Agent": 5_000_000}, {}))
+
+    def test_a_backup_naming_another_policy_is_refused(self):
+        for original in ({"policy": "Backup-Agent", "rate_bps": None, "exempt": []},
+                         {"policy": "StableInternet-Upload", "rate_bps": None, "exempt": ["Backup-Agent"]}):
+            with self.assertRaises(ValueError):
+                shaping().validate_original(original)
+        mgr, s, backup, _ = manager()
+        mgr.enable("upload_shaping", upload())
+        backup.data["upload_shaping"]["original"]["policy"] = "Backup-Agent"
+        self.assertFalse(mgr.disable("upload_shaping").ok)
+        self.assertEqual(s.qos["Backup-Agent"], 5_000_000)
+
+    def test_an_older_backup_without_exemptions_still_restores(self):
+        mgr, s, backup, _ = manager()
+        mgr.enable("upload_shaping", upload())
+        del backup.data["upload_shaping"]["original"]["exempt"]
+        self.assertTrue(mgr.disable("upload_shaping").ok)
+        self.assertEqual(s.qos_exempt, {})
+
+
 class ManagerTests(unittest.TestCase):
     def test_enable_writes_derived_cap_and_keeps_the_measurement(self):
         mgr, s, backup, events = manager()
@@ -123,10 +218,11 @@ class ManagerTests(unittest.TestCase):
         self.assertEqual(s.qos["StableInternet-Upload"], 34_000_000)
         self.assertEqual(s.qos["Backup-Agent"], 5_000_000)                     # someone else's policy untouched
         entry = backup.data["upload_shaping"]
-        self.assertEqual(entry["original"], {"policy": "StableInternet-Upload", "rate_bps": None})
+        self.assertEqual(entry["original"], {"policy": "StableInternet-Upload", "rate_bps": None, "exempt": []})
         self.assertEqual(entry["measurement"], {**upload(), "value": 34_000_000})
         st = mgr.state("upload_shaping")
-        self.assertEqual((st.enabled, st.measured, st.current), (True, True, {"limit_mbps": 34.0}))
+        self.assertEqual((st.enabled, st.measured, st.current),
+                         (True, True, {"limit_mbps": 34.0, "local_exempt": True}))
         self.assertEqual(st.measurement["value"], 34_000_000)
         self.assertEqual([k for k, *_ in events], ["tweak_enabled"])
 
@@ -244,6 +340,18 @@ class EnableMeasuredTests(unittest.TestCase):
         self.assertTrue(res["cancelled"])
         self.assertEqual((events, len(queue)), ([], 1))
 
+    def test_an_unreadable_state_neither_measures_nor_asks_for_uac(self):
+        mgr, s, _, _ = manager()
+
+        def denied(prefix):
+            raise RuntimeError("Access is denied")
+        s.qos_policies_get = denied
+        res, events, enabled, queue = self.run_flow([upload()], mgr=mgr,
+                                                    enable=lambda m: self.fail("enable must not run"))
+        self.assertFalse(res["ok"])
+        self.assertIn("Access is denied", en(res["message"]))
+        self.assertEqual(len(queue), 1)
+
     def test_already_on_does_not_measure(self):
         mgr, s, _, _ = manager()
         s.qos["StableInternet-Upload"] = 15_000_000
@@ -261,9 +369,12 @@ class UploadSummaryTests(unittest.TestCase):
         m = Measurement(Phase("idle", {"internet": [20.0, 22.0, None]}),
                         Phase("download", error="skipped"),
                         Phase("upload", {"internet": [200.0, None, 210.0, 190.0]}, mbps=41.234))
-        self.assertEqual(bufferbloat.upload_summary(m), {"upload_mbps": 41.23, "idle_ms": 21.0, "loaded_ms": 200.0,
-                                                         "samples": 3, "loss_pct": 25.0})
-        m.upload.rtts["internet"] = [None, None]
+        # the lost ping counts as the 900 ms timeout: median of 190, 200, 210, 900
+        self.assertEqual(bufferbloat.upload_summary(m), {"upload_mbps": 41.23, "idle_ms": 21.0, "loaded_ms": 205.0,
+                                                         "samples": 3, "attempted": 4, "loss_pct": 25.0})
+        m.upload.rtts["internet"] = [None, None]       # everything lost under load: the worst bloat, not no data
+        self.assertEqual(bufferbloat.upload_summary(m)["loaded_ms"], 900.0)
+        m.upload.rtts["internet"] = []
         self.assertIsNone(bufferbloat.upload_summary(m))
         m.upload = Phase("upload", {}, None, "OSError: refused")
         self.assertIsNone(bufferbloat.upload_summary(m))

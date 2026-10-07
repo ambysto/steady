@@ -223,6 +223,8 @@
   "diag.bufferbloat.by": "de {delta:.0f} ms",
   "diag.bufferbloat.rise": "La latence vers Internet augmente {amount} quand la ligne est occupée{where}",
   "diag.bufferbloat.advice": "Activez SQM / QoS intelligent (fq_codel ou CAKE) sur le routeur et réglez les limites d'envoi/téléchargement environ 5 à 10% sous la bande passante réelle. Si le routeur n'a pas de SQM, réduisez le débit d'envoi de l'application qui provoque la charge.",
+  "diag.bufferbloat.shaped": "Envoi limité par cette app à {limit:.1f} Mbit/s (Optimiser) : la mesure passe donc par cette limite",
+  "diag.bufferbloat.shaped_at_limit": "Envoi limité par cette app à {limit:.1f} Mbit/s, et l’envoi l’a atteinte ({mbps:.1f} Mbit/s) : si votre forfait est devenu plus rapide, désactivez puis réactivez la limite pour mesurer la ligne",
 
   "diag.route.title": "Route vers les destinations lointaines",
   "diag.route.no_data": "Impossible de comparer les routes : moins de 3 sites de référence ont répondu",
@@ -340,7 +342,7 @@
   "tweak.ipv6_off.name": "Désactiver IPv6 sur le Wi‑Fi",
   "tweak.ipv6_off.note": "À essayer seulement si vous soupçonnez que l'IPv6 du routeur ou le DNS IPv6 ralentit la connexion",
   "tweak.upload_shaping.name": "Limiter le débit montant pour garder une latence basse en charge",
-  "tweak.upload_shaping.note": "Mesure d’abord votre débit montant, puis le limite à 85 % pour que la file d’attente reste sur le PC plutôt que dans le modem. Envoi uniquement : le sens descendant ne peut être limité que sur le routeur (SQM)",
+  "tweak.upload_shaping.note": "Mesure d’abord votre débit montant, puis le limite à 85 % pour que la file d’attente reste sur le PC plutôt que dans le modem. Le trafic vers votre réseau local (NAS, diffusion) n’est pas limité. Envoi uniquement : le sens descendant ne peut être limité que sur le routeur (SQM)",
   "tweak.upload_shaping.value": "limité à {limit:.1f} Mbit/s (85 % des {upload:.1f} Mbit/s d’envoi mesurés)",
   "tweak.upload_shaping.refused.weak": "La mesure n’a pas assez chargé la ligne ({mbps:.1f} Mbit/s, {samples} échantillons) ; réessayez",
   "tweak.upload_shaping.refused.ceiling": "La mesure a atteint sa propre limite ({mbps:.1f} sur {ceiling:.0f} Mbit/s) : la ligne est peut-être plus rapide que ce qu’elle peut mesurer ; rien n’a été modifié",
@@ -520,12 +522,13 @@
   "ui.optimize.measured.upload_shaping": "Limité à {limit:.1f} Mbit/s — 85 % des {upload:.1f} Mbit/s d’envoi mesurés le {date}",
   "ui.optimize.stale.other_network": "Mesuré sur un autre réseau",
   "ui.optimize.stale.old": "La mesure est ancienne",
+  "ui.optimize.stale.no_record": "Aucune mesure enregistrée",
   "ui.optimize.stale.hint": "Désactivez puis réactivez pour mesurer ce réseau",
 
   "ui.sheet.experimental.title": "Activer un tweak expérimental ?",
   "ui.sheet.experimental.body": "« {name} » peut réduire le débit ou avoir des effets secondaires. La valeur d'origine est sauvegardée, vous pouvez le désactiver à tout moment.",
   "ui.sheet.measured.title": "Mesurer d’abord votre connexion ?",
-  "ui.sheet.measured.body": "« {name} » mesure votre débit montant pendant environ 15 secondes (jusqu’à 100 Mo), avant et après la modification, et n’est pas appliqué s’il n’y a rien à corriger.",
+  "ui.sheet.measured.body": "« {name} » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (jusqu’à 100 Mo à chaque fois), et n’est pas appliqué s’il n’y a rien à corriger.",
   "ui.sheet.cancel": "Annuler",
   "ui.sheet.confirm": "Activer",
 
