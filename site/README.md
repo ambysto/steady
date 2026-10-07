@@ -29,4 +29,5 @@ Then open `http://127.0.0.1:8799/`. The `/privacy` link only works on the deploy
 - The page must stay honest about limits: Ambysto Steady cannot make a provider faster.
 - The numbers in the "Real data" section come from the development machine (`docs/EXPERIMENT-LOG.md`). They carry no network identifiers and are labelled as a single case. Show them rounded (35%, 0.4%) so they are easy to remember; the exact values stay in the log.
 - No personal names, SSIDs, MAC or IP addresses; use placeholders if an example needs one.
+- Plain copy: no em dashes, round numbers where the exact value adds nothing.
 - Load nothing from third-party origins except Google Fonts.
