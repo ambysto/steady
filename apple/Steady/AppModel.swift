@@ -14,6 +14,8 @@ final class AppModel {
     private static let history = try? MinuteStore.standard()
 
     var selectedTab: AppTab = .overview
+    /// The History tab's range; the Overview's week card opens it at a week.
+    var historyRange: HistorySeries.Range = .hour
     private(set) var path: NetworkPath?
     let monitor: LiveMonitor
     /// App Store screenshots: a sample network instead of measurements (debug builds only).

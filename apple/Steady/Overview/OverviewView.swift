@@ -1,8 +1,8 @@
 import SteadyKit
 import SwiftUI
 
-/// The connection at a glance: what the system reports, "Check my connection", and live
-/// measurements of the router and the Internet.
+/// The connection at a glance: what the system reports, "Check my connection", the last
+/// 7 days, and live measurements of the router and the Internet.
 struct OverviewView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.localizer) private var text
@@ -13,6 +13,7 @@ struct OverviewView: View {
                 PathStatusView(path: model.path, text: text)
             }
             CheckCard()
+            WeekCard()
             Section {
                 ForEach(model.monitor.targets) { target in
                     MeasurementRow(title: title(of: target), endpoint: target.endpoint,

@@ -140,6 +140,8 @@ public enum MessageCatalog {
         "ui.value.recovered_detail": [MessageArgument("duration", nil)],
         "ui.value.step_helped": [MessageArgument("count", nil)],
         "ui.value.tweak_helped": [MessageArgument("count", nil)],
+        "ui.week.measured": [MessageArgument("duration", nil)],
+        "ui.week.offline": [MessageArgument("count", nil), MessageArgument("duration", nil)],
     ]
 
     /// Keys whose "count" argument selects a plural form.
@@ -177,6 +179,7 @@ public enum MessageCatalog {
         "ui.value.recovered",
         "ui.value.step_helped",
         "ui.value.tweak_helped",
+        "ui.week.offline",
     ]
 
     /// Keys with an Apple wording under "apple.<key>", rendered instead of the key itself.
