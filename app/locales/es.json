@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Forzar Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Pruébalo si sospechas de un problema de compatibilidad Wi‑Fi 6 entre la tarjeta y el router",
 
+  "tweak.wifi_prefer_5g.name": "Preferir la banda de 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Pasa a 5 GHz una tarjeta que se queda pegada a 2,4 GHz cuando hay cobertura, y sigue recurriendo a 2,4 GHz en otros sitios. Solo disponible si tu red tiene un punto de acceso de 5 GHz",
+
+  "tweak.wifi_tx_power_max.name": "Máxima potencia de transmisión",
+  "tweak.wifi_tx_power_max.note": "Mantiene la tarjeta en su nivel máximo de transmisión en lugar de dejar que el controlador lo reduzca. Algo más de calor y de consumo de batería en un portátil",
+
   "tweak.device_power_off.name": "Impedir que Windows apague la tarjeta",
   "tweak.device_power_off.note": "Surte efecto tras reiniciar la tarjeta o el PC",
 
@@ -312,6 +318,9 @@
   "tweak.reason.no_wifi_card": "No se encontró ninguna tarjeta Wi‑Fi",
   "tweak.reason.no_matching_value": "'{property}' no tiene un valor adecuado (disponibles: {values})",
   "tweak.reason.no_property": "La tarjeta no tiene esta propiedad",
+  "tweak.reason.not_connected": "No hay conexión a una red Wi‑Fi",
+  "tweak.reason.bands_unknown": "El último análisis de Windows no muestra qué bandas usa «{ssid}»",
+  "tweak.reason.no_5ghz": "«{ssid}» no tiene ningún punto de acceso de 5 GHz al alcance",
   "tweak.reason.multi_value": "'{property}' tiene un valor de varias partes, no admitido",
   "tweak.reason.no_registry_key": "No se encontró la clave del registro",
   "tweak.reason.no_binding": "La tarjeta no tiene el enlace {component}",

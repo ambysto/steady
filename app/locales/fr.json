@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Forcer le Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "À essayer si vous soupçonnez un problème de compatibilité Wi‑Fi 6 entre la carte et le routeur",
 
+  "tweak.wifi_prefer_5g.name": "Préférer la bande 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Fait passer sur 5 GHz une carte qui reste accrochée au 2,4 GHz quand la 5 GHz est à portée, et revient au 2,4 GHz ailleurs. Proposé seulement si votre réseau a un point d'accès 5 GHz",
+
+  "tweak.wifi_tx_power_max.name": "Puissance d'émission maximale",
+  "tweak.wifi_tx_power_max.note": "Garde la carte à son niveau d'émission le plus élevé au lieu de laisser le pilote le réduire. Un peu plus de chaleur et de consommation de batterie sur un portable",
+
   "tweak.device_power_off.name": "Ne pas laisser Windows éteindre la carte",
   "tweak.device_power_off.note": "Prend effet après le redémarrage de la carte ou du PC",
 
@@ -312,6 +318,9 @@
   "tweak.reason.no_wifi_card": "Aucune carte Wi‑Fi trouvée",
   "tweak.reason.no_matching_value": "« {property} » n'a aucune valeur adaptée (disponibles : {values})",
   "tweak.reason.no_property": "La carte n'a pas cette propriété",
+  "tweak.reason.not_connected": "Non connecté à un réseau Wi‑Fi",
+  "tweak.reason.bands_unknown": "Le dernier scan de Windows n'indique pas quelles bandes « {ssid} » utilise",
+  "tweak.reason.no_5ghz": "« {ssid} » n'a aucun point d'accès 5 GHz à portée",
   "tweak.reason.multi_value": "« {property} » a une valeur en plusieurs parties, non prise en charge",
   "tweak.reason.no_registry_key": "Clé de registre introuvable",
   "tweak.reason.no_binding": "La carte n'a pas de liaison {component}",
