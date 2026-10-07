@@ -484,6 +484,19 @@ class DnsFastestOtherInterfaceTests(unittest.TestCase):
         touched = {args[0] for _, name, args in s.writes()[before:] if name.startswith("doh")}
         self.assertNotIn("9.9.9.9", touched)
 
+    def test_a_vanished_entry_of_an_original_server_is_not_a_mismatch(self):
+        # The original static DNS was 9.9.9.9 (with its DoH entry); apply chose other servers; the entry of 9.9.9.9
+        # vanished meanwhile. Restore does not re-add it (apply never used it), and the check afterwards agrees.
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        s.dns.update(servers=["9.9.9.9"], static=True)
+        s.doh["9.9.9.9"].update(auto_upgrade=True, fallback_to_udp=True)
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        s.doh.pop("9.9.9.9")
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertNotIn("9.9.9.9", s.doh)
+        self.assertEqual((s.dns["servers"], backup.data), (["9.9.9.9"], {}))
+
     def test_an_adapter_that_is_gone_keeps_the_backup_and_says_why(self):
         mgr, s, backup, events, _ = self.enabled_on_wifi()
         s.dns = None                                      # the Wi-Fi adapter is removed

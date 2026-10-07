@@ -512,6 +512,7 @@ class DnsFastestTweak(Tweak):
         super().__init__(id, name, risk, **kw)
         self._benchmark, self._captive, self._clock = benchmark, captive, clock
         self._captive_seen: tuple[float, bool] | None = None
+        self._applied: set[str] = set()   # the servers apply() had set, as restore() last saw them
 
     @staticmethod
     def _info(sys_: System, guid: str | None = None) -> dict[str, Any]:
@@ -585,8 +586,9 @@ class DnsFastestTweak(Tweak):
             was = original["doh"][address]
             same = (now["present"], now["auto_upgrade"], now["fallback_to_udp"]) == \
                    (was["present"], was["auto_upgrade"], was["fallback_to_udp"])
+            # "apply was using it" is what restore() decided before it wrote the servers back
             ours = (now["present"] and _looks_ours(now)) or (was["present"] and not now["present"]
-                                                             and address in info["servers"])
+                                                             and address in self._applied)
             if not same and not ours:
                 snapshot["doh"][address] = dict(was)
         return snapshot
@@ -631,6 +633,7 @@ class DnsFastestTweak(Tweak):
         if original is None:
             raise NoDefaultRestore(msg("tweak.reason.no_default_dns"))
         info = self._info(sys_, original.get("guid"))   # the interface that was changed, wherever it is now
+        self._applied = {s for s in info["servers"] if s in DOH_ADDRESSES}   # read before the servers are written back
         wanted = list(original["servers"]) if original["static"] else None
         if (wanted is None and info["static"]) or (wanted is not None and (not info["static"] or info["servers"] != wanted)):
             sys_.dns_servers_set(info["index"], wanted)
@@ -638,7 +641,7 @@ class DnsFastestTweak(Tweak):
         for address, was in original["doh"].items():
             now = doh.get(address)
             if was["present"] and now is None:   # the entry vanished: put it back, if apply was using it
-                if address in info["servers"]:
+                if address in self._applied:
                     sys_.doh_set(address, was["template"] or DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
                                  bool(was["fallback_to_udp"]))
             elif was["present"]:
