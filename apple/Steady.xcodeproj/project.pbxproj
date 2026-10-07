@@ -110,8 +110,6 @@
 				de,
 				es,
 				fr,
-				ja,
-				ko,
 				"pt-BR",
 				vi,
 				"zh-Hans",

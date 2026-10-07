@@ -39,18 +39,6 @@
             "value" : "Ambysto Steady mesure le délai et la perte de paquets vers votre routeur pour distinguer les problèmes de Wi‑Fi des problèmes d'Internet."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ambysto Steady は、Wi‑Fi の問題とインターネットの問題を見分けるために、ルーターまでの遅延とパケット損失を測定します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ambysto Steady는 Wi‑Fi 문제와 인터넷 문제를 구분하기 위해 라우터까지의 지연과 패킷 손실을 측정합니다."
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
