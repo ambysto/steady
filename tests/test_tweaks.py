@@ -60,6 +60,7 @@ class FakeSystem:
         self.qos = {"Backup-Agent": 5_000_000}   # throttle policies: name -> bit/s; someone else's policy
         self.qos_exempt = {}           # unthrottled policies: name -> destination prefix
         self.qos_rounding = 0          # Windows may store a slightly different rate
+        self.mtu = {}                  # interface GUID -> IPv4 MTU (1500 when not listed)
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -129,6 +130,19 @@ class FakeSystem:
         out = {n: {"rate_bps": r, "destination": None} for n, r in self.qos.items()}
         out.update({n: {"rate_bps": None, "destination": d} for n, d in self.qos_exempt.items()})
         return {n: p for n, p in out.items() if n.lower().startswith(prefix.lower())}
+
+    def ipv4_interface(self, guid=None):
+        self._r("ipv4_interface", guid)
+        if guid is not None:
+            found = next((i for i in self.interfaces() if i["guid"] == guid), None)
+        elif self.uplink_read_error:
+            raise SystemReadError("the uplink cannot be read")
+        else:
+            found = self.dns if self.uplink == "dns" else self.uplink
+        if found is None:
+            return None
+        return {"index": found["index"], "guid": found["guid"], "alias": found["alias"],
+                "mtu": self.mtu.get(found["guid"], 1500)}
 
     # writes
     def _w(self, name, *args):
@@ -213,13 +227,22 @@ class FakeSystem:
             self.qos.pop(name, None)
             self.qos_exempt.pop(name, None)
 
+    def ipv4_mtu_set(self, interface_index, mtu):
+        if self._w("ipv4_mtu_set", interface_index, mtu):
+            target = next(i for i in self.interfaces() if i["index"] == interface_index)
+            if mtu == 1500:
+                self.mtu.pop(target["guid"], None)
+            else:
+                self.mtu[target["guid"]] = mtu
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
         return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.tcp_global, self.rsc,
-                              self.offload, self.dns, self.extra_interfaces, self.doh, self.qos, self.qos_exempt))
+                              self.offload, self.dns, self.extra_interfaces, self.doh, self.qos, self.qos_exempt,
+                              self.mtu))
 
 
 def power_saving():

@@ -8,7 +8,7 @@ Common mechanism (back up first, verify, undo, restore when there is no backup):
 
 ## 1. Wi‑Fi card (driver advanced properties)
 
-Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Reset-NetAdapterAdvancedProperty`. Property names differ by chip vendor → matched by `DisplayName` (regex); a tweak with no matching property is shown as "not supported".
+Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Reset-NetAdapterAdvancedProperty`. Property names differ by chip vendor, and `DisplayName` / `DisplayValue` are translated on a localized driver or Windows, so a property is found by its `RegistryKeyword` first (never translated) and only then by `DisplayName` (regex); see "How a property and its value are matched" below. A tweak with no matching property is shown as "not supported".
 
 | ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
@@ -21,7 +21,21 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 | `wifi_prefer_5g` | Prefer the 5 GHz band | `Preferred Band` / `Band Preference` = Prefer 5GHz (never "5G only") | low | 🔌🛡 A card that clings to a 2.4 GHz access point (802.11n, 65 Mbps link, 5% router loss) moved to 5 GHz 802.11ac (175 Mbps, 0% loss) when this was set. It only prefers 5 GHz: the card still falls back to 2.4 GHz where 5 GHz is out of range, which is why "5G only" is not used (some drivers ignore it anyway). Offered only while the card is on a 2.4 GHz access point and the connected network has a 5 GHz one in Windows' last scan; otherwise it is shown as not supported, with the reason. Not offered on a 6 GHz connection (Wi‑Fi 6E/7): preferring 5 GHz could pull the card down from 6 GHz |
 | `wifi_tx_power_max` | Highest transmit power | `Transmit Power` / `Transmit Power Level` / `Tx Power` = Highest | low | 🔌🛡 Some drivers lower the transmit power on their own to save energy; this keeps the card at its top level. Slightly more heat and battery use on a laptop |
 
-Matching rules for both: the property is found by `DisplayName` and the value by `DisplayValue`, each a full-match regular expression that tolerates a numeric prefix such as `3. ` (Intel and MediaTek add one). A card with no such property, or with no matching value, is shown as "not supported". Restore uses the value saved in `backup.json`, or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
+### How a property and its value are matched
+
+Applies to every tweak in this section (SIC-94). Each tweak lists, per known driver family, a `RegistryKeyword`, the registry value that means "target" (when it is known), and the English `DisplayName` / `DisplayValue` regular expressions as a fallback.
+
+1. **Property.** First by `RegistryKeyword` (case-insensitive, a leading `*` ignored), in the order the tweak lists them; the first keyword present on the card wins. Only if none is present, by `DisplayName` (full-match regular expression that tolerates a numeric prefix such as `3. `, which Intel and MediaTek add).
+2. **Value.** When the property was found by its keyword and the tweak knows the registry value for that keyword, the target is that registry value, provided the driver lists it among its valid values. This does not depend on any translated text. Otherwise the target is the valid value whose `DisplayValue` matches the English regular expression.
+3. **Not supported.** No property found: "the card does not have this property". Property found but no value matched (for example a translated `DisplayValue` where the registry value is not known): "no suitable value", with the values the driver lists. Nothing is ever written in these cases.
+
+Registry values are recorded only where they were read from a card or are fixed by Microsoft. Verified on the dev PC's MediaTek MT7922 (read 2026-10-07): `LowPowerEnable` Disabled = 0, `DisableWakeOnMagic` and `DisableWakeOnPattern` Disabled = 1, `BWSelection5G` 20MHz only = 1, `CurrPhyMode` 802.11ac = 1, `PreferredBand` Prefer 5GHz band = 2, `TxPowerLevel` Highest = 0. Standard NDIS keywords `*WakeOnMagicPacket` and `*WakeOnPattern`: 0 = Disabled. For Intel and Realtek only the keyword is listed (`MIMOPowerSaveMode`, `RoamingAggressiveness`, `RoamingPreferredBandType`, `TransmitPower`), which finds the property on a translated driver; its value still comes from the English `DisplayValue` until a registry value is read from a real card. A tweak is shown as "not supported" rather than guessed.
+
+The `netsh` labels that `wifi_prefer_5g` reads are English too. When `netsh wlan show interfaces` cannot be read (translated labels, the interface not listed) the band is reported as unknown ("cannot tell which band the Wi‑Fi connection is on"), never as "not connected", and nothing is changed.
+
+Restore uses the value saved in `backup.json`, or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
+
+### Notes on `wifi_prefer_5g` and `wifi_tx_power_max`
 
 **On by the driver default.** A property can already hold the target value because the driver ships that way (the MediaTek card's `PreferredBand` and `TxPowerLevel` defaults are `Prefer 5GHz` and `Highest`). Without a backup that is not a change the tool made, so the tweak is shown as on *by the driver default*, its switch is disabled, and turning it off writes nothing: `Reset-NetAdapterAdvancedProperty` would only restart the adapter and leave the same value. When a backup exists (the tool did write it) it is restored as usual. After any reset to the default the value is read back and a value that did not change is reported as a failure.
 
@@ -64,6 +78,7 @@ The value is computed from a measurement of the network in use, taken before the
 | ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
 | `upload_shaping` | Limit the upload speed to keep latency low under load | `NetQosPolicy` named `StableInternet-Upload`, `-Default` (all outbound traffic), `ThrottleRateActionBitsPerSecond` = 85% of the measured upload, rounded down to 0.1 Mbps, between 1 and 1000 Mbps; plus one unthrottled policy per local network (`StableInternet-Upload-Local1…6`) so the LAN is not limited | medium | 🛡 Upload to the Internet only (local networks are exempted); the download direction can only be shaped on the router (SQM). Refused when latency under upload rises < 30 ms (nothing to fix), when the upload load is < 1 Mbps, when the measurement reached its own ceiling (≥ 95% of the 80 Mbps a 100 MB, 10 s phase can show: the line may be faster), or with too few latency samples |
+| `mtu_pmtu` | Match the MTU to the largest packet the path carries | IPv4 MTU (`NlMtu`) of the uplink interface = the path MTU measured by check #16, between 1280 and the current MTU | medium | 🛡 Only lowers the MTU. Refused when large packets are not silently lost: the path already carries the interface MTU, or routers answer "packet too big" (PMTUD works); also refused with fewer than 2 answering targets, a VPN/tunnel carrying the traffic, a jumbo-frame interface (MTU above 1500), or a path below 1280 |
 
 `upload_shaping` details:
 
@@ -75,6 +90,15 @@ The value is computed from a measurement of the network in use, taken before the
 - **Prove**: after applying, the same measurement again; *helped* when the latency rise under upload dropped by ≥ 30% and ≥ 20 ms, otherwise the result suggests turning it off.
 - **While on**: check #14 says the upload is limited by the app to X Mbps, and when the measured upload reaches 95% of that limit (a faster plan, for example) asks to turn it off and on again to re-measure. A limit that is on with no measurement on record (the elevated helper stopped between applying and saving it) is flagged "No measurement on record". A measured enable and check #14 never run at the same time (one lock): each would see about half the bandwidth.
 - The 2026-08-31 hand-made policy (15 Mbps) lowered the worst latency under upload from 1880 to 403 ms; it has been removed and was measured before the hardware fault was found, so it is a hint, not evidence.
+
+`mtu_pmtu` details:
+
+- **Measure**: check #16 (`app/pmtu.py`): "do not fragment" ICMP echoes to 1.1.1.1, 8.8.8.8 and 9.9.9.9, a binary search between 576 bytes and the interface MTU (capped at 1500). About 1 s and a few dozen small packets, so unlike `upload_shaping` it loads nothing. Kept: the interface MTU, the largest path MTU any target reached, how many targets answered, whether any packet was refused with "packet too big", whether the route to 1.1.1.1 leaves by another interface than the default route (a tunnel), the network id.
+- **Derive**: the value is the measured path MTU itself (no margin: it is already the largest size that crossed the path). It is applied only in the one case where the mismatch hurts: large packets vanish silently (PMTUD blackhole) at two or more targets. Refused, with nothing written and no UAC prompt, when the path carries the interface MTU (nothing to fix), when a router answered "packet too big" (PMTUD works: connections adapt by themselves), when fewer than two targets answered (a single target that drops some pings could fake a small path), when a VPN or tunnel carries the traffic (the measurement would be the tunnel's), when the interface MTU is above 1500 (jumbo frames are a LAN choice), or when the path MTU is below 1280 (no plain PPPoE or tunnel is that small: something else is wrong).
+- **Apply**: `netsh interface ipv4 set subinterface <index> mtu=<value> store=persistent` on the interface of the default route, by index (no name to quote). Only IPv4: IPv6 has its own MTU and its own minimum of 1280. Writing refuses when the interface's MTU is already at or below the value. Verified when the interface's `NlMtu` reads back equal to the value. Changing the MTU does not restart the adapter.
+- **Restore**: the backup names the interface by its GUID (an ifIndex can be reused). Turning it off writes the saved MTU back to that interface, wherever it is now; turning it on while the backup is another interface's is refused. There is no safe default without a backup (1500 is not right for every interface), so without one the tweak is not turned off.
+- **Prove**: right after applying, the same measurement again; *helped* when the path now carries the full interface MTU, otherwise the result suggests turning it off.
+- **On / off**: Windows keeps no mark of who set an MTU, so the switch shows on only while this tweak's backup exists and its interface's MTU differs from the saved one. An MTU set by hand (the dev PC has had 1492 on Wi‑Fi since 2026-08-31) shows as off; turning the tweak on then finds nothing to fix.
 
 ## 5. Tool features
 
