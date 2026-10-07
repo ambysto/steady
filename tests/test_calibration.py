@@ -94,6 +94,15 @@ class DeriveTests(unittest.TestCase):
         self.assertEqual(shaping().derive(upload(mbps=40.0)), 34_000_000)
         self.assertEqual(shaping().derive(upload(mbps=17.77)), 15_100_000)   # 15.1045 -> 15.1
 
+    def test_a_measurement_at_its_own_ceiling_is_not_the_line_speed(self):
+        # A load phase stops at 100 MB in 10 s: 80 Mbps is the most it can show (SIC-93's dev PC read 79-80).
+        self.assertEqual(bufferbloat.LOAD_CEILING_MBPS, 80.0)
+        for mbps in (76.0, 79.5, 80.0):
+            with self.assertRaises(Refused, msg=mbps) as ctx:
+                shaping().derive(upload(mbps=mbps))
+            self.assertIn("reached its own limit", en(ctx.exception.message))
+        self.assertEqual(shaping().derive(upload(mbps=75.0)), 63_700_000)    # just below: trusted
+
     def test_refusals(self):
         cases = {"weak": upload(mbps=0.5), "few samples": upload(samples=5),
                  "nothing to fix": upload(loaded=45.0), "below floor": upload(mbps=1.1),

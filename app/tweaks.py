@@ -29,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from . import calibration, config, dnsprobe, i18n, winutil
+from . import bufferbloat, calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
 from .winsys import System
 
@@ -618,6 +618,10 @@ class UploadShapingTweak(MeasuredTweak):
         mbps, samples = float(measurement["upload_mbps"]), int(measurement["samples"])
         if mbps < calibration.MIN_UPLOAD_MBPS or samples < calibration.MIN_SAMPLES:
             raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=samples))
+        # The measurement stops at a fixed volume, so near its ceiling it shows its own limit, not the line's.
+        ceiling = bufferbloat.LOAD_CEILING_MBPS
+        if mbps >= calibration.AT_CEILING * ceiling:
+            raise Refused(msg("tweak.upload_shaping.refused.ceiling", mbps=mbps, ceiling=ceiling))
         rise = calibration.rise_ms(measurement)
         if rise < calibration.NOT_NEEDED_MS:
             raise Refused(msg("tweak.upload_shaping.refused.not_needed", rise=max(rise, 0.0)))

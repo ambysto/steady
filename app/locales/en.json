@@ -329,6 +329,7 @@
   "tweak.upload_shaping.note": "Measures your upload first, then caps it at 85% so the queue stays on the PC instead of the modem. Upload only: the download direction can only be shaped on the router (SQM)",
   "tweak.upload_shaping.value": "limited to {limit:.1f} Mbps (85% of the {upload:.1f} Mbps upload measured)",
   "tweak.upload_shaping.refused.weak": "The measurement did not load the line enough ({mbps:.1f} Mbps, {samples} samples); try again",
+  "tweak.upload_shaping.refused.ceiling": "The measurement reached its own limit ({mbps:.1f} of {ceiling:.0f} Mbps), so the line may be faster than it can tell; nothing was changed",
   "tweak.upload_shaping.refused.not_needed": "Latency rises only {rise:.0f} ms under upload; nothing to fix, so nothing was changed",
   "tweak.upload_shaping.refused.bounds": "A {cap:.1f} Mbps limit is outside the safe range ({low:.0f}–{high:.0f} Mbps); nothing was changed",
 
