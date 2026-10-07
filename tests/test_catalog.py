@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app import config, i18n, tweaks
 from app.tweaks import TweakManager
+from app.winsys import WifiBands
 from tests.test_network_tweaks import FAST_CLOUDFLARE, bench_of
 from tests.test_tweaks import MemoryBackup, FakeSystem, prop
 
@@ -32,7 +33,11 @@ def real_card_system():
         prop("Wake on Magic Packet", "DisableWakeOnMagic", "0", [("Disabled", "1"), ("Enabled", "0")], "0"),
         prop("Wake on Pattern Match", "DisableWakeOnPattern", "0", [("Disabled", "1"), ("Enabled", "0")], "0"),
         prop("Power Saving", "LowPowerEnable", "1", [("Disabled", "0"), ("Auto", "1")], "1"),
-        prop("Transmit Power Level", "TxPowerLevel", "0", [("1. Highest", "0"), ("2. Medium", "1")], "0"),
+        prop("Transmit Power Level", "TxPowerLevel", "0",
+             [("1. Highest", "0"), ("2. Medium", "1"), ("3. Lowest", "2")], "0"),
+        # Both ship at the value the tweaks want: the driver default is already "Prefer 5GHz" and "Highest".
+        prop("Preferred Band", "PreferredBand", "2",
+             [("1. No Preference", "0"), ("2. Prefer 2.4GHz band", "1"), ("3. Prefer 5GHz band", "2")], "2"),
     ]}
     s.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
     s.power = {(tweaks.SUB_PCIE, tweaks.SET_ASPM): (1, 2), (tweaks.SUB_WIRELESS, tweaks.SET_WIRELESS): (0, 2)}
@@ -104,16 +109,16 @@ class RealCardTests(unittest.TestCase):
         self.assertTrue(all(s.error is None for s in st.values()), [s.error for s in st.values() if s.error])
         self.assertFalse(st["wifi_roaming"].supported)                   # Intel-only property
         self.assertIn("không có thuộc tính", i18n.render(st["wifi_roaming"].reason, "vi"))
-        self.assertFalse(st["wifi_prefer_5g"].supported)                 # no band property on this card
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_bw20_5g", "wifi_mode_ac",
-                    "wifi_tx_power_max", "device_power_off", "power_wireless_max", "power_pcie_aspm_off",
-                    "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off", "dns_fastest",
-                    "upload_shaping"):
+                    "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "power_wireless_max",
+                    "power_pcie_aspm_off", "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off",
+                    "dns_fastest", "upload_shaping"):
             self.assertTrue(st[tid].supported, tid)
         self.assertTrue(st["upload_shaping"].measured)
         self.assertFalse(any(s.measured for tid, s in st.items() if tid != "upload_shaping"))
-        # fresh machine: only the transmit power reads as on, because the driver default is already Highest
-        self.assertEqual({tid for tid, s in st.items() if s.enabled}, {"wifi_tx_power_max"})
+        # fresh machine: only these two read as on, and only because the driver ships that way
+        self.assertEqual({tid for tid, s in st.items() if s.enabled}, {"wifi_prefer_5g", "wifi_tx_power_max"})
+        self.assertEqual({tid for tid, s in st.items() if s.on_by_default}, {"wifi_prefer_5g", "wifi_tx_power_max"})
 
     def test_prefixed_values_are_matched(self):
         mgr, s = manager()
@@ -154,7 +159,7 @@ class RealCardTests(unittest.TestCase):
                 self.assertTrue(out.ok and out.changed, (t.id, i18n.render(out.message)))
         self.assertTrue(all(st.enabled for st in mgr.states() if st.supported))
         for t in catalog():
-            if mgr.state(t.id).supported and t.id != "wifi_tx_power_max":   # already on: the tool never changed it
+            if mgr.state(t.id).supported and t.id not in ("wifi_prefer_5g", "wifi_tx_power_max"):   # on by default
                 out = mgr.disable(t.id)
                 self.assertTrue(out.ok, (t.id, out.message))
         self.assertEqual(s.snapshot(), before)
@@ -185,7 +190,8 @@ def card_with(*props):
     return s
 
 
-# Property names and values as the vendors ship them (Intel AX2xx, Realtek RTL88xx, MediaTek MT79xx).
+# Intel and Realtek fixtures are examples of the vendors' names and values. The MediaTek display names and
+# values are what the dev PC's MT7922 reports (its registry values here are assumed).
 INTEL_BAND = prop("Preferred Band", "RoamingPreferredBandType", "0",
                   [("1. No Preference", "0"), ("2. Prefer 2.4GHz band", "1"), ("3. Prefer 5GHz band", "2")], "0")
 INTEL_TX = prop("Transmit Power", "TransmitPower", "100",
@@ -194,15 +200,16 @@ REALTEK_BAND = prop("Band Preference", "BandPreference", "0",
                     [("Auto", "0"), ("Prefer 5GHz", "1"), ("5G Only", "2")], "0")
 REALTEK_TX = prop("Tx Power Level", "TxPowerLevel", "1", [("Highest", "0"), ("Medium", "1"), ("Lowest", "2")], "0")
 MEDIATEK_BAND = prop("Preferred Band", "PreferredBand", "0",
-                     [("1. Auto", "0"), ("2. Prefer 2.4GHz", "1"), ("3. Prefer 5GHz", "2"), ("4. 5G Only", "3")], "0")
-MEDIATEK_TX = prop("Transmit Power Level", "TxPowerLevel", "1", [("1. Highest", "0"), ("2. Medium", "1")], "0")
+                     [("1. No Preference", "0"), ("2. Prefer 2.4GHz band", "1"), ("3. Prefer 5GHz band", "2")], "2")
+MEDIATEK_TX = prop("Transmit Power Level", "TxPowerLevel", "1",
+                   [("1. Highest", "0"), ("2. Medium", "1"), ("3. Lowest", "2")], "0")
 
 
 class PreferFiveGhzTests(unittest.TestCase):
     def test_each_vendor_gets_prefer_5ghz_and_never_the_5g_only_value(self):
         for band, keyword, shown in ((INTEL_BAND, "RoamingPreferredBandType", "3. Prefer 5GHz band"),
                                      (REALTEK_BAND, "BandPreference", "Prefer 5GHz"),
-                                     (MEDIATEK_BAND, "PreferredBand", "3. Prefer 5GHz")):
+                                     (MEDIATEK_BAND, "PreferredBand", "3. Prefer 5GHz band")):
             mgr, s = manager(card_with(copy.deepcopy(band)))
             out = mgr.enable("wifi_prefer_5g")
             self.assertTrue(out.ok and out.changed, (keyword, out.message))
@@ -213,7 +220,7 @@ class PreferFiveGhzTests(unittest.TestCase):
         mgr.enable("wifi_prefer_5g")
         out = mgr.disable("wifi_prefer_5g")
         self.assertTrue(out.ok, out.message)
-        self.assertEqual(s._prop("Wi-Fi", "PreferredBand")["DisplayValue"], "1. Auto")
+        self.assertEqual(s._prop("Wi-Fi", "PreferredBand")["DisplayValue"], "1. No Preference")
 
     def test_disable_without_a_backup_resets_to_the_driver_default(self):
         mgr, s = manager(card_with(copy.deepcopy(REALTEK_BAND)))
@@ -223,7 +230,7 @@ class PreferFiveGhzTests(unittest.TestCase):
         self.assertEqual(s._prop("Wi-Fi", "BandPreference")["DisplayValue"], "Auto")
 
     def test_not_supported_without_the_property(self):
-        mgr, s = manager()
+        mgr, s = manager(card_with(copy.deepcopy(INTEL_TX)))
         st = mgr.state("wifi_prefer_5g")
         self.assertFalse(st.supported)
         self.assertIn("không có thuộc tính", i18n.render(st.reason, "vi"))
@@ -241,7 +248,7 @@ class PreferFiveGhzTests(unittest.TestCase):
         s = card_with(copy.deepcopy(INTEL_BAND))
         mgr, _ = manager(s)
         self.assertTrue(mgr.state("wifi_prefer_5g").supported)
-        s.ssid_bands = ("HomeNet", frozenset({"2.4 GHz"}))
+        s.ssid_bands = WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz"}))
         st = mgr.state("wifi_prefer_5g")
         self.assertFalse(st.supported)
         self.assertIn("HomeNet", i18n.render(st.reason, "en"))
@@ -249,10 +256,36 @@ class PreferFiveGhzTests(unittest.TestCase):
         self.assertFalse(mgr.enable("wifi_prefer_5g").ok)
         self.assertEqual(s.writes(), [])
 
+    def test_only_offered_to_a_card_that_is_on_2_4_ghz(self):
+        for band in ("5 GHz", "5GHz", "6 GHz"):
+            s = card_with(copy.deepcopy(INTEL_BAND))
+            s.ssid_bands = WifiBands("HomeNet", band, frozenset({"2.4 GHz", "5 GHz", "6 GHz"}))
+            mgr, _ = manager(s)
+            st = mgr.state("wifi_prefer_5g")
+            self.assertFalse(st.supported, band)
+            self.assertIn(band, i18n.render(st.reason, "en"))
+            self.assertFalse(mgr.enable("wifi_prefer_5g").ok, band)
+            self.assertEqual(s.writes(), [], band)
+
+    def test_2_4_ghz_spelled_without_a_space_is_still_2_4_ghz(self):
+        s = card_with(copy.deepcopy(INTEL_BAND))
+        s.ssid_bands = WifiBands("HomeNet", "2.4GHz", frozenset({"2.4GHz", "5GHz"}))
+        self.assertTrue(manager(s)[0].state("wifi_prefer_5g").supported)
+
+    def test_current_band_unknown_is_not_guessed(self):
+        s = card_with(copy.deepcopy(INTEL_BAND))
+        s.ssid_bands = WifiBands("HomeNet", "", frozenset({"2.4 GHz", "5 GHz"}))
+        mgr, _ = manager(s)
+        st = mgr.state("wifi_prefer_5g")
+        self.assertFalse(st.supported)
+        self.assertIn("which band", i18n.render(st.reason, "en"))
+        self.assertFalse(mgr.enable("wifi_prefer_5g").ok)
+        self.assertEqual(s.writes(), [])
+
     def test_reason_when_the_scan_does_not_list_the_ssid_or_wifi_is_down(self):
         s = card_with(copy.deepcopy(INTEL_BAND))
         mgr, _ = manager(s)
-        s.ssid_bands = ("HomeNet", frozenset())
+        s.ssid_bands = WifiBands("HomeNet", "2.4 GHz", frozenset())
         st = mgr.state("wifi_prefer_5g")
         self.assertFalse(st.supported)
         self.assertIn("HomeNet", i18n.render(st.reason, "en"))
@@ -261,15 +294,15 @@ class PreferFiveGhzTests(unittest.TestCase):
         self.assertFalse(st.supported)
         self.assertIn("not connected", i18n.render(st.reason, "en").lower())
 
-    def test_band_spelling_from_netsh_is_tolerated(self):
+    def test_the_connection_is_read_for_the_tweaks_own_adapter(self):
         s = card_with(copy.deepcopy(INTEL_BAND))
-        s.ssid_bands = ("HomeNet", frozenset({"5GHz"}))
-        self.assertTrue(manager(s)[0].state("wifi_prefer_5g").supported)
+        manager(s)[0].state("wifi_prefer_5g")
+        self.assertIn(("read", "wifi_ssid_bands", ("Wi-Fi",)), s.log)
 
     def test_already_on_stays_switchable_off_when_the_network_has_no_5ghz(self):
         mgr, s = manager(card_with(copy.deepcopy(INTEL_BAND)))
         self.assertTrue(mgr.enable("wifi_prefer_5g").ok)
-        s.ssid_bands = ("Cafe", frozenset({"2.4 GHz"}))       # moved to another network
+        s.ssid_bands = WifiBands("Cafe", "2.4 GHz", frozenset({"2.4 GHz"}))       # moved to another network
         st = mgr.state("wifi_prefer_5g")
         self.assertTrue(st.supported and st.enabled)
         self.assertTrue(mgr.disable("wifi_prefer_5g").ok)
@@ -279,6 +312,85 @@ class PreferFiveGhzTests(unittest.TestCase):
         mgr, s = manager(card_with(copy.deepcopy(INTEL_BAND), copy.deepcopy(INTEL_TX)))
         mgr.states()
         self.assertEqual(s.writes(), [])
+
+
+def manager_without_admin():
+    return TweakManager(real_card_system(), catalog(), load_backup=MemoryBackup().load,
+                        save_backup=MemoryBackup().save, is_admin=lambda: False)
+
+
+def manager_without_admin():
+    return TweakManager(real_card_system(), catalog(), load_backup=MemoryBackup().load,
+                        save_backup=MemoryBackup().save, is_admin=lambda: False)
+
+
+class DriverDefaultTests(unittest.TestCase):
+    """A property that already holds the target because the driver ships that way (the dev PC's MT7922)."""
+
+    def test_listed_as_on_by_default_with_the_reason(self):
+        mgr, _ = manager()
+        for tid in ("wifi_prefer_5g", "wifi_tx_power_max"):
+            st = mgr.state(tid)
+            self.assertTrue(st.supported and st.enabled and st.on_by_default, tid)
+            self.assertFalse(st.has_backup)
+            self.assertIn("driver", i18n.render(st.reason, "en"), tid)
+
+    def test_disable_writes_nothing_and_says_so(self):
+        mgr, s = manager()
+        for tid in ("wifi_prefer_5g", "wifi_tx_power_max"):
+            out = mgr.disable(tid)
+            self.assertTrue(out.ok and not out.changed, (tid, out.message))
+            self.assertIn("driver", i18n.render(out.message, "en"))
+        self.assertEqual(s.writes(), [])      # no Reset-NetAdapterAdvancedProperty, so no adapter restart
+
+    def test_disable_needs_no_admin_because_nothing_is_written(self):
+        s = real_card_system()
+        mgr = TweakManager(s, catalog(), load_backup=MemoryBackup().load, save_backup=MemoryBackup().save,
+                           is_admin=lambda: False)
+        out = mgr.disable("wifi_tx_power_max")
+        self.assertTrue(out.ok and not out.changed, out.message)
+        self.assertEqual(s.writes(), [])
+
+    def test_enable_also_leaves_it_alone(self):
+        mgr, s = manager()
+        out = mgr.enable("wifi_prefer_5g")
+        self.assertTrue(out.ok and not out.changed)
+        self.assertEqual(s.writes(), [])
+
+    def test_the_plan_says_there_is_nothing_to_turn_off(self):
+        mgr, _ = manager()
+        plan = mgr.plan("wifi_tx_power_max", enable=False, lang="en")
+        self.assertIn("nothing to turn off", plan)
+        self.assertNotIn("go back to the default", plan)
+        self.assertNotIn("Administrator", manager_without_admin().plan("wifi_tx_power_max", enable=False, lang="en"))
+        self.assertNotIn("Administrator", manager_without_admin().plan("wifi_tx_power_max", enable=False, lang="en"))
+
+    def test_not_flagged_when_the_tool_changed_it(self):
+        # The value was something else and the tool set it (a backup exists): a real change, switchable off.
+        mgr, s = manager()
+        s._prop("Wi-Fi", "PreferredBand").update(RegistryValue=["0"], DisplayValue="1. No Preference")
+        self.assertTrue(mgr.enable("wifi_prefer_5g").ok)
+        st = mgr.state("wifi_prefer_5g")
+        self.assertTrue(st.enabled and st.has_backup and not st.on_by_default)
+        self.assertTrue(mgr.disable("wifi_prefer_5g").ok)
+        self.assertEqual(s._prop("Wi-Fi", "PreferredBand")["DisplayValue"], "1. No Preference")
+
+    def test_not_flagged_when_the_default_is_not_the_target(self):
+        mgr, s = manager()
+        s._prop("Wi-Fi", "LowPowerEnable").update(RegistryValue=["0"], DisplayValue="Disabled")  # set by hand
+        st = mgr.state("wifi_power_saving")
+        self.assertTrue(st.enabled and not st.on_by_default)
+        self.assertTrue(mgr.disable("wifi_power_saving").ok)
+        self.assertEqual(s._prop("Wi-Fi", "LowPowerEnable")["DisplayValue"], "Auto")
+
+    def test_a_default_reset_that_changes_nothing_is_reported_as_failed(self):
+        mgr, s = manager()
+        s._prop("Wi-Fi", "LowPowerEnable").update(RegistryValue=["0"], DisplayValue="Disabled")
+        s.noop.add("adapter_property_reset")                       # the driver ignores the reset
+        out = mgr.disable("wifi_power_saving")
+        self.assertFalse(out.ok)
+        self.assertTrue(out.changed)
+        self.assertIn("still on", i18n.render(out.message, "en"))
 
 
 class TransmitPowerTests(unittest.TestCase):

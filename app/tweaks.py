@@ -62,6 +62,7 @@ class Reading:
     enabled: bool
     current: Any = None
     reason: Message = ""
+    driver_default: bool = False   # enabled only because the driver ships with the target value
 
 
 # --- the primitive kinds -------------------------------------------------------------
@@ -188,13 +189,15 @@ class AdapterPropertyTweak(Tweak):
         try:
             _, prop, target = self._resolve(sys_)
             cur = self._current(prop)
+            default = prop.get("DefaultRegistryValue")
             if cur != target and self._precondition is not None:
                 why = self._precondition(sys_)
                 if why:
                     raise Unsupported(why)
         except Unsupported as exc:
             return Reading(False, False, None, exc.message)
-        return Reading(True, cur == target, prop["DisplayValue"])
+        return Reading(True, cur == target, prop["DisplayValue"],
+                       driver_default=cur == target and default is not None and str(default) == str(cur))
 
     def capture(self, sys_: System) -> dict[str, Any]:
         adapter, prop, _ = self._resolve(sys_)
@@ -835,6 +838,7 @@ class TweakState:
     can_restore_without_backup: bool
     error: str | None = None     # reading failed (not the same as "unsupported")
     note: Message = ""
+    on_by_default: bool = False  # on only because the driver ships that way: the tool wrote nothing, nothing to turn off
     measured: bool = False       # the value comes from a measurement (ADR-0016)
     measurement: dict[str, Any] | None = None   # the one stored with the backup, while on
 
@@ -892,9 +896,12 @@ class TweakManager:
             r, error = Reading(False, False, None, msg("tweak.reason.unreadable")), f"{type(exc).__name__}: {exc}"
         entry = (backups or {}).get(t.id)
         measurement = entry.get("measurement") if isinstance(entry, dict) and r.enabled else None
-        return TweakState(t.id, t.name, t.risk, t.group, r.supported, r.enabled, r.current, r.reason,
-                          None if backups is None else t.id in backups, t.needs_admin, t.disrupts_network,
-                          t.needs_reboot, t.has_default_restore, error, t.note,
+        has_backup = None if backups is None else t.id in backups
+        on_by_default = r.enabled and r.driver_default and has_backup is False
+        return TweakState(t.id, t.name, t.risk, t.group, r.supported, r.enabled, r.current,
+                          msg("tweak.reason.driver_default") if on_by_default else r.reason,
+                          has_backup, t.needs_admin, t.disrupts_network, t.needs_reboot,
+                          t.has_default_restore, error, t.note, on_by_default,
                           isinstance(t, MeasuredTweak), measurement)
 
     def states(self) -> list[TweakState]:
@@ -1026,6 +1033,9 @@ class TweakManager:
             entry = backup.get(t.id)
             if entry is None and not r.enabled:
                 return Outcome(True, False, msg("tweak.result.already_off"), self.state(t.id))
+            if entry is None and r.enabled and r.driver_default:
+                # Resetting to the driver default would restart the adapter and leave the same value.
+                return Outcome(True, False, msg("tweak.result.driver_default"), self.state(t.id))
             if not r.supported and entry is None:
                 return Outcome(False, False, msg("tweak.result.unsupported", reason=r.reason), self.state(t.id))
             if t.needs_admin and not self._is_admin():
@@ -1042,6 +1052,12 @@ class TweakManager:
                     self.last_change_ts = self._clock()
                     return self._fail(t, msg("tweak.result.default_restore_failed", error=str(exc)), changed=True, level="bad")
                 self.last_change_ts = self._clock()
+                try:
+                    still_on = t.read(self.system).enabled
+                except Exception:
+                    still_on = False   # cannot read it back: report the reset, as before
+                if still_on:
+                    return self._fail(t, msg("tweak.result.default_restore_no_effect"), changed=True, level="bad")
                 self._event("tweak_disabled", msg("tweak.event.disabled_default", name=t.name, tweak_id=t.id), "info")
                 return Outcome(True, True, msg("tweak.result.restored_default"), self.state(t.id))
 
@@ -1120,12 +1136,14 @@ class TweakManager:
         else:
             if st.has_backup:
                 lines.append(msg("tweak.plan.will_restore"))
+            elif st.on_by_default:
+                lines.append(msg("tweak.plan.is_default"))
             elif st.enabled:
                 lines.append(msg("tweak.plan.will_default") if st.can_restore_without_backup else
                              msg("tweak.plan.will_refuse"))
             else:
                 lines.append(msg("tweak.plan.nothing_off"))
-        if st.needs_admin and not self._is_admin():
+        if st.needs_admin and not self._is_admin() and (enable or not st.on_by_default):
             lines.append(msg("tweak.plan.needs_admin"))
         return "\n".join(i18n.render(line, lang) for line in lines)
 
@@ -1148,16 +1166,26 @@ def _wifi_class_key(sys_: System) -> str | None:
     return sys_.adapter_class_key(name)
 
 
-def _has_5ghz_access_point(sys_: System) -> Message | None:
-    """Why "prefer 5 GHz" would do nothing here, or None when the connected network offers 5 GHz."""
-    seen = sys_.wifi_ssid_bands()
+def _band_key(band: str) -> str:
+    return re.sub(r"\s", "", band).lower()   # "5 GHz" and "5GHz" are the same band
+
+
+def _stuck_on_24ghz(sys_: System) -> Message | None:
+    """Why "prefer 5 GHz" would do nothing (or harm) here, or None when it fits: the card is on a
+    2.4 GHz access point and the same network has a 5 GHz one. A card already on 5 GHz gains
+    nothing; one on 6 GHz could be pulled down. The band always comes from a Band field: a channel
+    number alone cannot tell 2.4 GHz from 6 GHz."""
+    seen = sys_.wifi_ssid_bands(_wifi_adapter(sys_))
     if seen is None:
         return msg("tweak.reason.not_connected")
-    ssid, bands = seen
-    if not bands:
-        return msg("tweak.reason.bands_unknown", ssid=ssid)
-    if not any(re.sub(r"\s", "", band).lower() == "5ghz" for band in bands):
-        return msg("tweak.reason.no_5ghz", ssid=ssid)
+    if not _band_key(seen.current_band):
+        return msg("tweak.reason.band_unknown")
+    if _band_key(seen.current_band) != "2.4ghz":
+        return msg("tweak.reason.not_on_24ghz", band=seen.current_band)
+    if not seen.bands:
+        return msg("tweak.reason.bands_unknown", ssid=seen.ssid)
+    if not any(_band_key(band) == "5ghz" for band in seen.bands):
+        return msg("tweak.reason.no_5ghz", ssid=seen.ssid)
     return None
 
 
@@ -1196,7 +1224,7 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
                              note=_note("wifi_mode_ac")),
         AdapterPropertyTweak("wifi_prefer_5g", _name("wifi_prefer_5g"), "low",
                              [(r"Preferred Band|Band Preference", _N + r"Prefer 5\s?GHz(?: band)?")],
-                             precondition=_has_5ghz_access_point, group=GROUP_WIFI, note=_note("wifi_prefer_5g")),
+                             precondition=_stuck_on_24ghz, group=GROUP_WIFI, note=_note("wifi_prefer_5g")),
         AdapterPropertyTweak("wifi_tx_power_max", _name("wifi_tx_power_max"), "low",
                              [(r"Transmit Power(?: Level)?|Tx Power(?: Level)?", _N + r"Highest")],
                              group=GROUP_WIFI, note=_note("wifi_tx_power_max")),

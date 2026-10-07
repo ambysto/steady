@@ -50,29 +50,60 @@ class ProtocolTests(unittest.TestCase):
 
 
 class SsidBandsTests(unittest.TestCase):
-    """What the connected network offers, from `netsh wlan show interfaces` and `... networks mode=bssid`."""
+    """What an adapter's connection looks like, from `netsh wlan show interfaces` and `... networks mode=bssid`."""
 
     @staticmethod
-    def system(ssid="HomeNet", state="connected", scan=()):
-        wifi = None if state is None else SimpleNamespace(connected=state == "connected", ssid=ssid)
-        entries = [SimpleNamespace(ssid=s, band=b) for s, b in scan]
-        return winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_state=lambda: wifi, scan=lambda: entries)
+    def iface(name="Wi-Fi", state="connected", ssid="HomeNet", bssid="02:5e:00:9a:40:24", band="2.4 GHz"):
+        return SimpleNamespace(interface=name, connected=state == "connected", ssid=ssid, bssid=bssid, band=band)
 
-    def test_bands_of_the_connected_ssid_only(self):
-        sys_ = self.system(scan=[("HomeNet", "2.4 GHz"), ("HomeNet", "5 GHz"), ("HomeNet", "5 GHz"),
-                                 ("Neighbour", "6 GHz")])
-        self.assertEqual(sys_.wifi_ssid_bands(), ("HomeNet", frozenset({"2.4 GHz", "5 GHz"})))
+    @staticmethod
+    def system(*ifaces, scan=()):
+        entries = [SimpleNamespace(ssid=s, bssid=b, band=band) for s, b, band in scan]
+        return winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_states=lambda: list(ifaces),
+                                    scan=lambda: entries)
 
-    def test_ssid_missing_from_the_scan_gives_no_bands(self):
-        self.assertEqual(self.system(scan=[("Other", "5 GHz")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+    def test_current_band_and_the_bands_of_the_same_network(self):
+        sys_ = self.system(self.iface(), scan=[("HomeNet", "02:5e:00:9a:40:24", "2.4 GHz"),
+                                               ("HomeNet", "02:5e:00:9a:40:25", "5 GHz"),
+                                               ("HomeNet", "02:5e:00:9a:40:26", "5 GHz"),
+                                               ("Neighbour", "02:5e:00:11:22:33", "6 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi"),
+                         winsys.WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz", "5 GHz"})))
+
+    def test_band_comes_from_netsh_when_it_says_so_not_from_the_channel(self):
+        sys_ = self.system(self.iface(band="6 GHz"), scan=[("HomeNet", "02:5e:00:9a:40:24", "6 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi").current_band, "6 GHz")
+
+    def test_band_falls_back_to_the_scan_entry_of_the_connected_bssid(self):
+        sys_ = self.system(self.iface(band=""), scan=[("HomeNet", "02:5E:00:9A:40:24", "5 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi").current_band, "5 GHz")
+
+    def test_band_unknown_when_neither_netsh_nor_the_scan_says(self):
+        got = self.system(self.iface(band=""), scan=[("Other", "02:5e:00:00:00:01", "5 GHz")]).wifi_ssid_bands("Wi-Fi")
+        self.assertEqual(got, winsys.WifiBands("HomeNet", "", frozenset()))
+
+    def test_hidden_network_is_matched_by_the_connected_bssid(self):
+        sys_ = self.system(self.iface(band=""), scan=[("", "02:5e:00:9a:40:24", "2.4 GHz"),
+                                                      ("", "02:5e:00:ff:ff:ff", "5 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi"),
+                         winsys.WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz"})))
+
+    def test_the_interface_with_the_adapters_name_is_used(self):
+        sys_ = self.system(self.iface(name="Wi-Fi 2", ssid="Other", band="5 GHz"), self.iface(name="Wi-Fi"))
+        self.assertEqual(sys_.wifi_ssid_bands("wi-fi").ssid, "HomeNet")
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi 2").current_band, "5 GHz")
 
     def test_entries_without_a_band_are_ignored(self):
-        self.assertEqual(self.system(scan=[("HomeNet", "")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+        got = self.system(self.iface(), scan=[("HomeNet", "02:5e:00:9a:40:99", "")]).wifi_ssid_bands("Wi-Fi")
+        self.assertEqual(got.bands, frozenset())
 
-    def test_none_when_not_connected(self):
-        self.assertIsNone(self.system(state="disconnected").wifi_ssid_bands())
-        self.assertIsNone(self.system(state=None).wifi_ssid_bands())
-        self.assertIsNone(self.system(ssid="").wifi_ssid_bands())
+    def test_none_only_when_that_interface_is_not_connected(self):
+        self.assertIsNone(self.system(self.iface(state="disconnected")).wifi_ssid_bands("Wi-Fi"))
+
+    def test_an_interface_netsh_does_not_list_is_unknown_not_disconnected(self):
+        self.assertEqual(self.system().wifi_ssid_bands("Wi-Fi"), winsys.WifiBands("", "", frozenset()))
+        self.assertEqual(self.system(self.iface(name="Ethernet")).wifi_ssid_bands("Wi-Fi"),
+                         winsys.WifiBands("", "", frozenset()))
 
 
 class ScriptConstructionTests(unittest.TestCase):
