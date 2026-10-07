@@ -340,9 +340,10 @@ class DnsFastestTests(unittest.TestCase):
         self.assertEqual(kind, "tweak_disabled")
         self.assertTrue(app_changed([{"ts": 1000, "kind": kind, "message": message}], 1100))
 
-    def test_it_is_medium_risk_needs_admin_and_has_no_blind_default(self):
+    def test_it_is_experimental_needs_admin_and_has_no_blind_default(self):
+        # Experimental since EXP-021: on the dev PC it was ~3x slower than the router's own DNS.
         t = next(t for t in tweaks.CATALOG if t.id == "dns_fastest")
-        self.assertEqual((t.risk, t.needs_admin, t.has_default_restore), ("medium", True, False))
+        self.assertEqual((t.risk, t.needs_admin, t.has_default_restore), ("experimental", True, False))
 
     def test_no_uplink_is_unsupported(self):
         mgr, s, *_ = setup(["dns_fastest"])
