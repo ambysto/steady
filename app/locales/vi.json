@@ -865,6 +865,7 @@
   "ui.check.kind.none": "Máy này không sửa được",
   "ui.check.clear_title": "Kết nối của bạn đang ổn",
   "ui.check.clear_body": "Cả {total} mục đều ổn · kiểm tra lúc {time}",
+  "ui.check.stale": "Lần kiểm tra cuối cách đây {duration}. Kiểm tra lại để biết tình hình hiện tại.",
   "ui.check.drops_24h": "Rớt mạng trong 24 giờ",
   "ui.check.details": "Chi tiết",
   "ui.check.sheet.title": {"one": "Bật {count} thay đổi?", "other": "Bật {count} thay đổi?"},

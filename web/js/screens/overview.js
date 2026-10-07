@@ -174,6 +174,7 @@ const STATUS_ICON = { ok: "check", warn: "alert", bad: "x", info: "info" };
 const RING_R = 70;
 const RING = 2 * Math.PI * RING_R;
 const check = { running: false, progress: null };   // progress: the diagnostics job's, see app/server.py
+const STALE_AFTER_S = 3 * 3600;                     // older than this, "Check again" is the big button
 
 function bigButton(label, iconName, onClick) {
   return el("button", { class: "big-button", onclick: onClick }, icon(iconName), el("span", {}, label));
@@ -243,15 +244,20 @@ function checkCard(ctx) {
                             body: t("ui.check.idle_body", { count: suggestions.checks_total }) }));
   }
   const time = timeOf(suggestions.run.ts, { withDate: true });
-  const again = el("button", { class: "button", onclick: start }, t("ui.check.again"));
+  // An old result may no longer hold: checking again becomes the big button, the result stays below.
+  const age = nowOf(ctx) - suggestions.run.ts;
+  const stale = age > STALE_AFTER_S;
+  const again = stale ? null : el("button", { class: "button", onclick: start }, t("ui.check.again"));
+  const centre = fallback => (stale ? bigButton(t("ui.check.again"), "refresh", start) : fallback);
+  const staleNote = stale ? el("p", { class: "stale" }, t("ui.check.stale", { duration: duration(age) })) : null;
   if (!summary.count) {
-    return card(checkHero({ circle: statusCircle("ok", "check"), title: t("ui.check.clear_title"),
-                            body: t("ui.check.clear_body", { total: summary.total, time }), below: again }),
+    return card(checkHero({ circle: centre(statusCircle("ok", "check")), title: t("ui.check.clear_title"),
+                            body: t("ui.check.clear_body", { total: summary.total, time }), below: again || staleNote }),
       miniStats(ctx));
   }
   const worst = summary.problems.some(p => p.status === "bad") ? "bad" : "warn";
-  return card(checkHero({ circle: statusCircle(worst, "alert"), title: t("ui.check.found_title", { count: summary.count }),
-                          body: t("ui.check.found_body", { time, ok: summary.ok, total: summary.total }), below: again }),
+  return card(checkHero({ circle: centre(statusCircle(worst, "alert")), title: t("ui.check.found_title", { count: summary.count }),
+                          body: t("ui.check.found_body", { time, ok: summary.ok, total: summary.total }), below: again || staleNote }),
     el("div", { class: "rows" }, summary.problems.map(p => problemRow(p, ctx))));
 }
 

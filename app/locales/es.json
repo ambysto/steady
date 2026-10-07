@@ -865,6 +865,7 @@
   "ui.check.kind.none": "Nada en este PC lo arregla",
   "ui.check.clear_title": "Tu conexión está en buen estado",
   "ui.check.clear_body": "Las {total} comprobaciones están bien · comprobado a las {time}",
+  "ui.check.stale": "Última comprobación hace {duration}. Comprueba de nuevo para ver cómo está ahora.",
   "ui.check.drops_24h": "Cortes en 24 h",
   "ui.check.details": "Detalles",
   "ui.check.sheet.title": {"one": "¿Activar {count} cambio?", "other": "¿Activar {count} cambios?"},

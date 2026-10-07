@@ -867,6 +867,7 @@
   "ui.check.kind.none": "Nothing on this PC fixes this",
   "ui.check.clear_title": "Your connection is in good shape",
   "ui.check.clear_body": "All {total} checks are fine · checked at {time}",
+  "ui.check.stale": "Last checked {duration} ago. Check again to see how it is now.",
   "ui.check.drops_24h": "Drops in 24 h",
   "ui.check.details": "Details",
   "ui.check.sheet.title": {"one": "Turn on {count} change?", "other": "Turn on {count} changes?"},

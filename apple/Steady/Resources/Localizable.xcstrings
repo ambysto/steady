@@ -15451,6 +15451,53 @@
         }
       }
     },
+    "ui.check.stale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt vor %1$@ geprüft. Prüfen Sie erneut, um den aktuellen Stand zu sehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last checked %1$@ ago. Check again to see how it is now."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Última comprobación hace %1$@. Comprueba de nuevo para ver cómo está ahora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernière vérification il y a %1$@. Vérifiez à nouveau pour voir l'état actuel."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Última verificação há %1$@. Verifique de novo para ver como está agora."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lần kiểm tra cuối cách đây %1$@. Kiểm tra lại để biết tình hình hiện tại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次检查是在 %1$@前。再次检查以了解当前情况。"
+          }
+        }
+      }
+    },
     "ui.check.start" : {
       "extractionState" : "manual",
       "localizations" : {

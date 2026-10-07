@@ -865,6 +865,7 @@
   "ui.check.kind.none": "此电脑上无法修复",
   "ui.check.clear_title": "您的连接状况良好",
   "ui.check.clear_body": "全部 {total} 项检查正常 · 检查于 {time}",
+  "ui.check.stale": "上次检查是在 {duration}前。再次检查以了解当前情况。",
   "ui.check.drops_24h": "24 小时内断线",
   "ui.check.details": "详情",
   "ui.check.sheet.title": {"one": "启用 {count} 项更改？", "other": "启用 {count} 项更改？"},
