@@ -3,7 +3,7 @@ import sys
 import unittest
 from types import SimpleNamespace
 
-from app import winsys
+from app import winsys, winutil
 from app.winutil import run_powershell
 
 NASTY = ["Wi-Fi", "a'b", "a’b‘c", "$(Remove-Item x)", "`n`r", 'q"q', "Tên card ‑ Wi‑Fi 2", "; exit 1"]
@@ -99,6 +99,19 @@ class SsidBandsTests(unittest.TestCase):
 
     def test_none_only_when_that_interface_is_not_connected(self):
         self.assertIsNone(self.system(self.iface(state="disconnected")).wifi_ssid_bands("Wi-Fi"))
+
+    def test_translated_netsh_output_is_unknown_not_disconnected(self):
+        # French labels: the parsers key on English ones, find no interface, and the band stays unknown.
+        french = (
+            "Il y a 1 interface sur le système :\n\n"
+            "    Nom                    : Wi-Fi\n"
+            "    État                   : connecté\n"
+            "    SSID                   : HomeNet\n"
+            "    BSSID                  : 02:5e:00:9a:40:24\n"
+            "    Bande                  : 5 GHz\n")
+        states = [winutil.wifi_state_from(f) for f in winutil.parse_netsh_interfaces(french)]
+        sys_ = winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_states=lambda: states, scan=lambda: [])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi"), winsys.WifiBands("", "", frozenset()))
 
     def test_an_interface_netsh_does_not_list_is_unknown_not_disconnected(self):
         self.assertEqual(self.system().wifi_ssid_bands("Wi-Fi"), winsys.WifiBands("", "", frozenset()))

@@ -8295,6 +8295,65 @@
         }
       }
     },
+    "diag.path_mtu.advice_v4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Große Pakete können unterwegs verworfen werden: Seiten laden nur halb, Downloads stocken. Setzen Sie die MTU von %1$@ auf %2$@ (als Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) oder aktivieren Sie MSS-Clamping am Router."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Large packets can be dropped on the way, so pages hang half-loaded and downloads stall. Set the MTU of %1$@ to %2$@ (as Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), or turn on MSS clamping on the router."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los paquetes grandes pueden perderse por el camino: las páginas se quedan a medio cargar y las descargas se atascan. Ajuste la MTU de %1$@ a %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) o active el MSS clamping en el router."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les gros paquets peuvent être perdus en route : les pages restent à moitié chargées et les téléchargements calent. Réglez la MTU de %1$@ sur %2$@ (en administrateur : netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou activez le MSS clamping sur le routeur."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大きなパケットが途中で破棄され、ページが途中で止まったりダウンロードが停滞したりすることがあります。%1$@ の MTU を %2$@ に設定するか（管理者として: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent）、ルーターで MSS クランプを有効にしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "큰 패킷이 도중에 버려져 페이지가 반쯤 로드된 채 멈추거나 다운로드가 끊길 수 있습니다. %1$@의 MTU를 %2$@(으)로 설정하거나(관리자 권한: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), 라우터에서 MSS 클램핑을 켜세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pacotes grandes podem se perder no caminho: páginas ficam carregadas pela metade e downloads travam. Defina a MTU de %1$@ como %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou ative o MSS clamping no roteador."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói lớn có thể bị rơi dọc đường nên trang treo nửa chừng, tải xuống chập chờn. Đặt MTU của %1$@ thành %2$@ (quyền Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), hoặc bật MSS clamping trên router."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大数据包可能在途中被丢弃，导致网页加载到一半卡住、下载停滞。请将 %1$@ 的 MTU 设为 %2$@（以管理员身份：netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent），或在路由器上开启 MSS 钳制。"
+          }
+        }
+      }
+    },
     "diag.path_mtu.capped" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8478,55 +8537,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine IPv4-Route ins Internet: diese Prüfung misst nur IPv4"
+            "value" : "Keine IPv4-Route ins Internet (offline oder nur IPv6): diese Prüfung misst nur IPv4"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No IPv4 route to the Internet: this check measures IPv4 only"
+            "value" : "No IPv4 route to the Internet (offline, or IPv6 only): this check measures IPv4 only"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hay ruta IPv4 a Internet: esta comprobación solo mide IPv4"
+            "value" : "No hay ruta IPv4 a Internet (sin conexión o solo IPv6): esta comprobación solo mide IPv4"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucune route IPv4 vers Internet : cette vérification ne mesure que l'IPv4"
+            "value" : "Aucune route IPv4 vers Internet (hors ligne, ou IPv6 uniquement) : cette vérification ne mesure que l'IPv4"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インターネットへの IPv4 経路がありません。このチェックは IPv4 のみを測定します"
+            "value" : "インターネットへの IPv4 経路がありません（オフライン、または IPv6 のみ）。このチェックは IPv4 のみを測定します"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "인터넷으로 가는 IPv4 경로가 없습니다. 이 검사는 IPv4만 측정합니다"
+            "value" : "인터넷으로 가는 IPv4 경로가 없습니다(오프라인 또는 IPv6 전용). 이 검사는 IPv4만 측정합니다"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sem rota IPv4 para a Internet: esta verificação mede apenas IPv4"
+            "value" : "Sem rota IPv4 para a Internet (offline ou só IPv6): esta verificação mede apenas IPv4"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Không có tuyến IPv4 ra Internet: kiểm tra này chỉ đo IPv4"
+            "value" : "Không có tuyến IPv4 ra Internet (mất mạng, hoặc chỉ có IPv6): kiểm tra này chỉ đo IPv4"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有通往互联网的 IPv4 路由：此检查只测量 IPv4"
+            "value" : "没有通往互联网的 IPv4 路由（离线或仅有 IPv6）：此检查只测量 IPv4"
           }
         }
       }
@@ -21120,6 +21179,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在读取当前设置…"
+          }
+        }
+      }
+    },
+    "ui.optimize.measured.mtu_pmtu" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — das größte Paket, das der Pfad transportierte, gemessen am %2$@ (vorher %3$@)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — the largest packet the path carried, measured on %2$@ (was %3$@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — el paquete más grande que admitía la ruta, medido el %2$@ (antes %3$@)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — le plus gros paquet que le chemin transportait, mesuré le %2$@ (avant %3$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — 経路が運べた最大のパケット、%2$@ に測定（以前は %3$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — 경로가 전달한 가장 큰 패킷, %2$@에 측정(이전 %3$@)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — o maior pacote que o caminho transportava, medido em %2$@ (antes %3$@)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — gói lớn nhất đường truyền chở được, đo ngày %2$@ (trước là %3$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — 路径可传输的最大数据包，测量于 %2$@（原为 %3$@）"
           }
         }
       }

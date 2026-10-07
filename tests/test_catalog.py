@@ -55,6 +55,15 @@ def bloated_upload(mgr):
             "loss_pct": 0.0, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
 
 
+def blackholed_path(mgr):
+    """A path MTU measurement taken now: PPPoE behind a 1500 interface, large packets lost silently."""
+    return {"kind": "path_mtu", "interface_mtu": 1500, "path_mtu": 1492, "answered": 3, "too_big": False,
+            "tunnel": False, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
+
+
+MEASUREMENTS = {"upload": bloated_upload, "path_mtu": blackholed_path}
+
+
 def manager(system=None):
     system = system or real_card_system()
     backup = MemoryBackup()   # one object for both directions, like backup.json
@@ -65,7 +74,7 @@ def manager(system=None):
 class CatalogMatchesDocsTests(unittest.TestCase):
     def test_ids_and_risks_match_docs_tweaks_md(self):
         docs = doc_tweaks()
-        self.assertEqual(len(docs), 18, docs)
+        self.assertEqual(len(docs), 19, docs)
         self.assertEqual({t.id: t.risk for t in tweaks.CATALOG}, docs)
 
     def test_ids_are_unique_and_names_vietnamese_present(self):
@@ -82,7 +91,7 @@ class CatalogMatchesDocsTests(unittest.TestCase):
                     "wifi_mode_ac", "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "ipv6_off",
                     "rsc_off"):
             self.assertTrue(by[tid].disrupts_network, tid)             # 🔌
-        for tid in ("tcp_ecn", "packet_coalescing_off", "dns_fastest"):
+        for tid in ("tcp_ecn", "packet_coalescing_off", "dns_fastest", "upload_shaping", "mtu_pmtu"):
             self.assertFalse(by[tid].disrupts_network, tid)
         for t in tweaks.CATALOG:
             self.assertTrue(t.needs_admin, t.id)                       # 🛡
@@ -98,7 +107,7 @@ class CatalogMatchesDocsTests(unittest.TestCase):
         self.assertTrue(by["tcp_timedwait"].has_default_restore)        # Windows default is "not set"
         self.assertFalse(by["power_pcie_aspm_off"].has_default_restore)
         self.assertTrue(by["tcp_ecn"].has_default_restore)              # Windows' own value is "disabled"
-        for tid in ("rsc_off", "packet_coalescing_off", "dns_fastest"):
+        for tid in ("rsc_off", "packet_coalescing_off", "dns_fastest", "mtu_pmtu"):
             self.assertFalse(by[tid].has_default_restore, tid)          # the original is only in the backup
 
 
@@ -112,10 +121,11 @@ class RealCardTests(unittest.TestCase):
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_bw20_5g", "wifi_mode_ac",
                     "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "power_wireless_max",
                     "power_pcie_aspm_off", "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off",
-                    "dns_fastest", "upload_shaping"):
+                    "dns_fastest", "upload_shaping", "mtu_pmtu"):
             self.assertTrue(st[tid].supported, tid)
-        self.assertTrue(st["upload_shaping"].measured)
-        self.assertFalse(any(s.measured for tid, s in st.items() if tid != "upload_shaping"))
+        measured = {"upload_shaping", "mtu_pmtu"}
+        self.assertTrue(all(st[tid].measured for tid in measured))
+        self.assertFalse(any(s.measured for tid, s in st.items() if tid not in measured))
         # fresh machine: only these two read as on, and only because the driver ships that way
         self.assertEqual({tid for tid, s in st.items() if s.enabled}, {"wifi_prefer_5g", "wifi_tx_power_max"})
         self.assertEqual({tid for tid, s in st.items() if s.on_by_default}, {"wifi_prefer_5g", "wifi_tx_power_max"})
@@ -154,7 +164,7 @@ class RealCardTests(unittest.TestCase):
         before = s.snapshot()
         for t in catalog():
             if mgr.state(t.id).supported and not mgr.state(t.id).enabled:
-                measurement = bloated_upload(mgr) if isinstance(t, tweaks.MeasuredTweak) else None
+                measurement = MEASUREMENTS[t.measurement_kind](mgr) if isinstance(t, tweaks.MeasuredTweak) else None
                 out = mgr.enable(t.id, measurement)
                 self.assertTrue(out.ok and out.changed, (t.id, i18n.render(out.message)))
         self.assertTrue(all(st.enabled for st in mgr.states() if st.supported))
@@ -322,6 +332,117 @@ def manager_without_admin():
 def manager_without_admin():
     return TweakManager(real_card_system(), catalog(), load_backup=MemoryBackup().load,
                         save_backup=MemoryBackup().save, is_admin=lambda: False)
+
+
+def translated_mt7922():
+    """The MT7922's keywords and registry values (read 2026-10-07) with every DisplayName and DisplayValue
+    translated to French, as a localized driver shows them."""
+    s = real_card_system()
+    s.props["Wi-Fi"] = [
+        prop("Largeur de bande 5 GHz", "BWSelection5G", "0", [("1. Auto", "0"), ("2. 20 MHz uniquement", "1")], "0"),
+        prop("802.11ax/ac/n/abg", "CurrPhyMode", "0",
+             [("1. 802.11ax", "0"), ("2. 802.11ac", "1"), ("3. 802.11n", "2"), ("4. 802.11a/b/g", "3")], "0"),
+        prop("Réveil par paquet magique", "DisableWakeOnMagic", "0", [("Désactivé", "1"), ("Activé", "0")], "0"),
+        prop("Réveil par motif", "DisableWakeOnPattern", "0", [("Désactivé", "1"), ("Activé", "0")], "0"),
+        prop("Économie d'énergie", "LowPowerEnable", "1", [("Désactivé", "0"), ("Auto", "1")], "1"),
+        prop("Bande préférée", "PreferredBand", "0",
+             [("1. Aucune préférence", "0"), ("2. Préférer la bande 2,4 GHz", "1"), ("3. Préférer la bande 5 GHz", "2")],
+             "2"),
+        prop("Niveau de puissance d'émission", "TxPowerLevel", "1",
+             [("1. Maximale", "0"), ("2. Moyenne", "1"), ("3. Minimale", "2")], "0"),
+    ]
+    return s
+
+
+class LocalizedDriverTests(unittest.TestCase):
+    """SIC-94: a property is found by its RegistryKeyword and the value by its registry value, so a driver
+    or Windows that translated the display texts still works."""
+
+    EXPECTED = {"wifi_power_saving": ("LowPowerEnable", "0"), "wifi_wake_magic": ("DisableWakeOnMagic", "1"),
+                "wifi_wake_pattern": ("DisableWakeOnPattern", "1"), "wifi_bw20_5g": ("BWSelection5G", "1"),
+                "wifi_mode_ac": ("CurrPhyMode", "1"), "wifi_prefer_5g": ("PreferredBand", "2"),
+                "wifi_tx_power_max": ("TxPowerLevel", "0")}
+
+    def test_every_keyword_tweak_resolves_and_writes_the_known_registry_value(self):
+        for tid, (keyword, value) in self.EXPECTED.items():
+            s = translated_mt7922()
+            mgr, _ = manager(s)
+            st = mgr.state(tid)
+            self.assertTrue(st.supported, (tid, st.reason))
+            if st.enabled:
+                continue        # already at the target (the driver's default or the card's current value)
+            out = mgr.enable(tid)
+            self.assertTrue(out.ok and out.changed, (tid, out.message))
+            self.assertEqual(s.writes()[-1], ("write", "adapter_property_set", ("Wi-Fi", keyword, value)), tid)
+
+    def test_a_translated_card_round_trips(self):
+        s = translated_mt7922()
+        mgr, _ = manager(s)
+        before = s.snapshot()
+        for tid in self.EXPECTED:
+            if mgr.state(tid).supported and not mgr.state(tid).enabled:
+                self.assertTrue(mgr.enable(tid).ok, tid)
+        for tid in self.EXPECTED:
+            st = mgr.state(tid)
+            if st.has_backup:
+                self.assertTrue(mgr.disable(tid).ok, tid)
+        self.assertEqual(s.snapshot(), before)
+
+    def test_translated_names_do_not_fall_through_to_the_english_regexes(self):
+        s = translated_mt7922()
+        mgr, _ = manager(s)
+        for tid in self.EXPECTED:
+            self.assertNotIn("không có thuộc tính", i18n.render(mgr.state(tid).reason, "vi"), tid)
+
+    def test_wake_keywords_are_matched_without_the_star_and_in_any_case(self):
+        s = card_with(prop("Réveil par paquet magique", "*wakeonmagicpacket", "1",
+                           [("Désactivé", "0"), ("Activé", "1")], "1"))
+        mgr, _ = manager(s)
+        self.assertTrue(mgr.enable("wifi_wake_magic").ok)
+        self.assertEqual(s._prop("Wi-Fi", "*wakeonmagicpacket")["RegistryValue"], ["0"])
+
+    def test_the_keyword_wins_over_an_english_name_on_another_property(self):
+        decoy = prop("Preferred Band", "SomethingElse", "0", [("Auto", "0"), ("Prefer 5GHz", "1")], "0")
+        real = translated_mt7922()._prop("Wi-Fi", "PreferredBand")
+        s = card_with(decoy, real)
+        mgr, _ = manager(s)
+        self.assertTrue(mgr.enable("wifi_prefer_5g").ok)
+        self.assertEqual(s._prop("Wi-Fi", "PreferredBand")["RegistryValue"], ["2"])
+        self.assertEqual(s._prop("Wi-Fi", "SomethingElse")["RegistryValue"], ["0"])   # decoy untouched
+
+    def test_a_listed_keyword_without_a_known_registry_value_needs_the_english_text(self):
+        # Intel keywords are listed so the property is found, but no Intel registry value has been read from a
+        # real card: a translated value is "no suitable value", and nothing is written.
+        s = card_with(prop("Agressivité de l'itinérance", "RoamingAggressiveness", "3",
+                           [("1. La plus basse", "1"), ("3. Moyenne", "3"), ("5. La plus haute", "5")], "3"))
+        mgr, _ = manager(s)
+        st = mgr.state("wifi_roaming")
+        self.assertFalse(st.supported)
+        self.assertIn("no suitable value", i18n.render(st.reason, "en"))
+        self.assertFalse(mgr.enable("wifi_roaming").ok)
+        self.assertEqual(s.writes(), [])
+
+    def test_the_same_keyword_numbered_differently_is_not_written_blindly(self):
+        # English texts, but "Highest" is 4 here, not the 0 recorded for the MT7922: refuse.
+        s = card_with(prop("Transmit Power Level", "TxPowerLevel", "1",
+                           [("1. Lowest", "0"), ("2. Medium", "1"), ("3. Highest", "4")], "1"))
+        mgr, _ = manager(s)
+        st = mgr.state("wifi_tx_power_max")
+        self.assertFalse(st.supported)
+        self.assertFalse(mgr.enable("wifi_tx_power_max").ok)
+        self.assertEqual(s.writes(), [])
+
+    def test_a_known_registry_value_the_driver_does_not_list_falls_back_to_the_text(self):
+        s = card_with(prop("Transmit Power Level", "TxPowerLevel", "1",
+                           [("Highest", "7"), ("Medium", "1")], "1"))
+        mgr, _ = manager(s)
+        self.assertTrue(mgr.enable("wifi_tx_power_max").ok)
+        self.assertEqual(s._prop("Wi-Fi", "TxPowerLevel")["RegistryValue"], ["7"])
+
+    def test_listing_a_translated_card_never_writes(self):
+        s = translated_mt7922()
+        manager(s)[0].states()
+        self.assertEqual(s.writes(), [])
 
 
 class DriverDefaultTests(unittest.TestCase):
