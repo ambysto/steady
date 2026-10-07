@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-07
+
+Two new Wi‑Fi tweaks: prefer the 5 GHz band and highest transmit power.
+
 ### Added
 - **Two Wi‑Fi tweaks: prefer the 5 GHz band and highest transmit power** (SIC-83, `docs/TWEAKS.md` section 1).
   - `wifi_prefer_5g` sets the driver's `Preferred Band` / `Band Preference` to "Prefer 5GHz", never "5G only" (some drivers ignore it, and it would leave the card with nothing where 5 GHz does not reach). On 31 Aug this was the change that helped most: a card clinging to 2.4 GHz (802.11n, 65 Mbps, 5% router loss) moved to 5 GHz 802.11ac (175 Mbps, 0% loss). It is offered only while the connected network has a 5 GHz access point in Windows' last scan (read-only, no new scan); otherwise it is shown as not supported with the reason (not connected, network missing from the scan, or no 5 GHz access point). A tweak already on stays switchable off whatever the network looks like.
