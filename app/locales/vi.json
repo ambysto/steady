@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "tải lên",
   "diag.bufferbloat.no_load": "Không tạo được tải chiều {phase}: {error}",
   "diag.bufferbloat.weak_load": "Chiều {phase} chỉ đạt {mbps:.1f} Mbps nên không đủ để làm đầy đường truyền",
+  "diag.bufferbloat.refused": "Máy chủ đo đã từ chối tải chiều {phase} (HTTP {status}: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau khoảng {minutes} phút",
+  "diag.bufferbloat.refused_later": "Máy chủ đo đã từ chối tải chiều {phase} (HTTP {status}: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau",
+  "diag.bufferbloat.at_ceiling": "Tải chiều {phase} dừng ở giới hạn của chính phép đo ({mbps:.0f} Mbps): đường truyền có thể nhanh hơn, nên hàng đợi có thể chưa đầy",
+  "diag.bufferbloat.ok_incomplete": "Không thấy độ trễ tăng ở phần đo được (tối đa +{delta:.0f} ms), nhưng phép đo chưa đầy đủ",
+  "diag.bufferbloat.advice_incomplete": "Chỉ một lần đo mà cả hai chiều đều làm đầy đường truyền mới cho biết mọi thứ ổn; chạy lại sau.",
+  "diag.bufferbloat.advice_later": "Chờ máy chủ đo nhận tải trở lại rồi chạy lại.",
   "diag.bufferbloat.all_lost": "{label}: mất toàn bộ ping khi {phase}",
   "diag.bufferbloat.line": "{label} khi {phase} ({mbps:.0f} Mbps): trung vị {median:.0f} ms, p95 {p95:.0f} ms, tăng thêm {delta:+.0f} ms, mất {loss:.0f}%",
   "diag.bufferbloat.no_result": "Không đo được độ trễ khi tải",
@@ -224,6 +230,8 @@
   "diag.bufferbloat.by": "thêm {delta:.0f} ms",
   "diag.bufferbloat.rise": "Độ trễ ra Internet tăng {amount} khi đường truyền bận{where}",
   "diag.bufferbloat.advice": "Bật SQM / QoS thông minh (fq_codel hoặc CAKE) trên router và đặt giới hạn tải lên/xuống thấp hơn băng thông thật khoảng 5–10%. Nếu router không có SQM, giảm tốc độ tải lên của ứng dụng gây tải.",
+  "diag.bufferbloat.shaped": "Upload đang bị ứng dụng giới hạn ở {limit:.1f} Mbps (Tối ưu), nên phép đo này đi qua mức giới hạn đó",
+  "diag.bufferbloat.shaped_at_limit": "Upload đang bị ứng dụng giới hạn ở {limit:.1f} Mbps và đã chạm mức đó ({mbps:.1f} Mbps): nếu gói cước đã nhanh hơn, hãy tắt rồi bật lại giới hạn để đo đường truyền",
 
   "diag.route.title": "Đường đi tới các đích ở xa",
   "diag.route.no_data": "Không so sánh được đường đi: có chưa đến 3 trang tham chiếu trả lời",
@@ -341,7 +349,7 @@
   "tweak.ipv6_off.name": "Tắt IPv6 trên Wi‑Fi",
   "tweak.ipv6_off.note": "Chỉ thử khi nghi IPv6/DNS IPv6 của router gây chậm",
   "tweak.upload_shaping.name": "Giới hạn tốc độ upload để giữ độ trễ thấp khi tải nặng",
-  "tweak.upload_shaping.note": "Đo upload trước rồi giới hạn ở 85% để hàng đợi nằm trên máy thay vì trong modem. Chỉ chiều upload: chiều download chỉ giới hạn được ở router (SQM)",
+  "tweak.upload_shaping.note": "Đo upload trước rồi giới hạn ở 85% để hàng đợi nằm trên máy thay vì trong modem. Lưu lượng trong mạng nội bộ (NAS, truyền màn hình) không bị giới hạn. Chỉ chiều upload: chiều download chỉ giới hạn được ở router (SQM)",
   "tweak.upload_shaping.value": "giới hạn {limit:.1f} Mbps (85% của {upload:.1f} Mbps upload đo được)",
   "tweak.upload_shaping.refused.weak": "Phép đo chưa tải đủ đường truyền ({mbps:.1f} Mbps, {samples} mẫu); hãy thử lại",
   "tweak.upload_shaping.refused.ceiling": "Phép đo chạm giới hạn của chính nó ({mbps:.1f} trên {ceiling:.0f} Mbps) nên đường truyền có thể nhanh hơn mức đo được; không thay đổi gì",
@@ -439,6 +447,7 @@
   "tweak.result.restore_mismatch": "khôi phục xong nhưng giá trị không khớp bản sao lưu; bản sao lưu được giữ lại",
   "tweak.result.restored": "Đã khôi phục giá trị gốc",
   "tweak.result.bad_backup": "bản sao lưu không đúng dạng: {error}",
+  "tweak.result.backup_rejected": "Bản sao lưu trỏ ra ngoài phạm vi tinh chỉnh này thay đổi, nên không khôi phục gì và giữ nguyên bản sao lưu: {error}",
   "tweak.result.bad_measurement": "Phép đo không dùng được: {error}",
   "tweak.result.measure_failed": "Không đo được đường truyền (không tạo được tải hoặc không có phản hồi); không thay đổi gì",
   "tweak.result.measured_enabled": "Đã bật: {value}. {verdict}",
@@ -543,12 +552,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — gói lớn nhất đường truyền chở được, đo ngày {date} (trước là {before})",
   "ui.optimize.stale.other_network": "Đo trên mạng khác",
   "ui.optimize.stale.old": "Phép đo đã cũ",
+  "ui.optimize.stale.no_record": "Không có phép đo lưu lại",
   "ui.optimize.stale.hint": "Tắt rồi bật lại để đo mạng này",
 
   "ui.sheet.experimental.title": "Bật tối ưu thử nghiệm?",
   "ui.sheet.experimental.body": "“{name}” có thể làm giảm tốc độ hoặc có tác dụng phụ. Giá trị gốc được sao lưu, bạn có thể tắt lại bất cứ lúc nào.",
   "ui.sheet.measured.title": "Đo đường truyền trước?",
-  "ui.sheet.measured.body": "“{name}” sẽ đo upload khoảng 15 giây (tối đa 100 MB), trước và sau khi thay đổi, và không áp dụng nếu không có gì cần sửa.",
+  "ui.sheet.measured.body": "“{name}” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần khoảng 125 MB cho mỗi 100 Mbps upload), và không áp dụng nếu không có gì cần sửa.",
   "ui.sheet.cancel": "Hủy",
   "ui.sheet.confirm": "Bật",
 
@@ -561,7 +571,7 @@
   "ui.diag.advice": "Nên làm gì",
   "ui.diag.open_tweak": "Mở trong Tối ưu",
   "ui.diag.on_demand": "Theo yêu cầu",
-  "ui.diag.bufferbloat_run": "Đo (khoảng 30 giây, dùng tối đa 200 MB)",
+  "ui.diag.bufferbloat_run": "Đo (khoảng 30 giây, dùng tối đa 2 GB nếu mạng nhanh)",
 
   "ui.status.ok": "Ổn",
   "ui.status.warn": "Cảnh báo",
@@ -679,7 +689,7 @@
   "ui.optimize.loading": "Đang đọc cấu hình hiện tại…",
 
   "ui.diag.never": "Chưa chạy chẩn đoán lần nào",
-  "ui.diag.bufferbloat_confirm": "Thao tác này tải xuống và tải lên tối đa khoảng 200 MB từ speed.cloudflare.com trong khoảng 30 giây.",
+  "ui.diag.bufferbloat_confirm": "Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB.",
   "ui.diag.measure": "Đo",
 
   "ui.common.on": "Bật",
@@ -713,6 +723,7 @@
   "failover.result.restore_failed": "Chuyển về thất bại: {error}",
   "failover.result.restored": "Đã về kết nối chính (khôi phục cấu hình của {path})",
   "failover.result.unknown_path": "Không biết kết nối mạng {path}",
+  "failover.result.backup_rejected": "Bản sao lưu của kết nối này không phải metric giao diện hợp lệ, nên không chuyển lại: {error}",
 
   "notify.failover.switched.title": "Đã chuyển sang kết nối dự phòng",
   "notify.failover.available.title": "Có kết nối dự phòng đang thông",
@@ -745,6 +756,7 @@
   "installer.uninstall_failed": "Gỡ cài đặt xong nhưng có vấn đề.",
   "installer.keep_backup": "Có giá trị gốc chưa khôi phục được nên bản sao lưu được giữ lại",
   "installer.restored_all": "Mọi tối ưu đã về giá trị gốc",
+  "installer.store_kept": "Mọi tối ưu đã về giá trị gốc, nhưng chưa xoá được bản ghi sao lưu trong Registry: {error}",
 
   "installer.step.copy": "Chép chương trình vào {target}",
   "installer.step.task": "Cho monitor mạng chạy cùng Windows",

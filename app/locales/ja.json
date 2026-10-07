@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "アップロード",
   "diag.bufferbloat.no_load": "{phase}の負荷を生成できませんでした: {error}",
   "diag.bufferbloat.weak_load": "{phase}の負荷は {mbps:.1f} Mbps にとどまり、回線を満たすには不十分でした",
+  "diag.bufferbloat.refused": "テストサーバーが{phase}の負荷を拒否しました（HTTP {status}: アドレスごとにテスト通信を制限しています）。約 {minutes} 分後にもう一度試してください",
+  "diag.bufferbloat.refused_later": "テストサーバーが{phase}の負荷を拒否しました（HTTP {status}: アドレスごとにテスト通信を制限しています）。しばらくしてからもう一度試してください",
+  "diag.bufferbloat.at_ceiling": "{phase}の負荷はテスト自体の上限（{mbps:.0f} Mbps）で止まりました。回線はさらに速い可能性があり、キューが満たされていないかもしれません",
+  "diag.bufferbloat.ok_incomplete": "測定できた範囲では上昇はありません（最大 +{delta:.0f} ms）が、測定は不完全です",
+  "diag.bufferbloat.advice_incomplete": "両方向とも回線を満たした測定でなければ問題ないとは言えません。しばらくしてからもう一度実行してください。",
+  "diag.bufferbloat.advice_later": "テストサーバーが再び負荷を受け付けるまで待ってから、もう一度実行してください。",
   "diag.bufferbloat.all_lost": "{label}: {phase}中にすべての ping が失われました",
   "diag.bufferbloat.line": "{phase}中の{label}（{mbps:.0f} Mbps）: 中央値 {median:.0f} ms、p95 {p95:.0f} ms、{delta:+.0f} ms 増加、損失 {loss:.0f}%",
   "diag.bufferbloat.no_result": "負荷時のレイテンシを測定できませんでした",
@@ -224,6 +230,8 @@
   "diag.bufferbloat.by": "{delta:.0f} ms ほど上昇します",
   "diag.bufferbloat.rise": "回線が混雑すると、インターネットへのレイテンシが{amount}{where}",
   "diag.bufferbloat.advice": "ルーターで SQM / スマート QoS（fq_codel または CAKE）をオンにし、アップロード/ダウンロードの上限を実際の帯域より 5～10% 低く設定してください。ルーターに SQM がない場合は、負荷の原因となっているアプリのアップロード速度を下げてください。",
+  "diag.bufferbloat.shaped": "アップロードはこのアプリにより {limit:.1f} Mbps に制限されています（最適化）。この測定はその制限を通して行われています",
+  "diag.bufferbloat.shaped_at_limit": "アップロードはこのアプリにより {limit:.1f} Mbps に制限されており、その上限に達しました（{mbps:.1f} Mbps）。プランが速くなった場合は、制限をオフにしてから再度オンにして回線を測定してください",
 
   "diag.route.title": "遠方の宛先への経路",
   "diag.route.no_data": "経路を比較できません：応答した参照サイトが 3 つ未満です",
@@ -341,7 +349,7 @@
   "tweak.ipv6_off.name": "Wi‑Fi の IPv6 をオフにする",
   "tweak.ipv6_off.note": "ルーターの IPv6 や IPv6 DNS が速度低下の原因と疑われる場合のみお試しください",
   "tweak.upload_shaping.name": "アップロード速度を制限して高負荷時の遅延を低く保つ",
-  "tweak.upload_shaping.note": "まずアップロードを測定し、その 85% に制限して、キューがモデムではなく PC 側にたまるようにします。アップロードのみ：ダウンロード方向はルーター（SQM）でしか制限できません",
+  "tweak.upload_shaping.note": "まずアップロードを測定し、その 85% に制限して、キューがモデムではなく PC 側にたまるようにします。ローカルネットワーク（NAS、キャスト）への通信は制限しません。アップロードのみ：ダウンロード方向はルーター（SQM）でしか制限できません",
   "tweak.upload_shaping.value": "{limit:.1f} Mbps に制限（測定したアップロード {upload:.1f} Mbps の 85%）",
   "tweak.upload_shaping.refused.weak": "測定で回線に十分な負荷がかかりませんでした（{mbps:.1f} Mbps、サンプル {samples} 個）。もう一度お試しください",
   "tweak.upload_shaping.refused.ceiling": "測定が自身の上限に達しました（{ceiling:.0f} Mbps 中 {mbps:.1f}）。回線は測定できる速度より速い可能性があります。何も変更していません",
@@ -439,6 +447,7 @@
   "tweak.result.restore_mismatch": "復元しましたが、値がバックアップと一致しません。バックアップは保持されています",
   "tweak.result.restored": "元の値を復元しました",
   "tweak.result.bad_backup": "バックアップの形式が正しくありません: {error}",
+  "tweak.result.backup_rejected": "バックアップがこの調整の対象外を指しているため、何も復元せずバックアップを保持しました: {error}",
   "tweak.result.bad_measurement": "測定結果を使用できません: {error}",
   "tweak.result.measure_failed": "接続を測定できませんでした（負荷をかけられないか応答がありません）。何も変更していません",
   "tweak.result.measured_enabled": "オン: {value}。{verdict}",
@@ -543,12 +552,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — 経路が運べた最大のパケット、{date} に測定（以前は {before}）",
   "ui.optimize.stale.other_network": "別のネットワークで測定",
   "ui.optimize.stale.old": "測定結果が古くなっています",
+  "ui.optimize.stale.no_record": "保存された測定結果がありません",
   "ui.optimize.stale.hint": "このネットワークを測定するには、オフにしてから再度オンにしてください",
 
   "ui.sheet.experimental.title": "実験的な調整をオンにしますか？",
   "ui.sheet.experimental.body": "「{name}」は速度の低下や副作用を引き起こす可能性があります。元の値はバックアップされるため、いつでもオフにできます。",
   "ui.sheet.measured.title": "先に接続を測定しますか？",
-  "ui.sheet.measured.body": "「{name}」は変更の前後にアップロードを約 15 秒（最大 100 MB）測定し、直すことがなければ適用しません。",
+  "ui.sheet.measured.body": "「{name}」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回、アップロード 100 Mbps あたり約 125 MB）。直すことがなければ適用しません。",
   "ui.sheet.cancel": "キャンセル",
   "ui.sheet.confirm": "オンにする",
 
@@ -561,7 +571,7 @@
   "ui.diag.advice": "対処方法",
   "ui.diag.open_tweak": "最適化で開く",
   "ui.diag.on_demand": "オンデマンド",
-  "ui.diag.bufferbloat_run": "測定（約 30 秒、最大 200 MB を使用）",
+  "ui.diag.bufferbloat_run": "測定（約 30 秒、高速回線では最大 2 GB を使用）",
 
   "ui.status.ok": "正常",
   "ui.status.warn": "警告",
@@ -679,7 +689,7 @@
   "ui.optimize.loading": "現在の設定を読み取り中…",
 
   "ui.diag.never": "診断はまだ実行されていません",
-  "ui.diag.bufferbloat_confirm": "speed.cloudflare.com から最大約 200 MB のダウンロードとアップロードを約 30 秒間行います。",
+  "ui.diag.bufferbloat_confirm": "speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行います。回線速度 100 Mbps あたり約 250 MB、最大 2 GB です。",
   "ui.diag.measure": "測定",
 
   "ui.common.on": "オン",
@@ -713,6 +723,7 @@
   "failover.result.restore_failed": "元の接続への切り替えに失敗しました: {error}",
   "failover.result.restored": "メイン接続に戻りました（{path} の設定を復元しました）",
   "failover.result.unknown_path": "不明なネットワーク接続 {path}",
+  "failover.result.backup_rejected": "この接続のバックアップは有効なインターフェイス メトリックではないため、切り替えを戻しませんでした: {error}",
 
   "notify.failover.switched.title": "バックアップ接続に切り替えました",
   "notify.failover.available.title": "バックアップ接続を利用できます",
@@ -745,6 +756,7 @@
   "installer.uninstall_failed": "アンインストールは問題が発生した状態で終了しました。",
   "installer.keep_backup": "一部の元の値を復元できなかったため、バックアップを保持しています",
   "installer.restored_all": "すべての最適化が元の値に戻りました",
+  "installer.store_kept": "すべての最適化が元の値に戻りましたが、レジストリのバックアップ記録を削除できませんでした: {error}",
 
   "installer.step.copy": "プログラムを {target} にコピー",
   "installer.step.task": "Windows と同時にネットワークモニターを起動",

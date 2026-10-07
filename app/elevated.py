@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -26,6 +27,8 @@ from typing import Any
 
 from . import config, winutil
 from .i18n import msg
+
+log = logging.getLogger("stableinternet.elevated")
 
 OPS = ("tweak-enable", "tweak-disable", "restart-adapter", "path-prefer", "path-restore", "restore-all")
 _RESULT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
@@ -54,6 +57,7 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
         return {"ok": False, "message": f"{op} takes no measurement"}
     if not winutil.is_admin():
         return {"ok": False, "message": msg("elevation.not_admin")}
+    _close_backup_import()
     if op in ("tweak-enable", "tweak-disable"):
         from . import calibration, tweaks
         from .storage import Storage
@@ -81,10 +85,20 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
     return {"ok": res.ok, "message": res.message}
 
 
+def _close_backup_import() -> None:
+    """Every operation reads the backups once, so the first UAC prompt of this version imports the old
+    backup.json and closes that window for good (ADR-0018), even for an operation that needs no backup."""
+    try:
+        config.load_backup()
+    except Exception as exc:   # the operation reports its own trouble with the store, if it needs it
+        log.warning("reading the backups failed: %s", exc)
+
+
 def restore_everything() -> dict[str, Any]:
     """Uninstall: every tweak that has a backup goes back to its original value, and so do
-    failover's interface metrics. Whatever cannot be restored keeps its backup."""
-    from . import failover, tweaks
+    failover's interface metrics. Whatever cannot be restored keeps its backup; once nothing is
+    left, the backup store itself is removed (HKLM, ADR-0018)."""
+    from . import backupstore, failover, tweaks
     from .storage import Storage
     from .winsys import WindowsSystem
     failed: list[Any] = []
@@ -100,6 +114,10 @@ def restore_everything() -> dict[str, Any]:
             failed.append(res.message)
     if failed:
         return {"ok": False, "message": failed[0], "failed": len(failed)}
+    try:
+        backupstore.remove()
+    except Exception as exc:
+        return {"ok": False, "message": msg("installer.store_kept", error=f"{type(exc).__name__}: {exc}")}
     return {"ok": True, "message": msg("installer.restored_all")}
 
 

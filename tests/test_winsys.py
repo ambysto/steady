@@ -258,10 +258,10 @@ class NetworkStackSystemTests(unittest.TestCase):
             sys_.offload_global_set("PacketCoalescingFilter", "Disabled; calc")
 
     def test_dns_interface_reads_the_uplink_and_spots_a_vpn(self):
-        row = {"Index": 6, "Guid": "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}", "Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
+        row = {"Index": 6, "Guid": "{00000000-0000-4000-8000-0000000000AA}", "Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
                "Suffix": "", "Domain": False, "Up": ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter", "WARP Cloudflare WARP Interface Tunnel"]}
         info = self.system(rows=[row]).dns_interface()
-        self.assertEqual(info, {"index": 6, "guid": "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}", "alias": "Wi-Fi",
+        self.assertEqual(info, {"index": 6, "guid": "{00000000-0000-4000-8000-0000000000AA}", "alias": "Wi-Fi",
                                 "servers": ["1.1.1.1", "8.8.8.8"], "static": True, "static_v6": False, "suffix": "",
                                 "domain_joined": False, "vpn_up": True})
         row["Up"] = ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter"]
@@ -275,11 +275,11 @@ class NetworkStackSystemTests(unittest.TestCase):
         scripts = []
         sys_ = winsys.WindowsSystem(ps=FakePs(), ps_json=lambda script, **k: scripts.append(script) or [],
                                     run=None, route=lambda: self.fail("the uplink must not be asked"))
-        guid = "{A407D7A1-D1F3-4322-88DC-940E2CE6E38F}"
+        guid = "{00000000-0000-4000-8000-0000000000BB}"
         self.assertIsNone(sys_.dns_interface(guid))
         self.assertIn("InterfaceGuid -eq", scripts[0])
         self.assertNotIn("Get-NetAdapter -InterfaceIndex", scripts[0])
-        for bad in ("A407D7A1-D1F3-4322-88DC-940E2CE6E38F", "{x'; calc; '}", ""):
+        for bad in ("00000000-0000-4000-8000-0000000000BB", "{x'; calc; '}", ""):
             with self.assertRaises(ValueError):
                 sys_.dns_interface(bad)
         self.assertNotIn("calc", "".join(scripts))

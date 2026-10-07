@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "上传",
   "diag.bufferbloat.no_load": "无法产生{phase}负载：{error}",
   "diag.bufferbloat.weak_load": "{phase}负载仅达到 {mbps:.1f} Mbps，不足以占满线路",
+  "diag.bufferbloat.refused": "测试服务器拒绝了{phase}负载（HTTP {status}：它按地址限制测试流量）；请约 {minutes} 分钟后重试",
+  "diag.bufferbloat.refused_later": "测试服务器拒绝了{phase}负载（HTTP {status}：它按地址限制测试流量）；请稍后重试",
+  "diag.bufferbloat.at_ceiling": "{phase}负载停在了测试自身的上限（{mbps:.0f} Mbps）：线路可能更快，因此其队列可能未被填满",
+  "diag.bufferbloat.ok_incomplete": "在能测到的范围内延迟没有上升（最多 +{delta:.0f} ms），但测量不完整",
+  "diag.bufferbloat.advice_incomplete": "只有两个方向都占满线路的测量才能说明一切正常；请稍后重新运行。",
+  "diag.bufferbloat.advice_later": "请等待测试服务器重新接受负载后再运行。",
   "diag.bufferbloat.all_lost": "{label}：{phase}期间所有 ping 均丢失",
   "diag.bufferbloat.line": "{phase}期间的{label}（{mbps:.0f} Mbps）：中位数 {median:.0f} ms，p95 {p95:.0f} ms，增加 {delta:+.0f} ms，丢包 {loss:.0f}%",
   "diag.bufferbloat.no_result": "无法测量负载下的延迟",
@@ -224,6 +230,8 @@
   "diag.bufferbloat.by": "上升 {delta:.0f} ms",
   "diag.bufferbloat.rise": "线路繁忙时到互联网的延迟{amount}{where}",
   "diag.bufferbloat.advice": "请在路由器上开启 SQM / 智能 QoS（fq_codel 或 CAKE），并将上传/下载限速设为比实际带宽低约 5–10%。如果路由器没有 SQM，请降低造成负载的应用的上传速度。",
+  "diag.bufferbloat.shaped": "上传已被本应用限制为 {limit:.1f} Mbps（优化），因此本次测量经过了该限制",
+  "diag.bufferbloat.shaped_at_limit": "上传已被本应用限制为 {limit:.1f} Mbps，且上传已达到该限制（{mbps:.1f} Mbps）：如果你的套餐变快了，请关闭再开启该限制以测量线路",
 
   "diag.route.title": "到远方目的地的路由",
   "diag.route.no_data": "无法比较路由：响应的参考网站不足 3 个",
@@ -341,7 +349,7 @@
   "tweak.ipv6_off.name": "在 Wi‑Fi 上关闭 IPv6",
   "tweak.ipv6_off.note": "仅在怀疑路由器的 IPv6 或 IPv6 DNS 导致变慢时尝试",
   "tweak.upload_shaping.name": "限制上传速度，让高负载时延迟保持较低",
-  "tweak.upload_shaping.note": "先测量上传速度，再限制在其 85%，让队列留在电脑上而不是调制解调器里。仅限上传：下载方向只能在路由器上限制（SQM）",
+  "tweak.upload_shaping.note": "先测量上传速度，再限制在其 85%，让队列留在电脑上而不是调制解调器里。发往本地网络（NAS、投屏）的流量不受限制。仅限上传：下载方向只能在路由器上限制（SQM）",
   "tweak.upload_shaping.value": "限制为 {limit:.1f} Mbps（测得上传 {upload:.1f} Mbps 的 85%）",
   "tweak.upload_shaping.refused.weak": "测量没有让线路达到足够负载（{mbps:.1f} Mbps，{samples} 个样本）；请重试",
   "tweak.upload_shaping.refused.ceiling": "测量达到了自身上限（{mbps:.1f} / {ceiling:.0f} Mbps），线路可能比它能测出的更快；未做任何更改",
@@ -439,6 +447,7 @@
   "tweak.result.restore_mismatch": "已还原，但值与备份不一致；备份已保留",
   "tweak.result.restored": "已还原为原始值",
   "tweak.result.bad_backup": "备份格式不正确：{error}",
+  "tweak.result.backup_rejected": "备份指向此优化项更改范围之外的内容，因此未恢复任何内容并保留了备份：{error}",
   "tweak.result.bad_measurement": "测量结果无法使用：{error}",
   "tweak.result.measure_failed": "无法测量连接（无法产生负载或没有响应）；未做任何更改",
   "tweak.result.measured_enabled": "已开启：{value}。{verdict}",
@@ -543,12 +552,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — 路径可传输的最大数据包，测量于 {date}（原为 {before}）",
   "ui.optimize.stale.other_network": "在其他网络上测量",
   "ui.optimize.stale.old": "测量结果已过时",
+  "ui.optimize.stale.no_record": "没有保存的测量结果",
   "ui.optimize.stale.hint": "关闭后再开启即可测量此网络",
 
   "ui.sheet.experimental.title": "启用实验性优化项？",
   "ui.sheet.experimental.body": "“{name}”可能降低速度或产生副作用。原始值已备份，你可以随时关闭它。",
   "ui.sheet.measured.title": "先测量你的连接？",
-  "ui.sheet.measured.body": "“{name}”会在更改前后各测量约 15 秒上传（最多 100 MB），没有需要修复的问题时不会应用。",
+  "ui.sheet.measured.body": "“{name}”会在更改前测量约 15 秒上传，更改后再测量一次（每次每 100 Mbps 上传约 125 MB），没有需要修复的问题时不会应用。",
   "ui.sheet.cancel": "取消",
   "ui.sheet.confirm": "启用",
 
@@ -561,7 +571,7 @@
   "ui.diag.advice": "建议操作",
   "ui.diag.open_tweak": "在“优化”中打开",
   "ui.diag.on_demand": "按需运行",
-  "ui.diag.bufferbloat_run": "测量（约 30 秒，最多使用 200 MB）",
+  "ui.diag.bufferbloat_run": "测量（约 30 秒，线路快时最多使用 2 GB）",
 
   "ui.status.ok": "正常",
   "ui.status.warn": "警告",
@@ -679,7 +689,7 @@
   "ui.optimize.loading": "正在读取当前设置…",
 
   "ui.diag.never": "尚未运行过诊断",
-  "ui.diag.bufferbloat_confirm": "这将在约 30 秒内从 speed.cloudflare.com 下载和上传最多约 200 MB 的数据。",
+  "ui.diag.bufferbloat_confirm": "这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。",
   "ui.diag.measure": "测量",
 
   "ui.common.on": "开",
@@ -713,6 +723,7 @@
   "failover.result.restore_failed": "切换回去失败：{error}",
   "failover.result.restored": "已切换回主连接（已还原 {path} 的设置）",
   "failover.result.unknown_path": "未知的网络连接 {path}",
+  "failover.result.backup_rejected": "此连接的备份不是有效的接口跃点数，因此未切换回去：{error}",
 
   "notify.failover.switched.title": "已切换到备用连接",
   "notify.failover.available.title": "有可用的备用连接",
@@ -745,6 +756,7 @@
   "installer.uninstall_failed": "卸载完成，但出现了问题。",
   "installer.keep_backup": "部分原始值无法还原，因此保留了它们的备份",
   "installer.restored_all": "所有优化项均已恢复为原始值",
+  "installer.store_kept": "所有优化项均已恢复为原始值，但无法删除注册表中的备份记录：{error}",
 
   "installer.step.copy": "将程序复制到 {target}",
   "installer.step.task": "让网络监控程序随 Windows 启动",

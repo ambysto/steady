@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "Upload",
   "diag.bufferbloat.no_load": "{phase}-Last konnte nicht erzeugt werden: {error}",
   "diag.bufferbloat.weak_load": "Die {phase}-Last erreichte nur {mbps:.1f} Mbps, zu wenig, um die Leitung auszulasten",
+  "diag.bufferbloat.refused": "Der Testserver hat die {phase}-Last abgelehnt (HTTP {status}: er begrenzt Testverkehr pro Adresse); in etwa {minutes} Min. erneut versuchen",
+  "diag.bufferbloat.refused_later": "Der Testserver hat die {phase}-Last abgelehnt (HTTP {status}: er begrenzt Testverkehr pro Adresse); später erneut versuchen",
+  "diag.bufferbloat.at_ceiling": "Die {phase}-Last stoppte an der eigenen Grenze des Tests ({mbps:.0f} Mbps): Die Leitung ist womöglich schneller, ihre Warteschlange hat sich dann nicht gefüllt",
+  "diag.bufferbloat.ok_incomplete": "Kein Anstieg, soweit messbar (höchstens +{delta:.0f} ms), aber die Messung ist unvollständig",
+  "diag.bufferbloat.advice_incomplete": "Nur ein Lauf, in dem beide Richtungen die Leitung auslasten, kann zeigen, dass alles in Ordnung ist; später erneut ausführen.",
+  "diag.bufferbloat.advice_later": "Warten, bis der Testserver die Last wieder annimmt, dann erneut ausführen.",
   "diag.bufferbloat.all_lost": "{label}: alle Pings gingen bei {phase} verloren",
   "diag.bufferbloat.line": "{label} bei {phase} ({mbps:.0f} Mbps): Median {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms zusätzlich, {loss:.0f}% verloren",
   "diag.bufferbloat.no_result": "Latenz unter Last konnte nicht gemessen werden",
@@ -224,6 +230,8 @@
   "diag.bufferbloat.by": "um {delta:.0f} ms",
   "diag.bufferbloat.rise": "Die Latenz ins Internet steigt {amount}, wenn die Leitung ausgelastet ist{where}",
   "diag.bufferbloat.advice": "SQM / Smart-QoS (fq_codel oder CAKE) am Router aktivieren und die Upload-/Download-Limits etwa 5–10 % unter der tatsächlichen Bandbreite setzen. Hat der Router kein SQM, die Upload-Geschwindigkeit der Anwendung senken, die die Last verursacht.",
+  "diag.bufferbloat.shaped": "Upload von dieser App auf {limit:.1f} Mbit/s begrenzt (Optimieren), daher wird durch die Begrenzung hindurch gemessen",
+  "diag.bufferbloat.shaped_at_limit": "Upload von dieser App auf {limit:.1f} Mbit/s begrenzt, und der Upload hat sie erreicht ({mbps:.1f} Mbit/s): Wenn Ihr Tarif schneller geworden ist, schalten Sie die Begrenzung aus und wieder ein, um die Leitung zu messen",
 
   "diag.route.title": "Weg zu weit entfernten Zielen",
   "diag.route.no_data": "Wege lassen sich nicht vergleichen: weniger als 3 Referenzseiten haben geantwortet",
@@ -341,7 +349,7 @@
   "tweak.ipv6_off.name": "IPv6 auf Wi‑Fi ausschalten",
   "tweak.ipv6_off.note": "Nur ausprobieren, wenn vermutet wird, dass IPv6 oder IPv6-DNS des Routers etwas verlangsamt",
   "tweak.upload_shaping.name": "Upload-Geschwindigkeit begrenzen, damit die Latenz unter Last niedrig bleibt",
-  "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
+  "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Verkehr ins lokale Netzwerk (NAS, Casting) wird nicht begrenzt. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
   "tweak.upload_shaping.value": "begrenzt auf {limit:.1f} Mbit/s (85 % der gemessenen {upload:.1f} Mbit/s Upload)",
   "tweak.upload_shaping.refused.weak": "Die Messung hat die Leitung nicht genug ausgelastet ({mbps:.1f} Mbit/s, {samples} Messwerte); bitte erneut versuchen",
   "tweak.upload_shaping.refused.ceiling": "Die Messung hat ihr eigenes Limit erreicht ({mbps:.1f} von {ceiling:.0f} Mbit/s), die Leitung ist womöglich schneller als messbar; nichts wurde geändert",
@@ -439,6 +447,7 @@
   "tweak.result.restore_mismatch": "Wiederhergestellt, aber der Wert stimmt nicht mit der Sicherung überein; die Sicherung bleibt erhalten",
   "tweak.result.restored": "Ursprünglicher Wert wiederhergestellt",
   "tweak.result.bad_backup": "Die Sicherung ist fehlerhaft: {error}",
+  "tweak.result.backup_rejected": "Die Sicherung zeigt auf etwas, das diese Optimierung nicht ändert; nichts wurde wiederhergestellt und die Sicherung bleibt erhalten: {error}",
   "tweak.result.bad_measurement": "Die Messung ist nicht verwendbar: {error}",
   "tweak.result.measure_failed": "Die Verbindung konnte nicht gemessen werden (keine Last oder keine Antworten); nichts wurde geändert",
   "tweak.result.measured_enabled": "Ein: {value}. {verdict}",
@@ -543,12 +552,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — das größte Paket, das der Pfad transportierte, gemessen am {date} (vorher {before})",
   "ui.optimize.stale.other_network": "In einem anderen Netzwerk gemessen",
   "ui.optimize.stale.old": "Messung ist veraltet",
+  "ui.optimize.stale.no_record": "Keine Messung gespeichert",
   "ui.optimize.stale.hint": "Aus- und wieder einschalten, um dieses Netzwerk zu messen",
 
   "ui.sheet.experimental.title": "Experimentelle Optimierung einschalten?",
   "ui.sheet.experimental.body": "„{name}“ kann die Geschwindigkeit verringern oder Nebenwirkungen haben. Der ursprüngliche Wert wird gesichert, daher lässt sich die Optimierung jederzeit ausschalten.",
   "ui.sheet.measured.title": "Zuerst die Verbindung messen?",
-  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang (bis zu 100 MB), vor und nach der Änderung, und wird nicht angewendet, wenn nichts zu beheben ist.",
+  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils etwa 125 MB pro 100 Mbit/s Upload) und wird nicht angewendet, wenn nichts zu beheben ist.",
   "ui.sheet.cancel": "Abbrechen",
   "ui.sheet.confirm": "Einschalten",
 
@@ -561,7 +571,7 @@
   "ui.diag.advice": "Was zu tun ist",
   "ui.diag.open_tweak": "In „Optimieren“ öffnen",
   "ui.diag.on_demand": "Auf Abruf",
-  "ui.diag.bufferbloat_run": "Messen (ca. 30 s, bis zu 200 MB Datenverbrauch)",
+  "ui.diag.bufferbloat_run": "Messen (ca. 30 s, bei schneller Leitung bis zu 2 GB Datenverbrauch)",
 
   "ui.status.ok": "OK",
   "ui.status.warn": "Warnung",
@@ -679,7 +689,7 @@
   "ui.optimize.loading": "Aktuelle Einstellungen werden gelesen…",
 
   "ui.diag.never": "Es wurde noch keine Diagnose ausgeführt",
-  "ui.diag.bufferbloat_confirm": "Dabei werden etwa 30 Sekunden lang bis zu rund 200 MB von speed.cloudflare.com heruntergeladen und hochgeladen.",
+  "ui.diag.bufferbloat_confirm": "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB.",
   "ui.diag.measure": "Messen",
 
   "ui.common.on": "Ein",
@@ -713,6 +723,7 @@
   "failover.result.restore_failed": "Zurückwechseln fehlgeschlagen: {error}",
   "failover.result.restored": "Wieder auf der Hauptverbindung (Einstellungen von {path} wiederhergestellt)",
   "failover.result.unknown_path": "Unbekannte Netzwerkverbindung {path}",
+  "failover.result.backup_rejected": "Die Sicherung dieser Verbindung ist keine gültige Schnittstellenmetrik; es wurde nicht zurückgeschaltet: {error}",
 
   "notify.failover.switched.title": "Auf die Ersatzverbindung gewechselt",
   "notify.failover.available.title": "Eine Ersatzverbindung ist verfügbar",
@@ -745,6 +756,7 @@
   "installer.uninstall_failed": "Die Deinstallation wurde mit Problemen beendet.",
   "installer.keep_backup": "Einige ursprüngliche Werte konnten nicht wiederhergestellt werden, daher bleibt ihre Sicherung erhalten",
   "installer.restored_all": "Jede Optimierung ist wieder auf ihrem ursprünglichen Wert",
+  "installer.store_kept": "Jede Optimierung ist wieder auf ihrem ursprünglichen Wert, aber der Sicherungseintrag in der Registrierung konnte nicht entfernt werden: {error}",
 
   "installer.step.copy": "Programm nach {target} kopieren",
   "installer.step.task": "Netzwerkmonitor mit Windows starten",

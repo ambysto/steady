@@ -98,7 +98,7 @@ class System(Protocol):
     def dns_interface(self, guid: str | None = None) -> dict[str, Any] | None: ...
     def doh_get(self) -> dict[str, dict[str, Any]] | None: ...
 
-    def qos_policy_get(self, name: str) -> int | None: ...
+    def qos_policies_get(self, prefix: str) -> dict[str, dict[str, Any]]: ...
     def ipv4_interface(self, guid: str | None = None) -> dict[str, Any] | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
@@ -116,6 +116,7 @@ class System(Protocol):
     def doh_remove(self, address: str) -> None: ...
 
     def qos_policy_set(self, name: str, bits_per_second: int) -> None: ...
+    def qos_exempt_set(self, name: str, destination: str) -> None: ...
     def qos_policy_remove(self, name: str) -> None: ...
     def ipv4_mtu_set(self, interface_index: int, mtu: int) -> None: ...
 
@@ -263,14 +264,15 @@ class WindowsSystem:
         current = state.band or next((e.band for e in same if bssid and e.bssid.lower() == bssid), "")
         return WifiBands(state.ssid, current, frozenset(e.band for e in same))
 
-    def qos_policy_get(self, name: str) -> int | None:
-        """Throttle rate (bit/s) of the QoS policy `name` in the default (persistent) store; None if
-        there is none. Lists the store rather than asking by name, so "absent" never hides an error."""
-        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq "
-                             f"{ps_literal(_check_qos_name(name))} }}) | Select-Object Name, ThrottleRateAction")
-        if not rows:
-            return None
-        return int(rows[0].get("ThrottleRateAction") or 0)
+    def qos_policies_get(self, prefix: str) -> dict[str, dict[str, Any]]:
+        """The QoS policies of the default (persistent) store whose name starts with `prefix`:
+        name -> {"rate_bps": throttle bit/s or None, "destination": destination prefix or None}. Lists the
+        store rather than asking by name, so "absent" never hides an error."""
+        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -like "
+                             f"({ps_literal(_check_qos_name(prefix))} + '*') }}) | "
+                             "Select-Object Name, ThrottleRateAction, IPDstPrefixMatchCondition")
+        return {str(r["Name"]): {"rate_bps": int(r.get("ThrottleRateAction") or 0) or None,
+                                 "destination": r.get("IPDstPrefixMatchCondition") or None} for r in rows}
 
     def ipv4_interface(self, guid: str | None = None) -> dict[str, Any] | None:
         """{"index", "guid", "alias", "mtu"} of the IPv4 side of the uplink (the default route's interface), or of
@@ -477,6 +479,19 @@ class WindowsSystem:
                        f"Set-NetQosPolicy -Name $name -ThrottleRateActionBitsPerSecond {rate} -Confirm:$false -ErrorAction Stop }} "
                        f"else {{ New-NetQosPolicy -Name $name -Default -ThrottleRateActionBitsPerSecond {rate} "
                        "-ErrorAction Stop | Out-Null }", f"setting QoS policy {name} to {rate} bit/s")
+
+    def qos_exempt_set(self, name: str, destination: str) -> None:
+        """A policy for traffic to `destination` (an address prefix) that throttles nothing, so the
+        broader throttle does not reach it: of several matching policies, Windows applies the most
+        specific. DSCP 0 is only there because a policy needs an action; it is the unmarked default."""
+        prefix = str(ipaddress.ip_network(destination, strict=True))
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; $prefix = {ps_literal(prefix)}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       "Set-NetQosPolicy -Name $name -IPDstPrefixMatchCondition $prefix -DSCPAction 0 "
+                       "-Confirm:$false -ErrorAction Stop } "
+                       "else { New-NetQosPolicy -Name $name -IPDstPrefixMatchCondition $prefix -DSCPAction 0 "
+                       "-ErrorAction Stop | Out-Null }", f"setting QoS exemption {name} for {prefix}")
 
     def qos_policy_remove(self, name: str) -> None:
         """Remove exactly the policy `name`: persistent store first, then the active store if it lingers."""

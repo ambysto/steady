@@ -16,7 +16,7 @@ ISP ── ISP modem (bridge mode) ──cable── Huawei WiFi BE3 (PPPoE, DHC
 
 Huawei WiFi BE3: Wi‑Fi 7 dual-band 2×2 (BE3600), 1 × 2.5G port + 3 × 1G ports (WAN/LAN auto-detect), supports HUAWEI Mesh+ and 802.11k/v/r.
 
-**Update 2026-10-03 11:45:** the user already has a **VNPT iGate 302S mesh** but it is **not turned on** (unclear whether it is compatible with the BE3; no public specifications for this model found yet). The PC is connected **directly to the BE3**. The BSSID `02:5e:00:9a:40:24` differs from the BE3's LAN MAC (`64:A2:8A:0E:0E:9A`) only because the BE3 uses a locally-administered address for its 5GHz radio. *(The earlier inference that the PC went through the iGate was wrong.)*
+**Update 2026-10-03 11:45:** the user already has a **VNPT iGate 302S mesh** but it is **not turned on** (unclear whether it is compatible with the BE3; no public specifications for this model found yet). The PC is connected **directly to the BE3**. The BSSID `02:5e:00:9a:40:24` differs from the BE3's LAN MAC (`64:A2:8A:00:00:01`) only because the BE3 uses a locally-administered address for its 5GHz radio. *(The earlier inference that the PC went through the iGate was wrong.)*
 
 ⇒ The "router connection lost" events in EXP-001 are on the **Wi‑Fi PC ↔ BE3** hop.
 

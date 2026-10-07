@@ -2,7 +2,7 @@
 
 ## Core principles
 
-1. **Never make a system change that cannot be restored.** Every tweak must save the original value to `data/backup.json` *before* applying it, and must have a restore path for when there is no backup (back to the Windows/driver default).
+1. **Never make a system change that cannot be restored.** Every tweak must save the original value to the backup store (`HKLM\SOFTWARE\Ambysto\Steady`, [ADR-0018](docs/adr/0018-backups-in-hklm.md)) *before* applying it, and must have a restore path for when there is no backup (back to the Windows/driver default).
 2. **Read first, write later.** Every tweak must have an independent state-reading function with no side effects.
 3. **Transparency.** Every system change and every watchdog action is recorded in the log.
 4. **Works in read-only mode.** Without Admin rights the tool can still monitor and diagnose; only write operations are locked.

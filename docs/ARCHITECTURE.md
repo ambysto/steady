@@ -24,7 +24,8 @@
 
 | Module | Responsibility |
 |---|---|
-| `config.py` | Paths, `settings.json`, `backup.json` (original values before a tweak) |
+| `config.py` | Paths, `settings.json`, the backup lock; `load_backup` / `save_backup` go to `backupstore` |
+| `backupstore.py` | The backups (original values before a tweak, failover metrics) in `HKLM\SOFTWARE\Ambysto\Steady`, readable by everyone, writable only elevated; imports the old `backup.json` once ([ADR-0018](adr/0018-backups-in-hklm.md)) |
 | `winutil.py` | Helpers for calling PowerShell (`-EncodedCommand`, returns JSON), `netsh`, Admin check, detection of the Wi‑Fi card and the main network path (uplink) |
 | `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned; optional payload size and "do not fragment" flag |
 | `pmtu.py` | Path MTU: binary search with "do not fragment" pings, pure over an injected send function (diagnostic #16) |
@@ -44,7 +45,7 @@
 | `elevated.py`, `elevation.py` | Child process running as Admin via UAC for write operations — ADR-0005 |
 | `server.py` | HTTP server, API routing, serves `web/` |
 | `desktop.py` | Desktop shell (ADR-0002): a pywebview window using the native Windows frame (Snap Layouts, resizing, title bar painted the same color as the page background) around the UI + tray icon (pystray). It is only a viewer: closing the window = hiding to the tray, "Quit" only closes the shell, the monitor keeps running. Only this module needs `requirements.txt` |
-| `failover.py` | Switching to a backup network path ([ADR-0008](adr/0008-failover.md)): discovers paths (physical cards with a default route), measures each path with TCP bound to its IP, a pure policy with safety limits, changes InterfaceMetric with a backup in `backup.json`. Off by default |
+| `failover.py` | Switching to a backup network path ([ADR-0008](adr/0008-failover.md)): discovers paths (physical cards with a default route), measures each path with TCP bound to its IP, a pure policy with safety limits, changes InterfaceMetric with a backup in the backup store (`backupstore.py`). Off by default |
 | `runtime.py` | How each part (monitor, desktop, elevated) is launched, from source or from the packaged build — the task, UAC and shortcuts all ask here |
 | `installer.py`, `entry.py` | Packaged build `Ambysto Steady.exe` (PyInstaller, bundles Python): subcommands `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; per-user install into `%LOCALAPPDATA%\Programs`, uninstall first restores every tweak + metric. Data of the packaged build lives in `%LOCALAPPDATA%\StableInternet\data` |
 | `impact.py` | Measures the effect of a change (tweak, manual step) using monitor data before/after — [ADR-0007](adr/0007-measured-impact.md) |
@@ -76,7 +77,7 @@ Incident classification:
 | File | Contents |
 |---|---|
 | `settings.json` | User configuration (watchdog, ping interval, targets, `ui.language`…) |
-| `backup.json` | Original value of each tweak before it is applied |
+| `backup.json` | Before ADR-0018: original value of each tweak before it is applied. Now read once per machine by the first elevated process into `HKLM\SOFTWARE\Ambysto\Steady` (values `Backup`, the same JSON, and `Quarantine` for entries not imported yet; `LegacyImported` marks it done and stays after uninstalling); the file is left in place and no longer read. The tests still use it as the file backend (`STABLEINTERNET_BACKUP=file`) |
 | `metrics.db` | SQLite (WAL, `PRAGMA user_version` = schema version): `minute_stats(ts, target, ip, sent, lost, avg, max, jitter)`, `wifi_stats(ts, state, ssid, bssid, channel, signal, rssi, rx_mbps, tx_mbps)`, `events(id, ts, kind, level, message, duration, message_key, message_params)` (v3: events with text store a translation key + JSON parameters, the `message` column keeps the English version for reading the DB directly; the API returns text in the currently selected language). `ts` is Unix seconds UTC; statistics tables are keyed by the start of the minute. `*_down` events are written when the incident ends, so `ts` is the recovery time and `duration` tells when it started. When the monitor loses data for > 30 s (machine asleep/hung), the open incident is cut at the last tick before the gap (message contains "cut short by a monitoring gap") and a `monitor_gap` event records the length of the gap — time that could not be measured is never counted as an outage. `rx_mbps`/`tx_mbps`/`bssid` are needed for MLO and roaming diagnostics; `ip` because the router IP can change |
 
 Raw ping samples are kept only in RAM (last 15 minutes); the DB stores per-minute statistics, kept for 30 days.
@@ -128,10 +129,10 @@ The server runs inside the monitor process, **unelevated**, at `http://127.0.0.1
 ```
 UI turns toggle on → POST /api/tweaks/{id} {enable:true}
   → check supported + Admin rights
-  → if there is no backup yet: capture() original value → backup.json
+  → if there is no backup yet: capture() original value → HKLM backup store (ADR-0018)
   → apply()
   → write event "Optimization on: …" to the log
   → read() again and return the new state to the UI
 ```
 
-Disable: `restore(backup)` → delete backup → write event. If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.
+Disable: `check_original(backup)` (the entry must lie in the tweak's own domain, [ADR-0017](adr/0017-validate-backup-before-restore.md)) → `restore(backup)` → delete backup → write event. The backup comes from the HKLM store, which a process without Admin cannot write ([ADR-0018](adr/0018-backups-in-hklm.md)). If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.

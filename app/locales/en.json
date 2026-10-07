@@ -214,6 +214,12 @@
   "diag.bufferbloat.upload": "upload",
   "diag.bufferbloat.no_load": "Could not generate {phase} load: {error}",
   "diag.bufferbloat.weak_load": "The {phase} load reached only {mbps:.1f} Mbps, not enough to fill the line",
+  "diag.bufferbloat.refused": "The test server refused the {phase} load (HTTP {status}: it limits test traffic per address); try again in about {minutes} min",
+  "diag.bufferbloat.refused_later": "The test server refused the {phase} load (HTTP {status}: it limits test traffic per address); try again later",
+  "diag.bufferbloat.at_ceiling": "The {phase} load stopped at the test's own limit ({mbps:.0f} Mbps): the line may be faster, so its queue may not have filled",
+  "diag.bufferbloat.ok_incomplete": "No rise where it could be measured (at most +{delta:.0f} ms), but the measurement is incomplete",
+  "diag.bufferbloat.advice_incomplete": "Only a run in which both directions fill the line can show that it is fine; run it again later.",
+  "diag.bufferbloat.advice_later": "Wait until the test server accepts the load again, then run again.",
   "diag.bufferbloat.all_lost": "{label}: all pings lost during {phase}",
   "diag.bufferbloat.line": "{label} during {phase} ({mbps:.0f} Mbps): median {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms added, {loss:.0f}% lost",
   "diag.bufferbloat.no_result": "Could not measure latency under load",
@@ -226,6 +232,8 @@
   "diag.bufferbloat.by": "by {delta:.0f} ms",
   "diag.bufferbloat.rise": "Latency to the Internet rises {amount} when the line is busy{where}",
   "diag.bufferbloat.advice": "Turn on SQM / smart QoS (fq_codel or CAKE) on the router and set the upload/download limits about 5–10% below the real bandwidth. If the router has no SQM, lower the upload speed of the app causing the load.",
+  "diag.bufferbloat.shaped": "Upload limited by this app to {limit:.1f} Mbps (Optimize), so this is measured through the limit",
+  "diag.bufferbloat.shaped_at_limit": "Upload limited by this app to {limit:.1f} Mbps and the upload reached it ({mbps:.1f} Mbps): if your plan got faster, turn the limit off and on again to measure the line",
 
   "diag.route.title": "Route to far-away destinations",
   "diag.route.no_data": "Cannot compare routes: fewer than 3 reference sites answered",
@@ -343,7 +351,7 @@
   "tweak.ipv6_off.name": "Turn off IPv6 on Wi‑Fi",
   "tweak.ipv6_off.note": "Only try this when you suspect the router's IPv6 or IPv6 DNS slows things down",
   "tweak.upload_shaping.name": "Limit the upload speed to keep latency low under load",
-  "tweak.upload_shaping.note": "Measures your upload first, then caps it at 85% so the queue stays on the PC instead of the modem. Upload only: the download direction can only be shaped on the router (SQM)",
+  "tweak.upload_shaping.note": "Measures your upload first, then caps it at 85% so the queue stays on the PC instead of the modem. Traffic to your local network (NAS, casting) is not limited. Upload only: the download direction can only be shaped on the router (SQM)",
   "tweak.upload_shaping.value": "limited to {limit:.1f} Mbps (85% of the {upload:.1f} Mbps upload measured)",
   "tweak.upload_shaping.refused.weak": "The measurement did not load the line enough ({mbps:.1f} Mbps, {samples} samples); try again",
   "tweak.upload_shaping.refused.ceiling": "The measurement reached its own limit ({mbps:.1f} of {ceiling:.0f} Mbps), so the line may be faster than it can tell; nothing was changed",
@@ -441,6 +449,7 @@
   "tweak.result.restore_mismatch": "Restored, but the value does not match the backup; the backup is kept",
   "tweak.result.restored": "Original value restored",
   "tweak.result.bad_backup": "The backup is malformed: {error}",
+  "tweak.result.backup_rejected": "The backup points outside what this tweak changes, so nothing was restored and the backup is kept: {error}",
   "tweak.result.bad_measurement": "The measurement is not usable: {error}",
   "tweak.result.measure_failed": "Could not measure the connection (no load or no replies); nothing was changed",
   "tweak.result.measured_enabled": "On: {value}. {verdict}",
@@ -545,12 +554,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — the largest packet the path carried, measured on {date} (was {before})",
   "ui.optimize.stale.other_network": "Measured on another network",
   "ui.optimize.stale.old": "Measurement is old",
+  "ui.optimize.stale.no_record": "No measurement on record",
   "ui.optimize.stale.hint": "Turn it off and on again to measure this network",
 
   "ui.sheet.experimental.title": "Turn on an experimental tweak?",
   "ui.sheet.experimental.body": "“{name}” can lower speed or have side effects. The original value is backed up, so you can turn it off at any time.",
   "ui.sheet.measured.title": "Measure your connection first?",
-  "ui.sheet.measured.body": "“{name}” measures your upload for about 15 seconds (up to 100 MB), before and after the change, and is not applied if there is nothing to fix.",
+  "ui.sheet.measured.body": "“{name}” measures your upload for about 15 seconds before the change and again after it (each time about 125 MB per 100 Mbps of upload), and is not applied if there is nothing to fix.",
   "ui.sheet.cancel": "Cancel",
   "ui.sheet.confirm": "Turn on",
 
@@ -563,7 +573,7 @@
   "ui.diag.advice": "What to do",
   "ui.diag.open_tweak": "Open in Optimize",
   "ui.diag.on_demand": "On demand",
-  "ui.diag.bufferbloat_run": "Measure (about 30 s, uses up to 200 MB)",
+  "ui.diag.bufferbloat_run": "Measure (about 30 s, uses up to 2 GB on a fast line)",
 
   "ui.status.ok": "OK",
   "ui.status.warn": "Warning",
@@ -681,7 +691,7 @@
   "ui.optimize.loading": "Reading the current settings…",
 
   "ui.diag.never": "No diagnostics have run yet",
-  "ui.diag.bufferbloat_confirm": "This downloads and uploads up to about 200 MB from speed.cloudflare.com for about 30 seconds.",
+  "ui.diag.bufferbloat_confirm": "This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB.",
   "ui.diag.measure": "Measure",
 
   "ui.common.on": "On",
@@ -715,6 +725,7 @@
   "failover.result.restore_failed": "Switching back failed: {error}",
   "failover.result.restored": "Back on the main connection (settings of {path} restored)",
   "failover.result.unknown_path": "Unknown network connection {path}",
+  "failover.result.backup_rejected": "The backup of this connection is not a valid interface metric, so nothing was switched back: {error}",
 
   "notify.failover.switched.title": "Switched to the backup connection",
   "notify.failover.available.title": "A backup connection is available",
@@ -747,6 +758,7 @@
   "installer.uninstall_failed": "Uninstalling finished with problems.",
   "installer.keep_backup": "Some original values could not be restored, so their backup is kept",
   "installer.restored_all": "Every optimization is back to its original value",
+  "installer.store_kept": "Every optimization is back to its original value, but the backup record in the registry could not be removed: {error}",
 
   "installer.step.copy": "Copy the program to {target}",
   "installer.step.task": "Start the network monitor with Windows",
