@@ -205,7 +205,10 @@ a.group.row:hover { background: var(--surface-hover); }
 .status-circle.warn .disc { background: var(--warn-soft); color: var(--warn); }
 .status-circle.bad .disc { background: var(--bad-soft); color: var(--bad); }
 .status-circle .disc svg.icon { width: 52px; height: 52px; stroke-width: 2; }
-@media (prefers-reduced-motion: reduce) { .big-button:hover .segments, .big-button:focus-visible .segments { animation: none; } }
+.status-circle.accent .disc { background: var(--accent-soft); color: var(--accent); }
+.status-circle.busy .segments { animation: spin 2.4s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .big-button:hover .segments, .big-button:focus-visible .segments,
+  .status-circle.busy .segments { animation: none; } }
 .ring { width: 100%; height: 100%; display: block; }
 .ring circle { fill: none; stroke-width: 4; }
 .ring .track { stroke: var(--surface-pressed); }
@@ -233,6 +236,33 @@ svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.
 .problem-action + .problem-action { margin-top: var(--space-1); border-top: .5px solid var(--separator); }
 .problem-action .main { flex: 1; min-width: 0; }
 .mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: .5px solid var(--separator); }
+.check-hero .below { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-2); }
+.check-card .metric { margin-top: 2px; font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
+.check-card .sub-title { padding: var(--space-3) var(--space-4) var(--space-1); border-top: .5px solid var(--separator);
+  font-size: var(--text-footnote); font-weight: var(--weight-semibold); color: var(--text-secondary); }
+.check-card .sub-title + .rows { border-top: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--space-2); }
+.outcome-list .main { display: grid; gap: 6px; }
+.outcome { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.outcome .name { font-weight: var(--weight-medium); }
+.outcome .secondary { width: 100%; }
+/* The Fix sheet: a list to choose from, so left-aligned and wider. */
+.sheet.wide { width: 460px; max-width: calc(100% - 32px); max-height: calc(100% - 2 * var(--titlebar-height)); overflow-y: auto; text-align: left; }
+.sheet.wide h3 { text-align: center; }
+.fix-group { margin: var(--space-3) 0 var(--space-1); font-size: var(--text-footnote); font-weight: var(--weight-semibold);
+  color: var(--text-secondary); }
+.fix-item { display: flex; align-items: flex-start; gap: var(--space-2); padding: 6px var(--space-2); border-radius: var(--radius-control); }
+.fix-item:hover { background: var(--surface-hover); }
+.fix-item input { margin: 3px 0 0; }
+.fix-item > div { flex: 1; min-width: 0; }
+.fix-item .name { font-weight: var(--weight-medium); }
+.fix-item .for { font-size: var(--text-caption); color: var(--text-tertiary); }
+.fix-item svg.icon { margin-top: 2px; color: var(--text-tertiary); }
+.fix-list .note { display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0;
+  font-size: var(--text-footnote); color: var(--text-secondary); text-align: left; }
+.fix-list .note[hidden] { display: none; }
+.fix-list .note svg.icon { flex: none; margin-top: 2px; }
+#sheet-content:not(:empty) { margin-bottom: var(--space-4); }
 
 /* --- diagnostics ------------------------------------------------------------------------------ */
 .diag-summary { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }

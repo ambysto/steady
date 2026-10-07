@@ -717,5 +717,78 @@ class CatalogTests(unittest.TestCase):
                 os.environ.pop("STABLEINTERNET_DATA", None)
 
 
+class BatchTests(unittest.TestCase):
+    """The Fix button's batch (ADR-0020 point 6): which tweaks may go together, and how they run."""
+
+    def test_only_known_low_risk_unmeasured_tweaks_each_once(self):
+        for bad in ([], ["wifi_power_saving", "wifi_power_saving"], ["format_c"], ["tcp_timedwait"],
+                    ["dns_fastest"], ["upload_shaping"], ["wifi_power_saving", "ipv6_off"],
+                    ["wifi_power_saving"] * (tweaks.BATCH_MAX + 1)):
+            with self.assertRaises(ValueError, msg=bad):
+                tweaks.batch_tweaks(bad)
+
+    def test_tweaks_that_keep_the_network_up_go_first(self):
+        chosen = tweaks.batch_tweaks(["wifi_power_saving", "power_pcie_aspm_off", "device_power_off", "power_wireless_max"])
+        self.assertEqual([t.id for t in chosen],
+                         ["power_pcie_aspm_off", "power_wireless_max", "wifi_power_saving", "device_power_off"])
+
+    def test_every_tweak_runs_and_reports_even_when_one_fails(self):
+        from types import SimpleNamespace
+
+        class Manager:
+            calls = []
+
+            def preflight(self, tweak_id):
+                return None
+
+            def enable(self, tweak_id):
+                self.calls.append(tweak_id)
+                if tweak_id == "power_wireless_max":
+                    raise OSError("powercfg died")
+                if tweak_id == "wifi_wake_magic":
+                    return tweaks.Outcome(False, False, i18n.msg("tweak.result.unsupported", reason="x"),
+                                          SimpleNamespace(supported=False))
+                if tweak_id == "device_power_off":
+                    return tweaks.Outcome(True, False, i18n.msg("tweak.result.already_on"))
+                return tweaks.Outcome(True, True, "on")
+
+        out = tweaks.run_batch(Manager(), tweaks.batch_tweaks(
+            ["wifi_wake_magic", "power_wireless_max", "device_power_off", "power_pcie_aspm_off"]))
+        self.assertEqual(Manager.calls, ["power_wireless_max", "power_pcie_aspm_off", "wifi_wake_magic", "device_power_off"])
+        self.assertEqual({r["id"]: r["status"] for r in out["results"]},
+                         {"power_wireless_max": "failed", "power_pcie_aspm_off": "changed",
+                          "wifi_wake_magic": "unsupported", "device_power_off": "unchanged"})
+        self.assertFalse(out["ok"])
+        self.assertTrue(out["changed"])
+        self.assertEqual(i18n.render(out["message"], "en"), "Turned on 1 of 4")
+
+    def test_a_refusal_before_writing_is_reported_not_applied(self):
+        class Manager:
+            def preflight(self, tweak_id):
+                return i18n.msg("tweak.result.already_on")
+
+            def enable(self, tweak_id):
+                raise AssertionError("must not write")
+
+        out = tweaks.run_batch(Manager(), tweaks.batch_tweaks(["power_wireless_max"]))
+        self.assertEqual(out["results"][0]["status"], "failed")
+        self.assertFalse(out["changed"])
+
+    def test_turning_back_off_uses_disable_and_no_preflight(self):
+        class Manager:
+            calls = []
+
+            def preflight(self, tweak_id):
+                raise AssertionError("no preflight when turning off")
+
+            def disable(self, tweak_id):
+                self.calls.append(tweak_id)
+                return tweaks.Outcome(True, True, "off")
+
+        out = tweaks.run_batch(Manager(), tweaks.batch_tweaks(["power_wireless_max", "wifi_power_saving"]), enable=False)
+        self.assertEqual(Manager.calls, ["power_wireless_max", "wifi_power_saving"])
+        self.assertEqual(i18n.render(out["message"], "en"), "Turned off 2 of 2")
+
+
 if __name__ == "__main__":
     unittest.main()
