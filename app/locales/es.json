@@ -208,6 +208,14 @@
   "diag.bufferbloat.rise": "La latencia hacia Internet aumenta {amount} cuando la línea está ocupada{where}",
   "diag.bufferbloat.advice": "Activa SQM / QoS inteligente (fq_codel o CAKE) en el router y fija los límites de subida y bajada un 5–10% por debajo del ancho de banda real. Si el router no tiene SQM, reduce la velocidad de subida de la aplicación que causa la carga.",
 
+  "diag.route.title": "Ruta hacia destinos lejanos",
+  "diag.route.no_data": "No se pueden comparar las rutas: respondieron menos de 3 sitios de referencia",
+  "diag.route.tunnel_on": "Hay una VPN o un túnel activo, así que las rutas medidas son las del túnel, no las del proveedor",
+  "diag.route.line": "{host}: {median:.0f} ms (conexión TCP)",
+  "diag.route.ok": "Todos los sitios de referencia responden en un tiempo parecido (el más cercano, {near:.0f} ms)",
+  "diag.route.detour": "Algunos sitios de referencia siguen un camino mucho más largo que el resto (el más cercano, {near:.0f} ms): {hosts}",
+  "diag.route.advice": "Suele apuntar a la ruta del proveedor hacia esos destinos, no a este PC. Nada en el PC lo arregla: un servicio de túnel puede tomar un camino más corto (pero puede ralentizar los sitios cercanos), o consulta al proveedor.",
+
   "diag.cli.header": "Diagnóstico a las {time} — estado general: {status}",
   "diag.cli.saved": "Ejecución n.º {run_id} guardada",
   "diag.cli.compared": "Comparado con la ejecución anterior ({time}):",
@@ -315,6 +323,18 @@
   "tweak.ipv6_off.name": "Desactivar IPv6 en Wi‑Fi",
   "tweak.ipv6_off.note": "Pruébalo solo si sospechas que el IPv6 del router o el DNS por IPv6 ralentiza la conexión",
 
+  "tweak.tcp_ecn.name": "Activar TCP ECN",
+  "tweak.tcp_ecn.note": "Experimental: los routers pueden señalar la congestión en lugar de descartar paquetes, lo que puede reducir la latencia bajo carga. Algunos dispositivos intermedios gestionan mal los paquetes ECN, así que déjalo desactivado salvo que una medición antes/después muestre mejora",
+
+  "tweak.rsc_off.name": "Desactivar Receive Segment Coalescing en la tarjeta Wi‑Fi",
+  "tweak.rsc_off.note": "Experimental: los paquetes recibidos llegan a Windows de uno en uno, lo que puede reducir la latencia a costa de algo de velocidad y más uso de CPU. Para restaurar hace falta la copia de seguridad",
+
+  "tweak.packet_coalescing_off.name": "Desactivar el Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "Experimental: la tarjeta deja de retener los paquetes recibidos para ahorrar energía: menor latencia y algo más de consumo. Para restaurar hace falta la copia de seguridad",
+
+  "tweak.dns_fastest.name": "Usar el DNS público más rápido sobre HTTPS",
+  "tweak.dns_fastest.note": "Mide Cloudflare, Google y Quad9 y usa los dos proveedores más rápidos, cifrados con DoH. Al desactivarlo vuelve el DNS propio de la red. No se ofrece con VPN, en una red de dominio, con sufijo DNS ni tras un portal cautivo",
+
   "tweak.reason.no_wifi_card": "No se encontró ninguna tarjeta Wi‑Fi",
   "tweak.reason.no_matching_value": "'{property}' no tiene un valor adecuado (disponibles: {values})",
   "tweak.reason.no_property": "La tarjeta no tiene esta propiedad",
@@ -327,6 +347,19 @@
   "tweak.reason.unreadable": "No se puede leer el estado",
   "tweak.reason.no_default_registry": "No hay copia de seguridad y se desconoce el valor predeterminado",
   "tweak.reason.no_default_powercfg": "powercfg no tiene un valor predeterminado conocido; se necesita una copia de seguridad",
+  "tweak.reason.no_tcp_setting": "Windows no informa de '{setting}'",
+  "tweak.reason.no_default_tcp": "Sin copia de seguridad y se desconoce el valor por defecto",
+  "tweak.reason.no_rsc": "Esta tarjeta no admite Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "Sin copia de seguridad; se desconoce el ajuste original de la tarjeta",
+  "tweak.reason.no_offload_setting": "Windows no informa de '{setting}'",
+  "tweak.reason.no_default_offload": "No se conoce un valor por defecto; hace falta una copia de seguridad",
+  "tweak.reason.no_uplink": "No hay conexión de red cuyo DNS se pueda cambiar",
+  "tweak.reason.dns_vpn": "Hay una VPN activa; su propio DNS no se toca",
+  "tweak.reason.dns_domain": "Este PC está en un dominio o la red tiene un sufijo DNS; los nombres internos necesitan el DNS propio de la red",
+  "tweak.reason.dns_static_v6": "El adaptador de red tiene un servidor DNS IPv6 estático, que la restauración borraría",
+  "tweak.reason.dns_captive": "La red parece un portal cautivo (una página de inicio de sesión)",
+  "tweak.reason.dns_no_fast_servers": "La medición no encontró dos proveedores de DNS público que respondan de forma fiable; no se cambió nada",
+  "tweak.reason.no_default_dns": "Sin copia de seguridad; se desconoce la configuración DNS original",
 
   "tweak.result.read_failed": "No se puede leer el estado: {error}",
   "tweak.result.unsupported": "No compatible con este PC: {reason}",
@@ -523,10 +556,13 @@
   "manual.use_cable.body": "Este PC tiene un puerto LAN libre. Un cable evita de golpe todos los problemas del Wi‑Fi y es la opción más estable.",
 
   "manual.router_sqm.title": "Activar SQM / QoS inteligente en el router",
-  "manual.router_sqm.body": "Usa fq_codel o CAKE y fija los límites un 5–10% por debajo de la velocidad real de la línea, para que las descargas y subidas grandes dejen de saturar la cola.",
+  "manual.router_sqm.body": "La mayor parte del retraso se acumula en la descarga, que solo controla un router que moldea el tráfico entrante. Activa SQM / QoS inteligente (CAKE o fq_codel) y fija los límites un 5–10% por debajo de la velocidad real de la línea. Si el router no tiene SQM, OpenWrt (en los routers compatibles) lo ofrece en el paquete sqm-scripts. Si aun así ocurre, la propia línea está llena y una tarifa más rápida ayuda.",
 
   "manual.dns_server.title": "Usar otro servidor DNS",
   "manual.dns_server.body": "El servidor DNS en uso tiene errores o tiempos de espera agotados. Configura uno público, como 1.1.1.1 u 8.8.8.8, en Windows o en el router.",
+
+  "manual.tunnel_route.title": "Valora un túnel para los destinos lejanos",
+  "manual.tunnel_route.body": "Algunos destinos siguen un camino mucho más largo que otros, lo que apunta a la ruta del proveedor y no a este PC. Un servicio de túnel de confianza puede tomar un camino más corto hacia ellos, pero puede ralentizar los destinos cercanos. Marca el paso como hecho y la aplicación compara la conexión antes y después; apaga el túnel si no ayuda.",
 
   "manual.event.done": "Marcado como hecho: {step}",
 
@@ -545,6 +581,7 @@
 
   "event.dns_observed": "Servidores DNS de esta red: {servers}",
   "event.dns_changed": "Los servidores DNS de esta red cambiaron: {old} → {new}",
+  "event.dns_app_changed": "Esta aplicación cambió los servidores DNS de esta red: {servers}",
 
   "notify.dns_changed.title": "Servidores DNS modificados",
 

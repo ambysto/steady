@@ -208,6 +208,14 @@
   "diag.bufferbloat.rise": "Die Latenz ins Internet steigt {amount}, wenn die Leitung ausgelastet ist{where}",
   "diag.bufferbloat.advice": "SQM / Smart-QoS (fq_codel oder CAKE) am Router aktivieren und die Upload-/Download-Limits etwa 5–10 % unter der tatsächlichen Bandbreite setzen. Hat der Router kein SQM, die Upload-Geschwindigkeit der Anwendung senken, die die Last verursacht.",
 
+  "diag.route.title": "Weg zu weit entfernten Zielen",
+  "diag.route.no_data": "Wege lassen sich nicht vergleichen: weniger als 3 Referenzseiten haben geantwortet",
+  "diag.route.tunnel_on": "Ein VPN oder Tunnel ist aktiv, die gemessenen Wege sind also die des Tunnels, nicht die des Anbieters",
+  "diag.route.line": "{host}: {median:.0f} ms (TCP-Verbindungsaufbau)",
+  "diag.route.ok": "Alle Referenzseiten antworten in ähnlicher Zeit (die nächste in {near:.0f} ms)",
+  "diag.route.detour": "Einige Referenzseiten brauchen einen deutlich längeren Weg als die übrigen (die nächste: {near:.0f} ms): {hosts}",
+  "diag.route.advice": "Das deutet meist auf die Route des Internetanbieters zu diesen Zielen hin, nicht auf diesen PC. Am PC lässt sich das nicht beheben: Ein Tunnel-Dienst kann einen kürzeren Weg nehmen (kann aber nahe Seiten bremsen), oder den Anbieter fragen.",
+
   "diag.cli.header": "Diagnose um {time} — Gesamtstatus: {status}",
   "diag.cli.saved": "Lauf #{run_id} gespeichert",
   "diag.cli.compared": "Vergleich mit dem vorherigen Lauf ({time}):",
@@ -315,6 +323,18 @@
   "tweak.ipv6_off.name": "IPv6 auf Wi‑Fi ausschalten",
   "tweak.ipv6_off.note": "Nur ausprobieren, wenn vermutet wird, dass IPv6 oder IPv6-DNS des Routers etwas verlangsamt",
 
+  "tweak.tcp_ecn.name": "TCP-ECN einschalten",
+  "tweak.tcp_ecn.note": "Experimentell: Router können Überlast markieren, statt Pakete zu verwerfen, was die Latenz unter Last senken kann. Manche Geräte dazwischen verarbeiten ECN-Pakete falsch – daher ausgeschaltet lassen, außer eine Messung vorher/nachher zeigt einen Gewinn",
+
+  "tweak.rsc_off.name": "Receive Segment Coalescing der WLAN-Karte ausschalten",
+  "tweak.rsc_off.note": "Experimentell: Empfangene Pakete gelangen einzeln zu Windows, was die Latenz senken kann, auf Kosten von etwas Durchsatz und mehr CPU-Last. Zum Zurücksetzen wird das Backup benötigt",
+
+  "tweak.packet_coalescing_off.name": "Packet Coalescing Filter ausschalten",
+  "tweak.packet_coalescing_off.note": "Experimentell: Die Karte hält empfangene Pakete nicht mehr zurück, um Strom zu sparen: geringere Latenz, etwas mehr Stromverbrauch. Zum Zurücksetzen wird das Backup benötigt",
+
+  "tweak.dns_fastest.name": "Schnellsten öffentlichen DNS über HTTPS verwenden",
+  "tweak.dns_fastest.note": "Misst Cloudflare, Google und Quad9 und nutzt die zwei schnellsten Anbieter, per DoH verschlüsselt. Beim Ausschalten kommt der DNS des Netzwerks zurück. Nicht verfügbar mit VPN, in einem Domänennetzwerk, mit DNS-Suffix oder hinter einem Captive Portal",
+
   "tweak.reason.no_wifi_card": "Keine Wi‑Fi-Karte gefunden",
   "tweak.reason.no_matching_value": "„{property}“ hat keinen passenden Wert (verfügbar: {values})",
   "tweak.reason.no_property": "Die Karte besitzt diese Eigenschaft nicht",
@@ -327,6 +347,19 @@
   "tweak.reason.unreadable": "Der Zustand kann nicht gelesen werden",
   "tweak.reason.no_default_registry": "Keine Sicherung, und der Standardwert ist unbekannt",
   "tweak.reason.no_default_powercfg": "powercfg kennt keinen Standardwert; eine Sicherung ist erforderlich",
+  "tweak.reason.no_tcp_setting": "Windows meldet „{setting}“ nicht",
+  "tweak.reason.no_default_tcp": "Kein Backup, und der Standardwert ist unbekannt",
+  "tweak.reason.no_rsc": "Diese Karte unterstützt Receive Segment Coalescing nicht",
+  "tweak.reason.no_default_rsc": "Kein Backup; die ursprüngliche Einstellung der Karte ist unbekannt",
+  "tweak.reason.no_offload_setting": "Windows meldet „{setting}“ nicht",
+  "tweak.reason.no_default_offload": "Kein bekannter Standardwert; ein Backup ist nötig",
+  "tweak.reason.no_uplink": "Keine Netzwerkverbindung, deren DNS geändert werden könnte",
+  "tweak.reason.dns_vpn": "Ein VPN ist aktiv; sein eigener DNS bleibt unangetastet",
+  "tweak.reason.dns_domain": "Dieser PC ist in einer Domäne oder das Netzwerk hat ein DNS-Suffix; interne Namen brauchen den DNS des Netzwerks",
+  "tweak.reason.dns_static_v6": "Der Netzwerkadapter hat einen statischen IPv6-DNS-Server, den das Zurücksetzen löschen würde",
+  "tweak.reason.dns_captive": "Das Netzwerk sieht nach einem Captive Portal aus (einer Anmeldeseite)",
+  "tweak.reason.dns_no_fast_servers": "Der Benchmark hat keine zwei öffentlichen DNS-Anbieter gefunden, die zuverlässig antworten; es wurde nichts geändert",
+  "tweak.reason.no_default_dns": "Kein Backup; die ursprünglichen DNS-Einstellungen sind unbekannt",
 
   "tweak.result.read_failed": "Der Zustand kann nicht gelesen werden: {error}",
   "tweak.result.unsupported": "Auf diesem PC nicht unterstützt: {reason}",
@@ -523,10 +556,13 @@
   "manual.use_cable.body": "Dieser PC hat einen freien LAN-Anschluss. Ein Kabel umgeht alle Wi‑Fi-Probleme auf einmal und ist die stabilste Option.",
 
   "manual.router_sqm.title": "SQM / Smart-QoS am Router einschalten",
-  "manual.router_sqm.body": "fq_codel oder CAKE verwenden und die Limits etwa 5–10 % unter der tatsächlichen Leitungsgeschwindigkeit setzen, damit große Downloads und Uploads die Warteschlange nicht mehr überfluten.",
+  "manual.router_sqm.body": "Der größte Teil der Verzögerung entsteht beim Download, den nur ein Router in den Griff bekommt, der eingehenden Verkehr formt. SQM / Smart-QoS (CAKE oder fq_codel) einschalten und die Limits etwa 5–10 % unter der tatsächlichen Leitungsgeschwindigkeit setzen. Hat der Router kein SQM, bietet OpenWrt (auf unterstützten Routern) es im Paket sqm-scripts. Tritt es trotzdem auf, ist die Leitung selbst voll und ein schnellerer Tarif hilft.",
 
   "manual.dns_server.title": "Anderen DNS-Server verwenden",
   "manual.dns_server.body": "Der verwendete DNS-Server hat Fehler oder Zeitüberschreitungen. Einen öffentlichen wie 1.1.1.1 oder 8.8.8.8 in Windows oder am Router festlegen.",
+
+  "manual.tunnel_route.title": "Einen Tunnel für weit entfernte Ziele erwägen",
+  "manual.tunnel_route.body": "Manche Ziele brauchen einen deutlich längeren Weg als andere, was auf die Route des Anbieters hindeutet, nicht auf diesen PC. Ein vertrauenswürdiger Tunnel-Dienst kann einen kürzeren Weg dorthin nehmen, kann aber nahe Ziele verlangsamen. Als erledigt markieren, dann vergleicht die App die Verbindung vorher und nachher; den Tunnel ausschalten, wenn er nichts bringt.",
 
   "manual.event.done": "Als erledigt markiert: {step}",
 
@@ -545,6 +581,7 @@
 
   "event.dns_observed": "DNS-Server in diesem Netzwerk: {servers}",
   "event.dns_changed": "Die DNS-Server dieses Netzwerks haben sich geändert: {old} → {new}",
+  "event.dns_app_changed": "Diese App hat die DNS-Server dieses Netzwerks geändert: {servers}",
 
   "notify.dns_changed.title": "DNS-Server geändert",
 

@@ -208,6 +208,14 @@
   "diag.bufferbloat.rise": "回線が混雑すると、インターネットへのレイテンシが{amount}{where}",
   "diag.bufferbloat.advice": "ルーターで SQM / スマート QoS（fq_codel または CAKE）をオンにし、アップロード/ダウンロードの上限を実際の帯域より 5～10% 低く設定してください。ルーターに SQM がない場合は、負荷の原因となっているアプリのアップロード速度を下げてください。",
 
+  "diag.route.title": "遠方の宛先への経路",
+  "diag.route.no_data": "経路を比較できません：応答した参照サイトが 3 つ未満です",
+  "diag.route.tunnel_on": "VPN またはトンネルが有効なため、測定した経路はプロバイダーのものではなくトンネルのものです",
+  "diag.route.line": "{host}：{median:.0f} ms（TCP 接続）",
+  "diag.route.ok": "すべての参照サイトがほぼ同じ時間で応答しています（最短 {near:.0f} ms）",
+  "diag.route.detour": "一部の参照サイトは他よりはるかに遠回りの経路を通っています（最短 {near:.0f} ms）：{hosts}",
+  "diag.route.advice": "多くの場合、この PC ではなく、プロバイダーからそれらの宛先への経路が原因です。PC 側では直せません。トンネルサービスなら近い経路を通れることがあります（ただし近くのサイトが遅くなる場合があります）。またはプロバイダーに問い合わせてください。",
+
   "diag.cli.header": "{time} の診断 — 総合: {status}",
   "diag.cli.saved": "実行 #{run_id} を保存しました",
   "diag.cli.compared": "前回の実行（{time}）との比較:",
@@ -315,6 +323,18 @@
   "tweak.ipv6_off.name": "Wi‑Fi の IPv6 をオフにする",
   "tweak.ipv6_off.note": "ルーターの IPv6 や IPv6 DNS が速度低下の原因と疑われる場合のみお試しください",
 
+  "tweak.tcp_ecn.name": "TCP ECN をオンにする",
+  "tweak.tcp_ecn.note": "実験的：ルーターがパケットを破棄する代わりに輻輳を通知できるため、負荷時の遅延が下がることがあります。途中の機器によっては ECN パケットを正しく扱えないため、前後の測定で効果が確認できない限りオフのままにしてください",
+
+  "tweak.rsc_off.name": "Wi‑Fi カードの Receive Segment Coalescing をオフにする",
+  "tweak.rsc_off.note": "実験的：受信パケットが 1 つずつ Windows に渡され、スループットがわずかに下がり CPU 使用が増える代わりに、遅延が下がることがあります。元に戻すにはバックアップが必要です",
+
+  "tweak.packet_coalescing_off.name": "Packet Coalescing Filter をオフにする",
+  "tweak.packet_coalescing_off.note": "実験的：省電力のために受信パケットを保留することをカードがやめます。遅延は下がり、消費電力はわずかに増えます。元に戻すにはバックアップが必要です",
+
+  "tweak.dns_fastest.name": "最速の公開 DNS を HTTPS 経由で使う",
+  "tweak.dns_fastest.note": "Cloudflare、Google、Quad9 を測定し、最も速い 2 つのプロバイダーを DoH で暗号化して使います。オフにするとネットワーク本来の DNS に戻ります。VPN 使用中、ドメインのネットワーク、DNS サフィックスがある場合、キャプティブポータルの背後では提案されません",
+
   "tweak.reason.no_wifi_card": "Wi‑Fi カードが見つかりません",
   "tweak.reason.no_matching_value": "「{property}」に適した値がありません（選択可能: {values}）",
   "tweak.reason.no_property": "このカードにはこのプロパティがありません",
@@ -327,6 +347,19 @@
   "tweak.reason.unreadable": "状態を読み取れません",
   "tweak.reason.no_default_registry": "バックアップがなく、既定値も不明です",
   "tweak.reason.no_default_powercfg": "powercfg に既知の既定値がないため、バックアップが必要です",
+  "tweak.reason.no_tcp_setting": "Windows が「{setting}」を報告していません",
+  "tweak.reason.no_default_tcp": "バックアップがなく、既定値も不明です",
+  "tweak.reason.no_rsc": "このカードは Receive Segment Coalescing に対応していません",
+  "tweak.reason.no_default_rsc": "バックアップがなく、カードの元の設定が不明です",
+  "tweak.reason.no_offload_setting": "Windows が「{setting}」を報告していません",
+  "tweak.reason.no_default_offload": "既知の既定値がないため、バックアップが必要です",
+  "tweak.reason.no_uplink": "DNS を変更できるネットワーク接続がありません",
+  "tweak.reason.dns_vpn": "VPN が有効です。VPN 自身の DNS には触れません",
+  "tweak.reason.dns_domain": "この PC はドメインに参加しているか、ネットワークに DNS サフィックスがあります。内部名の解決にはネットワーク本来の DNS が必要です",
+  "tweak.reason.dns_static_v6": "ネットワークアダプターに固定の IPv6 DNS サーバーがあり、元に戻すと消えてしまいます",
+  "tweak.reason.dns_captive": "このネットワークはキャプティブポータル（サインインページ）のようです",
+  "tweak.reason.dns_no_fast_servers": "安定して応答する公開 DNS プロバイダーが 2 つ見つからなかったため、何も変更していません",
+  "tweak.reason.no_default_dns": "バックアップがなく、元の DNS 設定が不明です",
 
   "tweak.result.read_failed": "状態を読み取れません: {error}",
   "tweak.result.unsupported": "この PC ではサポートされていません: {reason}",
@@ -523,10 +556,13 @@
   "manual.use_cable.body": "この PC には空いている LAN ポートがあります。ケーブルを使えば Wi‑Fi の問題をすべて回避でき、最も安定した方法です。",
 
   "manual.router_sqm.title": "ルーターで SQM / スマート QoS をオンにする",
-  "manual.router_sqm.body": "fq_codel または CAKE を使用し、上限を実際の回線速度より 5～10% 低く設定してください。大きなダウンロードやアップロードでキューが溢れなくなります。",
+  "manual.router_sqm.body": "遅延の大半はダウンロード側で発生しており、受信トラフィックを整形できるルーターでないと抑えられません。SQM / スマート QoS（CAKE または fq_codel）をオンにし、上限を実際の回線速度より 5～10% 低く設定してください。ルーターに SQM がない場合、対応ルーターでは OpenWrt の sqm-scripts パッケージで使えます。それでも発生する場合は回線自体が満杯なので、より速いプランが有効です。",
 
   "manual.dns_server.title": "別の DNS サーバーを使用する",
   "manual.dns_server.body": "使用中の DNS サーバーにエラーまたはタイムアウトがあります。Windows またはルーターで、1.1.1.1 や 8.8.8.8 などのパブリック DNS を設定してください。",
+
+  "manual.tunnel_route.title": "遠方の宛先にはトンネルの利用を検討",
+  "manual.tunnel_route.body": "一部の宛先は他よりはるかに遠回りの経路を通っており、原因はこの PC ではなくプロバイダーの経路です。信頼できるトンネルサービスなら近い経路を通れることがありますが、近くの宛先が遅くなる場合があります。完了としてマークすると、アプリが前後の接続状態を比較します。効果がなければトンネルをオフにしてください。",
 
   "manual.event.done": "完了としてマークしました: {step}",
 
@@ -545,6 +581,7 @@
 
   "event.dns_observed": "このネットワークの DNS サーバー: {servers}",
   "event.dns_changed": "このネットワークの DNS サーバーが変更されました: {old} → {new}",
+  "event.dns_app_changed": "このアプリがこのネットワークの DNS サーバーを変更しました：{servers}",
 
   "notify.dns_changed.title": "DNS サーバーが変更されました",
 
