@@ -265,6 +265,7 @@
   "server.action.no_wifi_card": "không tìm thấy card Wi‑Fi",
 
   "elevation.not_admin": "tiến trình không có quyền Administrator",
+  "elevation.not_installed": "Muốn thay đổi cài đặt Windows, Ambysto Steady phải được cài cho mọi người dùng (trong Program Files). Mở app đã tải về một lần để cài.",
   "elevation.unknown_tweak": "không có tweak '{tweak}' trong danh mục",
   "elevation.cancelled": "Đã hủy: không cấp quyền Administrator",
   "elevation.launch_failed": "Không khởi chạy được tiến trình quyền Admin (lỗi {error})",
@@ -748,8 +749,14 @@
   "ui.failover.kind.ethernet": "Dây mạng",
   "ui.failover.kind.other": "Khác",
 
-  "installer.confirm_install": "Cài Ambysto Steady cho người dùng Windows này?\n\nThư mục: {target}\nMonitor mạng sẽ chạy cùng Windows, app có trong Start menu và khay hệ thống. Không cần quyền Administrator.",
-  "installer.confirm_uninstall": "Gỡ Ambysto Steady?\n\nMọi tối ưu app đã bật sẽ được khôi phục về giá trị gốc trước (Windows có thể hỏi quyền Administrator một lần).",
+  "installer.confirm_install": "Cài Ambysto Steady cho mọi người dùng của máy này?\n\nThư mục: {target}\nWindows sẽ hỏi quyền Administrator một lần. Monitor mạng sẽ chạy cùng Windows cho bạn, app có trong Start menu và khay hệ thống.",
+  "installer.confirm_uninstall": "Gỡ Ambysto Steady?\n\nMọi tối ưu app đã bật sẽ được khôi phục về giá trị gốc trước. Windows sẽ hỏi quyền Administrator một lần.",
+  "installer.step.machine_uninstall": "Đưa mọi tối ưu về như cũ và gỡ chương trình cho mọi người dùng (cần quyền Administrator)",
+  "installer.step.startup": "Hiện biểu tượng ở khay hệ thống khi đăng nhập",
+  "installer.step.shortcut_all": "Tạo lối tắt Start menu cho mọi người dùng",
+  "installer.step.legacy": "Gỡ bản cũ chỉ cài cho người dùng này: {folder}",
+  "installer.step.machine": "Cài chương trình cho mọi người dùng vào {target} (cần quyền Administrator)",
+  "installer.packaged_only": "Chỉ cài được từ bản app đóng gói.",
   "installer.ask_delete_data": "Xóa luôn số liệu đo, cài đặt và log?\n\n{folder}\n\nChọn No để giữ lại cho lần cài sau.",
   "installer.installed": "Đã cài Ambysto Steady.",
   "installer.install_failed": "Cài đặt chưa hoàn tất.",
@@ -761,16 +768,13 @@
 
   "installer.step.copy": "Chép chương trình vào {target}",
   "installer.step.task": "Cho monitor mạng chạy cùng Windows",
-  "installer.step.shortcuts": "Tạo lối tắt trong Start menu và khay hệ thống",
   "installer.step.register": "Thêm vào Apps & features",
   "installer.step.start": "Chạy monitor và mở cửa sổ",
   "installer.step.stop": "Dừng app và monitor",
-  "installer.step.restore": "Khôi phục mọi tối ưu về giá trị gốc",
+  "installer.step.retire_task": "Dừng và gỡ task monitor đang chạy một bản khác của app",
   "installer.step.unshortcut": "Xóa lối tắt",
-  "installer.step.unregister": "Xóa khỏi Apps & features",
   "installer.step.data": "Xóa số liệu đo, cài đặt và log",
   "installer.step.keep_data": "Giữ số liệu đo, cài đặt và log",
-  "installer.step.remove": "Xóa thư mục chương trình {target}",
 
   "installer.not_installed": "Không gỡ: {folder} không phải bản Ambysto Steady đã cài.",
 

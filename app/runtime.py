@@ -30,6 +30,33 @@ def install_dir() -> Path:
     return Path(sys.executable).resolve().parent if FROZEN else config.ROOT
 
 
+def program_files() -> Path:
+    from . import winutil
+    return Path(winutil.known_folder(winutil.FOLDERID_PROGRAM_FILES))
+
+
+def protected_dir() -> Path:
+    """Where the app is installed for all users: <Program Files>\\Ambysto Steady (ADR-0019)."""
+    return program_files() / APP_NAME
+
+
+def is_protected(folder: Path) -> bool:
+    """True for the app's own folder under Program Files (or inside it), which a process without Admin rights
+    cannot write (ADR-0019): the only place the packaged exe may run elevated from. Not any folder under
+    Program Files: other software sometimes makes its own folder there writable."""
+    try:
+        Path(folder).resolve().relative_to(protected_dir().resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def elevation_allowed() -> bool:
+    """May this copy ask for UAC to change Windows settings? From source always (development); the
+    packaged exe only from a protected install folder (ADR-0019)."""
+    return not FROZEN or is_protected(install_dir())
+
+
 def command(role: str, *args: str, exe: Path | None = None) -> tuple[Path, list[str], Path]:
     """(program, arguments, working directory) to start `role`. `exe` points at a packaged
     exe somewhere else (the installer registers the copy it is about to create)."""

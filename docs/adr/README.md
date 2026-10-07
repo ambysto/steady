@@ -22,3 +22,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0016](0016-measured-tweaks.md) | Measured tweaks: measure first, derive the value, keep the measurement with the backup | Accepted |
 | [0017](0017-validate-backup-before-restore.md) | The elevated helper validates every backup entry against the tweak's own domain before restoring it | Accepted (amended by 0018) |
 | [0018](0018-backups-in-hklm.md) | Backups live in HKLM, where only the elevated side can write (amends 0017) | Accepted |
+| [0019](0019-per-machine-install.md) | Install for all users under Program Files; elevated code only runs from there | Accepted |

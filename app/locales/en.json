@@ -267,6 +267,7 @@
   "server.action.no_wifi_card": "No Wi‑Fi card found",
 
   "elevation.not_admin": "The process does not have Administrator rights",
+  "elevation.not_installed": "Changing Windows settings needs Ambysto Steady installed for all users (under Program Files). Open the downloaded app once to install it.",
   "elevation.unknown_tweak": "There is no tweak '{tweak}' in the catalog",
   "elevation.cancelled": "Cancelled: Administrator rights were not granted",
   "elevation.launch_failed": "Could not start the Administrator process (error {error})",
@@ -750,8 +751,14 @@
   "ui.failover.kind.ethernet": "Cable",
   "ui.failover.kind.other": "Other",
 
-  "installer.confirm_install": "Install Ambysto Steady for this Windows user?\n\nFolder: {target}\nThe network monitor will start with Windows, and the app will appear in the Start menu and the notification area. No Administrator rights are needed.",
-  "installer.confirm_uninstall": "Uninstall Ambysto Steady?\n\nEvery optimization the app turned on is put back to its original value first (Windows may ask for Administrator approval once).",
+  "installer.confirm_install": "Install Ambysto Steady for all users of this PC?\n\nFolder: {target}\nWindows will ask for Administrator approval once. The network monitor will start with Windows for you, and the app will appear in the Start menu and the notification area.",
+  "installer.confirm_uninstall": "Uninstall Ambysto Steady?\n\nEvery optimization the app turned on is put back to its original value first. Windows asks for Administrator approval once.",
+  "installer.step.machine_uninstall": "Put every optimization back and remove the program for all users (Administrator approval)",
+  "installer.step.startup": "Show the tray icon at sign-in",
+  "installer.step.shortcut_all": "Add the Start menu shortcut for all users",
+  "installer.step.legacy": "Remove the earlier copy installed for this user only: {folder}",
+  "installer.step.machine": "Install the program for all users in {target} (Administrator approval)",
+  "installer.packaged_only": "Installing works from the packaged app only.",
   "installer.ask_delete_data": "Also delete the measurements, settings and logs?\n\n{folder}\n\nChoose No to keep them for a later reinstall.",
   "installer.installed": "Ambysto Steady is installed.",
   "installer.install_failed": "Installation did not finish.",
@@ -763,16 +770,13 @@
 
   "installer.step.copy": "Copy the program to {target}",
   "installer.step.task": "Start the network monitor with Windows",
-  "installer.step.shortcuts": "Add Start menu and notification-area shortcuts",
   "installer.step.register": "Add to Apps & features",
   "installer.step.start": "Start the monitor and open the window",
   "installer.step.stop": "Stop the app and the monitor",
-  "installer.step.restore": "Put every optimization back to its original value",
+  "installer.step.retire_task": "Stop and remove a monitor task that runs another copy of the app",
   "installer.step.unshortcut": "Remove the shortcuts",
-  "installer.step.unregister": "Remove from Apps & features",
   "installer.step.data": "Delete measurements, settings and logs",
   "installer.step.keep_data": "Keep measurements, settings and logs",
-  "installer.step.remove": "Remove the program folder {target}",
 
   "installer.not_installed": "Not uninstalling: {folder} is not an installed copy of Ambysto Steady.",
 
