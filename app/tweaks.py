@@ -7,7 +7,8 @@ See docs/adr/0003-tweak-framework.md. In short:
            default if the tweak has one, otherwise refuse and leave things alone
 
 Tweaks are declarations built from four primitive kinds (adapter advanced property,
-HKLM DWORD, powercfg AC/DC index, adapter binding). The catalog itself lives in CATALOG.
+HKLM DWORD, powercfg AC/DC index, adapter binding), plus measured tweaks whose value comes
+from a calibration of the network in use (ADR-0015). The catalog itself lives in CATALOG.
 
     python -m app.tweaks list
     python -m app.tweaks enable <id>             # dry run: shows the plan
@@ -25,7 +26,7 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from . import config, i18n, winutil
+from . import calibration, config, i18n, winutil
 from .i18n import msg
 from .winsys import System
 
@@ -280,10 +281,143 @@ class BindingTweak(Tweak):
         return (original["adapter"], original["component"], bool(original["enabled"]))
 
 
+class MeasuredTweak(Tweak):
+    """A tweak whose target comes from a calibration of the network in use (ADR-0015).
+    Never applied without one; the value is clamped here, whatever calibration.json says,
+    because the elevated helper reads that user-writable file itself."""
+
+    kind = ""
+
+    def __init__(self, id: str, name: Message, risk: str, *,
+                 load_calibration: Callable[[], dict] = config.load_calibration,
+                 clock: Callable[[], float] = time.time, **kw: Any) -> None:
+        super().__init__(id, name, risk, **kw)
+        self._load_calibration, self._clock = load_calibration, clock
+
+    def _network(self, sys_: System) -> dict[str, Any]:
+        net = sys_.current_network()
+        if not net:
+            raise Unsupported(msg("tweak.reason.no_network"))
+        return net
+
+    def _calibration(self, sys_: System, *, fresh: bool) -> tuple[dict[str, Any], dict[str, Any]]:
+        """(network, calibration entry) for the network in use. fresh: also refuse an old one."""
+        net = self._network(sys_)
+        entry = calibration.get(self.kind, self._load_calibration)
+        if entry is None:
+            raise Unsupported(msg(f"tweak.reason.measure_first.{self.kind}"))
+        if entry.get("network") != net["key"]:
+            raise Unsupported(msg(f"tweak.reason.measured_elsewhere.{self.kind}"))
+        if fresh and not calibration.usable(entry, net["key"], self._clock()):
+            raise Unsupported(msg(f"tweak.reason.measure_again.{self.kind}"))
+        return net, entry
+
+    @staticmethod
+    def _when(entry: dict[str, Any]) -> str:
+        return time.strftime("%Y-%m-%d", time.localtime(int(entry.get("measured_at") or 0)))
+
+
+class UploadLimitTweak(MeasuredTweak):
+    """Host-side upload limit just below the measured line rate: the queue then builds in this
+    PC instead of the router, so latency under load stays low. One QoS policy owned by the app;
+    no policy is Windows' default, so it can always be removed without a backup."""
+
+    kind = "upload_mbps"
+    POLICY = "AmbystoSteadyUpload"
+    RATIO = 0.85
+    LOW, HIGH = 2_000_000, 1_000_000_000       # bits per second
+    DRIFT = 0.15
+
+    def _target(self, entry: dict[str, Any]) -> int:
+        return max(self.LOW, min(self.HIGH, int(float(entry["value"]) * 1_000_000 * self.RATIO)))
+
+    def read(self, sys_: System) -> Reading:
+        cur = sys_.qos_throttle_get(self.POLICY)
+        try:
+            _, entry = self._calibration(sys_, fresh=cur is None)
+        except Unsupported as exc:
+            if cur is None:
+                return Reading(False, False, None, exc.message)
+            return Reading(True, True, cur / 1_000_000, exc.message)    # on, but no calibration for this network
+        target = self._target(entry)
+        source = msg("tweak.upload_shaping.source", mbps=float(entry["value"]), date=self._when(entry),
+                     limit=target / 1_000_000)
+        if cur is None:
+            return Reading(True, False, None, source)
+        if abs(target - cur) > self.DRIFT * cur:
+            return Reading(True, True, cur / 1_000_000, msg("tweak.reason.drift", source=source))
+        return Reading(True, True, cur / 1_000_000, source)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return {"policy": self.POLICY, "rate": sys_.qos_throttle_get(self.POLICY)}
+
+    def apply(self, sys_: System) -> None:
+        _, entry = self._calibration(sys_, fresh=True)
+        sys_.qos_throttle_set(self.POLICY, self._target(entry))
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None or original.get("rate") is None:
+            sys_.qos_policy_remove(self.POLICY)
+        else:
+            sys_.qos_throttle_set(self.POLICY, int(original["rate"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        rate = original["rate"]
+        return (original["policy"], None if rate is None else int(rate))
+
+
+class PathMtuTweak(MeasuredTweak):
+    """IPv4 MTU of the measured interface lowered to the measured path MTU (PPPoE lines carry
+    1492-byte packets). Only ever lowers it; the driver's own value is unknown without a backup."""
+
+    kind = "path_mtu"
+    has_default_restore = False
+    LOW, HIGH = 1280, 1500
+
+    def _target(self, entry: dict[str, Any]) -> int:
+        return max(self.LOW, min(self.HIGH, int(entry["value"])))
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            net = self._network(sys_)
+            cur = sys_.interface_mtu_get(net["interface_index"])
+            try:
+                _, entry = self._calibration(sys_, fresh=False)
+            except Unsupported:
+                if cur < self.HIGH:     # already lowered (by us or by hand): count it as on
+                    return Reading(True, True, cur, msg("tweak.reason.measure_first.path_mtu"))
+                raise
+            target = self._target(entry)
+            enabled = cur <= target
+            if not enabled and not calibration.usable(entry, net["key"], self._clock()):
+                raise Unsupported(msg("tweak.reason.measure_again.path_mtu"))
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        return Reading(True, enabled, cur, msg("tweak.mtu_path.source", mtu=target, date=self._when(entry)))
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        idx = self._network(sys_)["interface_index"]
+        return {"interface_index": idx, "mtu": sys_.interface_mtu_get(idx)}
+
+    def apply(self, sys_: System) -> None:
+        net, entry = self._calibration(sys_, fresh=True)
+        target = self._target(entry)
+        if target < sys_.interface_mtu_get(net["interface_index"]):
+            sys_.interface_mtu_set(net["interface_index"], target)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_mtu"))
+        sys_.interface_mtu_set(int(original["interface_index"]), int(original["mtu"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return (int(original["interface_index"]), int(original["mtu"]))
+
+
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
-                 "binding_get")
+                 "binding_get", "current_network", "qos_throttle_get", "interface_mtu_get")
 
 
 class _CachedReads:
@@ -605,7 +739,7 @@ GROUP_WIFI, GROUP_POWER, GROUP_STACK = (msg("tweak.group.wifi_card"), msg("tweak
                                         msg("tweak.group.stack"))
 
 
-def build_catalog() -> list[Tweak]:
+def build_catalog(load_calibration: Callable[[], dict] = config.load_calibration) -> list[Tweak]:
     return [
         # 1. Wi-Fi card (driver advanced properties). Property names vary by chip vendor.
         AdapterPropertyTweak("wifi_power_saving", _name("wifi_power_saving"), "low",
@@ -647,6 +781,11 @@ def build_catalog() -> list[Tweak]:
                            group=GROUP_STACK, needs_reboot=True, note=_note("tcp_timedwait")),
         BindingTweak("ipv6_off", _name("ipv6_off"), "experimental", component="ms_tcpip6", enabled=False,
                      group=GROUP_STACK, note=_note("ipv6_off")),
+        # 3b. Measured: the value comes from a calibration of the network in use (ADR-0015)
+        UploadLimitTweak("upload_shaping", _name("upload_shaping"), "medium", group=GROUP_STACK,
+                         note=_note("upload_shaping"), load_calibration=load_calibration),
+        PathMtuTweak("mtu_path", _name("mtu_path"), "medium", group=GROUP_STACK, note=_note("mtu_path"),
+                     load_calibration=load_calibration),
     ]
 
 

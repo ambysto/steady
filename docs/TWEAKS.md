@@ -36,6 +36,15 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 | `tcp_timedwait` | Shorten TIME_WAIT | `HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\TcpTimedWaitDelay` = 30 | medium | 🔁🛡 Reduces port exhaustion errors (Tcpip event 4227). Original does not exist ⇒ restored by deleting the value |
 | `ipv6_off` | Turn off IPv6 on Wi‑Fi | `Disable-NetAdapterBinding -ComponentID ms_tcpip6` | experimental | 🔌🛡 Only try when the router's IPv6/IPv6 DNS is suspected of causing slowness |
 
+### 3b. Measured tweaks
+
+The value comes from a measurement of the network in use, never from a constant: see [ADR-0015](adr/0015-measured-tweaks.md). Without a calibration for the network in use (or with one older than 30 days) the tweak is "not supported — measure first". Calibrations live in `data/calibration.json`; a measurement taken while the tweak is on does not replace them. Values are clamped in the tweak whatever the file says.
+
+| ID | Name | Target value | Risk | Notes |
+|---|---|---|---|---|
+| `upload_shaping` | Limit upload just below the line rate | QoS policy `AmbystoSteadyUpload` (`New-NetQosPolicy -IPProtocolMatchCondition Both -ThrottleRateActionBitsPerSecond`) = 85% of the upload rate measured by check #14, clamped to 2–1000 Mbps | medium | 🛡 The queue builds in the PC instead of the router, so latency under upload stays low (by hand on the development PC: maximum latency while uploading 1880 → 403 ms). Only the upload direction can be fixed from the PC; download needs SQM on the router (manual step `router_sqm`). Also caps uploads inside the home network (NAS). Restore without a backup = remove the app's policy (Windows has none by default). Never touches other policies |
+| `mtu_path` | Match the MTU to the line | `Set-NetIPInterface -NlMtuBytes` on the measured interface = the path MTU measured by check #15, 1280–1500, only ever lower than the current value | medium | 🛡 A PPPoE line carries 1492-byte packets; at 1500, large packets are lost wherever "fragmentation needed" is filtered (pages hang half-loaded). No safe default without a backup ⇒ refuse |
+
 ## 4. Tool features
 
 | ID | Name | Mechanism | Notes |
@@ -46,7 +55,7 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 
 ## Candidates not yet included (need evaluation)
 
-- Change the DNS server based on benchmark results (for now only shown in Diagnostics).
+- Change the DNS server based on benchmark results (for now only shown in Diagnostics) — planned as a measured tweak (ADR-0015).
 - Limit Delivery Optimization / Windows Update background bandwidth.
 - Turn off QoS Packet Scheduler, Network Throttling Index — unclear effect, easily becomes a "placebo tweak".
 - Change driver (rollback) directly in the tool — high risk, currently only guided via Device Manager.

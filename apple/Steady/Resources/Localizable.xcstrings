@@ -8236,6 +8236,142 @@
         }
       }
     },
+    "diag.path_mtu.advice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on the tweak \"Match the MTU to the line\". Typical of PPPoE lines (1492)."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật tối ưu \"Khớp MTU với đường truyền\". Thường gặp ở đường PPPoE (1492)."
+          }
+        }
+      }
+    },
+    "diag.path_mtu.measured" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Largest packet that gets through: %1$@ bytes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói lớn nhất đi qua được: %1$@ byte"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.no_reply" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No reply to large pings, so the packet size cannot be measured (ICMP may be blocked)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có phản hồi cho ping cỡ lớn nên không đo được kích thước gói (có thể ICMP bị chặn)"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Full-size packets (%1$@ bytes) get through"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói kích thước đầy đủ (%1$@ byte) đi qua được"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.ok_lowered" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The MTU in use (%1$@) fits the line"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU đang dùng (%1$@) khớp với đường truyền"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: largest packet that got through %2$@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: gói lớn nhất đi qua được %2$@"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Packet size (MTU)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kích thước gói (MTU)"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.too_big" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Packets larger than %1$@ bytes are lost, but this connection sends up to %2$@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói lớn hơn %1$@ byte bị mất, nhưng kết nối này gửi tới %2$@"
+          }
+        }
+      }
+    },
     "diag.physical_link.advice" : {
       "extractionState" : "manual",
       "localizations" : {

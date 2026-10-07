@@ -43,6 +43,9 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
+        self.network = {"key": "6|192.0.2.1|HomeNet", "interface_index": 6}
+        self.qos = {}                 # policy name -> bits per second
+        self.mtu = {6: 1500}
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -75,6 +78,18 @@ class FakeSystem:
     def binding_get(self, adapter, component):
         self._r("binding_get", adapter, component)
         return self.bindings.get((adapter, component))
+
+    def current_network(self):
+        self._r("current_network")
+        return copy.deepcopy(self.network)
+
+    def qos_throttle_get(self, name):
+        self._r("qos_throttle_get", name)
+        return self.qos.get(name)
+
+    def interface_mtu_get(self, index):
+        self._r("interface_mtu_get", index)
+        return self.mtu[index]
 
     # writes
     def _w(self, name, *args):
@@ -114,12 +129,24 @@ class FakeSystem:
         if self._w("binding_set", adapter, component, enabled):
             self.bindings[(adapter, component)] = enabled
 
+    def qos_throttle_set(self, name, rate):
+        if self._w("qos_throttle_set", name, rate):
+            self.qos[name] = rate
+
+    def qos_policy_remove(self, name):
+        if self._w("qos_policy_remove", name):
+            self.qos.pop(name, None)
+
+    def interface_mtu_set(self, index, mtu):
+        if self._w("interface_mtu_set", index, mtu):
+            self.mtu[index] = mtu
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
-        return copy.deepcopy((self.props, self.registry, self.power, self.bindings))
+        return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.qos, self.mtu))
 
 
 def power_saving():

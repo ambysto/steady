@@ -58,6 +58,11 @@ def backup_path() -> Path:
     return data_dir() / "backup.json"
 
 
+def calibration_path() -> Path:
+    """Measurements that measured tweaks take their value from (ADR-0015)."""
+    return data_dir() / "calibration.json"
+
+
 def db_path() -> Path:
     return data_dir() / "metrics.db"
 
@@ -158,6 +163,20 @@ def load_backup() -> dict[str, Any]:
 
 def save_backup(backup: dict[str, Any]) -> None:
     _write_json_atomic(backup_path(), backup)
+
+
+def load_calibration() -> dict[str, Any]:
+    """Calibrations keyed by kind (ADR-0015). A corrupt file reads as none: a measured tweak
+    then asks for a new measurement, which is safe (nothing is applied without one)."""
+    try:
+        stored = _read_json(calibration_path())
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return stored if isinstance(stored, dict) else {}
+
+
+def save_calibration(calibration: dict[str, Any]) -> None:
+    _write_json_atomic(calibration_path(), calibration)
 
 
 _backup_threads = threading.Lock()

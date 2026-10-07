@@ -42,14 +42,14 @@ def real_card_system():
 def manager(system=None):
     system = system or real_card_system()
     backup = MemoryBackup()   # one object for both directions, like backup.json
-    return TweakManager(system, tweaks.build_catalog(), load_backup=backup.load,
+    return TweakManager(system, tweaks.build_catalog(load_calibration=lambda: {}), load_backup=backup.load,
                         save_backup=backup.save, is_admin=lambda: True), system
 
 
 class CatalogMatchesDocsTests(unittest.TestCase):
     def test_ids_and_risks_match_docs_tweaks_md(self):
         docs = doc_tweaks()
-        self.assertEqual(len(docs), 13, docs)
+        self.assertEqual(len(docs), 15, docs)
         self.assertEqual({t.id: t.risk for t in tweaks.CATALOG}, docs)
 
     def test_ids_are_unique_and_names_vietnamese_present(self):

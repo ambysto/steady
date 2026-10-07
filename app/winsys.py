@@ -1,7 +1,8 @@
 """System access for tweaks - the only module that writes to the machine.
 
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
-active plan, adapter protocol bindings. Every write raises SystemWriteError on failure;
+active plan, adapter protocol bindings, the app's own QoS upload policy and an interface's IPv4
+MTU (ADR-0015). Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -22,6 +23,9 @@ NET_CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc
 _GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 _COMPONENT_RE = re.compile(r"^[A-Za-z0-9_]+$")
 _POWER_RE = re.compile(r"Current (AC|DC) Power Setting Index:\s*0x([0-9a-fA-F]+)")
+_QOS_NAME_RE = re.compile(r"^[A-Za-z0-9]+$")
+MTU_MIN, MTU_MAX = 576, 9216      # sanity only (restoring may need a jumbo-frame original); tweaks set 1280-1500
+UPLOAD_LIMIT_MIN, UPLOAD_LIMIT_MAX = 2_000_000, 1_000_000_000   # bits per second
 
 
 class SystemReadError(RuntimeError):
@@ -59,6 +63,9 @@ class System(Protocol):
     def registry_get(self, path: str, name: str) -> int | None: ...
     def power_get(self, subgroup: str, setting: str) -> tuple[int, int]: ...
     def binding_get(self, adapter: str, component: str) -> bool | None: ...
+    def current_network(self) -> dict[str, Any] | None: ...
+    def qos_throttle_get(self, name: str) -> int | None: ...
+    def interface_mtu_get(self, interface_index: int) -> int: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -67,6 +74,21 @@ class System(Protocol):
     def power_set(self, subgroup: str, setting: str, ac: int, dc: int) -> None: ...
     def interface_metric_set(self, interface_index: int, metric: int | None) -> None: ...
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None: ...
+    def qos_throttle_set(self, name: str, bits_per_second: int) -> None: ...
+    def qos_policy_remove(self, name: str) -> None: ...
+    def interface_mtu_set(self, interface_index: int, mtu: int) -> None: ...
+
+
+def _check_qos_name(name: str) -> str:
+    if not _QOS_NAME_RE.match(name):
+        raise ValueError(f"bad QoS policy name: {name!r}")
+    return name
+
+
+def _check_mtu(mtu: int) -> int:
+    if not MTU_MIN <= int(mtu) <= MTU_MAX:
+        raise ValueError(f"MTU out of range: {mtu}")
+    return int(mtu)
 
 
 def _as_list(value: Any) -> list[str]:
@@ -176,6 +198,36 @@ class WindowsSystem:
                              "-ErrorAction SilentlyContinue | Select-Object Enabled")
         return bool(rows[0]["Enabled"]) if rows else None
 
+    def current_network(self) -> dict[str, Any] | None:
+        """The network the default route uses: {"key", "interface_index"} (key as in dnswatch),
+        or None when there is no default route."""
+        from .dnswatch import network_key
+        from .winutil import default_route_native, get_wifi_state
+        route = default_route_native()
+        if not route:
+            return None
+        wifi = get_wifi_state()
+        ssid = wifi.ssid if wifi is not None and wifi.connected else None
+        return {"key": network_key(route["interface_index"], route.get("gateway"), ssid),
+                "interface_index": int(route["interface_index"])}
+
+    def qos_throttle_get(self, name: str) -> int | None:
+        """Throttle rate (bits/s) of the named QoS policy in the local store; None if absent."""
+        rows = self._ps_json(f"Get-NetQosPolicy -Name {ps_literal(_check_qos_name(name))} "
+                             "-ErrorAction SilentlyContinue | Select-Object ThrottleRateActionBitsPerSecond")
+        if not rows:
+            return None
+        rate = rows[0].get("ThrottleRateActionBitsPerSecond")
+        return int(rate) if rate else None
+
+    def interface_mtu_get(self, interface_index: int) -> int:
+        idx = int(interface_index)
+        rows = self._ps_json(f"Get-NetIPInterface -InterfaceIndex {idx} -AddressFamily IPv4 -ErrorAction Stop | "
+                             "Select-Object NlMtu")
+        if not rows:
+            raise SystemReadError(f"no IPv4 interface {idx}")
+        return int(rows[0]["NlMtu"])
+
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
         idx = int(interface_index)
@@ -250,3 +302,25 @@ class WindowsSystem:
         verb = "Enable" if enabled else "Disable"
         self._ps_write(f"{verb}-NetAdapterBinding -Name {ps_literal(adapter)} -ComponentID {component} "
                        "-ErrorAction Stop", f"{verb.lower()} {component} on {adapter}")
+
+    def qos_throttle_set(self, name: str, bits_per_second: int) -> None:
+        """Create or update the app's own policy: every outgoing TCP and UDP flow, throttled."""
+        rate = int(bits_per_second)
+        if not UPLOAD_LIMIT_MIN <= rate <= UPLOAD_LIMIT_MAX:
+            raise ValueError(f"upload limit out of range: {rate}")
+        n = ps_literal(_check_qos_name(name))
+        self._ps_write(f"if (Get-NetQosPolicy -Name {n} -ErrorAction SilentlyContinue) "
+                       f"{{ Set-NetQosPolicy -Name {n} -ThrottleRateActionBitsPerSecond {rate} -ErrorAction Stop }} "
+                       f"else {{ New-NetQosPolicy -Name {n} -IPProtocolMatchCondition Both "
+                       f"-ThrottleRateActionBitsPerSecond {rate} -ErrorAction Stop | Out-Null }}",
+                       f"setting QoS policy {name} to {rate} bit/s")
+
+    def qos_policy_remove(self, name: str) -> None:
+        n = ps_literal(_check_qos_name(name))
+        self._ps_write(f"Get-NetQosPolicy -Name {n} -ErrorAction SilentlyContinue | "
+                       "Remove-NetQosPolicy -Confirm:$false -ErrorAction Stop", f"removing QoS policy {name}")
+
+    def interface_mtu_set(self, interface_index: int, mtu: int) -> None:
+        idx = int(interface_index)
+        self._ps_write(f"Set-NetIPInterface -InterfaceIndex {idx} -AddressFamily IPv4 -NlMtuBytes {_check_mtu(mtu)} "
+                       "-ErrorAction Stop", f"setting the MTU of interface {idx}")

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from datetime import datetime
 
-from app import diagnostics, dnsprobe, i18n, winutil
+from app import diagnostics, dnsprobe, i18n, pathmtu, winutil
 from tests.localized import DiagnosticsIn
 
 d = DiagnosticsIn("vi")   # evaluate_* return Vietnamese text; see tests/localized.py
@@ -638,16 +638,18 @@ def fake_context(**overrides):
         "ping_rows_5m": lambda: [], "minutes": lambda: [minute(i) for i in range(100)],
         "dns_bench": lambda: ([bench("1.1.1.1", [40] * 5)], ["1.1.1.1"], {"1.1.1.1": "in_use"}),
         "tweak_states": lambda: None,
+        "path_mtu": lambda: pathmtu.PathMtu(1500, {"1.1.1.1": 1500}), "interface_mtu": lambda: 1500,
+        "calibrate": lambda: (lambda *a: False), "upload_limit_active": lambda: False,
     }
     loaders.update(overrides)
     return d.Context(now=NOW, loaders=loaders)
 
 
 class RunAllTests(unittest.TestCase):
-    def test_runs_all_13_in_order(self):
+    def test_runs_every_default_check_in_order(self):
         report = d.run_all(fake_context())
-        self.assertEqual([r.id for r in report.results], list(range(1, 14)))
-        self.assertEqual(len({r.key for r in report.results}), 13)
+        self.assertEqual([r.id for r in report.results], list(range(1, 14)) + [15])   # 14 is on demand
+        self.assertEqual(len({r.key for r in report.results}), 14)
         self.assertFalse([r for r in report.results if r.error])
 
     def test_a_broken_check_does_not_hide_the_others(self):
@@ -659,7 +661,7 @@ class RunAllTests(unittest.TestCase):
             self.assertEqual(by_key[key].status, d.INFO, key)
             self.assertIn("netsh died", by_key[key].error)
         self.assertIsNone(by_key["signal"].error)
-        self.assertEqual(len(report.results), 13)
+        self.assertEqual(len(report.results), 14)
 
     def test_only_filter(self):
         report = d.run_all(fake_context(), only={2, 13})

@@ -723,6 +723,34 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
     return CheckResult(**base, status=status, summary=summary, details=details, advice=advice)
 
 
+# --- 15. path MTU ---------------------------------------------------------------------------------
+
+def evaluate_path_mtu(measured: "Any", current: int | None) -> CheckResult:
+    """measured: pathmtu.PathMtu. current: IPv4 MTU of the interface in use."""
+    base = dict(id=15, key="path_mtu", title=title_of("path_mtu"))
+    details: list[Message] = [msg("diag.path_mtu.target", target=t, mtu=v if v is not None else "—")
+                              for t, v in measured.per_target.items()]
+    if measured.mtu is None:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.no_reply"), details=details)
+    if current is None:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.measured", mtu=measured.mtu),
+                           details=details)
+    if measured.mtu < current:
+        return CheckResult(**base, status=WARN, summary=msg("diag.path_mtu.too_big", mtu=measured.mtu, current=current),
+                           details=details, advice=msg("diag.path_mtu.advice"), tweak="mtu_path")
+    if current < 1500:
+        # Windows refuses DF packets above the interface MTU, so nothing above it could be seen.
+        return CheckResult(**base, status=OK, summary=msg("diag.path_mtu.ok_lowered", current=current), details=details)
+    return CheckResult(**base, status=OK, summary=msg("diag.path_mtu.ok", mtu=measured.mtu), details=details)
+
+
+def path_mtu_calibrates(measured: "Any", current: int | None) -> bool:
+    """Whether the probe saw the real limit (ADR-0015 rule 3): it is capped by the interface's own
+    MTU, so a result equal to an already lowered MTU says nothing about the line."""
+    return measured.mtu is not None and current is not None and (measured.mtu < current or current >= 1500)
+
+
+
 # --- context: lazy, cached data access ----------------------------------------------------------
 
 class Context:
@@ -749,6 +777,10 @@ class Context:
             "dns_bench": self._load_dns_bench,
             "tweak_states": self._load_tweak_states,
             "bufferbloat": self._load_bufferbloat,
+            "path_mtu": self._load_path_mtu,
+            "interface_mtu": self._load_interface_mtu,
+            "calibrate": lambda: self._calibrate,
+            "upload_limit_active": self._load_upload_limit_active,
         }
         self._loaders.update(loaders or {})
 
@@ -820,6 +852,31 @@ class Context:
             targets = {"router": gateway, **targets}
         down, up = bufferbloat.real_loads()
         return bufferbloat.measure(bufferbloat.real_ping(), targets, down, up)
+
+    def _load_path_mtu(self) -> Any:
+        from . import pathmtu
+        return pathmtu.measure(pathmtu.icmp_ping())
+
+    def _load_interface_mtu(self) -> int | None:
+        from .winsys import WindowsSystem
+        uplink = self.get("uplink")
+        return WindowsSystem().interface_mtu_get(uplink["interface_index"]) if uplink else None
+
+    def _load_upload_limit_active(self) -> bool:
+        from .tweaks import UploadLimitTweak
+        from .winsys import WindowsSystem
+        return WindowsSystem().qos_throttle_get(UploadLimitTweak.POLICY) is not None
+
+    def _calibrate(self, kind: str, value: float, detail: dict[str, Any], tweak_active: bool) -> bool:
+        """Store a measurement for the measured tweaks (ADR-0015), tied to the network in use. Only a
+        run with storage (the app, the CLI) records: a bare Context is a test or a one-off probe."""
+        if self.storage is None:
+            return False
+        from . import calibration
+        from .winsys import WindowsSystem
+        net = WindowsSystem().current_network()
+        return calibration.record(kind, value, net["key"] if net else None, self.now, detail=detail,
+                                  tweak_active=tweak_active)
 
     def _load_tweak_states(self) -> dict[str, dict] | None:
         try:
@@ -896,6 +953,13 @@ def check_link(ctx: Context) -> CheckResult:
     return evaluate_link(ctx.get("minutes"), ctx.now)
 
 
+def check_path_mtu(ctx: Context) -> CheckResult:
+    measured, current = ctx.get("path_mtu"), ctx.get("interface_mtu")
+    if path_mtu_calibrates(measured, current):
+        _record(ctx, "path_mtu", measured.mtu, {"per_target": measured.per_target}, lambda: False)
+    return evaluate_path_mtu(measured, current)
+
+
 # (id, key, function). The title of each is the message "diag.<key>.title".
 CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (1, "driver", check_driver),
@@ -911,11 +975,39 @@ CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (11, "wifi7_mlo", check_mlo),
     (12, "modem_wifi", check_modem_wifi),
     (13, "physical_link", check_link),
+    (15, "path_mtu", check_path_mtu),
 ]
 
 
 def check_bufferbloat(ctx: Context) -> CheckResult:
-    return evaluate_bufferbloat(ctx.get("bufferbloat"))
+    m = ctx.get("bufferbloat")
+    result = evaluate_bufferbloat(m)
+    up = m.upload
+    if up.mbps and up.mbps >= BLOAT_MIN_MBPS and not up.error:
+        _record(ctx, "upload_mbps", float(up.mbps), {"download_mbps": m.download.mbps},
+                lambda: bool(ctx.get("upload_limit_active")))
+    if result.status in (WARN, BAD) and _upload_is_worse(result):
+        result = replace(result, tweak="upload_shaping")
+    return result
+
+
+def _upload_is_worse(result: CheckResult) -> bool:
+    """The upload phase is (one of) the worst: the only direction a PC-side limit can help."""
+    for d in result.details:
+        if not isinstance(d, dict) or d.get("key") not in ("diag.bufferbloat.line", "diag.bufferbloat.all_lost"):
+            continue
+        params = d.get("params", {})
+        if params.get("phase", {}).get("key") == "diag.bufferbloat.upload" and                 params.get("delta", float("inf")) >= BLOAT_WARN_MS:
+            return True
+    return False
+
+
+def _record(ctx: Context, kind: str, value: float, detail: dict[str, Any], active: Callable[[], bool]) -> None:
+    """A failure to store a calibration must not change the check's result."""
+    try:
+        ctx.get("calibrate")(kind, value, detail, active())
+    except Exception:
+        pass
 
 
 # Checks that generate real traffic: never part of the default run, only when asked for by number.
