@@ -87,7 +87,7 @@ def run_elevated(op: str, value: str, *, measurement: dict[str, Any] | None = No
                  timeout_s: float = 180, launcher: Launcher = shell_execute_wait,
                  module: str = "app.elevated") -> ElevationResult:
     """Prompts UAC, runs `python -m app.elevated <op> <value>` (packaged: `<exe> elevated <op> <value>`),
-    returns its JSON outcome. `measurement` goes along for a measured tweak (ADR-0015)."""
+    returns its JSON outcome. `measurement` goes along for a measured tweak (ADR-0016)."""
     if op not in OPS:
         raise ValueError(f"unknown elevated operation {op!r}")
     from . import calibration, runtime

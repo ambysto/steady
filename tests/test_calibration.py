@@ -1,4 +1,4 @@
-"""Measured tweaks (ADR-0015): the measurement, the upload limit derived from it, and the
+"""Measured tweaks (ADR-0016): the measurement, the upload limit derived from it, and the
 measure -> enable -> measure-again flow. Everything runs on fakes; nothing touches the network."""
 import os
 import tempfile

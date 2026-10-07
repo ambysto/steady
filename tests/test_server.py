@@ -475,7 +475,7 @@ class WriteApiTests(ServerTestCase):
 
 
 class MeasuredTweakApiTests(ServerTestCase):
-    """upload_shaping (ADR-0015): measure, refuse before UAC, enable with the measurement, measure again."""
+    """upload_shaping (ADR-0016): measure, refuse before UAC, enable with the measurement, measure again."""
 
     def setUp(self):
         super().setUp()

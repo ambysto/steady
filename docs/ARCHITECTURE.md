@@ -32,7 +32,7 @@
 | `monitor.py` | Ping thread per target, reads Wi‑Fi state, detects incidents, aggregates per-minute statistics |
 | `watchdog.py` | Automatic recovery when an incident persists — see [WATCHDOG.md](WATCHDOG.md) |
 | `tweaks.py` | Toggle catalog and the `read / capture / apply / restore` framework — see [TWEAKS.md](TWEAKS.md) |
-| `calibration.py` | The measurement behind a measured tweak's value: validation, network id, staleness, the before/after verdict ([ADR-0015](adr/0015-measured-tweaks.md)) |
+| `calibration.py` | The measurement behind a measured tweak's value: validation, network id, staleness, the before/after verdict ([ADR-0016](adr/0016-measured-tweaks.md)) |
 | `diagnostics.py` | Diagnostic checks — see [DIAGNOSTICS.md](DIAGNOSTICS.md) |
 | `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
 | `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
@@ -48,7 +48,7 @@
 | `installer.py`, `entry.py` | Packaged build `Ambysto Steady.exe` (PyInstaller, bundles Python): subcommands `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; per-user install into `%LOCALAPPDATA%\Programs`, uninstall first restores every tweak + metric. Data of the packaged build lives in `%LOCALAPPDATA%\StableInternet\data` |
 | `impact.py` | Measures the effect of a change (tweak, manual step) using monitor data before/after — [ADR-0007](adr/0007-measured-impact.md) |
 | `suggestions.py` | Suggestions from the latest diagnostic run: tweaks + manual steps (rotate the antenna, turn off the modem's Wi‑Fi…), "I did this" |
-| `dnswatch.py` | Detects DNS being changed on the same network (read-only), warns via an event + toast |
+| `dnswatch.py` | Detects DNS being changed on the same network (read-only), warns via an event + toast; a change the app made itself (`dns_fastest`, ADR-0015) is only recorded |
 | `i18n.py`, `locales/*.json` | Translations (ADR-0006): `t(key, **params)`, `msg()` to store messages for later translation, `format_duration()`; English is the reference and fallback |
 
 ## Monitored targets

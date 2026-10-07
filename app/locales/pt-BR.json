@@ -208,6 +208,14 @@
   "diag.bufferbloat.rise": "A latência até a Internet sobe {amount} quando a linha está ocupada{where}",
   "diag.bufferbloat.advice": "Ative SQM / QoS inteligente (fq_codel ou CAKE) no roteador e defina os limites de upload/download cerca de 5–10% abaixo da banda real. Se o roteador não tiver SQM, reduza a velocidade de upload do aplicativo que causa a carga.",
 
+  "diag.route.title": "Rota até destinos distantes",
+  "diag.route.no_data": "Não foi possível comparar as rotas: menos de 3 sites de referência responderam",
+  "diag.route.tunnel_on": "Há uma VPN ou túnel ativo, então as rotas medidas são as do túnel, não as do provedor",
+  "diag.route.line": "{host}: {median:.0f} ms (conexão TCP)",
+  "diag.route.ok": "Todos os sites de referência respondem em tempo parecido (o mais próximo, {near:.0f} ms)",
+  "diag.route.detour": "Alguns sites de referência seguem um caminho bem mais longo que os demais (o mais próximo, {near:.0f} ms): {hosts}",
+  "diag.route.advice": "Isso costuma apontar para a rota do provedor até esses destinos, não para este PC. Nada no PC resolve: um serviço de túnel pode seguir um caminho mais curto (mas pode deixar sites próximos mais lentos), ou fale com o provedor.",
+
   "diag.cli.header": "Diagnóstico em {time} — geral: {status}",
   "diag.cli.saved": "Execução nº {run_id} salva",
   "diag.cli.compared": "Comparado com a execução anterior ({time}):",
@@ -276,6 +284,7 @@
   "tweak.group.wifi_card": "Placa Wi‑Fi",
   "tweak.group.power": "Energia do Windows",
   "tweak.group.stack": "Pilha de rede",
+  "tweak.group.measured": "Medido na sua rede",
 
   "tweak.wifi_power_saving.name": "Desativar a economia de energia da placa",
   "tweak.wifi_power_saving.note": "Uma causa comum de quedas intermitentes",
@@ -294,6 +303,12 @@
   "tweak.wifi_mode_ac.name": "Forçar Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Experimente quando suspeitar de problema de compatibilidade Wi‑Fi 6 entre a placa e o roteador",
 
+  "tweak.wifi_prefer_5g.name": "Preferir a banda de 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Move para 5 GHz uma placa que fica presa em 2,4 GHz quando há sinal, e continua voltando para 2,4 GHz em outros lugares. Disponível apenas quando a sua rede tem um ponto de acesso de 5 GHz",
+
+  "tweak.wifi_tx_power_max.name": "Potência de transmissão máxima",
+  "tweak.wifi_tx_power_max.note": "Mantém a placa no nível máximo de transmissão em vez de deixar o driver reduzi-lo. Um pouco mais de calor e de consumo de bateria em um notebook",
+
   "tweak.device_power_off.name": "Não permitir que o Windows desligue a placa",
   "tweak.device_power_off.note": "Tem efeito após reiniciar a placa ou o PC",
 
@@ -308,16 +323,51 @@
 
   "tweak.ipv6_off.name": "Desativar o IPv6 no Wi‑Fi",
   "tweak.ipv6_off.note": "Experimente apenas quando suspeitar que o IPv6 do roteador ou o DNS IPv6 deixa tudo lento",
+  "tweak.upload_shaping.name": "Limitar a velocidade de upload para manter a latência baixa sob carga",
+  "tweak.upload_shaping.note": "Primeiro mede seu upload e depois o limita a 85% para que a fila fique no PC e não no modem. Só upload: o sentido de download só pode ser limitado no roteador (SQM)",
+  "tweak.upload_shaping.value": "limitado a {limit:.1f} Mbps (85% dos {upload:.1f} Mbps de upload medidos)",
+  "tweak.upload_shaping.refused.weak": "A medição não carregou a linha o suficiente ({mbps:.1f} Mbps, {samples} amostras); tente de novo",
+  "tweak.upload_shaping.refused.not_needed": "A latência sobe só {rise:.0f} ms durante o upload; nada a corrigir, então nada foi alterado",
+  "tweak.upload_shaping.refused.bounds": "Um limite de {cap:.1f} Mbps está fora da faixa segura ({low:.0f}–{high:.0f} Mbps); nada foi alterado",
+
+  "tweak.tcp_ecn.name": "Ativar o TCP ECN",
+  "tweak.tcp_ecn.note": "Experimental: os roteadores podem sinalizar congestionamento em vez de descartar pacotes, o que pode reduzir a latência sob carga. Alguns dispositivos no caminho tratam mal pacotes ECN; deixe desativado, a menos que uma medição antes/depois mostre ganho",
+
+  "tweak.rsc_off.name": "Desativar o Receive Segment Coalescing na placa Wi‑Fi",
+  "tweak.rsc_off.note": "Experimental: os pacotes recebidos chegam ao Windows um a um, o que pode reduzir a latência ao custo de um pouco de velocidade e mais uso de CPU. Para restaurar é preciso o backup",
+
+  "tweak.packet_coalescing_off.name": "Desativar o Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "Experimental: a placa deixa de segurar os pacotes recebidos para economizar energia: latência menor e um pouco mais de consumo. Para restaurar é preciso o backup",
+
+  "tweak.dns_fastest.name": "Usar o DNS público mais rápido por HTTPS",
+  "tweak.dns_fastest.note": "Mede Cloudflare, Google e Quad9 e usa os dois provedores mais rápidos, criptografados com DoH. Ao desativar, o DNS da própria rede volta. Não é oferecido com VPN, em rede de domínio, com sufixo DNS ou atrás de um portal cativo",
 
   "tweak.reason.no_wifi_card": "Nenhuma placa Wi‑Fi encontrada",
   "tweak.reason.no_matching_value": "'{property}' não tem um valor adequado (disponíveis: {values})",
   "tweak.reason.no_property": "A placa não possui esta propriedade",
+  "tweak.reason.not_connected": "Não conectado a uma rede Wi‑Fi",
+  "tweak.reason.bands_unknown": "A última varredura do Windows não mostra quais bandas “{ssid}” usa",
+  "tweak.reason.no_5ghz": "“{ssid}” não tem nenhum ponto de acesso de 5 GHz ao alcance",
   "tweak.reason.multi_value": "'{property}' tem um valor de várias partes, não suportado",
   "tweak.reason.no_registry_key": "Chave do Registro não encontrada",
   "tweak.reason.no_binding": "A placa não tem o vínculo {component}",
   "tweak.reason.unreadable": "Não foi possível ler o estado",
+  "tweak.reason.needs_measurement": "É preciso medir esta rede primeiro",
   "tweak.reason.no_default_registry": "Sem backup, e o valor padrão é desconhecido",
   "tweak.reason.no_default_powercfg": "O powercfg não tem valor padrão conhecido; é necessário um backup",
+  "tweak.reason.no_tcp_setting": "O Windows não informa '{setting}'",
+  "tweak.reason.no_default_tcp": "Sem backup e o valor padrão é desconhecido",
+  "tweak.reason.no_rsc": "Esta placa não oferece suporte ao Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "Sem backup; a configuração original da placa é desconhecida",
+  "tweak.reason.no_offload_setting": "O Windows não informa '{setting}'",
+  "tweak.reason.no_default_offload": "Nenhum valor padrão conhecido; é preciso um backup",
+  "tweak.reason.no_uplink": "Não há conexão de rede cujo DNS possa ser alterado",
+  "tweak.reason.dns_vpn": "Há uma VPN ativa; o DNS dela é deixado como está",
+  "tweak.reason.dns_domain": "Este PC está em um domínio ou a rede tem sufixo DNS; nomes internos precisam do DNS da própria rede",
+  "tweak.reason.dns_static_v6": "O adaptador de rede tem um servidor DNS IPv6 estático, que a restauração apagaria",
+  "tweak.reason.dns_captive": "A rede parece um portal cativo (uma página de login)",
+  "tweak.reason.dns_no_fast_servers": "A medição não encontrou dois provedores de DNS público que respondam de forma confiável; nada foi alterado",
+  "tweak.reason.no_default_dns": "Sem backup; as configurações originais de DNS são desconhecidas",
 
   "tweak.result.read_failed": "Não foi possível ler o estado: {error}",
   "tweak.result.unsupported": "Não suportado neste PC: {reason}",
@@ -341,6 +391,9 @@
   "tweak.result.restore_mismatch": "Restaurado, mas o valor não corresponde ao backup; o backup foi mantido",
   "tweak.result.restored": "Valor original restaurado",
   "tweak.result.bad_backup": "O backup está malformado: {error}",
+  "tweak.result.bad_measurement": "A medição não pode ser usada: {error}",
+  "tweak.result.measure_failed": "Não foi possível medir a conexão (sem carga ou sem respostas); nada foi alterado",
+  "tweak.result.measured_enabled": "Ativado: {value}. {verdict}",
   "tweak.result.adopt_off": "O tweak está desativado: o valor atual já é o original; não adotado",
   "tweak.result.backup_exists": "Já existe um backup; mantendo o antigo",
   "tweak.result.adopted": "Backup adotado de {source}",
@@ -350,6 +403,13 @@
   "tweak.event.disabled": "Otimização desativada: {name}",
   "tweak.event.disabled_default": "Otimização desativada: {name} (voltou ao padrão, sem backup)",
   "tweak.event.backup_not_removed": "{name}: restaurado, mas não foi possível remover o backup: {error}",
+  "tweak.event.measurement_not_kept": "{name}: aplicado, mas a medição não pôde ser salva: {error}",
+  "tweak.event.verified_helped": "{name}: aumento de latência sob carga {before:.0f} → {after:.0f} ms, ajudou",
+  "tweak.event.verified_no_help": "{name}: aumento de latência sob carga {before:.0f} → {after:.0f} ms, sem melhora clara",
+  "tweak.event.verified_unknown": "{name}: não foi possível medir de novo após aplicar",
+  "tweak.verdict.helped": "O aumento de latência sob carga foi de {before:.0f} para {after:.0f} ms",
+  "tweak.verdict.no_help": "O aumento de latência sob carga foi de {before:.0f} para {after:.0f} ms — sem melhora clara; considere desativar",
+  "tweak.verdict.unknown": "Não foi possível medir de novo para verificar o efeito",
 
   "tweak.plan.header": "{name} [{id}, risco {risk}]",
   "tweak.plan.current": "  atual: {value} ({state})",
@@ -359,6 +419,7 @@
   "tweak.plan.unsupported": "  não suportado: {reason}",
   "tweak.plan.nothing_on": "  já está ativado, nada a fazer",
   "tweak.plan.will_apply": "  vai: salvar o valor atual no backup.json (se ainda não estiver salvo) e então aplicar{disrupts}{reboot}",
+  "tweak.plan.will_measure": "  vai: medir primeiro a conexão (~15 s de tráfego real), recusar se não houver nada a corrigir, calcular o valor a partir da medição",
   "tweak.plan.disrupts": " — a placa será reiniciada e a rede cai por alguns segundos",
   "tweak.plan.reboot": " — requer reiniciar o PC",
   "tweak.plan.will_restore": "  vai: restaurar o valor salvo no backup.json",
@@ -371,6 +432,7 @@
   "tweak.cli.on": "ATIVADO",
   "tweak.cli.unsupported": "não suportado",
   "tweak.cli.dry_run": "Nada foi feito. Adicione --apply para executar.",
+  "tweak.cli.measuring": "Medindo a conexão (~15 s)…",
 
   "ui.language.hint": "As traduções que não sejam em inglês ou vietnamita são feitas por máquina e ainda precisam da revisão de um falante nativo.",
 
@@ -426,9 +488,16 @@
   "ui.optimize.disrupts": "A rede cai por alguns segundos",
   "ui.optimize.not_supported": "Indisponível neste PC",
   "ui.optimize.applying": "Aplicando…",
+  "ui.optimize.measuring": "Medindo…",
+  "ui.optimize.measured.upload_shaping": "Limitado a {limit:.1f} Mbps — 85% dos {upload:.1f} Mbps de upload medidos em {date}",
+  "ui.optimize.stale.other_network": "Medido em outra rede",
+  "ui.optimize.stale.old": "A medição está antiga",
+  "ui.optimize.stale.hint": "Desative e ative de novo para medir esta rede",
 
   "ui.sheet.experimental.title": "Ativar uma otimização experimental?",
   "ui.sheet.experimental.body": "“{name}” pode reduzir a velocidade ou ter efeitos colaterais. O valor original fica em backup, então você pode desativá-la a qualquer momento.",
+  "ui.sheet.measured.title": "Medir sua conexão primeiro?",
+  "ui.sheet.measured.body": "“{name}” mede seu upload por cerca de 15 segundos (até 100 MB), antes e depois da mudança, e não é aplicado se não houver nada a corrigir.",
   "ui.sheet.cancel": "Cancelar",
   "ui.sheet.confirm": "Ativar",
 
@@ -514,10 +583,13 @@
   "manual.use_cable.body": "Este PC tem uma porta LAN livre. Um cabo evita todos os problemas de Wi‑Fi de uma só vez e é a opção mais estável.",
 
   "manual.router_sqm.title": "Ative o SQM / QoS inteligente no roteador",
-  "manual.router_sqm.body": "Use fq_codel ou CAKE e defina os limites cerca de 5–10% abaixo da velocidade real da linha, para que downloads e uploads grandes parem de encher a fila.",
+  "manual.router_sqm.body": "A maior parte do atraso se acumula no download, que só um roteador que molda o tráfego de entrada consegue controlar. Ative SQM / QoS inteligente (CAKE ou fq_codel) e defina os limites cerca de 5–10% abaixo da velocidade real da linha. Se o roteador não tiver SQM, o OpenWrt (em roteadores compatíveis) oferece um no pacote sqm-scripts. Se ainda acontecer, a própria linha está cheia e um plano mais rápido ajuda.",
 
   "manual.dns_server.title": "Use outro servidor DNS",
   "manual.dns_server.body": "O servidor DNS em uso apresenta erros ou tempos esgotados. Defina um público, como 1.1.1.1 ou 8.8.8.8, no Windows ou no roteador.",
+
+  "manual.tunnel_route.title": "Considere um túnel para destinos distantes",
+  "manual.tunnel_route.body": "Alguns destinos seguem um caminho bem mais longo que outros, o que aponta para a rota do provedor e não para este PC. Um serviço de túnel de confiança pode seguir um caminho mais curto até eles, mas pode deixar destinos próximos mais lentos. Marque o passo como feito e o app compara a conexão antes e depois; desligue o túnel se não ajudar.",
 
   "manual.event.done": "Marcado como feito: {step}",
 
@@ -536,6 +608,7 @@
 
   "event.dns_observed": "Servidores DNS desta rede: {servers}",
   "event.dns_changed": "Os servidores DNS desta rede mudaram: {old} → {new}",
+  "event.dns_app_changed": "Este app alterou os servidores DNS desta rede: {servers}",
 
   "notify.dns_changed.title": "Servidores DNS alterados",
 

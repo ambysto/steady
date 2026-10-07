@@ -1,4 +1,4 @@
-"""The measurement behind a measured tweak's value (ADR-0015).
+"""The measurement behind a measured tweak's value (ADR-0016).
 
 A measured tweak derives its value from a measurement taken on the network in use, just
 before it is turned on. This module checks such a measurement (the elevated helper trusts

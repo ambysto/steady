@@ -1,12 +1,14 @@
-# ADR-0015: Measured tweaks — measure first, derive the value, keep the measurement with the backup
+# ADR-0016: Measured tweaks — measure first, derive the value, keep the measurement with the backup
 
 - **Status:** Accepted
 - **Date:** 2026-10-07
-- **Related:** [ADR-0003](0003-tweak-framework.md) (backup/restore), [ADR-0004](0004-watchdog-safety.md) (watchdog), [ADR-0005](0005-unelevated-server-uac-writes.md) (UAC writes), [ADR-0007](0007-measured-impact.md) (before/after evidence), [ADR-0008](0008-failover.md) (failover)
+- **Related:** [ADR-0015](0015-tweak-value-from-measurement.md) (a value measured inside `apply()`, DNS), [ADR-0003](0003-tweak-framework.md) (backup/restore), [ADR-0004](0004-watchdog-safety.md) (watchdog), [ADR-0005](0005-unelevated-server-uac-writes.md) (UAC writes), [ADR-0007](0007-measured-impact.md) (before/after evidence), [ADR-0008](0008-failover.md) (failover)
 
 ## Context
 
 Every tweak so far writes a fixed value (`Disabled`, `0`, `30`). The next group — an upload limit against bufferbloat, an MTU from path-MTU discovery, the fastest DNS server — needs a value **computed from a measurement of the network in use**. The hand-tuned session of 2026-08-31 shows both the benefit and the trap: a `NetQosPolicy` throttle at 15 Mbps cut the worst latency under upload from 1880 to 403 ms, but 15 Mbps was typed by hand for one line and one plan; on a faster plan it wastes bandwidth, on another network it means nothing. ADR-0003 has no notion of "where did this value come from" or "is it still right".
+
+[ADR-0015](0015-tweak-value-from-measurement.md) settled this for `dns_fastest`: the benchmark runs inside `apply()`, in the elevated process, and "on" is read from the configuration. That shape does not fit a measurement that loads the line: it moves up to 100 MB, takes ~15 s, must happen while the tweak is off, decides whether there is anything to fix at all (and so whether a UAC prompt should be shown), and has to be repeated afterwards to prove the effect. This ADR covers that second kind of measured tweak; a cheap measurement whose result only picks among fixed values keeps the ADR-0015 shape.
 
 ## Decision
 

@@ -173,7 +173,7 @@ def _sample(ping: Ping, targets: dict[str, str], seconds: float, interval: float
 def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: Load, *, idle_s: float = 4,
             load_s: float = 10, interval: float = 0.2, ramp_s: float = RAMP_S,
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic) -> Measurement:
-    """download=None skips the download phase (a measured tweak only needs the upload, ADR-0015)."""
+    """download=None skips the download phase (a measured tweak only needs the upload, ADR-0016)."""
     idle = Phase("idle", _sample(ping, targets, idle_s, interval, sleep, clock))
 
     def loaded(name: str, load: Load) -> Phase:
@@ -205,7 +205,7 @@ def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: 
 
 
 def upload_summary(m: Measurement, label: str = "internet") -> dict[str, float | int] | None:
-    """The upload phase of `m` reduced to what a measured tweak keeps (ADR-0015): upload Mbps, median
+    """The upload phase of `m` reduced to what a measured tweak keeps (ADR-0016): upload Mbps, median
     idle and loaded latency to `label`, number of loaded samples. None when the load did not run."""
     if m.upload.mbps is None or (m.upload.error and not m.upload.mbps):
         return None

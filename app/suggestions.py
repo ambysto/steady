@@ -52,6 +52,7 @@ MANUAL_STEPS: list[ManualStep] = [
     ManualStep("use_cable", "wired", lambda r: _summary_key(r) == "diag.wired.idle_port"),
     ManualStep("router_sqm", "bufferbloat", _status_in("warn", "bad")),
     ManualStep("dns_server", "dns", _status_in("warn")),
+    ManualStep("tunnel_route", "route", lambda r: _summary_key(r) == "diag.route.detour"),
 ]
 STEPS = {s.id: s for s in MANUAL_STEPS}
 

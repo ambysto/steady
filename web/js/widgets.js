@@ -55,7 +55,7 @@ export function suggestionRow(item, { compact = false, onChange, isAdmin }) {
 
 /**
  * Turn a tweak on or off through the API (a job; without Admin rights Windows shows a UAC
- * prompt). Experimental tweaks ask first, and so do measured ones (they generate traffic, ADR-0015).
+ * prompt). Experimental tweaks ask first, and so do measured ones (they generate traffic, ADR-0016).
  * Resolves true when something changed.
  */
 export async function setTweak(tweak, enable, { button, isAdmin } = {}) {

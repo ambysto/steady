@@ -471,7 +471,7 @@ class Api:
         return any(t.id == tweak_id and isinstance(t, tweaks.MeasuredTweak) for t in tweaks.CATALOG)
 
     def _enable_measured(self, tweak_id: str) -> dict:
-        """Measure, refuse before UAC when there is nothing to fix, enable, measure again (ADR-0015)."""
+        """Measure, refuse before UAC when there is nothing to fix, enable, measure again (ADR-0016)."""
         from . import tweaks
         admin = self._is_admin()
         mgr = self._tweak_manager()

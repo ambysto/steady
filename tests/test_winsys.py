@@ -49,6 +49,32 @@ class ProtocolTests(unittest.TestCase):
             sys_.interface_metric_set("12; rm x", 5)
 
 
+class SsidBandsTests(unittest.TestCase):
+    """What the connected network offers, from `netsh wlan show interfaces` and `... networks mode=bssid`."""
+
+    @staticmethod
+    def system(ssid="HomeNet", state="connected", scan=()):
+        wifi = None if state is None else SimpleNamespace(connected=state == "connected", ssid=ssid)
+        entries = [SimpleNamespace(ssid=s, band=b) for s, b in scan]
+        return winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_state=lambda: wifi, scan=lambda: entries)
+
+    def test_bands_of_the_connected_ssid_only(self):
+        sys_ = self.system(scan=[("HomeNet", "2.4 GHz"), ("HomeNet", "5 GHz"), ("HomeNet", "5 GHz"),
+                                 ("Neighbour", "6 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands(), ("HomeNet", frozenset({"2.4 GHz", "5 GHz"})))
+
+    def test_ssid_missing_from_the_scan_gives_no_bands(self):
+        self.assertEqual(self.system(scan=[("Other", "5 GHz")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+
+    def test_entries_without_a_band_are_ignored(self):
+        self.assertEqual(self.system(scan=[("HomeNet", "")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+
+    def test_none_when_not_connected(self):
+        self.assertIsNone(self.system(state="disconnected").wifi_ssid_bands())
+        self.assertIsNone(self.system(state=None).wifi_ssid_bands())
+        self.assertIsNone(self.system(ssid="").wifi_ssid_bands())
+
+
 class ScriptConstructionTests(unittest.TestCase):
     """No caller-supplied string may appear raw in a PowerShell script."""
 
@@ -112,6 +138,144 @@ class ScriptConstructionTests(unittest.TestCase):
             sys_.registry_set_dword(r"SOFTWARE\x", "v", -1)
 
 
+NETSH_GLOBAL = (b"\r\nQuerying active state...\r\n\r\nTCP Global Parameters\r\n----------------------------------------------\r\n"
+                b"Receive-Side Scaling State          : enabled\r\nECN Capability                      : Enabled \r\n"
+                b"Receive Segment Coalescing State    : enabled\r\n")
+
+
+class NetworkStackSystemTests(unittest.TestCase):
+    """The system calls behind tcp_ecn, rsc_off, packet_coalescing_off and dns_fastest."""
+
+    @staticmethod
+    def system(ps=None, rows=None, run=None, route=lambda: {"interface_index": 6, "gateway": "192.168.1.1"}):
+        return winsys.WindowsSystem(ps=ps or FakePs(), ps_json=lambda script, **k: rows or [],
+                                    run=run or (lambda *a, **k: SimpleNamespace(returncode=0, stdout=b"Ok.")), route=route)
+
+    def test_netsh_table_is_parsed_whatever_the_case_and_padding(self):
+        table = winsys.parse_netsh_table(NETSH_GLOBAL.decode())
+        self.assertEqual(table["ECN Capability"], "enabled")
+        self.assertEqual(table["Receive-Side Scaling State"], "enabled")
+        self.assertNotIn("TCP Global Parameters", table)
+
+    def test_tcp_global_read_and_write_go_through_netsh(self):
+        calls = []
+
+        def run(args, **kw):
+            calls.append(args)
+            return SimpleNamespace(returncode=0, stdout=NETSH_GLOBAL)
+        sys_ = self.system(run=run)
+        self.assertEqual(sys_.tcp_global_get("ecncapability"), "enabled")
+        sys_.tcp_global_set("ecncapability", "disabled")
+        self.assertEqual(calls, [["netsh", "int", "tcp", "show", "global"],
+                                 ["netsh", "int", "tcp", "set", "global", "ecncapability=disabled"]])
+
+    def test_tcp_global_is_validated_and_a_failed_netsh_is_reported(self):
+        sys_ = self.system()
+        for bad in ("ecncapability; calc", "timestamps", ""):
+            with self.assertRaises(ValueError):
+                sys_.tcp_global_get(bad)
+        for bad in ("enabled & calc", "on"):
+            with self.assertRaises(ValueError):
+                sys_.tcp_global_set("ecncapability", bad)
+        failing = self.system(run=lambda *a, **k: SimpleNamespace(returncode=1, stdout=b"The requested operation requires elevation."))
+        with self.assertRaises(winsys.SystemWriteError):
+            failing.tcp_global_set("ecncapability", "enabled")
+        with self.assertRaises(winsys.SystemReadError):
+            failing.tcp_global_get("ecncapability")
+
+    def test_a_setting_netsh_does_not_list_is_none(self):
+        sys_ = self.system(run=lambda *a, **k: SimpleNamespace(returncode=0, stdout=b"TCP Global Parameters\r\n"))
+        self.assertIsNone(sys_.tcp_global_get("ecncapability"))
+
+    def test_rsc_read_and_write(self):
+        row = {"IPv4": True, "IPv6": False, "IPv4Supported": True, "IPv6Supported": False}
+        sys_ = self.system(rows=[row])
+        self.assertEqual(sys_.rsc_get("Wi-Fi"), {"ipv4": True, "ipv6": False, "ipv4_supported": True, "ipv6_supported": False})
+        self.assertIsNone(self.system().rsc_get("Wi-Fi"))
+        ps = FakePs()
+        self.system(ps=ps).rsc_set("Wi-Fi", False, None)
+        self.system(ps=ps).rsc_set("Wi-Fi", True, True)
+        self.assertEqual(len(ps.scripts), 3)                          # a family set to None is not touched
+        self.assertIn("Disable-NetAdapterRsc", ps.scripts[0])
+        self.assertIn("-IPv4", ps.scripts[0])
+        self.assertNotIn("-IPv6", ps.scripts[0])
+        self.assertTrue(ps.scripts[1].startswith("Enable-NetAdapterRsc") and ps.scripts[2].startswith("Enable-NetAdapterRsc"))
+
+    def test_rsc_adapter_name_only_reaches_powershell_as_base64(self):
+        ps = FakePs()
+        for nasty in NASTY:
+            self.system(ps=ps).rsc_set(nasty, False, False)
+        for script in ps.scripts:
+            for nasty in NASTY[1:]:
+                self.assertNotIn(nasty, script)
+
+    def test_offload_setting_read_and_write(self):
+        ps = FakePs("Disabled\r\n")
+        sys_ = self.system(ps=ps)
+        self.assertEqual(sys_.offload_global_get("PacketCoalescingFilter"), "Disabled")
+        sys_.offload_global_set("PacketCoalescingFilter", "Enabled")
+        self.assertIn("Set-NetOffloadGlobalSetting -PacketCoalescingFilter Enabled", ps.scripts[-1])
+        self.assertIsNone(self.system(ps=FakePs("")).offload_global_get("PacketCoalescingFilter"))
+        for bad in ("PacketCoalescingFilter; calc", "ReceiveSideScaling"):
+            with self.assertRaises(ValueError):
+                sys_.offload_global_get(bad)
+        with self.assertRaises(ValueError):
+            sys_.offload_global_set("PacketCoalescingFilter", "Disabled; calc")
+
+    def test_dns_interface_reads_the_uplink_and_spots_a_vpn(self):
+        row = {"Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
+               "Suffix": "", "Domain": False, "Up": ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter", "WARP Cloudflare WARP Interface Tunnel"]}
+        info = self.system(rows=[row]).dns_interface()
+        self.assertEqual(info, {"index": 6, "alias": "Wi-Fi", "servers": ["1.1.1.1", "8.8.8.8"], "static": True,
+                                "static_v6": False, "suffix": "", "domain_joined": False, "vpn_up": True})
+        row["Up"] = ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter"]
+        self.assertFalse(self.system(rows=[row]).dns_interface()["vpn_up"])
+
+    def test_dns_interface_is_none_without_an_uplink(self):
+        self.assertIsNone(self.system(route=lambda: None).dns_interface())
+        self.assertIsNone(self.system(rows=[]).dns_interface())
+
+    def test_doh_list_is_read_into_flags(self):
+        rows = [{"ServerAddress": "1.1.1.1", "DohTemplate": "https://cloudflare-dns.com/dns-query", "AutoUpgrade": True,
+                 "Fallback": False}]
+        self.assertEqual(self.system(rows=rows).doh_get(),
+                         {"1.1.1.1": {"template": "https://cloudflare-dns.com/dns-query", "auto_upgrade": True,
+                                      "fallback_to_udp": False}})
+
+    def test_dns_and_doh_writes(self):
+        ps = FakePs()
+        sys_ = self.system(ps=ps)
+        sys_.dns_servers_set(6, ["1.1.1.1", "8.8.8.8"])
+        sys_.dns_servers_set("6", None)
+        sys_.doh_set("1.1.1.1", "https://cloudflare-dns.com/dns-query", True, False)
+        sys_.doh_remove("1.1.1.1")
+        self.assertIn("Set-DnsClientServerAddress -InterfaceIndex 6 -ServerAddresses '1.1.1.1','8.8.8.8'", ps.scripts[0])
+        self.assertIn("-ResetServerAddresses", ps.scripts[1])
+        self.assertIn("Set-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -AutoUpgrade $true -AllowFallbackToUdp $false",
+                      ps.scripts[2])
+        self.assertIn("Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query'",
+                      ps.scripts[2])
+        self.assertIn("Remove-DnsClientDohServerAddress", ps.scripts[3])
+
+    def test_dns_and_doh_arguments_are_validated(self):
+        ps = FakePs()
+        sys_ = self.system(ps=ps)
+        for bad in (["1.1.1.1'; calc; '"], ["not an ip"], ["1.1.1.1", ""], []):
+            with self.assertRaises(ValueError):
+                sys_.dns_servers_set(6, bad)
+        with self.assertRaises(ValueError):
+            sys_.dns_servers_set("6; calc", ["1.1.1.1"])
+        for template in ("http://insecure.example/dns", "https://x.example/'; calc", "javascript:alert(1)", ""):
+            with self.assertRaises(ValueError):
+                sys_.doh_set("1.1.1.1", template, True, True)
+        for address in ("1.1.1.1'; calc", "one.one.one.one"):
+            with self.assertRaises(ValueError):
+                sys_.doh_set(address, "https://cloudflare-dns.com/dns-query", True, True)
+            with self.assertRaises(ValueError):
+                sys_.doh_remove(address)
+        self.assertEqual(ps.scripts, [])                                # nothing reached PowerShell
+
+
 @unittest.skipUnless(sys.platform == "win32", "needs PowerShell")
 class PsLiteralRoundTripTests(unittest.TestCase):
     def test_nasty_strings_survive_unchanged(self):
@@ -157,6 +321,22 @@ class RealReadsTests(unittest.TestCase):
         self.assertIsInstance(ac, int)
         self.assertIsInstance(self.sys.binding_get(self.adapter, "ms_tcpip6"), bool)
         self.assertIsNone(self.sys.binding_get(self.adapter, "ms_doesnotexist"))
+
+    def test_network_stack_settings(self):
+        self.assertIn(self.sys.tcp_global_get("ecncapability"), ("enabled", "disabled", "default"))
+        self.assertIn(self.sys.offload_global_get("PacketCoalescingFilter"), ("Enabled", "Disabled", "Default"))
+        rsc = self.sys.rsc_get(self.adapter)
+        self.assertTrue(rsc is None or {"ipv4", "ipv6", "ipv4_supported", "ipv6_supported"} == set(rsc))
+
+    def test_dns_configuration_of_the_uplink(self):
+        info = self.sys.dns_interface()
+        if info is None:
+            self.skipTest("no uplink")
+        self.assertEqual(set(info), {"index", "alias", "servers", "static", "static_v6", "suffix", "domain_joined",
+                                     "vpn_up"})
+        self.assertIsInstance(info["servers"], list)
+        for entry in self.sys.doh_get().values():
+            self.assertEqual(set(entry), {"template", "auto_upgrade", "fallback_to_udp"})
 
 
 if __name__ == "__main__":

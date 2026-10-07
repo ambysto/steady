@@ -6,7 +6,7 @@ its caller: every argument is re-validated here, and the result may only be writ
 
     python -m app.elevated tweak-enable <tweak_id>  --result-file <path>
     python -m app.elevated tweak-enable <tweak_id>  --measurement <base64 JSON> --result-file <path>
-                                                    (a measured tweak, ADR-0015: the value is derived here)
+                                                    (a measured tweak, ADR-0016: the value is derived here)
     python -m app.elevated tweak-disable <tweak_id> --result-file <path>
     python -m app.elevated restart-adapter <name>   --result-file <path>
     python -m app.elevated path-prefer <ifIndex>    --result-file <path>

@@ -23,7 +23,7 @@ function tweakRow(ctx, st) {
   if (st.disrupts_network) pills.push(el("span", { class: "pill" }, t("ui.optimize.disrupts")));
   if (st.needs_reboot) pills.push(el("span", { class: "pill warn" }, t("ui.optimize.needs_reboot")));
   const note = !st.supported ? `${t("ui.optimize.not_supported")}${st.reason ? ` — ${st.reason}` : ""}` : st.error || st.note;
-  // A measured tweak (ADR-0015): the measurement behind the value, and whether it still fits this network.
+  // A measured tweak (ADR-0016): the measurement behind the value, and whether it still fits this network.
   const m = st.enabled ? st.measurement : null;
   const measuredFrom = m && m.value ? t(`ui.optimize.measured.${st.id}`, {
     limit: m.value / 1e6, upload: m.upload_mbps, date: timeOf(m.measured_at, { withDate: true }) }) : null;

@@ -210,6 +210,14 @@
   "diag.bufferbloat.rise": "Latency to the Internet rises {amount} when the line is busy{where}",
   "diag.bufferbloat.advice": "Turn on SQM / smart QoS (fq_codel or CAKE) on the router and set the upload/download limits about 5–10% below the real bandwidth. If the router has no SQM, lower the upload speed of the app causing the load.",
 
+  "diag.route.title": "Route to far-away destinations",
+  "diag.route.no_data": "Cannot compare routes: fewer than 3 reference sites answered",
+  "diag.route.tunnel_on": "A VPN or tunnel is up, so the routes measured are the tunnel's, not the ISP's",
+  "diag.route.line": "{host}: {median:.0f} ms (TCP connect)",
+  "diag.route.ok": "Every reference site answers in a similar time (nearest {near:.0f} ms)",
+  "diag.route.detour": "Some reference sites take a much longer path than the others (nearest {near:.0f} ms): {hosts}",
+  "diag.route.advice": "This usually points at the ISP's route to those destinations, not at this PC. Nothing on the PC fixes it: a tunnel service may take a shorter path (but can slow nearby sites), or ask the ISP.",
+
   "diag.cli.header": "Diagnostics at {time} — overall: {status}",
   "diag.cli.saved": "Saved run #{run_id}",
   "diag.cli.compared": "Compared with the previous run ({time}):",
@@ -297,6 +305,12 @@
   "tweak.wifi_mode_ac.name": "Force Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Try when you suspect a Wi‑Fi 6 compatibility problem between card and router",
 
+  "tweak.wifi_prefer_5g.name": "Prefer the 5 GHz band",
+  "tweak.wifi_prefer_5g.note": "Moves a card that clings to 2.4 GHz onto 5 GHz when it is in range, and still falls back to 2.4 GHz elsewhere. Offered only when your network has a 5 GHz access point",
+
+  "tweak.wifi_tx_power_max.name": "Highest transmit power",
+  "tweak.wifi_tx_power_max.note": "Keeps the card at its top transmit level instead of letting the driver lower it. Slightly more heat and battery use on a laptop",
+
   "tweak.device_power_off.name": "Don't let Windows turn off the card",
   "tweak.device_power_off.note": "Takes effect after restarting the card or the PC",
 
@@ -318,9 +332,24 @@
   "tweak.upload_shaping.refused.not_needed": "Latency rises only {rise:.0f} ms under upload; nothing to fix, so nothing was changed",
   "tweak.upload_shaping.refused.bounds": "A {cap:.1f} Mbps limit is outside the safe range ({low:.0f}–{high:.0f} Mbps); nothing was changed",
 
+  "tweak.tcp_ecn.name": "Turn on TCP ECN",
+  "tweak.tcp_ecn.note": "Experimental: routers can flag congestion instead of dropping packets, which may lower latency under load. Some devices in between mishandle ECN packets, so keep it off unless a before/after measurement shows a gain",
+
+  "tweak.rsc_off.name": "Turn off Receive Segment Coalescing on the Wi‑Fi card",
+  "tweak.rsc_off.note": "Experimental: received packets reach Windows one by one, which may lower latency at the price of a little throughput and more CPU use. Restoring needs the backup",
+
+  "tweak.packet_coalescing_off.name": "Turn off the Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "Experimental: the card stops holding back received packets to save power: lower latency, slightly more power use. Restoring needs the backup",
+
+  "tweak.dns_fastest.name": "Use the fastest public DNS over HTTPS",
+  "tweak.dns_fastest.note": "Measures Cloudflare, Google and Quad9 and uses the two fastest providers, encrypted with DoH. Turning it off brings the network's own DNS back. Not offered with a VPN, on a domain network, with a DNS suffix or behind a captive portal",
+
   "tweak.reason.no_wifi_card": "No Wi‑Fi card found",
   "tweak.reason.no_matching_value": "'{property}' has no suitable value (available: {values})",
   "tweak.reason.no_property": "The card does not have this property",
+  "tweak.reason.not_connected": "Not connected to a Wi‑Fi network",
+  "tweak.reason.bands_unknown": "Windows' last scan does not show which bands '{ssid}' uses",
+  "tweak.reason.no_5ghz": "'{ssid}' has no 5 GHz access point in range",
   "tweak.reason.multi_value": "'{property}' has a multi-part value, not supported",
   "tweak.reason.no_registry_key": "Registry key not found",
   "tweak.reason.no_binding": "The card has no {component} binding",
@@ -328,6 +357,19 @@
   "tweak.reason.needs_measurement": "Needs a measurement of this network first",
   "tweak.reason.no_default_registry": "No backup, and the default value is unknown",
   "tweak.reason.no_default_powercfg": "powercfg has no known default value; a backup is needed",
+  "tweak.reason.no_tcp_setting": "Windows does not report '{setting}'",
+  "tweak.reason.no_default_tcp": "No backup, and the default value is unknown",
+  "tweak.reason.no_rsc": "This card does not support Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "No backup; the original setting of the card is unknown",
+  "tweak.reason.no_offload_setting": "Windows does not report '{setting}'",
+  "tweak.reason.no_default_offload": "No known default value; a backup is needed",
+  "tweak.reason.no_uplink": "No network connection whose DNS could be changed",
+  "tweak.reason.dns_vpn": "A VPN is up; its own DNS is left alone",
+  "tweak.reason.dns_domain": "This PC is on a domain or the network has a DNS suffix; internal names need the network's own DNS",
+  "tweak.reason.dns_static_v6": "The network adapter has a static IPv6 DNS server, which restoring would erase",
+  "tweak.reason.dns_captive": "The network looks like a captive portal (a sign-in page)",
+  "tweak.reason.dns_no_fast_servers": "The benchmark did not find two public DNS providers that answer reliably; nothing was changed",
+  "tweak.reason.no_default_dns": "No backup; the original DNS settings are unknown",
 
   "tweak.result.read_failed": "Cannot read the state: {error}",
   "tweak.result.unsupported": "Not supported on this PC: {reason}",
@@ -543,10 +585,13 @@
   "manual.use_cable.body": "This PC has a free LAN port. A cable avoids every Wi‑Fi problem at once and is the most stable option.",
 
   "manual.router_sqm.title": "Turn on SQM / smart QoS on the router",
-  "manual.router_sqm.body": "Use fq_codel or CAKE and set the limits about 5–10% below the real line speed, so big downloads and uploads stop flooding the queue.",
+  "manual.router_sqm.body": "Most of the delay builds up on the download side, which only a router that shapes incoming traffic can control. Turn on SQM / smart QoS (CAKE or fq_codel) and set the limits about 5–10% below the real line speed. If the router has no SQM, OpenWrt (on routers that support it) offers one in the sqm-scripts package. If it still happens, the line itself is full and a faster plan helps.",
 
   "manual.dns_server.title": "Use another DNS server",
   "manual.dns_server.body": "The DNS server in use has errors or timeouts. Set a public one such as 1.1.1.1 or 8.8.8.8 in Windows or on the router.",
+
+  "manual.tunnel_route.title": "Consider a tunnel for far-away destinations",
+  "manual.tunnel_route.body": "Some destinations take a much longer path than others, which points at the ISP's route, not at this PC. A tunnel service you trust may take a shorter path to them, but it can slow down nearby destinations. Mark the step as done and the app compares the connection before and after; switch the tunnel off if it does not help.",
 
   "manual.event.done": "Marked as done: {step}",
 
@@ -565,6 +610,7 @@
 
   "event.dns_observed": "DNS servers on this network: {servers}",
   "event.dns_changed": "The DNS servers of this network changed: {old} → {new}",
+  "event.dns_app_changed": "This app changed the DNS servers of this network: {servers}",
 
   "notify.dns_changed.title": "DNS servers changed",
 

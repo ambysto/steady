@@ -18,4 +18,5 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0012](0012-user-sent-problem-reports.md) | Problem reports are written by the app, read in full and sent by the user | Accepted |
 | [0013](0013-apple-release-from-a-mac.md) | Apple builds are archived and uploaded from a Mac, by script | Accepted |
 | [0014](0014-merge-internet-drops.md) | Internet drops close together are one unstable episode | Accepted |
-| [0015](0015-measured-tweaks.md) | Measured tweaks: measure first, derive the value, keep the measurement with the backup | Accepted |
+| [0015](0015-tweak-value-from-measurement.md) | A tweak whose value comes from a measurement (DNS) | Accepted |
+| [0016](0016-measured-tweaks.md) | Measured tweaks: measure first, derive the value, keep the measurement with the backup | Accepted |

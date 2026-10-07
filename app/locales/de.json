@@ -208,6 +208,14 @@
   "diag.bufferbloat.rise": "Die Latenz ins Internet steigt {amount}, wenn die Leitung ausgelastet ist{where}",
   "diag.bufferbloat.advice": "SQM / Smart-QoS (fq_codel oder CAKE) am Router aktivieren und die Upload-/Download-Limits etwa 5–10 % unter der tatsächlichen Bandbreite setzen. Hat der Router kein SQM, die Upload-Geschwindigkeit der Anwendung senken, die die Last verursacht.",
 
+  "diag.route.title": "Weg zu weit entfernten Zielen",
+  "diag.route.no_data": "Wege lassen sich nicht vergleichen: weniger als 3 Referenzseiten haben geantwortet",
+  "diag.route.tunnel_on": "Ein VPN oder Tunnel ist aktiv, die gemessenen Wege sind also die des Tunnels, nicht die des Anbieters",
+  "diag.route.line": "{host}: {median:.0f} ms (TCP-Verbindungsaufbau)",
+  "diag.route.ok": "Alle Referenzseiten antworten in ähnlicher Zeit (die nächste in {near:.0f} ms)",
+  "diag.route.detour": "Einige Referenzseiten brauchen einen deutlich längeren Weg als die übrigen (die nächste: {near:.0f} ms): {hosts}",
+  "diag.route.advice": "Das deutet meist auf die Route des Internetanbieters zu diesen Zielen hin, nicht auf diesen PC. Am PC lässt sich das nicht beheben: Ein Tunnel-Dienst kann einen kürzeren Weg nehmen (kann aber nahe Seiten bremsen), oder den Anbieter fragen.",
+
   "diag.cli.header": "Diagnose um {time} — Gesamtstatus: {status}",
   "diag.cli.saved": "Lauf #{run_id} gespeichert",
   "diag.cli.compared": "Vergleich mit dem vorherigen Lauf ({time}):",
@@ -276,6 +284,7 @@
   "tweak.group.wifi_card": "Wi‑Fi-Karte",
   "tweak.group.power": "Windows-Energie",
   "tweak.group.stack": "Netzwerk-Stack",
+  "tweak.group.measured": "In Ihrem Netzwerk gemessen",
 
   "tweak.wifi_power_saving.name": "Energiesparmodus der Karte ausschalten",
   "tweak.wifi_power_saving.note": "Eine häufige Ursache für sporadische Verbindungsabbrüche",
@@ -294,6 +303,12 @@
   "tweak.wifi_mode_ac.name": "Wi‑Fi 5 (802.11ac) erzwingen",
   "tweak.wifi_mode_ac.note": "Ausprobieren, wenn ein Wi‑Fi-6-Kompatibilitätsproblem zwischen Karte und Router vermutet wird",
 
+  "tweak.wifi_prefer_5g.name": "5-GHz-Band bevorzugen",
+  "tweak.wifi_prefer_5g.note": "Holt eine Karte, die am 2,4-GHz-Band festhängt, auf 5 GHz, sobald es in Reichweite ist, und weicht anderswo weiterhin auf 2,4 GHz aus. Nur verfügbar, wenn Ihr Netzwerk einen 5-GHz-Access-Point hat",
+
+  "tweak.wifi_tx_power_max.name": "Höchste Sendeleistung",
+  "tweak.wifi_tx_power_max.note": "Hält die Karte auf ihrer höchsten Sendestufe, statt den Treiber sie senken zu lassen. Auf einem Laptop etwas mehr Wärme und Akkuverbrauch",
+
   "tweak.device_power_off.name": "Windows das Ausschalten der Karte verbieten",
   "tweak.device_power_off.note": "Wirksam nach einem Neustart der Karte oder des PCs",
 
@@ -308,16 +323,51 @@
 
   "tweak.ipv6_off.name": "IPv6 auf Wi‑Fi ausschalten",
   "tweak.ipv6_off.note": "Nur ausprobieren, wenn vermutet wird, dass IPv6 oder IPv6-DNS des Routers etwas verlangsamt",
+  "tweak.upload_shaping.name": "Upload-Geschwindigkeit begrenzen, damit die Latenz unter Last niedrig bleibt",
+  "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
+  "tweak.upload_shaping.value": "begrenzt auf {limit:.1f} Mbit/s (85 % der gemessenen {upload:.1f} Mbit/s Upload)",
+  "tweak.upload_shaping.refused.weak": "Die Messung hat die Leitung nicht genug ausgelastet ({mbps:.1f} Mbit/s, {samples} Messwerte); bitte erneut versuchen",
+  "tweak.upload_shaping.refused.not_needed": "Die Latenz steigt beim Upload nur um {rise:.0f} ms; nichts zu beheben, daher wurde nichts geändert",
+  "tweak.upload_shaping.refused.bounds": "Eine Grenze von {cap:.1f} Mbit/s liegt außerhalb des sicheren Bereichs ({low:.0f}–{high:.0f} Mbit/s); nichts wurde geändert",
+
+  "tweak.tcp_ecn.name": "TCP-ECN einschalten",
+  "tweak.tcp_ecn.note": "Experimentell: Router können Überlast markieren, statt Pakete zu verwerfen, was die Latenz unter Last senken kann. Manche Geräte dazwischen verarbeiten ECN-Pakete falsch – daher ausgeschaltet lassen, außer eine Messung vorher/nachher zeigt einen Gewinn",
+
+  "tweak.rsc_off.name": "Receive Segment Coalescing der WLAN-Karte ausschalten",
+  "tweak.rsc_off.note": "Experimentell: Empfangene Pakete gelangen einzeln zu Windows, was die Latenz senken kann, auf Kosten von etwas Durchsatz und mehr CPU-Last. Zum Zurücksetzen wird das Backup benötigt",
+
+  "tweak.packet_coalescing_off.name": "Packet Coalescing Filter ausschalten",
+  "tweak.packet_coalescing_off.note": "Experimentell: Die Karte hält empfangene Pakete nicht mehr zurück, um Strom zu sparen: geringere Latenz, etwas mehr Stromverbrauch. Zum Zurücksetzen wird das Backup benötigt",
+
+  "tweak.dns_fastest.name": "Schnellsten öffentlichen DNS über HTTPS verwenden",
+  "tweak.dns_fastest.note": "Misst Cloudflare, Google und Quad9 und nutzt die zwei schnellsten Anbieter, per DoH verschlüsselt. Beim Ausschalten kommt der DNS des Netzwerks zurück. Nicht verfügbar mit VPN, in einem Domänennetzwerk, mit DNS-Suffix oder hinter einem Captive Portal",
 
   "tweak.reason.no_wifi_card": "Keine Wi‑Fi-Karte gefunden",
   "tweak.reason.no_matching_value": "„{property}“ hat keinen passenden Wert (verfügbar: {values})",
   "tweak.reason.no_property": "Die Karte besitzt diese Eigenschaft nicht",
+  "tweak.reason.not_connected": "Nicht mit einem Wi‑Fi-Netzwerk verbunden",
+  "tweak.reason.bands_unknown": "Der letzte Windows-Scan zeigt nicht, welche Bänder „{ssid}“ nutzt",
+  "tweak.reason.no_5ghz": "„{ssid}“ hat in Reichweite keinen 5-GHz-Access-Point",
   "tweak.reason.multi_value": "„{property}“ hat einen mehrteiligen Wert, nicht unterstützt",
   "tweak.reason.no_registry_key": "Registrierungsschlüssel nicht gefunden",
   "tweak.reason.no_binding": "Die Karte hat keine {component}-Bindung",
   "tweak.reason.unreadable": "Der Zustand kann nicht gelesen werden",
+  "tweak.reason.needs_measurement": "Dieses Netzwerk muss zuerst gemessen werden",
   "tweak.reason.no_default_registry": "Keine Sicherung, und der Standardwert ist unbekannt",
   "tweak.reason.no_default_powercfg": "powercfg kennt keinen Standardwert; eine Sicherung ist erforderlich",
+  "tweak.reason.no_tcp_setting": "Windows meldet „{setting}“ nicht",
+  "tweak.reason.no_default_tcp": "Kein Backup, und der Standardwert ist unbekannt",
+  "tweak.reason.no_rsc": "Diese Karte unterstützt Receive Segment Coalescing nicht",
+  "tweak.reason.no_default_rsc": "Kein Backup; die ursprüngliche Einstellung der Karte ist unbekannt",
+  "tweak.reason.no_offload_setting": "Windows meldet „{setting}“ nicht",
+  "tweak.reason.no_default_offload": "Kein bekannter Standardwert; ein Backup ist nötig",
+  "tweak.reason.no_uplink": "Keine Netzwerkverbindung, deren DNS geändert werden könnte",
+  "tweak.reason.dns_vpn": "Ein VPN ist aktiv; sein eigener DNS bleibt unangetastet",
+  "tweak.reason.dns_domain": "Dieser PC ist in einer Domäne oder das Netzwerk hat ein DNS-Suffix; interne Namen brauchen den DNS des Netzwerks",
+  "tweak.reason.dns_static_v6": "Der Netzwerkadapter hat einen statischen IPv6-DNS-Server, den das Zurücksetzen löschen würde",
+  "tweak.reason.dns_captive": "Das Netzwerk sieht nach einem Captive Portal aus (einer Anmeldeseite)",
+  "tweak.reason.dns_no_fast_servers": "Der Benchmark hat keine zwei öffentlichen DNS-Anbieter gefunden, die zuverlässig antworten; es wurde nichts geändert",
+  "tweak.reason.no_default_dns": "Kein Backup; die ursprünglichen DNS-Einstellungen sind unbekannt",
 
   "tweak.result.read_failed": "Der Zustand kann nicht gelesen werden: {error}",
   "tweak.result.unsupported": "Auf diesem PC nicht unterstützt: {reason}",
@@ -341,6 +391,9 @@
   "tweak.result.restore_mismatch": "Wiederhergestellt, aber der Wert stimmt nicht mit der Sicherung überein; die Sicherung bleibt erhalten",
   "tweak.result.restored": "Ursprünglicher Wert wiederhergestellt",
   "tweak.result.bad_backup": "Die Sicherung ist fehlerhaft: {error}",
+  "tweak.result.bad_measurement": "Die Messung ist nicht verwendbar: {error}",
+  "tweak.result.measure_failed": "Die Verbindung konnte nicht gemessen werden (keine Last oder keine Antworten); nichts wurde geändert",
+  "tweak.result.measured_enabled": "Ein: {value}. {verdict}",
   "tweak.result.adopt_off": "Die Optimierung ist aus: Der aktuelle Wert ist bereits der ursprüngliche; nicht übernommen",
   "tweak.result.backup_exists": "Es existiert bereits eine Sicherung; die alte wird beibehalten",
   "tweak.result.adopted": "Sicherung aus {source} übernommen",
@@ -350,6 +403,13 @@
   "tweak.event.disabled": "Optimierung aus: {name}",
   "tweak.event.disabled_default": "Optimierung aus: {name} (zurück auf Standard, keine Sicherung)",
   "tweak.event.backup_not_removed": "{name}: wiederhergestellt, aber die Sicherung konnte nicht entfernt werden: {error}",
+  "tweak.event.measurement_not_kept": "{name}: angewendet, aber die Messung konnte nicht gespeichert werden: {error}",
+  "tweak.event.verified_helped": "{name}: Latenzanstieg unter Last {before:.0f} → {after:.0f} ms, es hat geholfen",
+  "tweak.event.verified_no_help": "{name}: Latenzanstieg unter Last {before:.0f} → {after:.0f} ms, keine klare Verbesserung",
+  "tweak.event.verified_unknown": "{name}: nach dem Anwenden konnte nicht erneut gemessen werden",
+  "tweak.verdict.helped": "Der Latenzanstieg unter Last ging von {before:.0f} auf {after:.0f} ms zurück",
+  "tweak.verdict.no_help": "Der Latenzanstieg unter Last änderte sich von {before:.0f} auf {after:.0f} ms – keine klare Verbesserung; erwägen Sie, die Optimierung auszuschalten",
+  "tweak.verdict.unknown": "Die Wirkung konnte nicht durch eine erneute Messung geprüft werden",
 
   "tweak.plan.header": "{name} [{id}, Risiko {risk}]",
   "tweak.plan.current": "  aktuell: {value} ({state})",
@@ -359,6 +419,7 @@
   "tweak.plan.unsupported": "  nicht unterstützt: {reason}",
   "tweak.plan.nothing_on": "  bereits ein, nichts zu tun",
   "tweak.plan.will_apply": "  wird: den aktuellen Wert in backup.json sichern (falls noch nicht gesichert), dann anwenden{disrupts}{reboot}",
+  "tweak.plan.will_measure": "  wird: zuerst die Verbindung messen (~15 s echter Datenverkehr), ablehnen, wenn nichts zu beheben ist, den Wert aus der Messung ableiten",
   "tweak.plan.disrupts": " — die Karte wird neu gestartet und das Netzwerk fällt für einige Sekunden aus",
   "tweak.plan.reboot": " — erfordert einen Neustart des PCs",
   "tweak.plan.will_restore": "  wird: den in backup.json gesicherten Wert wiederherstellen",
@@ -371,6 +432,7 @@
   "tweak.cli.on": "EIN",
   "tweak.cli.unsupported": "nicht unterstützt",
   "tweak.cli.dry_run": "Nichts ausgeführt. Mit --apply ausführen.",
+  "tweak.cli.measuring": "Verbindung wird gemessen (~15 s)…",
 
   "ui.language.hint": "Andere Übersetzungen als Englisch und Vietnamesisch sind maschinell erstellt und müssen noch von Muttersprachlern geprüft werden.",
 
@@ -426,9 +488,16 @@
   "ui.optimize.disrupts": "Netzwerk fällt für einige Sekunden aus",
   "ui.optimize.not_supported": "Auf diesem PC nicht verfügbar",
   "ui.optimize.applying": "Wird angewendet…",
+  "ui.optimize.measuring": "Wird gemessen…",
+  "ui.optimize.measured.upload_shaping": "Begrenzt auf {limit:.1f} Mbit/s – 85 % der {upload:.1f} Mbit/s Upload, gemessen am {date}",
+  "ui.optimize.stale.other_network": "In einem anderen Netzwerk gemessen",
+  "ui.optimize.stale.old": "Messung ist veraltet",
+  "ui.optimize.stale.hint": "Aus- und wieder einschalten, um dieses Netzwerk zu messen",
 
   "ui.sheet.experimental.title": "Experimentelle Optimierung einschalten?",
   "ui.sheet.experimental.body": "„{name}“ kann die Geschwindigkeit verringern oder Nebenwirkungen haben. Der ursprüngliche Wert wird gesichert, daher lässt sich die Optimierung jederzeit ausschalten.",
+  "ui.sheet.measured.title": "Zuerst die Verbindung messen?",
+  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang (bis zu 100 MB), vor und nach der Änderung, und wird nicht angewendet, wenn nichts zu beheben ist.",
   "ui.sheet.cancel": "Abbrechen",
   "ui.sheet.confirm": "Einschalten",
 
@@ -514,10 +583,13 @@
   "manual.use_cable.body": "Dieser PC hat einen freien LAN-Anschluss. Ein Kabel umgeht alle Wi‑Fi-Probleme auf einmal und ist die stabilste Option.",
 
   "manual.router_sqm.title": "SQM / Smart-QoS am Router einschalten",
-  "manual.router_sqm.body": "fq_codel oder CAKE verwenden und die Limits etwa 5–10 % unter der tatsächlichen Leitungsgeschwindigkeit setzen, damit große Downloads und Uploads die Warteschlange nicht mehr überfluten.",
+  "manual.router_sqm.body": "Der größte Teil der Verzögerung entsteht beim Download, den nur ein Router in den Griff bekommt, der eingehenden Verkehr formt. SQM / Smart-QoS (CAKE oder fq_codel) einschalten und die Limits etwa 5–10 % unter der tatsächlichen Leitungsgeschwindigkeit setzen. Hat der Router kein SQM, bietet OpenWrt (auf unterstützten Routern) es im Paket sqm-scripts. Tritt es trotzdem auf, ist die Leitung selbst voll und ein schnellerer Tarif hilft.",
 
   "manual.dns_server.title": "Anderen DNS-Server verwenden",
   "manual.dns_server.body": "Der verwendete DNS-Server hat Fehler oder Zeitüberschreitungen. Einen öffentlichen wie 1.1.1.1 oder 8.8.8.8 in Windows oder am Router festlegen.",
+
+  "manual.tunnel_route.title": "Einen Tunnel für weit entfernte Ziele erwägen",
+  "manual.tunnel_route.body": "Manche Ziele brauchen einen deutlich längeren Weg als andere, was auf die Route des Anbieters hindeutet, nicht auf diesen PC. Ein vertrauenswürdiger Tunnel-Dienst kann einen kürzeren Weg dorthin nehmen, kann aber nahe Ziele verlangsamen. Als erledigt markieren, dann vergleicht die App die Verbindung vorher und nachher; den Tunnel ausschalten, wenn er nichts bringt.",
 
   "manual.event.done": "Als erledigt markiert: {step}",
 
@@ -536,6 +608,7 @@
 
   "event.dns_observed": "DNS-Server in diesem Netzwerk: {servers}",
   "event.dns_changed": "Die DNS-Server dieses Netzwerks haben sich geändert: {old} → {new}",
+  "event.dns_app_changed": "Diese App hat die DNS-Server dieses Netzwerks geändert: {servers}",
 
   "notify.dns_changed.title": "DNS-Server geändert",
 

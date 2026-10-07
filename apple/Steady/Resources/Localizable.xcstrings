@@ -10180,6 +10180,419 @@
         }
       }
     },
+    "diag.route.advice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das deutet meist auf die Route des Internetanbieters zu diesen Zielen hin, nicht auf diesen PC. Am PC lässt sich das nicht beheben: Ein Tunnel-Dienst kann einen kürzeren Weg nehmen (kann aber nahe Seiten bremsen), oder den Anbieter fragen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This usually points at the ISP's route to those destinations, not at this PC. Nothing on the PC fixes it: a tunnel service may take a shorter path (but can slow nearby sites), or ask the ISP."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suele apuntar a la ruta del proveedor hacia esos destinos, no a este PC. Nada en el PC lo arregla: un servicio de túnel puede tomar un camino más corto (pero puede ralentizar los sitios cercanos), o consulta al proveedor."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela désigne en général la route du fournisseur vers ces destinations, pas ce PC. Rien sur le PC ne le corrige : un service de tunnel peut prendre un chemin plus court (mais peut ralentir les sites proches), ou interrogez le fournisseur."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多くの場合、この PC ではなく、プロバイダーからそれらの宛先への経路が原因です。PC 側では直せません。トンネルサービスなら近い経路を通れることがあります（ただし近くのサイトが遅くなる場合があります）。またはプロバイダーに問い合わせてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대개 이 PC가 아니라 통신사에서 해당 목적지로 가는 경로가 원인입니다. PC에서는 고칠 수 없습니다. 터널 서비스가 더 짧은 경로를 택할 수 있지만(가까운 사이트는 느려질 수 있음), 통신사에 문의하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso costuma apontar para a rota do provedor até esses destinos, não para este PC. Nada no PC resolve: um serviço de túnel pode seguir um caminho mais curto (mas pode deixar sites próximos mais lentos), ou fale com o provedor."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thường là do tuyến của nhà mạng tới các đích đó, không phải do máy này. Không chỉnh gì trên máy được: một dịch vụ tunnel có thể đi đường ngắn hơn (nhưng có thể làm chậm các trang ở gần), hoặc hỏi nhà mạng."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这通常指向运营商到这些目的地的路由，而不是这台电脑。电脑上无法修复：隧道服务可能走更短的路径（但可能拖慢近处的网站），也可以咨询运营商。"
+          }
+        }
+      }
+    },
+    "diag.route.detour" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Referenzseiten brauchen einen deutlich längeren Weg als die übrigen (die nächste: %1$@ ms): %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some reference sites take a much longer path than the others (nearest %1$@ ms): %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algunos sitios de referencia siguen un camino mucho más largo que el resto (el más cercano, %1$@ ms): %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certains sites de référence suivent un chemin bien plus long que les autres (le plus proche : %1$@ ms) : %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部の参照サイトは他よりはるかに遠回りの経路を通っています（最短 %1$@ ms）：%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일부 기준 사이트는 다른 곳보다 훨씬 먼 경로를 거칩니다 (가장 가까운 곳 %1$@ ms): %2$@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alguns sites de referência seguem um caminho bem mais longo que os demais (o mais próximo, %1$@ ms): %2$@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Một số trang tham chiếu đi đường dài hơn hẳn các trang còn lại (gần nhất %1$@ ms): %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部分参考网站走的路径比其他的长得多（最近的 %1$@ ms）：%2$@"
+          }
+        }
+      }
+    },
+    "diag.route.line" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (TCP-Verbindungsaufbau)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (TCP connect)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (conexión TCP)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ : %2$@ ms (connexion TCP)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@ ms（TCP 接続）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (TCP 연결)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (conexão TCP)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (kết nối TCP)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@ ms（TCP 连接）"
+          }
+        }
+      }
+    },
+    "diag.route.no_data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wege lassen sich nicht vergleichen: weniger als 3 Referenzseiten haben geantwortet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot compare routes: fewer than 3 reference sites answered"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pueden comparar las rutas: respondieron menos de 3 sitios de referencia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de comparer les routes : moins de 3 sites de référence ont répondu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "経路を比較できません：応答した参照サイトが 3 つ未満です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "경로를 비교할 수 없습니다: 응답한 기준 사이트가 3곳 미만입니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível comparar as rotas: menos de 3 sites de referência responderam"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không so sánh được đường đi: có chưa đến 3 trang tham chiếu trả lời"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法比较路由：响应的参考网站不足 3 个"
+          }
+        }
+      }
+    },
+    "diag.route.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Referenzseiten antworten in ähnlicher Zeit (die nächste in %1$@ ms)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every reference site answers in a similar time (nearest %1$@ ms)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los sitios de referencia responden en un tiempo parecido (el más cercano, %1$@ ms)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les sites de référence répondent en un temps voisin (le plus proche : %1$@ ms)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての参照サイトがほぼ同じ時間で応答しています（最短 %1$@ ms）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 기준 사이트가 비슷한 시간에 응답합니다 (가장 가까운 곳 %1$@ ms)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos os sites de referência respondem em tempo parecido (o mais próximo, %1$@ ms)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mọi trang tham chiếu đều trả lời trong thời gian gần nhau (gần nhất %1$@ ms)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有参考网站的响应时间相近（最近的 %1$@ ms）"
+          }
+        }
+      }
+    },
+    "diag.route.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weg zu weit entfernten Zielen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route to far-away destinations"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruta hacia destinos lejanos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route vers les destinations lointaines"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遠方の宛先への経路"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼 목적지로 가는 경로"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rota até destinos distantes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đường đi tới các đích ở xa"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到远方目的地的路由"
+          }
+        }
+      }
+    },
+    "diag.route.tunnel_on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein VPN oder Tunnel ist aktiv, die gemessenen Wege sind also die des Tunnels, nicht die des Anbieters"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A VPN or tunnel is up, so the routes measured are the tunnel's, not the ISP's"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hay una VPN o un túnel activo, así que las rutas medidas son las del túnel, no las del proveedor"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un VPN ou un tunnel est actif : les routes mesurées sont celles du tunnel, pas celles du fournisseur"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN またはトンネルが有効なため、測定した経路はプロバイダーのものではなくトンネルのものです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 또는 터널이 켜져 있어, 측정된 경로는 통신사가 아니라 터널의 경로입니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Há uma VPN ou túnel ativo, então as rotas medidas são as do túnel, não as do provedor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang bật VPN hoặc tunnel nên đường đo được là của tunnel, không phải của nhà mạng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 或隧道已开启，所测路由是隧道的，而不是运营商的"
+          }
+        }
+      }
+    },
     "diag.signal.advice" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19770,10 +20183,46 @@
     "ui.optimize.measured.upload_shaping" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Begrenzt auf %1$@ Mbit/s – 85 %% der %2$@ Mbit/s Upload, gemessen am %3$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Limited to %1$@ Mbps — 85%% of the %2$@ Mbps upload measured on %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limitada a %1$@ Mbps: 85 %% de los %2$@ Mbps de subida medidos el %3$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limité à %1$@ Mbit/s — 85 %% des %2$@ Mbit/s d’envoi mesurés le %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Mbps に制限 — %3$@ に測定したアップロード %2$@ Mbps の 85%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Mbps로 제한 — %3$@에 측정한 업로드 %2$@ Mbps의 85%%"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limitado a %1$@ Mbps — 85%% dos %2$@ Mbps de upload medidos em %3$@"
           }
         },
         "vi" : {
@@ -19781,22 +20230,70 @@
             "state" : "translated",
             "value" : "Giới hạn %1$@ Mbps — 85%% của %2$@ Mbps upload đo ngày %3$@"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "限制为 %1$@ Mbps — %3$@ 测得上传 %2$@ Mbps 的 85%%"
+          }
         }
       }
     },
     "ui.optimize.measuring" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gemessen…"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Measuring…"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Midiendo…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mesure en cours…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測定中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 중…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medindo…"
+          }
+        },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Đang đo…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在测量…"
           }
         }
       }
@@ -19981,10 +20478,46 @@
     "ui.optimize.stale.hint" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus- und wieder einschalten, um dieses Netzwerk zu messen"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn it off and on again to measure this network"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactívalo y vuelve a activarlo para medir esta red"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivez puis réactivez pour mesurer ce réseau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このネットワークを測定するには、オフにしてから再度オンにしてください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 네트워크를 측정하려면 껐다가 다시 켜세요"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desative e ative de novo para medir esta rede"
           }
         },
         "vi" : {
@@ -19992,16 +20525,58 @@
             "state" : "translated",
             "value" : "Tắt rồi bật lại để đo mạng này"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭后再开启即可测量此网络"
+          }
         }
       }
     },
     "ui.optimize.stale.old" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Messung ist veraltet"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Measurement is old"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La medición es antigua"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La mesure est ancienne"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測定結果が古くなっています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정 결과가 오래됨"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A medição está antiga"
           }
         },
         "vi" : {
@@ -20009,22 +20584,70 @@
             "state" : "translated",
             "value" : "Phép đo đã cũ"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量结果已过时"
+          }
         }
       }
     },
     "ui.optimize.stale.other_network" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In einem anderen Netzwerk gemessen"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Measured on another network"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medido en otra red"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mesuré sur un autre réseau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のネットワークで測定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 네트워크에서 측정됨"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medido em outra rede"
+          }
+        },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Đo trên mạng khác"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在其他网络上测量"
           }
         }
       }
@@ -25041,10 +25664,46 @@
     "ui.sheet.measured.body" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang (bis zu 100 MB), vor und nach der Änderung, und wird nicht angewendet, wenn nichts zu beheben ist."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%1$@” measures your upload for about 15 seconds (up to 100 MB), before and after the change, and is not applied if there is nothing to fix."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "«%1$@» mide tu subida durante unos 15 segundos (hasta 100 MB), antes y después del cambio, y no se aplica si no hay nada que corregir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes (jusqu’à 100 Mo), avant et après la modification, et n’est pas appliqué s’il n’y a rien à corriger."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%1$@」は変更の前後にアップロードを約 15 秒（最大 100 MB）測定し、直すことがなければ適用しません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "'%1$@'은(는) 변경 전후로 업로드를 약 15초(최대 100MB) 측정하며, 고칠 것이 없으면 적용하지 않습니다."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” mede seu upload por cerca de 15 segundos (até 100 MB), antes e depois da mudança, e não é aplicado se não houver nada a corrigir."
           }
         },
         "vi" : {
@@ -25052,22 +25711,70 @@
             "state" : "translated",
             "value" : "“%1$@” sẽ đo upload khoảng 15 giây (tối đa 100 MB), trước và sau khi thay đổi, và không áp dụng nếu không có gì cần sửa."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@”会在更改前后各测量约 15 秒上传（最多 100 MB），没有需要修复的问题时不会应用。"
+          }
         }
       }
     },
     "ui.sheet.measured.title" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuerst die Verbindung messen?"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Measure your connection first?"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Medir primero tu conexión?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mesurer d’abord votre connexion ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先に接続を測定しますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼저 연결을 측정할까요?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Medir sua conexão primeiro?"
+          }
+        },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Đo đường truyền trước?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先测量你的连接？"
           }
         }
       }
