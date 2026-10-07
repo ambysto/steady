@@ -244,6 +244,71 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
 - **Takeaways:** the rate Windows stores is exactly the rate asked for (no rounding at these values); a policy created in the default store shows up in the `ActiveStore` immediately, under a lower-case name (`-eq` in PowerShell ignores case, so the removal still finds it). Whether the limit lowers latency under upload remains to be measured on a line that has upload bufferbloat — the tweak records that itself (`tweak_verified`).
 - **Correction (same day):** "no upload bufferbloat" is not established. A load phase stops at 100 MB, so it cannot report more than 80 Mbps, and on this PC every phase measured that day read 79–80 Mbps (EXP-016/017, SIC-93): the queue was probably never full, so the 25 ms rise says little. The tweak now also refuses a measurement at that ceiling instead of taking it for the line's capacity.
 
+## EXP-016 — Speed tweaks: which ones can be measured on this PC (2026-10-07)
+
+The speed changes made by hand on 2026-08-31 were applied together and measured before the antenna fault (EXP-014) was found, so none of them has its own result. They are now tweaks in the app. This entry records, per tweak, what a before/after measurement on this PC can show. Read-only inventory at 09:20 (+07), app at `main` 87cc23c (`python -m app.tweaks list`, `Get-NetAdapterAdvancedProperty`, `Get-NetAdapterRsc`, `Get-NetOffloadGlobalSetting`):
+
+| Tweak | State on this PC | Result / what is needed |
+|---|---|---|
+| `wifi_prefer_5g` | ON | **Nothing to measure here:** the MediaTek driver's own default for Preferred Band is already "Prefer 5GHz band". The tweak only changes something on drivers whose default is "No Preference". |
+| `wifi_tx_power_max` | ON | **Nothing to measure here:** the driver's default Transmit Power Level is already "Highest". |
+| `rsc_off` | not supported | **Not applicable:** the card reports no RSC hardware (`RscHardwareCapabilities` IPv4/IPv6 = False). The "RSC off" done by hand on 08-31 never had an effect on this card. |
+| `packet_coalescing_off` | ON (global `PacketCoalescingFilter` = Disabled) | Measured in EXP-018: no clear difference (upload only). |
+| `tcp_ecn` | ON (set by hand 08-31) | Measured in EXP-017: no clear difference. |
+| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Not to be enabled from the app yet:** the code review found that its restore broke when the uplink changed, and that the static DNS followed the card to other networks. PR #30 fixes both; a remaining gap (switching it off from the UI while offline or on another uplink) is being fixed. Then the baseline needs DNS back to DHCP (write). |
+| `upload_shaping` (upload limit) | built after this inventory (PR #25) | First run in EXP-015: refused, latency rose only 25 ms under upload. That load was capped at 80 Mbps (see EXP-017), so the line's real behaviour under a full upload is still unknown. |
+| MTU from path MTU | not built yet (interface MTU 1492 set by hand) | Waits for the tweak. Baseline needs MTU 1500 (write). |
+
+Conditions seen at the same time:
+
+- A WireGuard tunnel is up. Check #15 measures the tunnel's routes, not the ISP's, and `dns_fastest` is not meant to be offered with a VPN ⇒ **the tunnel must be off for every measurement below.**
+- DNS benchmark (check #6, cached names): the router answers in **8 ms**; the hand-set DoH servers in **45–52 ms**. A cold-cache test is needed before saying `dns_fastest` helps here; it may be slower than DHCP DNS.
+- Bufferbloat (check #14): +4 ms under load at ~79 Mbps, verdict OK. There is little headroom for ECN or an upload limit to show a gain.
+
+**Protocol for the remaining tweaks.** These change speed or latency at once, so they are measured with short interleaved runs, not with the 24-hour windows of [ADR-0007](adr/0007-measured-impact.md) (those suit stability outcomes such as outages). Each step that writes to the PC runs only after the owner agrees to it.
+
+1. Tunnel off, nothing else using the line, same hour of the day for A and B.
+2. State A = Windows/driver default, state B = the tweak enabled from the app. Run **A, B, A, B**; in each run: `python -m app.diagnostics --bufferbloat --no-save` and `python -m app.diagnostics --only 5,6,15 --no-save`; for `dns_fastest` also a cold-cache lookup of 20 names that are not in the router's cache.
+3. Better only when B beats both A runs on the tweak's own metric (DNS: median lookup; ECN, packet coalescing: added latency and loss under load; MTU: path MTU result and loss of large packets) by more than the A-to-A difference. Otherwise "no clear difference" ⇒ the tweak stays experimental or is dropped, and [TWEAKS.md](TWEAKS.md) says so.
+4. Leave the winning state on; after 24 hours the app's effect report ([ADR-0007](adr/0007-measured-impact.md)) checks that stability did not get worse.
+
+## EXP-017 — `tcp_ecn`: A/B/A/B (2026-10-07 09:50, +07)
+
+- **Done with:** an elevated helper script that sets the value, waits 15 s, and runs `python -m app.diagnostics --bufferbloat` and `--only 6,15` (`--json --no-save`). The tunnel was off. A = `netsh int tcp set global ecncapability=default`, which reads back as **Disabled** on this Windows build. B = `enabled` (the hand-set value). Put back to Enabled at the end.
+
+  | Round | ECN | Idle router / Internet | p95 under download, router / Internet (loss) | p95 under upload, router / Internet (loss) | DNS median |
+  |---|---|---|---|---|---|
+  | 1 | A off | 5 / 48 ms | 20 / 57 ms (0% / 15%) | 124 / 206 ms (5% / 13%) | 47 ms |
+  | 2 | B on | 4 / 47 ms | 64 / 98 ms (5% / 12%) | 136 / 165 ms (15% / 23%) | 59 ms |
+  | 3 | A off | 5 / 85 ms | 58 / 96 ms (2% / 8%) | 200 / 165 ms (3% / 10%) | 40 ms |
+  | 4 | B on | 4 / 47 ms | 53 / 97 ms (2% / 5%) | 97 / 187 ms (5% / 14%) | 42 ms |
+
+  The median added latency under load was 0 ms in every round.
+- **Result: no clear difference.** The two A runs differ from each other as much as A differs from B.
+- **Caveat:** the load was only ~80 Mbps (see below), so the queue that ECN acts on was probably never full.
+- `tcp_ecn` stays **experimental**, and the hand-set value stays on until a test that fills the line exists.
+
+## EXP-018 — `packet_coalescing_off`: A/B/A/B (2026-10-07 09:55, +07)
+
+- **Done with:** the same script. A = `Set-NetOffloadGlobalSetting -PacketCoalescingFilter Enabled`; B = `Disabled` (the hand-set value). Put back to Disabled at the end.
+- **The download load failed in all 4 rounds** with `HTTP 429` from speed.cloudflare.com (rate-limited after the ECN runs), so only upload was measured. Coalescing acts on received packets, so upload is the less relevant direction.
+
+  | Round | Coalescing filter | p95 under upload, router / Internet (loss) | Check #14 verdict |
+  |---|---|---|---|
+  | 1 | A on | 95 / 205 ms (3% / 16%) | ok |
+  | 2 | B off | 71 / 110 ms (2% / 18%) | ok |
+  | 3 | A on | 266 / 205 ms (12% / 21%) | bad |
+  | 4 | B off | 117 / 225 ms (8% / 21%) | bad |
+
+- **Result: no clear difference, and the measurement is incomplete** (no download phase). The line got worse for both states between rounds 2 and 3, which is drift, not the setting.
+- `packet_coalescing_off` stays **experimental**, with the hand-set value left as it was.
+
+**What these two runs showed about the measuring tool** (more important than the tweaks):
+
+- The bufferbloat check caps each 10-second load phase at `MAX_BYTES` = 100 MB, i.e. **80 Mbps**. Every phase here ran at 79–80 Mbps, so on a faster line the check never fills the queue and reports "OK" without having tested it. The upload limit (`upload_shaping`, ADR-0016) inherits the blind spot: its value is the measured upload speed times a margin, so on a line faster than 80 Mbps it either says "not needed" (as in EXP-015) or, when latency already rises at 80 Mbps, sets a limit below what the line can carry.
+- After about 6 runs in 10 minutes, speed.cloudflare.com answers `HTTP 429` to the download, and the check carries on with upload only.
+- Internet ICMP loss of 5–23% under load matches the ICMP-only loss seen in EXP-014, so loss under load is a weak signal on this line.
+
 ## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 
 - **Context:** the PC is **upstairs**, the BE3 router is **downstairs**, a LAN cable cannot be run ⇒ explains the signal of only −66…−80 dBm.
