@@ -22,7 +22,6 @@ class FakeOps:
         if name == self.fail:
             raise OSError(f"{name} failed")
 
-    def copy_tree(self, src, dst): self._do("copy", src, dst)
     def replace_tree(self, src, dst): self._do("replace", src, dst)
     def shortcut(self, link, target, args=""): self._do("shortcut", link.name, args)
     def remove_file(self, path): self._do("remove_file", path.name)
@@ -41,16 +40,9 @@ class FakeOps:
     def launch(self, exe, args): self._do("launch", args)
     def stop_other_instances(self, folder, keep=None): self._do("stop_instances", folder, keep)
     def backups_left(self): return self.backups
-    def store_left(self): return self.store
     def delete_tree(self, path): self._do("delete_tree", path)
     def delete_program_folder(self, folder): self._do("delete_program_folder", folder)
     def delete_after_exit(self, folder, also_wait=None): self._do("delete_after_exit", folder, also_wait)
-
-    def restore_everything(self):
-        self._do("restore_all")
-        if self.restore_ok:
-            self.backups = self.store = False
-        return self.restore_ok, i18n.msg("installer.restored_all")
 
     def install_machine(self):
         self._do("install_machine")
@@ -86,8 +78,8 @@ class MachineInstallTests(unittest.TestCase):
         ops = FakeOps()
         results = installer.run_steps(installer.machine_steps(SRC, DST, ops))
         self.assertTrue(all(ok for _, ok, _ in results))
-        self.assertEqual(ops.names(), ["stop_instances", "retire_task", "replace", "register", "shortcut"])
-        self.assertEqual(ops.calls[2][1:], (SRC, DST))
+        self.assertEqual(ops.names(), ["stop_instances", "replace", "register", "retire_task", "shortcut"])
+        self.assertEqual(ops.calls[1][1:], (SRC, DST))
         reg = next(c[1] for c in ops.calls if c[0] == "register")
         self.assertEqual(reg["UninstallString"], f'"{DST / runtime.EXE_NAME}" uninstall')
         self.assertEqual((reg["DisplayName"], reg["InstallLocation"]), ("Ambysto Steady", str(DST)))
@@ -107,7 +99,7 @@ class MachineInstallTests(unittest.TestCase):
             out = installer.install_machine(77, ops=ops)
         self.assertTrue(out["ok"], out)
         self.assertEqual(ops.calls[0][1:], (DST, 77))                   # the installer that asked is spared
-        self.assertEqual(ops.calls[2][1:], (SRC, DST))
+        self.assertEqual(ops.calls[1][1:], (SRC, DST))
 
     def test_install_machine_refuses_from_source(self):
         ops = FakeOps()
@@ -122,6 +114,7 @@ class MachineInstallTests(unittest.TestCase):
             out = installer.install_machine(ops=ops)
         self.assertFalse(out["ok"])
         self.assertNotIn("register", ops.names())
+        self.assertNotIn("retire_task", ops.names())          # a failed copy leaves the old monitor's task alone
 
 
 class InstallTests(unittest.TestCase):
@@ -404,10 +397,10 @@ class RetireTaskTests(unittest.TestCase):
     def run_it(self, status):
         from app import autostart
         calls = []
-        with mock.patch.object(autostart, "status", return_value=status), \
+        with mock.patch.object(autostart, "remove_legacy_tasks", side_effect=lambda: calls.append("legacy")), \
+                mock.patch.object(autostart, "status", return_value=status), \
                 mock.patch.object(autostart, "end_now", side_effect=lambda: calls.append("end")), \
                 mock.patch.object(autostart, "uninstall", side_effect=lambda: calls.append("delete") or SimpleNamespace(ok=True)):
-            installer.Ops.__mro__  # the guarded class: use the real method on a bare instance
             real = _real_ops()
             real.retire_unprotected_task(DST)
         return calls
@@ -415,12 +408,12 @@ class RetireTaskTests(unittest.TestCase):
     def test_a_task_from_a_per_user_install_is_ended_and_removed(self):
         from app import autostart
         st = autostart.TaskStatus(True, run_level="HighestAvailable", command=str(OLD / runtime.EXE_NAME))
-        self.assertEqual(self.run_it(st), ["end", "delete"])
+        self.assertEqual(self.run_it(st), ["legacy", "end", "delete"])
 
     def test_the_task_of_this_install_and_no_task_are_left_alone(self):
         from app import autostart
-        self.assertEqual(self.run_it(autostart.TaskStatus(True, command=f'"{DST / runtime.EXE_NAME}"')), [])
-        self.assertEqual(self.run_it(autostart.TaskStatus(False)), [])
+        self.assertEqual(self.run_it(autostart.TaskStatus(True, command=f'"{DST / runtime.EXE_NAME}"')), ["legacy"])
+        self.assertEqual(self.run_it(autostart.TaskStatus(False)), ["legacy"])
 
 
 def _real_ops():
@@ -462,6 +455,24 @@ class PowerShellModulePathTests(unittest.TestCase):
         from app import winutil
         self.assertTrue(winutil._UTF8_PREAMBLE.startswith(winutil.SAFE_MODULE_PATH))
         self.assertTrue(winutil.powershell_exe().lower().endswith(r"\windowspowershell\v1.0\powershell.exe"))
+
+    def test_a_cmdlet_shadowed_in_the_users_path_does_not_run(self):
+        # A non-admin process can put files in a folder on the user's PATH (WindowsApps, or one it adds).
+        from app import winutil
+        with tempfile.TemporaryDirectory() as tmp:
+            for name in ("Get-CimInstance", "Join-Path"):
+                (Path(tmp) / f"{name}.ps1").write_text(f'Write-Output "HIJACKED {name}"', encoding="utf-8")
+            with mock.patch.dict(os.environ, {"PATH": tmp + ";" + os.environ.get("PATH", "")}):
+                out = winutil.run_powershell("$r = Get-CimInstance Win32_OperatingSystem; "
+                                             "if ($r -is [string]) { $r } else { 'REAL' }; $env:PSModulePath")
+        self.assertNotIn("HIJACKED", out)
+        self.assertTrue(out.startswith("REAL"), out)
+
+    def test_the_child_gets_a_clean_environment(self):
+        from app import winutil
+        env = winutil.safe_env()
+        self.assertTrue(all("Users" not in p for p in env["PATH"].split(";")), env["PATH"])
+        self.assertTrue(all("Documents" not in p for p in env["PSModulePath"].split(";")), env["PSModulePath"])
 
     def test_the_module_path_seen_by_a_script(self):
         from app import winutil

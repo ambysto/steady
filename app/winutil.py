@@ -17,12 +17,18 @@ from pathlib import Path
 from typing import Any
 
 CREATE_NO_WINDOW = 0x08000000
-# Modules load only from Windows' own folders. -NoProfile does not stop module autoloading, and PSModulePath
-# starts with the user's Documents\WindowsPowerShell\Modules, which a process without Admin rights can fill:
-# a module there exporting e.g. Get-CimInstance would run with the rights of an elevated caller (ADR-0019).
-# Set as the script's first statement: PowerShell 5.1 rebuilds the variable at startup.
-SAFE_MODULE_PATH = ("$env:PSModulePath = (Join-Path $PSHOME 'Modules') + ';' + "
-                    "(Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'WindowsPowerShell\\Modules'); ")
+# Commands and modules come only from Windows' own folders (ADR-0019). A process without Admin rights can
+# put files in the user's PATH (e.g. %LOCALAPPDATA%\Microsoft\WindowsApps, or any folder it adds through
+# HKCU\Environment) and in Documents\WindowsPowerShell\Modules; PowerShell 5.1 looks a not-yet-loaded cmdlet
+# up in PATH before autoloading its module, and -NoProfile stops neither. A Get-CimInstance.ps1 there would
+# run with the rights of an elevated caller. So the child gets a clean PATH and PSModulePath (safe_env), and
+# every script starts by setting both again (PowerShell 5.1 adds the user's module folder back at startup),
+# using .NET only: no cmdlet runs before the paths are safe.
+SAFE_MODULE_PATH = (
+    "$env:Path = [Environment]::SystemDirectory + ';' + [Environment]::GetFolderPath('Windows') + ';' + "
+    "[IO.Path]::Combine([Environment]::SystemDirectory, 'Wbem') + ';' + $PSHOME; "
+    "$env:PSModulePath = [IO.Path]::Combine($PSHOME, 'Modules') + ';' + "
+    "[IO.Path]::Combine([Environment]::GetFolderPath('ProgramFiles'), 'WindowsPowerShell', 'Modules'); ")
 _UTF8_PREAMBLE = SAFE_MODULE_PATH + ("[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
                                      "$ProgressPreference = 'SilentlyContinue'; ")
 FOLDERID_SYSTEM = "1ac14e77-02e7-4e5d-b744-2eb1ae5198b7"
@@ -34,6 +40,21 @@ def powershell_exe() -> str:
         return str(Path(known_folder(FOLDERID_SYSTEM)) / "WindowsPowerShell" / "v1.0" / "powershell.exe")
     except (OSError, AttributeError):
         return "powershell.exe"
+
+
+def safe_env() -> dict[str, str]:
+    """The environment for a PowerShell child: PATH and PSModulePath limited to Windows' own folders."""
+    import os
+    try:
+        system = Path(known_folder(FOLDERID_SYSTEM))
+    except (OSError, AttributeError):
+        return dict(os.environ)
+    windows, posh = system.parent, system / "WindowsPowerShell" / "v1.0"
+    env = dict(os.environ)
+    env["PATH"] = ";".join(str(p) for p in (system, windows, system / "Wbem", posh))
+    env["PSModulePath"] = ";".join(str(p) for p in (posh / "Modules",
+                                                     Path(known_folder(FOLDERID_PROGRAM_FILES)) / "WindowsPowerShell" / "Modules"))
+    return env
 
 
 class PowerShellError(RuntimeError):
@@ -61,7 +82,7 @@ def run_powershell(script: str, timeout: float = 30.0) -> str:
     ]
     try:
         proc = subprocess.run(
-            cmd, capture_output=True, timeout=timeout, creationflags=CREATE_NO_WINDOW,
+            cmd, capture_output=True, timeout=timeout, creationflags=CREATE_NO_WINDOW, env=safe_env(),
         )
     except subprocess.TimeoutExpired as exc:
         raise PowerShellError(f"PowerShell timed out after {timeout}s") from exc

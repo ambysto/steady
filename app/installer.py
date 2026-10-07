@@ -179,6 +179,7 @@ class Ops:
         `target`: a task from a per-user install may have highest privileges and point at a folder any
         process can write. Elevated, so it can end an elevated monitor too; the user's half registers it again."""
         from . import autostart
+        autostart.remove_legacy_tasks()       # the same monitor under an earlier name ("StableInternet Monitor")
         st = autostart.status()
         if not st.installed or not st.command:
             return
@@ -222,13 +223,13 @@ class Ops:
         from .winsys import ps_literal
         check_deletable(folder, marker=runtime.EXE_NAME)
         pids = ",".join(str(p) for p in (os.getpid(), also_wait) if p)
-        from .winutil import SAFE_MODULE_PATH, powershell_exe
+        from .winutil import SAFE_MODULE_PATH, powershell_exe, safe_env
         script = (SAFE_MODULE_PATH + f"Wait-Process -Id {pids} -Timeout 3600 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; "
                   f"Remove-Item -LiteralPath {ps_literal(str(Path(folder).resolve()))} -Recurse -Force")
         encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
         # Not DETACHED: powershell.exe without any console exits at once and does nothing (seen on
         # Windows 11). A hidden console of its own outlives this process just as well.
-        subprocess.Popen([powershell_exe(), "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+        subprocess.Popen([powershell_exe(), "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], env=safe_env(),
                          cwd=os.environ.get("TEMP") or None,       # never inside the folder it deletes
                          creationflags=NEW_GROUP | CREATE_NO_WINDOW, close_fds=True)
 
@@ -279,8 +280,7 @@ def machine_steps(source: Path, target: Path, ops: Ops, caller: int | None = Non
     asked) is spared when copies running from the target are stopped."""
     exe = target / runtime.EXE_NAME
     # An earlier copy may be running (upgrade): its exe is locked against the copy.
-    steps = [Step(msg("installer.step.stop"), lambda: ops.stop_other_instances(target, keep=caller), required=False),
-             Step(msg("installer.step.retire_task"), lambda: ops.retire_unprotected_task(target))]
+    steps = [Step(msg("installer.step.stop"), lambda: ops.stop_other_instances(target, keep=caller), required=False)]
     if source.resolve() != target.resolve():
         steps.append(Step(msg("installer.step.copy", target=str(target)), lambda: ops.replace_tree(source, target)))
     steps += [
@@ -289,6 +289,8 @@ def machine_steps(source: Path, target: Path, ops: Ops, caller: int | None = Non
             "InstallLocation": str(target), "DisplayIcon": f"{exe},0",
             "UninstallString": f'"{exe}" uninstall', "QuietUninstallString": f'"{exe}" uninstall --yes',
             "NoModify": 1, "NoRepair": 1})),
+        # Only once the new copy is in place: a failed copy must not leave the old monitor without its task.
+        Step(msg("installer.step.retire_task"), lambda: ops.retire_unprotected_task(target)),
         Step(msg("installer.step.shortcut_all"), lambda: ops.shortcut(common_start_menu_link(), exe)),
     ]
     return steps
