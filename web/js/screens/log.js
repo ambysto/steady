@@ -19,6 +19,12 @@ const WITH_DURATION = new Set(["router_down", "internet_down", "monitor_gap"]);
 let filter = "all";
 let events = [];
 
+/** Open the Log on one group (the Overview's value card links here). */
+export function showGroup(group) {
+  filter = group in GROUPS ? group : "all";
+  location.hash = "#/log";
+}
+
 const root = () => $("#screen-log");
 const groupOf = kind => Object.keys(GROUPS).find(g => GROUPS[g].includes(kind));
 

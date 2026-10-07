@@ -236,6 +236,8 @@ svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.
 .problem-action + .problem-action { margin-top: var(--space-1); border-top: .5px solid var(--separator); }
 .problem-action .main { flex: 1; min-width: 0; }
 .mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: .5px solid var(--separator); }
+.section-title-row { display: flex; align-items: baseline; justify-content: space-between; margin-right: var(--space-2); }
+.section-title-row .time { font-weight: var(--weight-regular); }
 .check-hero .below { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-2); }
 .check-card .metric { margin-top: 2px; font-weight: var(--weight-medium); font-variant-numeric: tabular-nums; }
 .check-card .sub-title { padding: var(--space-3) var(--space-4) var(--space-1); border-top: .5px solid var(--separator);
