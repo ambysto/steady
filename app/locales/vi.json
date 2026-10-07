@@ -827,6 +827,8 @@
   "apple.diag.physical_link.advice": "Kiểm tra không nói được nguyên nhân. Loại trừ trước: nhiễu kênh và cấu hình Wi‑Fi của router (MLO/Wi‑Fi 7, Wi‑Fi modem cũ). Nếu sạch thì nghi thứ xung quanh Mac: kim loại, gập nắp, dock hay màn hình có thể che ăng-ten; đặt Mac ở chỗ thoáng hoặc gần router hơn rồi so lại sau vài giờ.",
   "apple.diag.physical_link.advice_improved": "Nếu bạn vừa dời Mac/router hoặc đổi cấu hình, theo dõi thêm vài giờ để xác nhận.",
   "apple.ui.language.auto": "Theo hệ thống",
+  "apple.ui.check.idle_body": "Chạy {count} kiểm tra kết nối, router và DNS. Không thay đổi gì trên thiết bị.",
+  "apple.ui.check.kind.none": "Thiết bị này không sửa được",
 
   "ui.nav.history": "Lịch sử",
   "ui.overview.all_ok": "Mọi kiểm tra đều ổn",
@@ -889,6 +891,7 @@
   "ui.check.undo": "Hoàn tác các thay đổi này",
   "ui.check.still_open": "Còn lại",
   "ui.check.done": "Xong",
+  "ui.check.recent_note": "Độ trễ trung vị và tỉ lệ mất gói tính trên 60 lần đo gần nhất của mỗi đích.",
   "ui.value.title": "Steady đã làm gì cho bạn",
   "ui.value.window": "7 ngày qua",
   "ui.value.recovered": {"one": "Tự kết nối lại cho bạn {count} lần", "other": "Tự kết nối lại cho bạn {count} lần"},

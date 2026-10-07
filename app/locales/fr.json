@@ -827,6 +827,8 @@
   "apple.diag.physical_link.advice": "Cette vérification ne peut pas déterminer la cause. Écartez d'abord : les interférences de canal et les réglages Wi‑Fi du routeur (MLO/Wi‑Fi 7, le Wi‑Fi d'un ancien modem). Si tout est en ordre, soupçonnez l'environnement du Mac : du métal, un écran rabattu, un dock ou un moniteur peuvent masquer ses antennes ; placez-le à découvert ou plus près du routeur, puis comparez de nouveau après quelques heures.",
   "apple.diag.physical_link.advice_improved": "Si vous venez de déplacer le Mac ou le routeur, ou de changer un réglage, observez encore quelques heures pour confirmer.",
   "apple.ui.language.auto": "Identique au système",
+  "apple.ui.check.idle_body": "Lance {count} vérifications sur la connexion, le routeur et le DNS. Rien n'est modifié.",
+  "apple.ui.check.kind.none": "Rien sur cet appareil ne le corrige",
 
   "ui.nav.history": "Historique",
   "ui.overview.all_ok": "Toutes les vérifications sont OK",
@@ -889,6 +891,7 @@
   "ui.check.undo": "Annuler ces modifications",
   "ui.check.still_open": "Reste à faire",
   "ui.check.done": "Terminé",
+  "ui.check.recent_note": "Latence médiane et perte sur les 60 dernières mesures de chaque cible.",
   "ui.value.title": "Ce que Steady a fait pour vous",
   "ui.value.window": "7 derniers jours",
   "ui.value.recovered": {"one": "Vous a reconnecté automatiquement {count} fois", "other": "Vous a reconnecté automatiquement {count} fois"},

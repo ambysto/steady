@@ -130,4 +130,15 @@ struct SampleNetworkTests {
         #expect(SampleNetwork.interference.status == .ok)
         #expect(SampleNetwork.path.routerIPv4?.hasPrefix("192.0.2.") == true)   // RFC 5737
     }
+
+    /// `-SampleProblems`: one problem of each kind for the "found" screenshot.
+    @Test func theProblemNetworkHasSomethingToFixAndSomethingNot() {
+        let monitor = SampleNetwork.monitor(now: 1_790_000_040, wifi: SampleNetwork.fairWiFi, internetLoss: true)
+        let signal = WiFiSignal.evaluate(SampleNetwork.fairWiFi)
+        let problems = CheckFlow.problems([signal, monitor.pingQuality, SampleNetwork.brokenDNS])
+        #expect(problems.map(\.result.key) == ["signal", "ping", "dns"])   // all warnings: by check number
+        #expect(problems.map(\.result.status) == [.warn, .warn, .warn])
+        #expect(problems.map(\.remedy) == [.you, .none, .you])
+        #expect(monitor.pingQuality.summary.key != "diag.ping.router_loss")   // the loss is past the router
+    }
 }

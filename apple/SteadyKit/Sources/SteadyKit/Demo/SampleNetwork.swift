@@ -18,9 +18,14 @@ public enum SampleNetwork {
     public static let wifi = WiFiSignal.State(state: "connected", channel: 44, radioType: "802.11ax",
                                               signal: WiFiSignal.State.quality(rssi: -52), rssi: -52, txMbps: 864)
 
-    /// A monitor holding the hour before `now` and live samples, measured nowhere.
+    /// `-SampleProblems`: the same network from a room further away, a fair signal.
+    public static let fairWiFi = WiFiSignal.State(state: "connected", channel: 44, radioType: "802.11ax",
+                                                  signal: WiFiSignal.State.quality(rssi: -67), rssi: -67, txMbps: 288)
+
+    /// A monitor holding the hour before `now` and live samples, measured nowhere. With
+    /// `internetLoss` (`-SampleProblems`), about 2.5% of the rounds get no reply past the router.
     @MainActor
-    public static func monitor(now: Double, wifi: WiFiSignal.State?) -> LiveMonitor {
+    public static func monitor(now: Double, wifi: WiFiSignal.State?, internetLoss: Bool = false) -> LiveMonitor {
         let clock = Clock(time: now - 3600)
         let monitor = LiveMonitor(now: { clock.time.withLock { $0 } })
         monitor.routerAddress = router
@@ -37,6 +42,13 @@ public enum SampleNetwork {
             if second % 10 == 0 {
                 round += [("tcp_cloudflare", 24 + busy + random.next(8)), ("tcp_google", 27 + busy + random.next(8))]
             }
+            if internetLoss {
+                // 1 ping in 40 and 1 TCP probe in 40 (probes run every 10 s) get no reply.
+                round = round.map { target, rtt in
+                    let lost = target.hasPrefix("tcp_") ? second % 400 == 0 : target != LiveMonitor.router && second % 40 == 5
+                    return (target, lost ? nil : rtt)
+                }
+            }
             monitor.record(round)
             clock.time.withLock { $0 += 1 }
         }
@@ -52,6 +64,13 @@ public enum SampleNetwork {
         return DNSBenchmark.evaluate([server(router, 6.5), server("1.1.1.1", 19), server("8.8.8.8", 23), server("9.9.9.9", 26)],
                                      inUse: [router], roles: [router: .inUseRouter, "1.1.1.1": .public,
                                                               "8.8.8.8": .public, "9.9.9.9": .public])
+    }
+
+    /// Check #6 for `-SampleProblems`: the router's DNS, in use, times out on 2 queries of 5.
+    public static var brokenDNS: CheckResult {
+        DNSBenchmark.evaluate([DNSBenchmark.Server(server: router, sent: 5, replies: 3, failures: 2, rtts: [9.5, 11.0, 48.2]),
+                               DNSBenchmark.Server(server: "1.1.1.1", sent: 5, replies: 5, rtts: [19, 20.2, 19.4, 21.1, 19.8])],
+                              inUse: [router], roles: [router: .inUseRouter, "1.1.1.1": .public])
     }
 
     /// Check #3 on the Mac: two quiet neighbours on other channels.
