@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Tweak `dns_fastest`** (SIC-87, medium risk, [ADR-0015](docs/adr/0015-tweak-value-from-measurement.md)): switches the uplink's DNS to the fastest public servers over HTTPS.
+  - At apply time it benchmarks Cloudflare, Google and Quad9 (the providers Windows has a DoH template for) and keeps two different providers, the winner's two servers and the runner-up's fastest; DoH auto-upgrade is turned on for them (with fallback to plain UDP).
+  - The backup holds whether DNS was static or from DHCP and the DoH flags of all six candidates; turning it off resets to DHCP (`-ResetServerAddresses`) or puts the static servers back, and removes DoH entries that did not exist.
+  - Not offered (and never suggested) with a VPN, on a domain, with a DNS suffix, with a static IPv6 DNS or behind a captive portal. A hand-made setup counts as on.
+  - The DNS-change warning of the monitor no longer fires for a change the app made in the last 5 minutes; it is recorded as `dns_observed` (`event.dns_app_changed`).
+  - A broken DNS in diagnostics check #6 now points at this tweak.
+- **Experimental tweaks `tcp_ecn`, `rsc_off`, `packet_coalescing_off`** (SIC-88): TCP ECN on, Receive Segment Coalescing off on the Wi‑Fi card, Packet Coalescing Filter off. All off by default, labelled experimental, with the original value in the backup. `tcp_ecn` goes back to Windows' own `disabled` even without a backup; the other two need the backup. A card without RSC is "not supported". `app/winsys.py` gained the system calls behind them.
+- **Diagnostics check #15, route to far-away destinations** (SIC-89): TCP connect times to five widely served sites; one that takes at least 3× and 80 ms more than the nearest is reported as a detour (`info`), and the new manual step `tunnel_route` suggests considering a tunnel service (no product named) with the usual before/after measurement. Not measured while a VPN or tunnel is up.
+- Manual step `router_sqm` now explains why (the queue builds on the download side), names OpenWrt's `sqm-scripts` for a router without SQM and a faster plan for a line that is simply full. All new texts are in the 9 catalogs.
+
 ## [0.2.0] - 2026-10-06
 
 This is the first section of this file: it lists the project's work from the start, including what 0.1.0 shipped. New since 0.1.0 on Windows: the desktop window uses the native frame (Snap Layouts, resizing), a new app icon, a watchdog that stays out of the way when another connection carries the traffic, safer failover, and a code signing and privacy policy. The Apple app lives in `apple/` and is not part of this download.

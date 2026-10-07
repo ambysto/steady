@@ -1,7 +1,9 @@
 """System access for tweaks - the only module that writes to the machine.
 
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
-active plan, adapter protocol bindings. Every write raises SystemWriteError on failure;
+active plan, adapter protocol bindings, TCP global parameters (netsh), receive segment
+coalescing, global offload settings, the DNS servers of the uplink and the DoH entries
+Windows keeps for them. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -10,18 +12,28 @@ the typographic quotes U+2018..U+201B as single quotes, so doubling ' is not eno
 from __future__ import annotations
 
 import base64
+import ipaddress
 import re
 import subprocess
 import winreg
 from typing import Any, Callable, Protocol
 
-from .winutil import (CREATE_NO_WINDOW, PowerShellError, _oem_codepage, is_wifi_adapter,
-                      run_powershell, run_powershell_json)
+from .winutil import (CREATE_NO_WINDOW, VPN_RE, PowerShellError, _oem_codepage, default_route_native, get_adapters,
+                      get_uplink, is_wifi_adapter, run_powershell, run_powershell_json)
 
 NET_CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
 _GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 _COMPONENT_RE = re.compile(r"^[A-Za-z0-9_]+$")
 _POWER_RE = re.compile(r"Current (AC|DC) Power Setting Index:\s*0x([0-9a-fA-F]+)")
+_NETSH_LINE_RE = re.compile(r"^\s*(.+?)\s*:\s*(.*?)\s*$")
+_DOH_TEMPLATE_RE = re.compile(r"^https://[A-Za-z0-9.-]+(?::\d+)?(?:/[A-Za-z0-9._~/-]*)?$")
+
+# `netsh int tcp set global <key>=<value>` parameters a tweak may change -> the label of `show global`.
+TCP_GLOBAL_SETTINGS = {"ecncapability": "ECN Capability"}
+TCP_GLOBAL_VALUES = ("enabled", "disabled", "default")
+# Set-NetOffloadGlobalSetting parameters a tweak may change.
+OFFLOAD_SETTINGS = ("PacketCoalescingFilter",)
+OFFLOAD_VALUES = ("Default", "Enabled", "Disabled")
 
 
 class SystemReadError(RuntimeError):
@@ -59,6 +71,11 @@ class System(Protocol):
     def registry_get(self, path: str, name: str) -> int | None: ...
     def power_get(self, subgroup: str, setting: str) -> tuple[int, int]: ...
     def binding_get(self, adapter: str, component: str) -> bool | None: ...
+    def tcp_global_get(self, setting: str) -> str | None: ...
+    def rsc_get(self, adapter: str) -> dict[str, Any] | None: ...
+    def offload_global_get(self, setting: str) -> str | None: ...
+    def dns_interface(self) -> dict[str, Any] | None: ...
+    def doh_get(self) -> dict[str, dict[str, Any]]: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -67,6 +84,12 @@ class System(Protocol):
     def power_set(self, subgroup: str, setting: str, ac: int, dc: int) -> None: ...
     def interface_metric_set(self, interface_index: int, metric: int | None) -> None: ...
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None: ...
+    def tcp_global_set(self, setting: str, value: str) -> None: ...
+    def rsc_set(self, adapter: str, ipv4: bool | None, ipv6: bool | None) -> None: ...
+    def offload_global_set(self, setting: str, value: str) -> None: ...
+    def dns_servers_set(self, interface_index: int, servers: list[str] | None) -> None: ...
+    def doh_set(self, address: str, template: str, auto_upgrade: bool, fallback_to_udp: bool) -> None: ...
+    def doh_remove(self, address: str) -> None: ...
 
 
 def _as_list(value: Any) -> list[str]:
@@ -79,10 +102,37 @@ def _as_list(value: Any) -> list[str]:
     return [str(v) for v in value] if isinstance(value, list) else [str(value)]
 
 
+def _check_address(address: str) -> str:
+    try:
+        ipaddress.ip_address(address)
+    except ValueError:
+        raise ValueError(f"not an IP address: {address!r}") from None
+    return address
+
+
+def _ps_bool(value: bool) -> str:
+    return "$true" if value else "$false"
+
+
+def _uplink_route() -> dict[str, Any] | None:
+    return default_route_native() or get_uplink()
+
+
+def parse_netsh_table(text: str) -> dict[str, str]:
+    """`label : value` lines of a netsh `show` command (labels as printed, values lower-cased)."""
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        m = _NETSH_LINE_RE.match(line)
+        if m and m.group(2):
+            out[m.group(1)] = m.group(2).lower()
+    return out
+
+
 class WindowsSystem:
     def __init__(self, *, ps: Callable[..., str] = run_powershell, ps_json: Callable[..., Any] = run_powershell_json,
-                 run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> None:
-        self._ps, self._ps_json, self._run = ps, ps_json, run
+                 run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+                 route: Callable[[], dict[str, Any] | None] = _uplink_route) -> None:
+        self._ps, self._ps_json, self._run, self._route = ps, ps_json, run, route
 
     # -- reads --------------------------------------------------------------------------
 
@@ -185,6 +235,92 @@ class WindowsSystem:
             raise SystemReadError(f"no IPv4 interface {idx}")
         return {"automatic": bool(rows[0]["Automatic"]), "metric": int(rows[0]["InterfaceMetric"])}
 
+    def _netsh(self, *args: str) -> tuple[int, str]:
+        proc = self._run(["netsh", *args], capture_output=True, timeout=30, creationflags=CREATE_NO_WINDOW)
+        out = proc.stdout.decode(_oem_codepage(), errors="replace") if isinstance(proc.stdout, bytes) else proc.stdout
+        return proc.returncode, out or ""
+
+    def tcp_global_get(self, setting: str) -> str | None:
+        """Lower-case value of a `netsh int tcp show global` parameter ("enabled"...); None when not listed."""
+        if setting not in TCP_GLOBAL_SETTINGS:
+            raise ValueError(f"unknown TCP global setting: {setting!r}")
+        code, out = self._netsh("int", "tcp", "show", "global")
+        if code != 0:
+            raise SystemReadError(f"netsh int tcp show global exited {code}")
+        return parse_netsh_table(out).get(TCP_GLOBAL_SETTINGS[setting])
+
+    def rsc_get(self, adapter: str) -> dict[str, Any] | None:
+        """Receive Segment Coalescing of an adapter: {"ipv4", "ipv6"} enabled flags and {"ipv4_supported",
+        "ipv6_supported"} from the hardware capabilities. None when Windows has no RSC data for it."""
+        try:
+            rows = self._ps_json(
+                f"Get-NetAdapterRsc -Name {ps_literal(adapter)} -ErrorAction Stop | Select-Object "
+                "@{n='IPv4';e={[bool]$_.IPv4Enabled}}, @{n='IPv6';e={[bool]$_.IPv6Enabled}}, "
+                "@{n='IPv4Supported';e={[bool]$_.RscHardwareCapabilities.IPv4Supported}}, "
+                "@{n='IPv6Supported';e={[bool]$_.RscHardwareCapabilities.IPv6Supported}}")
+        except PowerShellError as exc:
+            if re.search(r"No MSFT_NetAdapterRscSettingData|not supported", str(exc), re.I):
+                return None
+            raise SystemReadError(f"cannot read RSC of {adapter!r}: {exc}") from exc
+        if not rows:
+            return None
+        r = rows[0]
+        return {"ipv4": bool(r["IPv4"]), "ipv6": bool(r["IPv6"]),
+                "ipv4_supported": bool(r["IPv4Supported"]), "ipv6_supported": bool(r["IPv6Supported"])}
+
+    def offload_global_get(self, setting: str) -> str | None:
+        if setting not in OFFLOAD_SETTINGS:
+            raise ValueError(f"unknown offload setting: {setting!r}")
+        try:
+            value = self._ps(f"(Get-NetOffloadGlobalSetting -ErrorAction Stop).{setting}").strip()
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read {setting}: {exc}") from exc
+        return value or None
+
+    def dns_interface(self) -> dict[str, Any] | None:
+        """The uplink's IPv4 DNS configuration: {"index", "alias", "servers", "static", "static_v6", "suffix",
+        "domain_joined", "vpn_up"}. `static` is a DNS server typed in by hand (the interface's NameServer
+        value), as opposed to one from DHCP. None when there is no uplink."""
+        route = self._route()
+        if not route:
+            return None
+        idx = int(route["interface_index"])
+        try:
+            rows = self._ps_json(
+                f"$i = {idx}; $a = Get-NetAdapter -InterfaceIndex $i -ErrorAction Stop; $g = $a.InterfaceGuid; "
+                "$v4 = Get-ItemProperty \"HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\$g\" "
+                "-ErrorAction SilentlyContinue; "
+                "$v6 = Get-ItemProperty \"HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\Interfaces\\$g\" "
+                "-ErrorAction SilentlyContinue; "
+                "[pscustomobject]@{ Alias = $a.Name; StaticV4 = [bool]$v4.NameServer; StaticV6 = [bool]$v6.NameServer; "
+                "Servers = @(Get-DnsClientServerAddress -InterfaceIndex $i -AddressFamily IPv4 "
+                "-ErrorAction SilentlyContinue | ForEach-Object { $_.ServerAddresses }); "
+                "Suffix = [string](Get-DnsClient -InterfaceIndex $i -ErrorAction SilentlyContinue).ConnectionSpecificSuffix; "
+                "Domain = [bool](Get-CimInstance Win32_ComputerSystem).PartOfDomain; "
+                "Up = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' } | "
+                "ForEach-Object { \"$($_.Name) $($_.InterfaceDescription)\" }) }")
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the DNS configuration of interface {idx}: {exc}") from exc
+        if not rows:
+            return None
+        r = rows[0]
+        return {"index": idx, "alias": r.get("Alias") or "", "servers": _as_list(r.get("Servers")),
+                "static": bool(r.get("StaticV4")), "static_v6": bool(r.get("StaticV6")),
+                "suffix": (r.get("Suffix") or "").strip(), "domain_joined": bool(r.get("Domain")),
+                "vpn_up": any(VPN_RE.search(name) for name in _as_list(r.get("Up")))}
+
+    def doh_get(self) -> dict[str, dict[str, Any]]:
+        """DoH entries Windows knows: address -> {"template", "auto_upgrade", "fallback_to_udp"}."""
+        try:
+            rows = self._ps_json(
+                "Get-DnsClientDohServerAddress -ErrorAction Stop | Select-Object ServerAddress, DohTemplate, "
+                "@{n='AutoUpgrade';e={[bool]$_.AutoUpgrade}}, @{n='Fallback';e={[bool]$_.AllowFallbackToUdp}}")
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the DoH server list: {exc}") from exc
+        return {str(r["ServerAddress"]): {"template": r.get("DohTemplate") or "",
+                                          "auto_upgrade": bool(r.get("AutoUpgrade")),
+                                          "fallback_to_udp": bool(r.get("Fallback"))} for r in rows}
+
     # -- writes -------------------------------------------------------------------------
 
     def _ps_write(self, script: str, what: str) -> None:
@@ -250,3 +386,57 @@ class WindowsSystem:
         verb = "Enable" if enabled else "Disable"
         self._ps_write(f"{verb}-NetAdapterBinding -Name {ps_literal(adapter)} -ComponentID {component} "
                        "-ErrorAction Stop", f"{verb.lower()} {component} on {adapter}")
+
+    def tcp_global_set(self, setting: str, value: str) -> None:
+        if setting not in TCP_GLOBAL_SETTINGS:
+            raise ValueError(f"unknown TCP global setting: {setting!r}")
+        if value not in TCP_GLOBAL_VALUES:
+            raise ValueError(f"bad TCP global value: {value!r}")
+        code, out = self._netsh("int", "tcp", "set", "global", f"{setting}={value}")
+        if code != 0:
+            raise SystemWriteError(f"netsh int tcp set global {setting}={value} exited {code}: {out.strip()[:200]}")
+
+    def rsc_set(self, adapter: str, ipv4: bool | None, ipv6: bool | None) -> None:
+        """Turn RSC on/off per address family; None leaves a family alone."""
+        for flag, switch in ((ipv4, "-IPv4"), (ipv6, "-IPv6")):
+            if flag is None:
+                continue
+            verb = "Enable" if flag else "Disable"
+            self._ps_write(f"{verb}-NetAdapterRsc -Name {ps_literal(adapter)} {switch} -ErrorAction Stop",
+                           f"{verb.lower()} RSC {switch} on {adapter}")
+
+    def offload_global_set(self, setting: str, value: str) -> None:
+        if setting not in OFFLOAD_SETTINGS:
+            raise ValueError(f"unknown offload setting: {setting!r}")
+        if value not in OFFLOAD_VALUES:
+            raise ValueError(f"bad offload value: {value!r}")
+        self._ps_write(f"Set-NetOffloadGlobalSetting -{setting} {value} -ErrorAction Stop", f"setting {setting}={value}")
+
+    def dns_servers_set(self, interface_index: int, servers: list[str] | None) -> None:
+        """IPv4 DNS servers of an interface. None: back to DHCP's (-ResetServerAddresses, both families)."""
+        idx = int(interface_index)
+        if servers is None:
+            how = "-ResetServerAddresses"
+        else:
+            if not servers:
+                raise ValueError("no DNS servers given")
+            how = "-ServerAddresses " + ",".join(f"'{_check_address(s)}'" for s in servers)
+        self._ps_write(f"Set-DnsClientServerAddress -InterfaceIndex {idx} {how} -ErrorAction Stop",
+                       f"setting the DNS servers of interface {idx}")
+
+    def doh_set(self, address: str, template: str, auto_upgrade: bool, fallback_to_udp: bool) -> None:
+        """Make Windows use DoH for `address` (adds the entry with `template` if it is missing)."""
+        addr = _check_address(address)
+        if not _DOH_TEMPLATE_RE.match(template):
+            raise ValueError(f"bad DoH template: {template!r}")
+        flags = f"-AutoUpgrade {_ps_bool(auto_upgrade)} -AllowFallbackToUdp {_ps_bool(fallback_to_udp)}"
+        self._ps_write(
+            f"$e = Get-DnsClientDohServerAddress -ServerAddress '{addr}' -ErrorAction SilentlyContinue; "
+            f"if ($e) {{ Set-DnsClientDohServerAddress -ServerAddress '{addr}' {flags} -ErrorAction Stop }} "
+            f"else {{ Add-DnsClientDohServerAddress -ServerAddress '{addr}' -DohTemplate '{template}' {flags} "
+            "-ErrorAction Stop }", f"setting DoH for {addr}")
+
+    def doh_remove(self, address: str) -> None:
+        addr = _check_address(address)
+        self._ps_write(f"Get-DnsClientDohServerAddress -ServerAddress '{addr}' -ErrorAction SilentlyContinue | "
+                       "Remove-DnsClientDohServerAddress -ErrorAction Stop", f"removing the DoH entry of {addr}")

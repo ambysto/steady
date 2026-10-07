@@ -43,6 +43,15 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
+        self.tcp_global = {"ecncapability": "disabled"}
+        self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
+        self.offload = {"PacketCoalescingFilter": "Enabled"}
+        self.dhcp_dns = ["192.168.1.1"]
+        self.dns = {"index": 6, "alias": "Wi-Fi", "servers": list(self.dhcp_dns), "static": False, "static_v6": False,
+                    "suffix": "", "domain_joined": False, "vpn_up": False}
+        # What Windows 11 ships: a template for each public server, auto-upgrade for none of them.
+        self.doh = {address: {"template": template, "auto_upgrade": False, "fallback_to_udp": False}
+                    for address, (_, template) in tweaks.DOH_ADDRESSES.items()}
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -75,6 +84,26 @@ class FakeSystem:
     def binding_get(self, adapter, component):
         self._r("binding_get", adapter, component)
         return self.bindings.get((adapter, component))
+
+    def tcp_global_get(self, setting):
+        self._r("tcp_global_get", setting)
+        return self.tcp_global.get(setting)
+
+    def rsc_get(self, adapter):
+        self._r("rsc_get", adapter)
+        return copy.deepcopy(self.rsc.get(adapter))
+
+    def offload_global_get(self, setting):
+        self._r("offload_global_get", setting)
+        return self.offload.get(setting)
+
+    def dns_interface(self):
+        self._r("dns_interface")
+        return copy.deepcopy(self.dns)
+
+    def doh_get(self):
+        self._r("doh_get")
+        return copy.deepcopy(self.doh)
 
     # writes
     def _w(self, name, *args):
@@ -114,12 +143,41 @@ class FakeSystem:
         if self._w("binding_set", adapter, component, enabled):
             self.bindings[(adapter, component)] = enabled
 
+    def tcp_global_set(self, setting, value):
+        if self._w("tcp_global_set", setting, value):
+            self.tcp_global[setting] = value
+
+    def rsc_set(self, adapter, ipv4, ipv6):
+        if self._w("rsc_set", adapter, ipv4, ipv6):
+            for family, flag in (("ipv4", ipv4), ("ipv6", ipv6)):
+                if flag is not None:
+                    self.rsc[adapter][family] = flag
+
+    def offload_global_set(self, setting, value):
+        if self._w("offload_global_set", setting, value):
+            self.offload[setting] = value
+
+    def dns_servers_set(self, interface_index, servers):
+        if self._w("dns_servers_set", interface_index, servers):
+            self.dns.update(servers=list(self.dhcp_dns) if servers is None else list(servers),
+                            static=servers is not None)
+
+    def doh_set(self, address, template, auto_upgrade, fallback_to_udp):
+        if self._w("doh_set", address, template, auto_upgrade, fallback_to_udp):
+            self.doh[address] = {"template": template, "auto_upgrade": auto_upgrade,
+                                 "fallback_to_udp": fallback_to_udp}
+
+    def doh_remove(self, address):
+        if self._w("doh_remove", address):
+            self.doh.pop(address, None)
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
-        return copy.deepcopy((self.props, self.registry, self.power, self.bindings))
+        return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.tcp_global, self.rsc,
+                              self.offload, self.dns, self.doh))
 
 
 def power_saving():

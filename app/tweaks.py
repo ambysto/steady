@@ -6,8 +6,10 @@ See docs/adr/0003-tweak-framework.md. In short:
   disable: with a backup, restore it and verify it matches; without one, use a known
            default if the tweak has one, otherwise refuse and leave things alone
 
-Tweaks are declarations built from four primitive kinds (adapter advanced property,
-HKLM DWORD, powercfg AC/DC index, adapter binding). The catalog itself lives in CATALOG.
+Tweaks are declarations built from a few primitive kinds (adapter advanced property,
+HKLM DWORD, powercfg AC/DC index, adapter binding, TCP global parameter, adapter RSC, global
+offload setting) plus one measured tweak (DnsFastestTweak, ADR-0015). The catalog itself lives
+in CATALOG.
 
     python -m app.tweaks list
     python -m app.tweaks enable <id>             # dry run: shows the plan
@@ -22,10 +24,11 @@ import re
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from . import config, i18n, winutil
+from . import config, dnsprobe, i18n, winutil
 from .i18n import msg
 from .winsys import System
 
@@ -280,10 +283,268 @@ class BindingTweak(Tweak):
         return (original["adapter"], original["component"], bool(original["enabled"]))
 
 
+class TcpGlobalTweak(Tweak):
+    """A `netsh int tcp set global` parameter. `default` is Windows' own value, used to restore when
+    there is no backup (None: refuse instead)."""
+
+    def __init__(self, id: str, name: str, risk: str, *, setting: str, target: str, default: str | None,
+                 **kw: Any) -> None:
+        super().__init__(id, name, risk, **kw)
+        self.setting, self.target, self.default = setting, target, default
+        self.has_default_restore = default is not None
+
+    def _value(self, sys_: System) -> str:
+        value = sys_.tcp_global_get(self.setting)
+        if value is None:
+            raise Unsupported(msg("tweak.reason.no_tcp_setting", setting=self.setting))
+        return value
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            value = self._value(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        return Reading(True, value == self.target, value)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return {"setting": self.setting, "value": self._value(sys_)}
+
+    def apply(self, sys_: System) -> None:
+        sys_.tcp_global_set(self.setting, self.target)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            if self.default is None:
+                raise NoDefaultRestore(msg("tweak.reason.no_default_tcp"))
+            sys_.tcp_global_set(self.setting, self.default)
+        else:
+            sys_.tcp_global_set(original["setting"], original["value"])
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return (original["setting"], str(original["value"]))
+
+
+class RscTweak(Tweak):
+    """Receive Segment Coalescing of the Wi-Fi card, per address family. Only the families the card's
+    hardware supports are touched; a card with none is unsupported. No known default: backup only."""
+
+    has_default_restore = False
+
+    def __init__(self, id: str, name: str, risk: str, **kw: Any) -> None:
+        kw.setdefault("disrupts_network", True)   # the driver restarts the adapter
+        super().__init__(id, name, risk, **kw)
+
+    def _state(self, sys_: System) -> tuple[str, dict[str, Any]]:
+        adapter = _wifi_adapter(sys_)
+        rsc = sys_.rsc_get(adapter)
+        if rsc is None or not (rsc["ipv4_supported"] or rsc["ipv6_supported"]):
+            raise Unsupported(msg("tweak.reason.no_rsc"))
+        return adapter, rsc
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            _, rsc = self._state(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        on = [rsc[f] for f in ("ipv4", "ipv6") if rsc[f + "_supported"]]
+        return Reading(True, not any(on), {"ipv4": rsc["ipv4"], "ipv6": rsc["ipv6"]})
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        adapter, rsc = self._state(sys_)
+        return {"adapter": adapter, **{f: rsc[f] if rsc[f + "_supported"] else None for f in ("ipv4", "ipv6")}}
+
+    def apply(self, sys_: System) -> None:
+        adapter, rsc = self._state(sys_)
+        sys_.rsc_set(adapter, *(False if rsc[f + "_supported"] else None for f in ("ipv4", "ipv6")))
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_rsc"))
+        sys_.rsc_set(original["adapter"], original["ipv4"], original["ipv6"])
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return (original["adapter"], original["ipv4"], original["ipv6"])
+
+
+class OffloadGlobalTweak(Tweak):
+    """A Set-NetOffloadGlobalSetting parameter. No known default: restoring needs the backup."""
+
+    has_default_restore = False
+
+    def __init__(self, id: str, name: str, risk: str, *, setting: str, target: str, **kw: Any) -> None:
+        super().__init__(id, name, risk, **kw)
+        self.setting, self.target = setting, target
+
+    def _value(self, sys_: System) -> str:
+        value = sys_.offload_global_get(self.setting)
+        if value is None:
+            raise Unsupported(msg("tweak.reason.no_offload_setting", setting=self.setting))
+        return value
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            value = self._value(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        return Reading(True, value == self.target, value)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return {"setting": self.setting, "value": self._value(sys_)}
+
+    def apply(self, sys_: System) -> None:
+        sys_.offload_global_set(self.setting, self.target)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_offload"))
+        sys_.offload_global_set(original["setting"], original["value"])
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return (original["setting"], str(original["value"]))
+
+
+# --- DNS: the fastest public servers, over HTTPS (ADR-0015) ---------------------------------------
+
+# Providers Windows ships a DoH template for: provider -> (template, IPv4 addresses).
+DOH_PROVIDERS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "cloudflare": ("https://cloudflare-dns.com/dns-query", ("1.1.1.1", "1.0.0.1")),
+    "google": ("https://dns.google/dns-query", ("8.8.8.8", "8.8.4.4")),
+    "quad9": ("https://dns.quad9.net/dns-query", ("9.9.9.9", "149.112.112.112")),
+}
+DOH_ADDRESSES: dict[str, tuple[str, str]] = {address: (provider, template)
+                                             for provider, (template, addresses) in DOH_PROVIDERS.items()
+                                             for address in addresses}   # address -> (provider, template)
+CAPTIVE_PROBE_URL = "http://cp.cloudflare.com/generate_204"
+
+Benchmark = Callable[[list[str]], "list[dnsprobe.ServerBenchmark]"]
+CaptiveCheck = Callable[[], bool]
+
+
+class NoFastServers(_MessageError):
+    """The benchmark did not find two working providers to switch to."""
+
+
+def benchmark_servers(servers: list[str]) -> list[dnsprobe.ServerBenchmark]:
+    """The DNS benchmark of diagnostics check #6, one thread per server."""
+    with ThreadPoolExecutor(max_workers=max(1, len(servers))) as pool:
+        return list(pool.map(lambda s: dnsprobe.benchmark([s], timeout=1.5)[0], servers))
+
+
+def captive_portal() -> bool:
+    """True when the connectivity probe is answered the way a captive portal answers it."""
+    from . import probe
+    result = probe.http_204(CAPTIVE_PROBE_URL, 3.0)
+    return not result.ok and "captive portal" in result.error
+
+
+def choose_dns_servers(bench: list[dnsprobe.ServerBenchmark]) -> list[str]:
+    """The servers to use, from a benchmark of DOH_ADDRESSES (pure). A server that failed a query is
+    out; providers are ranked by their fastest server. Result: the winner's fastest, the runner-up's
+    fastest (so the first two never share a provider), then the winner's other server if it works."""
+    by_provider: dict[str, list[tuple[float, str]]] = {}
+    for b in bench:
+        if b.server in DOH_ADDRESSES and b.median_ms is not None and not b.failures:
+            by_provider.setdefault(DOH_ADDRESSES[b.server][0], []).append((b.median_ms, b.server))
+    ranked = sorted((sorted(rows) for rows in by_provider.values()), key=lambda rows: rows[0])
+    if len(ranked) < 2:
+        raise NoFastServers(msg("tweak.reason.dns_no_fast_servers"))
+    winner, runner_up = ranked[0], ranked[1]
+    return [winner[0][1], runner_up[0][1]] + [row[1] for row in winner[1:]]
+
+
+class DnsFastestTweak(Tweak):
+    """The uplink's IPv4 DNS set to the fastest public servers, each with DoH auto-upgrade on.
+
+    read() never measures: "on" is a property of the configuration (static servers, all from the
+    candidate list, two providers or more, DoH auto-upgrade on). The benchmark runs in apply().
+    capture() therefore records the DoH flags of every candidate, not only the chosen ones."""
+
+    has_default_restore = False
+
+    def __init__(self, id: str, name: str, risk: str, *, benchmark: Benchmark = benchmark_servers,
+                 captive: CaptiveCheck = captive_portal, **kw: Any) -> None:
+        super().__init__(id, name, risk, **kw)
+        self._benchmark, self._captive = benchmark, captive
+
+    @staticmethod
+    def _info(sys_: System) -> dict[str, Any]:
+        info = sys_.dns_interface()
+        if info is None:
+            raise Unsupported(msg("tweak.reason.no_uplink"))
+        return info
+
+    @staticmethod
+    def _is_on(info: dict[str, Any], doh: dict[str, dict[str, Any]]) -> bool:
+        servers = info["servers"]
+        return bool(info["static"] and servers and all(s in DOH_ADDRESSES for s in servers)
+                    and len({DOH_ADDRESSES[s][0] for s in servers}) >= 2
+                    and all(doh.get(s, {}).get("auto_upgrade") for s in servers))
+
+    def _blocked(self, info: dict[str, Any]) -> Message | None:
+        """Why this network should be left alone (None: fine). The cheap checks come first."""
+        if info["vpn_up"]:
+            return msg("tweak.reason.dns_vpn")
+        if info["domain_joined"] or info["suffix"]:
+            return msg("tweak.reason.dns_domain")
+        if info["static_v6"]:
+            return msg("tweak.reason.dns_static_v6")
+        if self._captive():
+            return msg("tweak.reason.dns_captive")
+        return None
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            info = self._info(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        current = {"servers": info["servers"], "static": info["static"]}
+        if self._is_on(info, sys_.doh_get()):
+            return Reading(True, True, current)
+        blocked = self._blocked(info)
+        return Reading(blocked is None, False, current, blocked or "")
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        info, doh = self._info(sys_), sys_.doh_get()
+        return {"interface_index": info["index"], "static": info["static"], "servers": list(info["servers"]),
+                "doh": {address: {"present": address in doh, "template": doh.get(address, {}).get("template", ""),
+                                  "auto_upgrade": doh.get(address, {}).get("auto_upgrade", False),
+                                  "fallback_to_udp": doh.get(address, {}).get("fallback_to_udp", False)}
+                        for address in DOH_ADDRESSES}}
+
+    def apply(self, sys_: System) -> None:
+        info = self._info(sys_)
+        blocked = self._blocked(info)
+        if blocked is not None:   # the state may have changed since it was read (a VPN came up...)
+            raise Unsupported(blocked)
+        servers = choose_dns_servers(self._benchmark(list(DOH_ADDRESSES)))
+        for address in servers:   # DoH first: the moment the server is used, Windows already knows to upgrade
+            sys_.doh_set(address, DOH_ADDRESSES[address][1], True, True)
+        sys_.dns_servers_set(info["index"], servers)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_dns"))
+        sys_.dns_servers_set(original["interface_index"], list(original["servers"]) if original["static"] else None)
+        for address, was in original["doh"].items():
+            if was["present"]:
+                sys_.doh_set(address, was["template"] or DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
+                             bool(was["fallback_to_udp"]))
+            else:
+                sys_.doh_remove(address)
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        # DHCP servers come and go with the lease: only "static" and a static list must come back.
+        return (original["interface_index"], bool(original["static"]),
+                tuple(original["servers"]) if original["static"] else None,
+                tuple(sorted((a, bool(d["present"]), bool(d["auto_upgrade"]) if d["present"] else None,
+                              bool(d["fallback_to_udp"]) if d["present"] else None)
+                             for a, d in original["doh"].items())))
+
+
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
-                 "binding_get")
+                 "binding_get", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface", "doh_get")
 
 
 class _CachedReads:
@@ -602,7 +863,8 @@ GROUP_WIFI, GROUP_POWER, GROUP_STACK = (msg("tweak.group.wifi_card"), msg("tweak
                                         msg("tweak.group.stack"))
 
 
-def build_catalog() -> list[Tweak]:
+def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: CaptiveCheck = captive_portal) -> list[Tweak]:
+    """`dns_benchmark` and `captive` are what dns_fastest asks the network; tests pass fakes."""
     return [
         # 1. Wi-Fi card (driver advanced properties). Property names vary by chip vendor.
         AdapterPropertyTweak("wifi_power_saving", _name("wifi_power_saving"), "low",
@@ -638,6 +900,14 @@ def build_catalog() -> list[Tweak]:
                            group=GROUP_STACK, needs_reboot=True, note=_note("tcp_timedwait")),
         BindingTweak("ipv6_off", _name("ipv6_off"), "experimental", component="ms_tcpip6", enabled=False,
                      group=GROUP_STACK, note=_note("ipv6_off")),
+        TcpGlobalTweak("tcp_ecn", _name("tcp_ecn"), "experimental", setting="ecncapability", target="enabled",
+                       default="disabled", group=GROUP_STACK, note=_note("tcp_ecn")),
+        RscTweak("rsc_off", _name("rsc_off"), "experimental", group=GROUP_STACK, note=_note("rsc_off")),
+        OffloadGlobalTweak("packet_coalescing_off", _name("packet_coalescing_off"), "experimental",
+                           setting="PacketCoalescingFilter", target="Disabled", group=GROUP_STACK,
+                           note=_note("packet_coalescing_off")),
+        DnsFastestTweak("dns_fastest", _name("dns_fastest"), "medium", benchmark=dns_benchmark, captive=captive,
+                        group=GROUP_STACK, note=_note("dns_fastest")),
     ]
 
 

@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from . import config, icmp, winutil
+from . import config, dnswatch, icmp, winutil
 from .dnswatch import KINDS as DNS_EVENT_KINDS, DnsWatch, network_key
 from .i18n import msg, render, t
 from .notify import Notifier, OutageNotifier
@@ -535,10 +535,21 @@ class Monitor:
         ssid = wifi.ssid if wifi is not None and wifi.connected else None
         network = network_key(route["interface_index"], route.get("gateway"), ssid)
         now = int(self._clock())
-        for kind, message, level in self._dns_watch.observe(network, table.get(route["interface_index"], [])):
+        for kind, message, level in self._dns_watch.observe(network, table.get(route["interface_index"], []),
+                                                            by_app=lambda: self._dns_changed_by_app(now)):
             self._guarded(lambda: self.storage.add_event(now, kind, message, level=level), f"event {kind}")
             if kind == "dns_changed" and self._notify is not None:
                 self._notify(t("notify.dns_changed.title"), render(message))
+
+    def _dns_changed_by_app(self, now: float) -> bool:
+        """Did a tweak of this app change the DNS servers just now? (storage is shared with the elevated writer)"""
+        try:
+            since = int(now) - dnswatch.APP_CHANGE_WINDOW_S
+            return dnswatch.app_changed(self.storage.query_events(since=since, kinds=list(dnswatch.TWEAK_EVENT_KINDS),
+                                                                  limit=50), now)
+        except Exception as exc:
+            self._log_once(f"dns-app:{exc}", "cannot read tweak history: %r", exc)
+            return False
 
     def poll_wifi(self, baseline: bool = False) -> None:
         try:

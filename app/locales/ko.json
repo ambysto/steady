@@ -208,6 +208,14 @@
   "diag.bufferbloat.rise": "회선이 사용 중일 때 인터넷 지연 시간이 {amount} 증가합니다{where}",
   "diag.bufferbloat.advice": "라우터에서 SQM / 스마트 QoS(fq_codel 또는 CAKE)를 켜고 업로드/다운로드 제한을 실제 대역폭보다 약 5–10% 낮게 설정하십시오. 라우터에 SQM이 없다면 부하를 일으키는 앱의 업로드 속도를 낮추십시오.",
 
+  "diag.route.title": "먼 목적지로 가는 경로",
+  "diag.route.no_data": "경로를 비교할 수 없습니다: 응답한 기준 사이트가 3곳 미만입니다",
+  "diag.route.tunnel_on": "VPN 또는 터널이 켜져 있어, 측정된 경로는 통신사가 아니라 터널의 경로입니다",
+  "diag.route.line": "{host}: {median:.0f} ms (TCP 연결)",
+  "diag.route.ok": "모든 기준 사이트가 비슷한 시간에 응답합니다 (가장 가까운 곳 {near:.0f} ms)",
+  "diag.route.detour": "일부 기준 사이트는 다른 곳보다 훨씬 먼 경로를 거칩니다 (가장 가까운 곳 {near:.0f} ms): {hosts}",
+  "diag.route.advice": "대개 이 PC가 아니라 통신사에서 해당 목적지로 가는 경로가 원인입니다. PC에서는 고칠 수 없습니다. 터널 서비스가 더 짧은 경로를 택할 수 있지만(가까운 사이트는 느려질 수 있음), 통신사에 문의하십시오.",
+
   "diag.cli.header": "{time} 진단 — 전체 상태: {status}",
   "diag.cli.saved": "실행 #{run_id} 저장됨",
   "diag.cli.compared": "이전 실행({time})과 비교:",
@@ -309,6 +317,18 @@
   "tweak.ipv6_off.name": "Wi‑Fi에서 IPv6 끄기",
   "tweak.ipv6_off.note": "라우터의 IPv6 또는 IPv6 DNS 때문에 느려진다고 의심될 때만 시도하십시오",
 
+  "tweak.tcp_ecn.name": "TCP ECN 켜기",
+  "tweak.tcp_ecn.note": "실험적: 라우터가 패킷을 버리는 대신 혼잡을 알릴 수 있어 부하 시 지연이 줄어들 수 있습니다. 중간 장비 중에는 ECN 패킷을 잘못 처리하는 것이 있으므로, 전후 측정에서 이득이 확인되지 않으면 꺼 두십시오",
+
+  "tweak.rsc_off.name": "Wi‑Fi 카드의 Receive Segment Coalescing 끄기",
+  "tweak.rsc_off.note": "실험적: 수신 패킷이 하나씩 Windows로 전달되어, 처리량이 약간 줄고 CPU 사용이 늘어나는 대신 지연이 줄어들 수 있습니다. 복원하려면 백업이 필요합니다",
+
+  "tweak.packet_coalescing_off.name": "Packet Coalescing Filter 끄기",
+  "tweak.packet_coalescing_off.note": "실험적: 카드가 전력을 아끼려고 수신 패킷을 붙잡아 두지 않습니다. 지연은 줄고 전력 사용은 약간 늘어납니다. 복원하려면 백업이 필요합니다",
+
+  "tweak.dns_fastest.name": "가장 빠른 공용 DNS를 HTTPS로 사용",
+  "tweak.dns_fastest.note": "Cloudflare, Google, Quad9를 측정해 가장 빠른 두 제공자를 DoH로 암호화해 사용합니다. 끄면 네트워크 본래의 DNS로 돌아갑니다. VPN 사용 중, 도메인 네트워크, DNS 접미사가 있거나 캡티브 포털 뒤에서는 제안하지 않습니다",
+
   "tweak.reason.no_wifi_card": "Wi‑Fi 카드를 찾을 수 없습니다",
   "tweak.reason.no_matching_value": "'{property}'에 적합한 값이 없습니다 (사용 가능: {values})",
   "tweak.reason.no_property": "카드에 이 속성이 없습니다",
@@ -318,6 +338,19 @@
   "tweak.reason.unreadable": "상태를 읽을 수 없습니다",
   "tweak.reason.no_default_registry": "백업이 없고 기본값을 알 수 없습니다",
   "tweak.reason.no_default_powercfg": "powercfg에 알려진 기본값이 없습니다. 백업이 필요합니다",
+  "tweak.reason.no_tcp_setting": "Windows가 '{setting}'을(를) 보고하지 않습니다",
+  "tweak.reason.no_default_tcp": "백업이 없고 기본값도 알 수 없습니다",
+  "tweak.reason.no_rsc": "이 카드는 Receive Segment Coalescing을 지원하지 않습니다",
+  "tweak.reason.no_default_rsc": "백업이 없어 카드의 원래 설정을 알 수 없습니다",
+  "tweak.reason.no_offload_setting": "Windows가 '{setting}'을(를) 보고하지 않습니다",
+  "tweak.reason.no_default_offload": "알려진 기본값이 없어 백업이 필요합니다",
+  "tweak.reason.no_uplink": "DNS를 바꿀 수 있는 네트워크 연결이 없습니다",
+  "tweak.reason.dns_vpn": "VPN이 켜져 있습니다. VPN 자체의 DNS는 건드리지 않습니다",
+  "tweak.reason.dns_domain": "이 PC가 도메인에 속해 있거나 네트워크에 DNS 접미사가 있습니다. 내부 이름은 네트워크 본래의 DNS가 필요합니다",
+  "tweak.reason.dns_static_v6": "네트워크 어댑터에 고정 IPv6 DNS 서버가 있어, 복원하면 지워집니다",
+  "tweak.reason.dns_captive": "이 네트워크는 캡티브 포털(로그인 페이지)처럼 보입니다",
+  "tweak.reason.dns_no_fast_servers": "안정적으로 응답하는 공용 DNS 제공자 두 곳을 찾지 못해 아무것도 변경하지 않았습니다",
+  "tweak.reason.no_default_dns": "백업이 없어 원래 DNS 설정을 알 수 없습니다",
 
   "tweak.result.read_failed": "상태를 읽을 수 없습니다: {error}",
   "tweak.result.unsupported": "이 PC에서 지원되지 않음: {reason}",
@@ -514,10 +547,13 @@
   "manual.use_cable.body": "이 PC에는 비어 있는 LAN 포트가 있습니다. 케이블을 사용하면 모든 Wi‑Fi 문제를 한 번에 피할 수 있으며 가장 안정적인 방법입니다.",
 
   "manual.router_sqm.title": "라우터에서 SQM / 스마트 QoS 켜기",
-  "manual.router_sqm.body": "fq_codel 또는 CAKE를 사용하고 제한 값을 실제 회선 속도보다 약 5–10% 낮게 설정하면, 대용량 다운로드와 업로드가 큐를 가득 채우지 않습니다.",
+  "manual.router_sqm.body": "지연의 대부분은 다운로드 쪽에서 쌓이며, 들어오는 트래픽을 정형하는 라우터만 이를 제어할 수 있습니다. SQM / 스마트 QoS(CAKE 또는 fq_codel)를 켜고 제한 값을 실제 회선 속도보다 약 5–10% 낮게 설정하십시오. 라우터에 SQM이 없다면, 지원하는 라우터에서는 OpenWrt의 sqm-scripts 패키지로 쓸 수 있습니다. 그래도 발생하면 회선 자체가 가득 찬 것이므로 더 빠른 요금제가 도움이 됩니다.",
 
   "manual.dns_server.title": "다른 DNS 서버 사용",
   "manual.dns_server.body": "사용 중인 DNS 서버에 오류 또는 시간 초과가 있습니다. Windows나 라우터에서 1.1.1.1 또는 8.8.8.8 같은 공용 DNS를 설정하십시오.",
+
+  "manual.tunnel_route.title": "먼 목적지에는 터널 사용을 고려",
+  "manual.tunnel_route.body": "일부 목적지는 다른 곳보다 훨씬 먼 경로를 거치며, 원인은 이 PC가 아니라 통신사의 경로입니다. 신뢰할 수 있는 터널 서비스는 더 짧은 경로를 택할 수 있지만 가까운 목적지는 느려질 수 있습니다. 완료로 표시하면 앱이 전후의 연결 상태를 비교합니다. 도움이 되지 않으면 터널을 끄십시오.",
 
   "manual.event.done": "완료로 표시함: {step}",
 
@@ -536,6 +572,7 @@
 
   "event.dns_observed": "이 네트워크의 DNS 서버: {servers}",
   "event.dns_changed": "이 네트워크의 DNS 서버가 변경되었습니다: {old} → {new}",
+  "event.dns_app_changed": "이 앱이 이 네트워크의 DNS 서버를 변경했습니다: {servers}",
 
   "notify.dns_changed.title": "DNS 서버가 변경되었습니다",
 

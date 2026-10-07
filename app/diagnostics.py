@@ -1,4 +1,4 @@
-"""Diagnostics: 13 read-only checks, each returning ok / warn / bad / info.
+"""Diagnostics: 14 read-only checks (plus on-demand ones), each returning ok / warn / bad / info.
 
 Every check is split in two:
   * `evaluate_*`  pure function over already-collected data - this is what the tests exercise
@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import socket
 import statistics
 import sys
 import time
@@ -28,7 +29,7 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 from typing import Any, Callable, Iterable
 
-from . import config, dnsprobe, i18n, winutil
+from . import config, dnsprobe, i18n, probe, winutil
 from .i18n import msg
 from .storage import Storage
 
@@ -431,7 +432,7 @@ def evaluate_dns(bench: list[dnsprobe.ServerBenchmark], in_use: list[str], label
     primary = used[0]
     if broken:
         return CheckResult(**base, status=WARN, summary=msg("diag.dns.broken", servers=[b.server for b in broken]),
-                           details=details, advice=msg("diag.dns.advice_broken"))
+                           details=details, advice=msg("diag.dns.advice_broken"), tweak="dns_fastest")
     if fastest and primary.median_ms is not None and primary.median_ms - fastest.median_ms > 20:
         gap = primary.median_ms - fastest.median_ms
         if fastest.server in in_use:
@@ -462,8 +463,7 @@ def evaluate_tcp(port_events: list[int], time_wait: int | None, error: str | Non
 
 # --- 8. VPN / virtual adapters ---------------------------------------------------------------
 
-_VPN_RE = re.compile(r"VPN|WireGuard|Wintun|\bTAP\b|TAP-|OpenVPN|NetBird|Surfshark|Tailscale|ZeroTier|NordLynx|"
-                     r"Proton|WARP|Fortinet|Cisco AnyConnect|Cloudflare", re.I)
+_VPN_RE = winutil.VPN_RE   # shared with the tweaks that must keep out of a VPN's way
 
 
 def evaluate_vpn(adapters: list[dict]) -> CheckResult:
@@ -723,6 +723,57 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
     return CheckResult(**base, status=status, summary=summary, details=details, advice=advice)
 
 
+# --- 15. route to far-away destinations ----------------------------------------------------------------
+
+# Big sites that are served from many places, so each is normally reached close by. A site that takes
+# far longer than the nearest one is taking a detour: the ISP's route to it is poor (peering), which
+# nothing on the PC can change. No geography is assumed: "near" is whichever answers fastest.
+ROUTE_HOSTS = ("cloudflare.com", "google.com", "microsoft.com", "wikipedia.org", "apple.com")
+ROUTE_SAMPLES = 3             # TCP connections per site; the median counts
+ROUTE_MIN_ANSWERED = 3        # sites that must answer for the comparison to mean anything
+ROUTE_RATIO, ROUTE_MIN_GAP_MS = 3.0, 80.0   # a detour is at least this many times AND this many ms slower
+
+
+def evaluate_route(rtts: dict[str, float | None], tunnel_up: bool = False) -> CheckResult:
+    """rtts: site -> median TCP connect time in ms (None: no answer). tunnel_up: a VPN/tunnel is on."""
+    base = dict(id=15, key="route", title=title_of("route"))
+    if tunnel_up:   # the routes measured would be the tunnel's: nothing to say about the ISP
+        return CheckResult(**base, status=INFO, summary=msg("diag.route.tunnel_on"))
+    got = {host: float(ms) for host, ms in rtts.items() if ms is not None}
+    details = [msg("diag.route.line", host=h, median=ms) for h, ms in sorted(got.items(), key=lambda kv: kv[1])]
+    if len(got) < ROUTE_MIN_ANSWERED:
+        return CheckResult(**base, status=INFO, summary=msg("diag.route.no_data"), details=details)
+    near = min(got.values())
+    far = sorted((h for h, ms in got.items() if ms >= max(near * ROUTE_RATIO, near + ROUTE_MIN_GAP_MS)),
+                 key=lambda h: got[h])
+    if not far:
+        return CheckResult(**base, status=OK, summary=msg("diag.route.ok", near=near), details=details)
+    return CheckResult(**base, status=INFO, summary=msg("diag.route.detour", near=near, hosts=", ".join(far)),
+                       details=details, advice=msg("diag.route.advice"))
+
+
+def measure_route(hosts: Iterable[str] = ROUTE_HOSTS, samples: int = ROUTE_SAMPLES,
+                  resolve: Callable[[str], str] = socket.gethostbyname,
+                  connect: Callable[[str, float], probe.ProbeResult] = probe.tcp_connect) -> dict[str, float | None]:
+    """Median TCP connect time to port 443 of each site. The name is resolved first so DNS time is not counted."""
+    def one(host: str) -> float | None:
+        try:
+            address = resolve(host)
+        except OSError:
+            return None
+        rtts = [r.rtt_ms for r in (connect(f"{address}:443", 2.0) for _ in range(samples)) if r.ok and r.rtt_ms is not None]
+        return statistics.median(rtts) if rtts else None
+
+    hosts = list(hosts)
+    with ThreadPoolExecutor(max_workers=max(1, len(hosts))) as pool:
+        return dict(zip(hosts, pool.map(one, hosts)))
+
+
+def _tunnel_up(adapters: list[dict]) -> bool:
+    return any(winutil.VPN_RE.search(f"{a.get('Name', '')} {a.get('InterfaceDescription', '')}")
+               and a.get("Status") == "Up" for a in adapters)
+
+
 # --- context: lazy, cached data access ----------------------------------------------------------
 
 class Context:
@@ -749,6 +800,7 @@ class Context:
             "dns_bench": self._load_dns_bench,
             "tweak_states": self._load_tweak_states,
             "bufferbloat": self._load_bufferbloat,
+            "route_rtts": measure_route,
         }
         self._loaders.update(loaders or {})
 
@@ -896,6 +948,12 @@ def check_link(ctx: Context) -> CheckResult:
     return evaluate_link(ctx.get("minutes"), ctx.now)
 
 
+def check_route(ctx: Context) -> CheckResult:
+    if _tunnel_up(ctx.get("adapters")):   # no need to measure what cannot be judged
+        return evaluate_route({}, tunnel_up=True)
+    return evaluate_route(ctx.get("route_rtts"))
+
+
 # (id, key, function). The title of each is the message "diag.<key>.title".
 CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (1, "driver", check_driver),
@@ -911,6 +969,7 @@ CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (11, "wifi7_mlo", check_mlo),
     (12, "modem_wifi", check_modem_wifi),
     (13, "physical_link", check_link),
+    (15, "route", check_route),   # 14 is the on-demand bufferbloat check
 ]
 
 
