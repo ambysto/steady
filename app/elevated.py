@@ -34,8 +34,8 @@ from .i18n import msg
 
 log = logging.getLogger("stableinternet.elevated")
 
-OPS = ("tweak-enable", "tweak-disable", "restart-adapter", "path-prefer", "path-restore", "restore-all",
-       "install-machine", "uninstall-machine")
+OPS = ("tweak-enable", "tweak-disable", "tweak-enable-many", "tweak-disable-many", "restart-adapter", "path-prefer",
+       "path-restore", "restore-all", "install-machine", "uninstall-machine")
 _RESULT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
 
 
@@ -91,6 +91,17 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
             mgr = tweaks.default_manager(storage)
             out = mgr.enable(value, decoded) if op == "tweak-enable" else mgr.disable(value)
         return {"ok": out.ok, "changed": out.changed, "message": out.message}
+    if op in ("tweak-enable-many", "tweak-disable-many"):
+        # One UAC prompt for the Fix button (ADR-0020 point 6). The value is only a list of ids, and it is
+        # checked here again: known, low risk, not measured. Nothing more than each id could do on its own.
+        from . import tweaks
+        from .storage import Storage
+        try:
+            chosen = tweaks.batch_tweaks(value.split(","))
+        except ValueError as exc:
+            return {"ok": False, "message": str(exc)}
+        with Storage(config.db_path()) as storage:
+            return tweaks.run_batch(tweaks.default_manager(storage), chosen, enable=op == "tweak-enable-many")
     if op in ("path-prefer", "path-restore"):
         return _path_op(op, value)
     if op == "restore-all":

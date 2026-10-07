@@ -29,7 +29,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, Iterable, NamedTuple
 
 from . import bufferbloat, calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
@@ -1762,6 +1762,53 @@ def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict
     result.update(verdict=v, message=msg("tweak.result.measured_enabled", value=t.describe_value(value, before),
                                          verdict=msg(f"{prefix}.verdict.{key}", **params)))
     return result
+
+
+BATCH_MAX = 16
+
+
+def batch_tweaks(ids: Iterable[str]) -> list[Tweak]:
+    """The tweaks one "Fix" may turn on (or back off) together, under one UAC prompt (ADR-0020 point 6):
+    known, low risk, not measured, each named once. Anything else refuses the whole batch with
+    ValueError before anything is written. Sorted so the tweaks that keep the network up go first."""
+    by_id = {t.id: t for t in CATALOG}
+    ids = list(ids)
+    if not ids or len(ids) > BATCH_MAX:
+        raise ValueError(f"a batch takes 1 to {BATCH_MAX} tweaks")
+    if len(set(ids)) != len(ids):
+        raise ValueError("a tweak is named twice")
+    chosen = []
+    for tweak_id in ids:
+        t = by_id.get(tweak_id)
+        if t is None:
+            raise ValueError(f"unknown tweak {tweak_id!r}")
+        if t.risk != "low" or isinstance(t, MeasuredTweak):
+            raise ValueError(f"{tweak_id} is not a low-risk tweak a batch may change")
+        chosen.append(t)
+    return sorted(chosen, key=lambda t: t.disrupts_network)
+
+
+def run_batch(mgr: TweakManager, tweaks: list[Tweak], enable: bool = True) -> dict[str, Any]:
+    """Each tweak through the manager, as one by one (backup, verification, events); one failing does
+    not stop the others. Every result says what happened: on, already on, not supported, failed."""
+    results = []
+    for t in tweaks:
+        try:
+            refusal = mgr.preflight(t.id) if enable else None
+            out = Outcome(False, False, refusal) if refusal is not None else (
+                mgr.enable(t.id) if enable else mgr.disable(t.id))
+        except Exception as exc:   # one broken tweak must not hide the others
+            out = Outcome(False, False, msg("tweak.result.apply_failed", error=f"{type(exc).__name__}: {exc}"))
+        if out.ok:
+            status = "changed" if out.changed else "unchanged"
+        else:
+            state = getattr(out, "state", None)
+            status = "unsupported" if state is not None and not state.supported else "failed"
+        results.append({"id": t.id, "name": t.name, "ok": out.ok, "changed": out.changed, "status": status,
+                        "message": out.message})
+    changed = sum(1 for r in results if r["changed"])
+    return {"ok": all(r["ok"] for r in results), "changed": changed > 0, "results": results,
+            "message": msg("tweak.batch.done" if enable else "tweak.batch.undone", changed=changed, total=len(results))}
 
 
 def measure_for(t: MeasuredTweak) -> Callable[[], dict | None]:

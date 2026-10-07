@@ -190,6 +190,7 @@ class Api:
             ("POST", re.compile(r"^/api/failover/prefer/(?P<index>\d{1,6})$"), self.failover_prefer),
             ("POST", re.compile(r"^/api/failover/restore$"), self.failover_restore),
             ("POST", re.compile(r"^/api/manual/(?P<step_id>[a-z_]{1,40})/done$"), self.manual_done),
+            ("POST", re.compile(r"^/api/tweaks/batch$"), self.set_tweaks),     # before the per-tweak route
             ("POST", re.compile(r"^/api/tweaks/(?P<tweak_id>[^/]+)$"), self.set_tweak),
             ("POST", re.compile(r"^/api/diagnostics$"), self.start_diagnostics),
             ("POST", re.compile(r"^/api/diagnostics/bufferbloat$"), self.start_bufferbloat),
@@ -358,8 +359,8 @@ class Api:
         from . import suggestions, tweaks
         states = self._tweak_cache["states"]
         tweak_states = {s["id"]: s for s in states} if states else None
-        meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk, "measured": isinstance(t, tweaks.MeasuredTweak)}
-                for t in tweaks.CATALOG}
+        meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk, "measured": isinstance(t, tweaks.MeasuredTweak),
+                       "disrupts": t.disrupts_network} for t in tweaks.CATALOG}
         out = suggestions.build(self.storage, self._clock(), tweak_states, meta)
         from .diagnostics import CHECKS
         out["checks_total"] = len(CHECKS)   # "Runs N checks", before the first run
@@ -499,6 +500,32 @@ class Api:
             return result
         # One write at a time: two UAC prompts or two writers racing on backup.json would be confusing at best.
         return self.jobs.submit(f"tweak:{tweak_id}", work, single="tweak_write", sync=self._sync)
+
+    def set_tweaks(self, body: Any, **_: Any) -> dict:
+        """The Fix button (ADR-0020): several low-risk tweaks on (or back off) under one UAC prompt.
+        Body {"ids": [...], "enable": true|false}; the ids are checked here and again by the helper."""
+        from . import tweaks
+        if not isinstance(body, dict) or not isinstance(body.get("enable"), bool) or not isinstance(body.get("ids"), list) \
+                or not all(isinstance(i, str) and TWEAK_ID.match(i) for i in body["ids"]):
+            raise ApiError(400, 'body must be {"ids": [tweak ids], "enable": true|false}')
+        enable = body["enable"]
+        try:
+            chosen = tweaks.batch_tweaks(body["ids"])
+        except ValueError as exc:
+            raise ApiError(400, str(exc)) from None
+
+        def work() -> dict:
+            if self._is_admin():
+                result = {**tweaks.run_batch(self._tweak_manager(), chosen, enable), "elevated": False}
+            else:
+                op = "tweak-enable-many" if enable else "tweak-disable-many"
+                res = self._elevate(op, ",".join(t.id for t in chosen))
+                detail = getattr(res, "result", None) or {}   # empty when UAC was declined or no result came back
+                result = {"ok": res.ok, "message": res.message, "cancelled": res.cancelled, "elevated": True,
+                          "results": detail.get("results", []), "changed": detail.get("changed")}
+            self._tweak_cache["refreshed_at"] = None
+            return result
+        return self.jobs.submit("tweaks", work, single="tweak_write", sync=self._sync)
 
     @staticmethod
     def _is_measured(tweak_id: str) -> bool:

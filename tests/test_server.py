@@ -390,6 +390,50 @@ class ReadApiTests(ServerTestCase):
         self.assertIsNone(job["progress"])
 
 
+class BatchApiTests(ServerTestCase):
+    """POST /api/tweaks/batch: the Fix button (ADR-0020 point 6)."""
+
+    class Manager(FakeManager):
+        def get(self, tweak_id):
+            pass
+
+        def enable(self, tweak_id):
+            self.calls.append(("enable", tweak_id))
+            from app.tweaks import Outcome
+            return Outcome(True, True, "on")
+
+    def test_without_admin_one_uac_prompt_for_the_whole_batch(self):
+        ids = ["wifi_power_saving", "power_pcie_aspm_off"]
+        job = self.req("POST", "/api/tweaks/batch", {"ids": ids, "enable": True})[1]
+        self.assertEqual(self.elevations, [("tweak-enable-many", "power_pcie_aspm_off,wifi_power_saving")])
+        self.assertEqual(self.manager.calls, [])                              # nothing written here
+        self.assertTrue(job["result"]["cancelled"])
+        self.assertEqual(job["result"]["results"], [])
+
+    def test_turning_back_off_is_one_prompt_too(self):
+        self.req("POST", "/api/tweaks/batch", {"ids": ["wifi_power_saving"], "enable": False})
+        self.assertEqual(self.elevations, [("tweak-disable-many", "wifi_power_saving")])
+
+    def test_with_admin_each_tweak_goes_through_the_manager_in_order(self):
+        self.admin = True
+        self.manager = self.Manager()
+        job = self.req("POST", "/api/tweaks/batch", {"ids": ["device_power_off", "power_wireless_max"], "enable": True})[1]
+        self.assertEqual([c for c in self.manager.calls if c[0] == "enable"],
+                         [("enable", "power_wireless_max"), ("enable", "device_power_off")])
+        self.assertEqual([r["status"] for r in job["result"]["results"]], ["changed", "changed"])
+        self.assertEqual(job["result"]["message"], "Turned on 2 of 2")
+        self.assertEqual(self.elevations, [])
+
+    def test_anything_but_known_low_risk_tweaks_is_refused_before_any_prompt(self):
+        for body in ({"ids": ["tcp_timedwait"], "enable": True}, {"ids": ["dns_fastest"], "enable": True},
+                     {"ids": ["upload_shaping"], "enable": True}, {"ids": ["format_c"], "enable": True},
+                     {"ids": [], "enable": True}, {"ids": ["wifi_power_saving"] * 2, "enable": True},
+                     {"ids": "wifi_power_saving", "enable": True}, {"ids": ["wifi_power_saving"]},
+                     {"ids": ["wifi_power_saving,ipv6_off"], "enable": True}, {"ids": [1], "enable": True}):
+            self.assertEqual(self.req("POST", "/api/tweaks/batch", body)[0], 400, body)
+        self.assertEqual(self.elevations, [])
+
+
 class WriteApiTests(ServerTestCase):
     def test_tweak_without_admin_goes_through_uac(self):
         job = self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": True})[1]
@@ -630,6 +674,36 @@ class ElevatedChildTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         os.environ["STABLEINTERNET_USERDIR"] = self.tmp.name
         self.addCleanup(os.environ.pop, "STABLEINTERNET_USERDIR", None)
+
+    def test_the_helper_checks_a_batch_again_before_touching_anything(self):
+        from app import tweaks
+        with mock.patch.object(elevated.winutil, "is_admin", return_value=True), \
+                mock.patch.object(tweaks, "default_manager", side_effect=AssertionError("must not build a manager")):
+            for value in ("tcp_timedwait", "wifi_power_saving,dns_fastest", "format_c", "", "wifi_power_saving,wifi_power_saving"):
+                out = elevated.run_op("tweak-enable-many", value)
+                self.assertFalse(out["ok"], value)
+                self.assertIsInstance(out["message"], str)
+
+    def test_the_helper_runs_a_valid_batch_through_the_manager(self):
+        from app import tweaks
+        os.environ["STABLEINTERNET_DATA"] = self.tmp.name
+        self.addCleanup(os.environ.pop, "STABLEINTERNET_DATA", None)
+        calls = []
+
+        class Manager:
+            def preflight(self, tweak_id):
+                return None
+
+            def enable(self, tweak_id):
+                calls.append(tweak_id)
+                return tweaks.Outcome(True, True, "on")
+
+        with mock.patch.object(elevated.winutil, "is_admin", return_value=True), \
+                mock.patch.object(tweaks, "default_manager", return_value=Manager()):
+            out = elevated.run_op("tweak-enable-many", "wifi_power_saving,power_pcie_aspm_off")
+        self.assertTrue(out["ok"])
+        self.assertEqual(calls, ["power_pcie_aspm_off", "wifi_power_saving"])
+        self.assertEqual([r["status"] for r in out["results"]], ["changed", "changed"])
 
     def test_result_path_must_be_ours(self):
         good = config.results_dir() / ("a" * 32 + ".json")

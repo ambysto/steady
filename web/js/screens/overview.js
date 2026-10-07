@@ -3,7 +3,7 @@
 
 import { get, runJob } from "../api.js";
 import { latencyChart } from "../chart.js";
-import { $, el, fill, icon, svgEl, toast } from "../dom.js";
+import { $, confirmSheet, el, fill, icon, svgEl, toast } from "../dom.js";
 import { duration, number, t, timeOf } from "../i18n.js";
 import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
 import { failoverKey, failoverRows, suggestionAction } from "../widgets.js";
@@ -184,10 +184,11 @@ function segments() {
   return svg;
 }
 
-/** The label, which turns into a magnifier while the pointer is on it and the ring turns. */
-function bigButton(label, onClick) {
+/** The label, which turns into a symbol (a magnifier to check, sliders to fix) while the pointer is on it
+ *  and the ring turns. */
+function bigButton(label, onClick, glyph = "search") {
   return el("button", { class: "big-button", onclick: onClick, "aria-label": label }, segments(),
-    el("span", { class: "disc" }, el("span", { class: "label" }, label), icon("search", "icon glyph")));
+    el("span", { class: "disc" }, el("span", { class: "label" }, label), icon(glyph, "icon glyph")));
 }
 
 const statusCircle = (tile, iconName) => el("div", { class: `status-circle ${tile}` }, segments(),
@@ -243,7 +244,8 @@ function checkCard(ctx) {
   const card = (...children) => el("div", { class: "group check-card" }, children);
   if (check.running) {
     const p = check.progress || { done: 0, total: suggestions?.checks_total || 0, finished: [] };
-    const counted = t("ui.check.running", { done: p.done, total: p.total });
+    const counted = (fix.phase === "rechecking" ? `${t("ui.check.rechecking")} · ` : "")
+      + t("ui.check.running", { done: p.done, total: p.total });
     // Under the ring: what is being checked now, then how far along (the count the percent comes from).
     return card(checkHero({ circle: progressRing(p.done, p.total), title: p.title || counted, body: p.title ? counted : null,
                             running: true }),
@@ -251,6 +253,8 @@ function checkCard(ctx) {
         icon(STATUS_ICON[f.status] || "info", `icon s ${f.status}`), el("span", {}, f.title))),
         p.key ? el("div", { class: "item current" }, icon("refresh", "icon spin"), el("span", {}, p.title)) : null));
   }
+  if (fix.phase === "applying" || fix.phase === "undoing") return busyCard(ctx, card);
+  if (fix.phase === "result" && fix.outcome) return resultCard(ctx, card);
   if (!suggestions) return el("div", { class: "group loading" }, "…");
   const start = () => runCheck(ctx);
   const summary = suggestions.check;
@@ -271,30 +275,173 @@ function checkCard(ctx) {
       miniStats(ctx));
   }
   const worst = summary.problems.some(p => p.status === "bad") ? "bad" : "warn";
-  return card(checkHero({ circle: centre(statusCircle(worst, "alert")), title: t("ui.check.found_title", { count: summary.count }),
-                          body: t("ui.check.found_body", { time, ok: summary.ok, total: summary.total }), below: again || staleNote }),
+  // What the app can fix is the big button; an old result gives that place to checking again.
+  const fixLabel = t("ui.check.fix_some", { fixable: summary.fixable, count: summary.count });
+  const openSheet = () => openFix(ctx);
+  const circle = stale || !summary.fixable ? centre(statusCircle(worst, "alert")) : bigButton(fixLabel, openSheet, "sliders");
+  const fixSmall = stale && summary.fixable ? el("button", { class: "button primary", onclick: openSheet }, fixLabel) : null;
+  return card(checkHero({ circle, title: t("ui.check.found_title", { count: summary.count }),
+                          body: t("ui.check.found_body", { time, ok: summary.ok, total: summary.total }),
+                          below: again ? [fixSmall, again] : [staleNote, fixSmall] }),
     el("div", { class: "rows" }, summary.problems.map(p => problemRow(p, ctx))));
+}
+
+// --- Fix (ADR-0020 points 5-7): the low-risk tweaks together, one UAC prompt, then check again ----------
+
+const RANK = { ok: 0, info: 0, warn: 1, bad: 2 };
+// phase: null, "applying", "rechecking", "result" or "undoing"; before/after: the check summaries around it.
+const fix = { phase: null, ids: [], before: null, after: null, outcome: null };
+
+const tweakItem = id => (suggestions?.items || []).find(i => i.kind === "tweak" && i.id === id) || { id, title: id };
+
+/** The sheet: what the Fix button would turn on, ticked, each with why; nothing happens until confirmed. */
+async function openFix(ctx) {
+  const summary = suggestions.check;
+  const forProblem = summary.problems.flatMap(p => p.batch.map(id => [id, p.title]));
+  const fromProblems = new Set(forProblem.map(([id]) => id));
+  const also = summary.also.filter(id => !fromProblems.has(id)).map(id => [id, tweakItem(id).reason?.title]);
+  const selected = new Set([...forProblem, ...also].map(([id]) => id));
+  const disruptsNote = el("p", { class: "note" }, icon("wifi-off"), el("span", {}, t("ui.check.sheet.disrupts")));
+  const refresh = () => {
+    $("#sheet-title").textContent = t("ui.check.sheet.title", { count: selected.size });
+    $("#sheet-confirm").disabled = !selected.size;
+    disruptsNote.hidden = ![...selected].some(id => tweakItem(id).disrupts);
+  };
+  const row = ([id, reason]) => {
+    const item = tweakItem(id);
+    const box = el("input", { type: "checkbox", checked: true });
+    box.addEventListener("change", () => { box.checked ? selected.add(id) : selected.delete(id); refresh(); });
+    return el("label", { class: "fix-item" }, box,
+      el("div", {}, el("div", { class: "name" }, item.title), reason ? el("div", { class: "for" }, t("ui.check.sheet.for", { reason })) : null),
+      item.disrupts ? el("span", { title: t("ui.optimize.disrupts") }, icon("wifi-off")) : null);
+  };
+  const content = el("div", { class: "fix-list" },
+    forProblem.length ? [el("div", { class: "fix-group" }, t("ui.check.sheet.fixes")), forProblem.map(row)] : null,
+    also.length ? [el("div", { class: "fix-group" }, t("ui.check.sheet.also")), also.map(row)] : null,
+    disruptsNote,
+    ctx.state?.is_admin ? null : el("p", { class: "note" }, icon("lock"), el("span", {}, t("ui.check.sheet.admin"))));
+  const sheet = confirmSheet({ title: "", content, wide: true, symbol: "sliders", tile: "accent",
+                              confirm: t("ui.check.sheet.confirm"), cancel: t("ui.sheet.cancel") });
+  refresh();
+  if (await sheet) await runFix(ctx, [...selected]);
+}
+
+async function runFix(ctx, ids) {
+  Object.assign(fix, { phase: "applying", ids, before: suggestions.check, after: null, outcome: null });
+  drawCheck(ctx);
+  try {
+    const result = await runJob("/api/tweaks/batch", { ids, enable: true });
+    if (!result.results?.length) {             // UAC declined, or no answer came back: nothing changed here
+      toast(result.message || t("ui.error.failed", { message: "" }), { bad: !result.ok });
+      fix.phase = null;
+      return;
+    }
+    fix.outcome = result;
+    toast(result.message, { bad: !result.ok });
+    fix.phase = "rechecking";
+    const checked = await runCheck(ctx);
+    // Without a new run there is nothing honest to compare: show the plain card, which still lists the changes.
+    fix.after = checked ? suggestions.check : null;
+    fix.phase = fix.after ? "result" : null;
+  } catch (err) {
+    toast(t("ui.error.failed", { message: err.message }), { bad: true });
+    fix.phase = null;
+  } finally {
+    drawCheck(ctx);
+  }
+}
+
+async function undoFix(ctx, ids) {
+  fix.phase = "undoing";
+  fix.ids = ids;
+  drawCheck(ctx);
+  try {
+    const result = await runJob("/api/tweaks/batch", { ids, enable: false });
+    toast(result.message || "", { bad: !result.ok });
+    await loadSuggestions(ctx);
+  } catch (err) {
+    toast(t("ui.error.failed", { message: err.message }), { bad: true });
+  } finally {
+    fix.phase = null;
+    drawCheck(ctx);
+  }
+}
+
+/** Turning tweaks on or off: the ring turns while Windows (and the helper) do it. */
+function busyCard(ctx, card) {
+  const key = fix.phase === "undoing" ? "ui.check.undoing" : "ui.check.applying";
+  return card(checkHero({ circle: el("div", { class: "status-circle accent busy" }, segments(), el("span", { class: "disc" }, icon("sliders"))),
+                          title: t(key, { count: fix.ids.length }),
+                          body: ctx.state?.is_admin ? null : t("ui.optimize.waiting_uac"), running: true }),
+    el("div", { class: "check-list" }, fix.ids.map(id => el("div", { class: "item" }, icon("sliders", "icon"), el("span", {}, tweakItem(id).title)))));
+}
+
+const OUTCOME_PILL = { changed: ["ok", "ui.check.fix.on"], unchanged: ["", "tweak.result.already_on"],
+                       unsupported: ["", "ui.check.fix.not_supported"], failed: ["bad", "ui.check.fix.failed"] };
+
+/** After fixing: what was turned on, and for each problem it was for, how it looks now. "Better now" only
+ *  when checking again shows it; a finding about past days says it is being measured; else, plainly, no change. */
+function resultCard(ctx, card) {
+  const results = fix.outcome.results;
+  const changed = new Set(results.filter(r => r.status === "changed").map(r => r.id));
+  const nameOf = id => results.find(r => r.id === id)?.name || tweakItem(id).title;
+  const after = new Map((fix.after?.problems || []).map(p => [p.key, p]));
+  const rows = fix.before.problems.filter(p => p.batch.some(id => changed.has(id))).map(p => {
+    const now = after.get(p.key)?.status || "ok";
+    const variant = RANK[now] < RANK[p.status] ? "improved" : p.history ? "pending" : "no_gain";
+    const ids = p.batch.filter(id => changed.has(id));
+    return { problem: p, now, variant, ids };
+  });
+  const shownKeys = new Set(rows.map(r => r.problem.key));
+  const open = (fix.after?.problems || []).filter(p => !shownKeys.has(p.key));
+  const improved = rows.some(r => r.variant === "improved");
+  const done = el("button", { class: "button primary", onclick: () => { fix.phase = null; drawCheck(ctx); } }, t("ui.check.done"));
+  return card(
+    checkHero({ circle: statusCircle(improved ? "ok" : "accent", improved ? "check" : "sliders"),
+                title: t("ui.check.result_title", { count: changed.size }), body: fix.outcome.message, below: done }),
+    el("div", { class: "rows" },
+      el("div", { class: "row outcome-list" }, el("div", { class: "main" }, results.map(r => {
+        const [cls, key] = OUTCOME_PILL[r.status] || OUTCOME_PILL.failed;
+        return el("div", { class: "outcome" }, el("span", { class: "name" }, r.name), el("span", { class: `pill ${cls}` }, t(key)),
+          r.ok ? null : el("div", { class: "secondary" }, r.message));
+      }))),
+      rows.map(({ problem, now, variant, ids }) => el("div", { class: "row problem" },
+        el("div", { class: `icon-tile ${variant === "improved" ? "ok" : variant === "pending" ? "accent" : "info"}` },
+          icon(variant === "improved" ? "check" : "sliders")),
+        el("div", { class: "main" },
+          el("div", { class: "label" }, problem.title, " ",
+            el("span", { class: `pill ${{ improved: "ok", pending: "accent", no_gain: "" }[variant]}` }, t(`ui.check.result.${variant}`))),
+          el("div", { class: "metric" }, `${t(`ui.status.${problem.status}`)} → ${t(`ui.status.${now}`)}`),
+          variant === "improved" ? null : el("div", { class: "secondary" }, t(variant === "pending" ? "ui.check.result.pending_body" : "ui.check.result.no_gain_body")),
+          el("div", { class: "chips" }, ids.map(id => el("span", { class: "pill ok" }, icon("check"), nameOf(id))))),
+        variant === "no_gain" ? el("div", { class: "actions-col" },
+          el("button", { class: "button", onclick: () => undoFix(ctx, ids) }, t("ui.check.undo"))) : null))),
+    open.length ? [el("div", { class: "sub-title" }, t("ui.check.still_open")), el("div", { class: "rows" }, open.map(p => problemRow(p, ctx)))] : null);
 }
 
 function drawCheck(ctx) {
   slots.check && fill(slots.check, checkCard(ctx));
 }
 
+/** Resolves true when a new run was saved and loaded. */
 async function runCheck(ctx) {
-  if (check.running) return;
+  if (check.running) return false;
   Object.assign(check, { running: true, progress: null });
   drawCheck(ctx);
+  let ok = false;
   try {
     await runJob("/api/diagnostics", {}, { interval: 300, timeout: 180000,
       onProgress: progress => { if (progress) { check.progress = progress; drawCheck(ctx); } } });
     await loadSuggestions(ctx);
     loadBadge().catch(() => {});        // the sidebar count and the Diagnostics page follow the new run
+    ok = true;
   } catch (err) {
     toast(t("ui.error.failed", { message: err.message }), { bad: true });
   } finally {
     check.running = false;
     drawCheck(ctx);
   }
+  return ok;
 }
 
 // Static parts are built once per render; the live parts (state, chart, numbers) are swapped in
