@@ -230,6 +230,8 @@
   "diag.bufferbloat.by": "um {delta:.0f} ms",
   "diag.bufferbloat.rise": "Die Latenz ins Internet steigt {amount}, wenn die Leitung ausgelastet ist{where}",
   "diag.bufferbloat.advice": "SQM / Smart-QoS (fq_codel oder CAKE) am Router aktivieren und die Upload-/Download-Limits etwa 5–10 % unter der tatsächlichen Bandbreite setzen. Hat der Router kein SQM, die Upload-Geschwindigkeit der Anwendung senken, die die Last verursacht.",
+  "diag.bufferbloat.shaped": "Upload von dieser App auf {limit:.1f} Mbit/s begrenzt (Optimieren), daher wird durch die Begrenzung hindurch gemessen",
+  "diag.bufferbloat.shaped_at_limit": "Upload von dieser App auf {limit:.1f} Mbit/s begrenzt, und der Upload hat sie erreicht ({mbps:.1f} Mbit/s): Wenn Ihr Tarif schneller geworden ist, schalten Sie die Begrenzung aus und wieder ein, um die Leitung zu messen",
 
   "diag.route.title": "Weg zu weit entfernten Zielen",
   "diag.route.no_data": "Wege lassen sich nicht vergleichen: weniger als 3 Referenzseiten haben geantwortet",
@@ -347,7 +349,7 @@
   "tweak.ipv6_off.name": "IPv6 auf Wi‑Fi ausschalten",
   "tweak.ipv6_off.note": "Nur ausprobieren, wenn vermutet wird, dass IPv6 oder IPv6-DNS des Routers etwas verlangsamt",
   "tweak.upload_shaping.name": "Upload-Geschwindigkeit begrenzen, damit die Latenz unter Last niedrig bleibt",
-  "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
+  "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Verkehr ins lokale Netzwerk (NAS, Casting) wird nicht begrenzt. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
   "tweak.upload_shaping.value": "begrenzt auf {limit:.1f} Mbit/s (85 % der gemessenen {upload:.1f} Mbit/s Upload)",
   "tweak.upload_shaping.refused.weak": "Die Messung hat die Leitung nicht genug ausgelastet ({mbps:.1f} Mbit/s, {samples} Messwerte); bitte erneut versuchen",
   "tweak.upload_shaping.refused.ceiling": "Die Messung hat ihr eigenes Limit erreicht ({mbps:.1f} von {ceiling:.0f} Mbit/s), die Leitung ist womöglich schneller als messbar; nichts wurde geändert",
@@ -549,12 +551,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — das größte Paket, das der Pfad transportierte, gemessen am {date} (vorher {before})",
   "ui.optimize.stale.other_network": "In einem anderen Netzwerk gemessen",
   "ui.optimize.stale.old": "Messung ist veraltet",
+  "ui.optimize.stale.no_record": "Keine Messung gespeichert",
   "ui.optimize.stale.hint": "Aus- und wieder einschalten, um dieses Netzwerk zu messen",
 
   "ui.sheet.experimental.title": "Experimentelle Optimierung einschalten?",
   "ui.sheet.experimental.body": "„{name}“ kann die Geschwindigkeit verringern oder Nebenwirkungen haben. Der ursprüngliche Wert wird gesichert, daher lässt sich die Optimierung jederzeit ausschalten.",
   "ui.sheet.measured.title": "Zuerst die Verbindung messen?",
-  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang (bis zu 100 MB), vor und nach der Änderung, und wird nicht angewendet, wenn nichts zu beheben ist.",
+  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils etwa 125 MB pro 100 Mbit/s Upload) und wird nicht angewendet, wenn nichts zu beheben ist.",
   "ui.sheet.cancel": "Abbrechen",
   "ui.sheet.confirm": "Einschalten",
 

@@ -230,6 +230,8 @@
   "diag.bufferbloat.by": "{delta:.0f} ms만큼",
   "diag.bufferbloat.rise": "회선이 사용 중일 때 인터넷 지연 시간이 {amount} 증가합니다{where}",
   "diag.bufferbloat.advice": "라우터에서 SQM / 스마트 QoS(fq_codel 또는 CAKE)를 켜고 업로드/다운로드 제한을 실제 대역폭보다 약 5–10% 낮게 설정하십시오. 라우터에 SQM이 없다면 부하를 일으키는 앱의 업로드 속도를 낮추십시오.",
+  "diag.bufferbloat.shaped": "이 앱이 업로드를 {limit:.1f} Mbps로 제한하고 있어(최적화) 이 측정은 그 제한을 거쳐 이루어졌습니다",
+  "diag.bufferbloat.shaped_at_limit": "이 앱이 업로드를 {limit:.1f} Mbps로 제한하고 있으며 업로드가 그 한도에 도달했습니다({mbps:.1f} Mbps). 요금제가 빨라졌다면 제한을 껐다가 다시 켜서 회선을 측정하세요",
 
   "diag.route.title": "먼 목적지로 가는 경로",
   "diag.route.no_data": "경로를 비교할 수 없습니다: 응답한 기준 사이트가 3곳 미만입니다",
@@ -347,7 +349,7 @@
   "tweak.ipv6_off.name": "Wi‑Fi에서 IPv6 끄기",
   "tweak.ipv6_off.note": "라우터의 IPv6 또는 IPv6 DNS 때문에 느려진다고 의심될 때만 시도하십시오",
   "tweak.upload_shaping.name": "업로드 속도를 제한해 부하 시에도 지연 시간을 낮게 유지",
-  "tweak.upload_shaping.note": "먼저 업로드를 측정한 뒤 85%로 제한해 대기열이 모뎀이 아닌 PC에 쌓이게 합니다. 업로드 전용: 다운로드 방향은 공유기(SQM)에서만 제한할 수 있습니다",
+  "tweak.upload_shaping.note": "먼저 업로드를 측정한 뒤 85%로 제한해 대기열이 모뎀이 아닌 PC에 쌓이게 합니다. 로컬 네트워크(NAS, 캐스팅)로 가는 트래픽은 제한하지 않습니다. 업로드 전용: 다운로드 방향은 공유기(SQM)에서만 제한할 수 있습니다",
   "tweak.upload_shaping.value": "{limit:.1f} Mbps로 제한(측정한 업로드 {upload:.1f} Mbps의 85%)",
   "tweak.upload_shaping.refused.weak": "측정 중 회선에 충분한 부하가 걸리지 않았습니다({mbps:.1f} Mbps, 샘플 {samples}개). 다시 시도하세요",
   "tweak.upload_shaping.refused.ceiling": "측정이 자체 한도에 도달했습니다({ceiling:.0f} Mbps 중 {mbps:.1f}). 회선이 측정 가능한 속도보다 빠를 수 있습니다. 아무것도 바꾸지 않았습니다",
@@ -549,12 +551,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — 경로가 전달한 가장 큰 패킷, {date}에 측정(이전 {before})",
   "ui.optimize.stale.other_network": "다른 네트워크에서 측정됨",
   "ui.optimize.stale.old": "측정 결과가 오래됨",
+  "ui.optimize.stale.no_record": "저장된 측정 결과 없음",
   "ui.optimize.stale.hint": "이 네트워크를 측정하려면 껐다가 다시 켜세요",
 
   "ui.sheet.experimental.title": "실험적 최적화를 켜시겠습니까?",
   "ui.sheet.experimental.body": "“{name}”은(는) 속도를 낮추거나 부작용을 일으킬 수 있습니다. 원래 값은 백업되므로 언제든지 끌 수 있습니다.",
   "ui.sheet.measured.title": "먼저 연결을 측정할까요?",
-  "ui.sheet.measured.body": "'{name}'은(는) 변경 전후로 업로드를 약 15초(최대 100MB) 측정하며, 고칠 것이 없으면 적용하지 않습니다.",
+  "ui.sheet.measured.body": "'{name}'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 업로드 100 Mbps당 약 125MB), 고칠 것이 없으면 적용하지 않습니다.",
   "ui.sheet.cancel": "취소",
   "ui.sheet.confirm": "켜기",
 

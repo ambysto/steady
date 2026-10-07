@@ -230,6 +230,8 @@
   "diag.bufferbloat.by": "上升 {delta:.0f} ms",
   "diag.bufferbloat.rise": "线路繁忙时到互联网的延迟{amount}{where}",
   "diag.bufferbloat.advice": "请在路由器上开启 SQM / 智能 QoS（fq_codel 或 CAKE），并将上传/下载限速设为比实际带宽低约 5–10%。如果路由器没有 SQM，请降低造成负载的应用的上传速度。",
+  "diag.bufferbloat.shaped": "上传已被本应用限制为 {limit:.1f} Mbps（优化），因此本次测量经过了该限制",
+  "diag.bufferbloat.shaped_at_limit": "上传已被本应用限制为 {limit:.1f} Mbps，且上传已达到该限制（{mbps:.1f} Mbps）：如果你的套餐变快了，请关闭再开启该限制以测量线路",
 
   "diag.route.title": "到远方目的地的路由",
   "diag.route.no_data": "无法比较路由：响应的参考网站不足 3 个",
@@ -347,7 +349,7 @@
   "tweak.ipv6_off.name": "在 Wi‑Fi 上关闭 IPv6",
   "tweak.ipv6_off.note": "仅在怀疑路由器的 IPv6 或 IPv6 DNS 导致变慢时尝试",
   "tweak.upload_shaping.name": "限制上传速度，让高负载时延迟保持较低",
-  "tweak.upload_shaping.note": "先测量上传速度，再限制在其 85%，让队列留在电脑上而不是调制解调器里。仅限上传：下载方向只能在路由器上限制（SQM）",
+  "tweak.upload_shaping.note": "先测量上传速度，再限制在其 85%，让队列留在电脑上而不是调制解调器里。发往本地网络（NAS、投屏）的流量不受限制。仅限上传：下载方向只能在路由器上限制（SQM）",
   "tweak.upload_shaping.value": "限制为 {limit:.1f} Mbps（测得上传 {upload:.1f} Mbps 的 85%）",
   "tweak.upload_shaping.refused.weak": "测量没有让线路达到足够负载（{mbps:.1f} Mbps，{samples} 个样本）；请重试",
   "tweak.upload_shaping.refused.ceiling": "测量达到了自身上限（{mbps:.1f} / {ceiling:.0f} Mbps），线路可能比它能测出的更快；未做任何更改",
@@ -549,12 +551,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — 路径可传输的最大数据包，测量于 {date}（原为 {before}）",
   "ui.optimize.stale.other_network": "在其他网络上测量",
   "ui.optimize.stale.old": "测量结果已过时",
+  "ui.optimize.stale.no_record": "没有保存的测量结果",
   "ui.optimize.stale.hint": "关闭后再开启即可测量此网络",
 
   "ui.sheet.experimental.title": "启用实验性优化项？",
   "ui.sheet.experimental.body": "“{name}”可能降低速度或产生副作用。原始值已备份，你可以随时关闭它。",
   "ui.sheet.measured.title": "先测量你的连接？",
-  "ui.sheet.measured.body": "“{name}”会在更改前后各测量约 15 秒上传（最多 100 MB），没有需要修复的问题时不会应用。",
+  "ui.sheet.measured.body": "“{name}”会在更改前测量约 15 秒上传，更改后再测量一次（每次每 100 Mbps 上传约 125 MB），没有需要修复的问题时不会应用。",
   "ui.sheet.cancel": "取消",
   "ui.sheet.confirm": "启用",
 

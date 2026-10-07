@@ -232,6 +232,8 @@
   "diag.bufferbloat.by": "by {delta:.0f} ms",
   "diag.bufferbloat.rise": "Latency to the Internet rises {amount} when the line is busy{where}",
   "diag.bufferbloat.advice": "Turn on SQM / smart QoS (fq_codel or CAKE) on the router and set the upload/download limits about 5–10% below the real bandwidth. If the router has no SQM, lower the upload speed of the app causing the load.",
+  "diag.bufferbloat.shaped": "Upload limited by this app to {limit:.1f} Mbps (Optimize), so this is measured through the limit",
+  "diag.bufferbloat.shaped_at_limit": "Upload limited by this app to {limit:.1f} Mbps and the upload reached it ({mbps:.1f} Mbps): if your plan got faster, turn the limit off and on again to measure the line",
 
   "diag.route.title": "Route to far-away destinations",
   "diag.route.no_data": "Cannot compare routes: fewer than 3 reference sites answered",
@@ -349,7 +351,7 @@
   "tweak.ipv6_off.name": "Turn off IPv6 on Wi‑Fi",
   "tweak.ipv6_off.note": "Only try this when you suspect the router's IPv6 or IPv6 DNS slows things down",
   "tweak.upload_shaping.name": "Limit the upload speed to keep latency low under load",
-  "tweak.upload_shaping.note": "Measures your upload first, then caps it at 85% so the queue stays on the PC instead of the modem. Upload only: the download direction can only be shaped on the router (SQM)",
+  "tweak.upload_shaping.note": "Measures your upload first, then caps it at 85% so the queue stays on the PC instead of the modem. Traffic to your local network (NAS, casting) is not limited. Upload only: the download direction can only be shaped on the router (SQM)",
   "tweak.upload_shaping.value": "limited to {limit:.1f} Mbps (85% of the {upload:.1f} Mbps upload measured)",
   "tweak.upload_shaping.refused.weak": "The measurement did not load the line enough ({mbps:.1f} Mbps, {samples} samples); try again",
   "tweak.upload_shaping.refused.ceiling": "The measurement reached its own limit ({mbps:.1f} of {ceiling:.0f} Mbps), so the line may be faster than it can tell; nothing was changed",
@@ -551,12 +553,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — the largest packet the path carried, measured on {date} (was {before})",
   "ui.optimize.stale.other_network": "Measured on another network",
   "ui.optimize.stale.old": "Measurement is old",
+  "ui.optimize.stale.no_record": "No measurement on record",
   "ui.optimize.stale.hint": "Turn it off and on again to measure this network",
 
   "ui.sheet.experimental.title": "Turn on an experimental tweak?",
   "ui.sheet.experimental.body": "“{name}” can lower speed or have side effects. The original value is backed up, so you can turn it off at any time.",
   "ui.sheet.measured.title": "Measure your connection first?",
-  "ui.sheet.measured.body": "“{name}” measures your upload for about 15 seconds (up to 100 MB), before and after the change, and is not applied if there is nothing to fix.",
+  "ui.sheet.measured.body": "“{name}” measures your upload for about 15 seconds before the change and again after it (each time about 125 MB per 100 Mbps of upload), and is not applied if there is nothing to fix.",
   "ui.sheet.cancel": "Cancel",
   "ui.sheet.confirm": "Turn on",
 

@@ -19,6 +19,8 @@ public enum MessageCatalog {
         "diag.bufferbloat.refused": [MessageArgument("phase", nil), MessageArgument("status", nil), MessageArgument("minutes", nil)],
         "diag.bufferbloat.refused_later": [MessageArgument("phase", nil), MessageArgument("status", nil)],
         "diag.bufferbloat.rise": [MessageArgument("amount", nil), MessageArgument("where", nil)],
+        "diag.bufferbloat.shaped": [MessageArgument("limit", ".1f")],
+        "diag.bufferbloat.shaped_at_limit": [MessageArgument("limit", ".1f"), MessageArgument("mbps", ".1f")],
         "diag.bufferbloat.weak_load": [MessageArgument("phase", nil), MessageArgument("mbps", ".1f")],
         "diag.cli.compared": [MessageArgument("time", nil)],
         "diag.cli.header": [MessageArgument("time", nil), MessageArgument("status", nil)],

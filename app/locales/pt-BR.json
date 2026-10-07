@@ -230,6 +230,8 @@
   "diag.bufferbloat.by": "em {delta:.0f} ms",
   "diag.bufferbloat.rise": "A latência até a Internet sobe {amount} quando a linha está ocupada{where}",
   "diag.bufferbloat.advice": "Ative SQM / QoS inteligente (fq_codel ou CAKE) no roteador e defina os limites de upload/download cerca de 5–10% abaixo da banda real. Se o roteador não tiver SQM, reduza a velocidade de upload do aplicativo que causa a carga.",
+  "diag.bufferbloat.shaped": "Upload limitado por este app a {limit:.1f} Mbps (Otimizar), então esta medição passa pelo limite",
+  "diag.bufferbloat.shaped_at_limit": "Upload limitado por este app a {limit:.1f} Mbps e o upload chegou ao limite ({mbps:.1f} Mbps): se o seu plano ficou mais rápido, desative e ative o limite de novo para medir a linha",
 
   "diag.route.title": "Rota até destinos distantes",
   "diag.route.no_data": "Não foi possível comparar as rotas: menos de 3 sites de referência responderam",
@@ -347,7 +349,7 @@
   "tweak.ipv6_off.name": "Desativar o IPv6 no Wi‑Fi",
   "tweak.ipv6_off.note": "Experimente apenas quando suspeitar que o IPv6 do roteador ou o DNS IPv6 deixa tudo lento",
   "tweak.upload_shaping.name": "Limitar a velocidade de upload para manter a latência baixa sob carga",
-  "tweak.upload_shaping.note": "Primeiro mede seu upload e depois o limita a 85% para que a fila fique no PC e não no modem. Só upload: o sentido de download só pode ser limitado no roteador (SQM)",
+  "tweak.upload_shaping.note": "Primeiro mede seu upload e depois o limita a 85% para que a fila fique no PC e não no modem. O tráfego para a sua rede local (NAS, transmissão para a TV) não é limitado. Só upload: o sentido de download só pode ser limitado no roteador (SQM)",
   "tweak.upload_shaping.value": "limitado a {limit:.1f} Mbps (85% dos {upload:.1f} Mbps de upload medidos)",
   "tweak.upload_shaping.refused.weak": "A medição não carregou a linha o suficiente ({mbps:.1f} Mbps, {samples} amostras); tente de novo",
   "tweak.upload_shaping.refused.ceiling": "A medição chegou ao próprio limite ({mbps:.1f} de {ceiling:.0f} Mbps), então a linha pode ser mais rápida do que ela consegue medir; nada foi alterado",
@@ -549,12 +551,13 @@
   "ui.optimize.measured.mtu_pmtu": "MTU {mtu} — o maior pacote que o caminho transportava, medido em {date} (antes {before})",
   "ui.optimize.stale.other_network": "Medido em outra rede",
   "ui.optimize.stale.old": "A medição está antiga",
+  "ui.optimize.stale.no_record": "Nenhuma medição registrada",
   "ui.optimize.stale.hint": "Desative e ative de novo para medir esta rede",
 
   "ui.sheet.experimental.title": "Ativar uma otimização experimental?",
   "ui.sheet.experimental.body": "“{name}” pode reduzir a velocidade ou ter efeitos colaterais. O valor original fica em backup, então você pode desativá-la a qualquer momento.",
   "ui.sheet.measured.title": "Medir sua conexão primeiro?",
-  "ui.sheet.measured.body": "“{name}” mede seu upload por cerca de 15 segundos (até 100 MB), antes e depois da mudança, e não é aplicado se não houver nada a corrigir.",
+  "ui.sheet.measured.body": "“{name}” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (a cada vez cerca de 125 MB por 100 Mbps de upload), e não é aplicado se não houver nada a corrigir.",
   "ui.sheet.cancel": "Cancelar",
   "ui.sheet.confirm": "Ativar",
 

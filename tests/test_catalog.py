@@ -52,7 +52,7 @@ def catalog():
 def bloated_upload(mgr):
     """An upload measurement taken now, with latency rising 180 ms under load (the 2026-08-31 kind)."""
     return {"kind": "upload", "upload_mbps": 40.0, "idle_ms": 20.0, "loaded_ms": 200.0, "samples": 40,
-            "loss_pct": 0.0, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
+            "attempted": 40, "loss_pct": 0.0, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
 
 
 def blackholed_path(mgr):

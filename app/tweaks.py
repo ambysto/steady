@@ -746,26 +746,32 @@ UPLOAD_POLICY = "StableInternet-Upload"
 UPLOAD_MARGIN = 0.85
 UPLOAD_MIN_BPS, UPLOAD_MAX_BPS = 1_000_000, 1_000_000_000
 UPLOAD_STEP_BPS = 100_000
+# Destinations the upload limit must not reach: private, link-local and unique-local networks (a NAS
+# copy or casting runs at LAN speed, far above any Internet uplink).
+LOCAL_DESTINATIONS = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16", "fc00::/7", "fe80::/10")
 
 
 class UploadShapingTweak(MeasuredTweak):
-    """A QoS policy of the tool's own name throttling all outbound traffic to 85% of the measured
-    upload, so the queue builds on the PC (short) instead of in the modem (long). Restore removes
-    exactly that policy, which is also the safe default without a backup (the name is ours)."""
+    """A QoS policy of the tool's own name throttling outbound traffic to 85% of the measured upload,
+    so the queue builds on the PC (short) instead of in the modem (long). The throttle matches all
+    traffic (-Default), so one more specific policy per local network exempts the LAN; they are
+    written before the throttle and removed after it. Restore removes exactly the tool's policies,
+    which is also the safe default without a backup (the names are ours)."""
 
     measurement_kind = "upload"
 
     def __init__(self, id: str, name: Message, risk: str, *, policy: str = UPLOAD_POLICY, **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
         self.policy = policy
+        self.exemptions = {f"{policy}-Local{i}": prefix for i, prefix in enumerate(LOCAL_DESTINATIONS, 1)}
 
     def check(self, measurement: Any, now: float) -> dict[str, Any]:
         return calibration.check_upload(measurement, now)
 
     def derive(self, measurement: dict[str, Any]) -> int:
-        mbps, samples = float(measurement["upload_mbps"]), int(measurement["samples"])
-        if mbps < calibration.MIN_UPLOAD_MBPS or samples < calibration.MIN_SAMPLES:
-            raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=samples))
+        mbps, attempted = float(measurement["upload_mbps"]), int(measurement["attempted"])
+        if mbps < calibration.MIN_UPLOAD_MBPS or attempted < calibration.MIN_SAMPLES:
+            raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=attempted))
         # The measurement stops at a fixed volume, so near its ceiling it shows its own limit, not the line's.
         ceiling = bufferbloat.LOAD_CEILING_MBPS
         if mbps >= calibration.AT_CEILING * ceiling:
@@ -779,8 +785,20 @@ class UploadShapingTweak(MeasuredTweak):
                               low=UPLOAD_MIN_BPS / 1e6, high=UPLOAD_MAX_BPS / 1e6))
         return cap
 
+    def _policies(self, sys_: System) -> dict[str, dict[str, Any]]:
+        """The tool's policies by lower-case name (the ActiveStore lower-cases them)."""
+        return {name.lower(): p for name, p in sys_.qos_policies_get(self.policy).items()}
+
+    def _exempted(self, policies: dict[str, dict[str, Any]]) -> list[str]:
+        """Exemption policies present with their intended destination."""
+        return sorted(n for n, prefix in self.exemptions.items()
+                      if (policies.get(n.lower()) or {}).get("destination") == prefix)
+
     def applied_value(self, sys_: System) -> int | None:
-        return sys_.qos_policy_get(self.policy)
+        """The throttle in effect, counted only while every local network is exempted."""
+        policies = self._policies(sys_)
+        rate = (policies.get(self.policy.lower()) or {}).get("rate_bps")
+        return rate if rate is not None and len(self._exempted(policies)) == len(self.exemptions) else None
 
     def value_matches(self, applied: int | None, value: int) -> bool:
         # Windows may round the rate it stores; 1% is far below the margin taken.
@@ -790,24 +808,48 @@ class UploadShapingTweak(MeasuredTweak):
         return msg("tweak.upload_shaping.value", limit=value / 1e6, upload=float(measurement["upload_mbps"]))
 
     def read(self, sys_: System) -> Reading:
-        rate = self.applied_value(sys_)
-        return Reading(True, rate is not None, None if rate is None else {"limit_mbps": round(rate / 1e6, 1)})
+        policies = self._policies(sys_)
+        rate = (policies.get(self.policy.lower()) or {}).get("rate_bps")
+        if rate is None:
+            return Reading(True, False, None)
+        return Reading(True, True, {"limit_mbps": round(rate / 1e6, 1),
+                                    "local_exempt": len(self._exempted(policies)) == len(self.exemptions)})
 
     def capture(self, sys_: System) -> dict[str, Any]:
-        return {"policy": self.policy, "rate_bps": self.applied_value(sys_)}
+        policies = self._policies(sys_)
+        return {"policy": self.policy, "rate_bps": (policies.get(self.policy.lower()) or {}).get("rate_bps"),
+                "exempt": self._exempted(policies)}
 
     def apply_value(self, sys_: System, value: int) -> None:
+        for name, prefix in self.exemptions.items():   # the LAN is exempted before anything is throttled
+            sys_.qos_exempt_set(name, prefix)
         sys_.qos_policy_set(self.policy, value)
 
+    def validate_original(self, original: dict[str, Any]) -> None:
+        if original["policy"] != self.policy:
+            raise ValueError(f"backup names policy {original['policy']!r}, not {self.policy!r}")
+        if not set(original.get("exempt", [])) <= set(self.exemptions):
+            raise ValueError("backup names an unknown exemption policy")
+        self.restore_key(original)
+
     def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
-        if original is None or original["rate_bps"] is None:
+        if original is not None:
+            self.validate_original(original)    # only ever touch the tool's own names
+        rate = None if original is None else original["rate_bps"]
+        keep = set() if original is None else set(original.get("exempt", []))
+        if rate is None:
             sys_.qos_policy_remove(self.policy)
         else:
-            sys_.qos_policy_set(original["policy"], int(original["rate_bps"]))
+            sys_.qos_policy_set(self.policy, int(rate))
+        present = {n for n in self.exemptions if n.lower() in self._policies(sys_)}
+        for name in sorted(present - keep):        # the throttle is gone or back: exemptions can follow
+            sys_.qos_policy_remove(name)
+        for name in sorted(keep):
+            sys_.qos_exempt_set(name, self.exemptions[name])
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         rate = original["rate_bps"]
-        return (original["policy"], None if rate is None else int(rate))
+        return (original["policy"], None if rate is None else int(rate), tuple(sorted(original.get("exempt", []))))
 
 
 MTU_LOWEST = 1280            # no plain PPPoE or tunnel is that small; it is also IPv6's minimum
@@ -922,7 +964,7 @@ class MtuTweak(MeasuredTweak):
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
                  "binding_get", "wifi_ssid_bands", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface",
-                 "doh_get", "qos_policy_get", "ipv4_interface")
+                 "doh_get", "qos_policies_get", "ipv4_interface")
 
 
 class _CachedReads:
@@ -1424,7 +1466,12 @@ def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict
     t = mgr.get(tweak_id)
     if not isinstance(t, MeasuredTweak):
         raise ValueError(f"{tweak_id} is not a measured tweak")
-    if mgr.state(tweak_id).enabled:
+    state = mgr.state(tweak_id)
+    if state.error:          # do not load the line, nor ask for UAC, for a state that cannot be read
+        return {"ok": False, "changed": False, "message": msg("tweak.result.read_failed", error=state.error)}
+    if not state.supported:
+        return {"ok": False, "changed": False, "message": msg("tweak.result.unsupported", reason=state.reason)}
+    if state.enabled:
         return {"ok": True, "changed": False, "message": msg("tweak.result.already_on")}
     before = measure()
     if before is None:
@@ -1468,10 +1515,11 @@ def default_manager(storage: Any = None) -> TweakManager:
 
 
 def list_states() -> dict[str, dict[str, Any]] | None:
-    """For diagnostics check #10. None while no tweak is declared. No side effects."""
+    """For diagnostics (check #10, and #14 for the upload limit). None while no tweak is declared.
+    No side effects."""
     if not CATALOG:
         return None
-    return {s.id: {"risk": s.risk, "enabled": s.enabled, "supported": s.supported}
+    return {s.id: {"risk": s.risk, "enabled": s.enabled, "supported": s.supported, "current": s.current}
             for s in default_manager().states()}
 
 

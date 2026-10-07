@@ -502,6 +502,7 @@ class MeasuredTweakApiTests(ServerTestCase):
         self.assertTrue(result["verdict"]["helped"])
         self.assertIn("34.0 Mbps", result["message"])
         self.assertEqual(self.system.qos["StableInternet-Upload"], 34_000_000)
+        self.assertEqual(len(self.system.qos_exempt), 6)            # the local networks are not limited
         self.assertEqual(len(self.storage.query_events(kinds=["tweak_verified"])), 1)
 
     def test_nothing_to_fix_is_refused_before_uac(self):
@@ -524,6 +525,23 @@ class MeasuredTweakApiTests(ServerTestCase):
         self.req("POST", "/api/tweaks/upload_shaping", {"enable": False})
         self.assertEqual(self.calls, [("tweak-disable", "upload_shaping", {})])
         self.assertNotIn("StableInternet-Upload", self.system.qos)
+
+    def test_measurements_never_load_the_line_together(self):
+        seen = []
+
+        def measure(tid):
+            seen.append(self.api._line_lock.locked())
+            return self.measurements.pop(0) if self.measurements else None
+        self.api._measure_tweak = measure
+        self.api._run_bufferbloat = lambda: seen.append(self.api._line_lock.locked()) or {"results": []}
+        self.req("POST", "/api/tweaks/upload_shaping", {"enable": True})
+        self.req("POST", "/api/diagnostics/bufferbloat", {})
+        self.assertEqual(seen, [True, True, True])       # before, after, and check #14: each holds the lock
+
+    def test_an_enabled_limit_without_its_measurement_is_flagged(self):
+        self.system.qos["StableInternet-Upload"] = 15_000_000     # on, but no backup entry to tell its source
+        st = {s["id"]: s for s in self.req("GET", "/api/tweaks")[1]["states"]}["upload_shaping"]
+        self.assertEqual(st["stale"], ["no_record"])
 
     def test_states_flag_a_measurement_from_another_network(self):
         self.mgr.enable("upload_shaping", self.upload())

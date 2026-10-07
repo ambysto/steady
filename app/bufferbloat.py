@@ -22,6 +22,7 @@ from . import USER_AGENT
 DOWN_URL = "https://speed.cloudflare.com/__down?bytes=25000000"
 UP_URL = "https://speed.cloudflare.com/__up"
 RAMP_S = 2.0          # samples taken while the line is still picking up speed are dropped
+PING_TIMEOUT_MS = 900  # a ping lost under load waited at least this long
 # A load phase runs for LOAD_S; MAX_BYTES only stops it on a very fast line, to bound the data used.
 # (It was 100 MB until 2026-10-07: every phase then read 80 Mbps on a line that uploads ~230.)
 MAX_BYTES = 1_000_000_000
@@ -174,12 +175,16 @@ def http_upload(url: str, seconds: float, stop: threading.Event, connections: in
 # --- measuring ---------------------------------------------------------------------------------
 
 def _sample(ping: Ping, targets: dict[str, str], seconds: float, interval: float,
-            sleep: Callable[[float], None], clock: Callable[[], float]) -> dict[str, list[float | None]]:
-    """Ping every target once per `interval` for `seconds` (targets pinged in parallel)."""
+            sleep: Callable[[float], None], clock: Callable[[], float],
+            starts: list[float] | None = None) -> dict[str, list[float | None]]:
+    """Ping every target once per `interval` for `seconds` (targets pinged in parallel). `starts`, if
+    given, receives the clock time each round began: under load a round can take most of a second."""
     out: dict[str, list[float | None]] = {label: [] for label in targets}
     end = clock() + seconds
     while clock() < end:
         started = clock()
+        if starts is not None:
+            starts.append(started)
         threads = []
         results: dict[str, float | None] = {}
 
@@ -224,12 +229,15 @@ def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: 
         thread = threading.Thread(target=run, daemon=True)
         started = clock()
         thread.start()
-        samples = _sample(ping, targets, load_s, interval, sleep, clock)
+        starts: list[float] = []
+        samples = _sample(ping, targets, load_s, interval, sleep, clock, starts)
         stop.set()
         thread.join(10)
         elapsed = max(clock() - started, 1e-6)
-        drop = int(ramp_s / interval)
-        phase.rtts = {label: s[drop:] if len(s) > drop else [] for label, s in samples.items()}
+        # Drop the ramp by time, not by count: on a bloated line each round waits for slow or lost pings,
+        # so a fixed count of rounds can cover most of the phase.
+        keep = next((i for i, t in enumerate(starts) if t - started >= ramp_s), len(starts))
+        phase.rtts = {label: s[keep:] for label, s in samples.items()}
         phase.mbps = moved[0] * 8 / elapsed / 1e6
         phase.error = failure[0] if failure else ""
         phase.capped = moved[0] >= max_bytes
@@ -241,16 +249,19 @@ def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: 
 
 def upload_summary(m: Measurement, label: str = "internet") -> dict[str, float | int] | None:
     """The upload phase of `m` reduced to what a measured tweak keeps (ADR-0016): upload Mbps, median
-    idle and loaded latency to `label`, number of loaded samples. None when the load did not run."""
+    idle and loaded latency to `label`, samples answered and attempted. A ping lost under load counts
+    as PING_TIMEOUT_MS, a lower bound: on a badly bloated line the slowest pings are the lost ones.
+    None when the load did not run or there is no idle baseline."""
     if m.upload.mbps is None or (m.upload.error and not m.upload.mbps):
         return None
     idle = [s for s in m.idle.rtts.get(label, []) if s is not None]
     loaded = m.upload.rtts.get(label, [])
     got = [s for s in loaded if s is not None]
-    if not idle or not got:
+    if not idle or not loaded:
         return None
+    floored = [PING_TIMEOUT_MS if s is None else max(s, 0.0) for s in loaded]
     return {"upload_mbps": round(float(m.upload.mbps), 2), "idle_ms": round(statistics.median(idle), 1),
-            "loaded_ms": round(statistics.median(got), 1), "samples": len(got),
+            "loaded_ms": round(statistics.median(floored), 1), "samples": len(got), "attempted": len(loaded),
             "loss_pct": round(100.0 * (len(loaded) - len(got)) / len(loaded), 1)}
 
 
@@ -267,6 +278,6 @@ def real_ping() -> Ping:
         p = getattr(local, "p", None)
         if p is None:
             p = local.p = icmp.Pinger()
-        r = p.ping(address, 900)
+        r = p.ping(address, PING_TIMEOUT_MS)
         return r.rtt_ms if r.ok else None
     return ping
