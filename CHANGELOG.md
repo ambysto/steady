@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-07
+
+The app installs for all users under `Program Files`, so nothing a process without Administrator rights can change runs elevated. Installing and uninstalling each ask once for Administrator approval; an earlier per-user install is replaced and its data kept.
+
 ### Security
 - **The app installs for all users under `Program Files`** (SIC-97, [ADR-0019](docs/adr/0019-per-machine-install.md)). Up to 0.5.0 it installed into `%LOCALAPPDATA%\Programs`, which a process without Admin rights can write, and the elevated helper (and a monitor task with highest privileges, at every logon) ran from there: replacing a file in it meant running code as Administrator at the next UAC prompt. Now:
   - Installing asks once for Administrator approval. The elevated part copies the helper's own folder (never a path it is given) to `Program Files`, adds the "Apps & features" entry in HKLM and the all-users Start menu shortcut; the monitor task and the sign-in (tray) shortcut stay per user, created by the user's own installer (so over-the-shoulder UAC does not give them to the administrator's account). When the helper's result cannot come back (over-the-shoulder UAC), the installer checks the effect itself.
