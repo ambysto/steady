@@ -211,6 +211,12 @@
   "diag.bufferbloat.upload": "tải lên",
   "diag.bufferbloat.no_load": "Không tạo được tải chiều {phase}: {error}",
   "diag.bufferbloat.weak_load": "Chiều {phase} chỉ đạt {mbps:.1f} Mbps nên không đủ để làm đầy đường truyền",
+  "diag.bufferbloat.refused": "Máy chủ đo đã từ chối tải chiều {phase} (HTTP {status}: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau khoảng {minutes} phút",
+  "diag.bufferbloat.refused_later": "Máy chủ đo đã từ chối tải chiều {phase} (HTTP {status}: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau",
+  "diag.bufferbloat.at_ceiling": "Tải chiều {phase} dừng ở giới hạn của chính phép đo ({mbps:.0f} Mbps): đường truyền có thể nhanh hơn, nên hàng đợi có thể chưa đầy",
+  "diag.bufferbloat.ok_incomplete": "Không thấy độ trễ tăng ở phần đo được (tối đa +{delta:.0f} ms), nhưng phép đo chưa đầy đủ",
+  "diag.bufferbloat.advice_incomplete": "Chỉ một lần đo mà cả hai chiều đều làm đầy đường truyền mới cho biết mọi thứ ổn; chạy lại sau.",
+  "diag.bufferbloat.advice_later": "Chờ máy chủ đo nhận tải trở lại rồi chạy lại.",
   "diag.bufferbloat.all_lost": "{label}: mất toàn bộ ping khi {phase}",
   "diag.bufferbloat.line": "{label} khi {phase} ({mbps:.0f} Mbps): trung vị {median:.0f} ms, p95 {p95:.0f} ms, tăng thêm {delta:+.0f} ms, mất {loss:.0f}%",
   "diag.bufferbloat.no_result": "Không đo được độ trễ khi tải",
@@ -539,7 +545,7 @@
   "ui.diag.advice": "Nên làm gì",
   "ui.diag.open_tweak": "Mở trong Tối ưu",
   "ui.diag.on_demand": "Theo yêu cầu",
-  "ui.diag.bufferbloat_run": "Đo (khoảng 30 giây, dùng tối đa 200 MB)",
+  "ui.diag.bufferbloat_run": "Đo (khoảng 30 giây, dùng tối đa 2 GB nếu mạng nhanh)",
 
   "ui.status.ok": "Ổn",
   "ui.status.warn": "Cảnh báo",
@@ -657,7 +663,7 @@
   "ui.optimize.loading": "Đang đọc cấu hình hiện tại…",
 
   "ui.diag.never": "Chưa chạy chẩn đoán lần nào",
-  "ui.diag.bufferbloat_confirm": "Thao tác này tải xuống và tải lên tối đa khoảng 200 MB từ speed.cloudflare.com trong khoảng 30 giây.",
+  "ui.diag.bufferbloat_confirm": "Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB.",
   "ui.diag.measure": "Đo",
 
   "ui.common.on": "Bật",

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import socket
 import statistics
@@ -671,14 +672,29 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
     details: list[Message] = [msg("diag.bufferbloat.idle", values=[f"{l} {v:.0f} ms" for l, v in idle_med.items()])]
     statuses, delta_by, loss_by = [], {}, {}
     notes: list[Message] = []
+    # A direction that was not measured, or not loaded fully, cannot vouch for "ok"; a rise it did
+    # measure is still real and is reported.
+    incomplete = refused = False
     for phase, direction in ((m.download, "download"), (m.upload, "upload")):
         name = msg(f"diag.bufferbloat.{direction}")
+        if phase.refused:
+            incomplete = refused = True
+            wait = phase.retry_after_s
+            notes.append(msg("diag.bufferbloat.refused", phase=name, status=int(phase.refused),
+                             minutes=max(1, math.ceil(wait / 60))) if wait is not None else
+                         msg("diag.bufferbloat.refused_later", phase=name, status=int(phase.refused)))
+            continue
         if phase.error and not phase.mbps:
+            incomplete = True
             notes.append(msg("diag.bufferbloat.no_load", phase=name, error=phase.error))
             continue
         if (phase.mbps or 0) < BLOAT_MIN_MBPS:
+            incomplete = True
             notes.append(msg("diag.bufferbloat.weak_load", phase=name, mbps=float(phase.mbps or 0)))
             continue
+        if phase.capped:
+            incomplete = True
+            notes.append(msg("diag.bufferbloat.at_ceiling", phase=name, mbps=float(phase.mbps)))
         for label, samples in phase.rtts.items():
             if label not in idle_med or len(samples) < BLOAT_MIN_SAMPLES:
                 continue
@@ -698,13 +714,18 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
     details += notes
     if not statuses:
         return CheckResult(**base, status=INFO, summary=msg("diag.bufferbloat.no_result"), details=details,
-                           advice=msg("diag.bufferbloat.advice_unreachable"))
+                           advice=msg("diag.bufferbloat.advice_later" if refused else
+                                      "diag.bufferbloat.advice_unreachable"))
     status = worst(statuses)
     inet = [d for (label, _), d in delta_by.items() if label == "internet"]
     router = [d for (label, _), d in delta_by.items() if label == "router"]
     biggest = max(inet) if inet else 0.0
     worst_loss = max((l for (label, _), l in loss_by.items() if label == "internet"), default=0.0)
     delay_is_the_problem = biggest >= BLOAT_WARN_MS
+    if status == OK and incomplete:
+        return CheckResult(**base, status=INFO, details=details,
+                           summary=msg("diag.bufferbloat.ok_incomplete", delta=float(max(biggest, 0))),
+                           advice=msg("diag.bufferbloat.advice_incomplete"))
     if status == OK:
         summary = msg("diag.bufferbloat.ok", delta=float(max(biggest, 0)))
     elif not delay_is_the_problem:
@@ -1114,7 +1135,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-save", action="store_true", help="do not store this run in metrics.db")
     ap.add_argument("--compare", action="store_true", help="show changes against the previous saved run")
     ap.add_argument("--bufferbloat", action="store_true",
-                    help="run ONLY the bufferbloat check (~30 s, generates up to ~200 MB of traffic)")
+                    help="run ONLY the bufferbloat check (~30 s at full line speed, up to ~2 GB of traffic)")
     ap.add_argument("--lang", help="language for the output (default: settings.json ui.language)")
     args = ap.parse_args(argv)
     if hasattr(sys.stdout, "reconfigure"):

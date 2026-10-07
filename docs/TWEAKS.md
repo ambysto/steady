@@ -63,7 +63,7 @@ The value is computed from a measurement of the network in use, taken before the
 
 | ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
-| `upload_shaping` | Limit the upload speed to keep latency low under load | `NetQosPolicy` named `StableInternet-Upload`, `-Default` (all outbound traffic), `ThrottleRateActionBitsPerSecond` = 85% of the measured upload, rounded down to 0.1 Mbps, between 1 and 1000 Mbps | medium | 🛡 Upload only; the download direction can only be shaped on the router (SQM). Refused when latency under upload rises < 30 ms (nothing to fix), when the upload load is < 1 Mbps, when the measurement reached its own ceiling (≥ 95% of the 80 Mbps a 100 MB, 10 s phase can show: the line may be faster), or with too few latency samples |
+| `upload_shaping` | Limit the upload speed to keep latency low under load | `NetQosPolicy` named `StableInternet-Upload`, `-Default` (all outbound traffic), `ThrottleRateActionBitsPerSecond` = 85% of the measured upload, rounded down to 0.1 Mbps, between 1 and 1000 Mbps | medium | 🛡 Upload only; the download direction can only be shaped on the router (SQM). Refused when latency under upload rises < 30 ms (nothing to fix), when the upload load is < 1 Mbps, when the measurement reached its own ceiling (≥ 95% of the 800 Mbps a 1 GB, 10 s phase can show: the line may be faster), or with too few latency samples |
 
 `upload_shaping` details:
 

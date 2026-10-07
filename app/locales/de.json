@@ -211,6 +211,12 @@
   "diag.bufferbloat.upload": "Upload",
   "diag.bufferbloat.no_load": "{phase}-Last konnte nicht erzeugt werden: {error}",
   "diag.bufferbloat.weak_load": "Die {phase}-Last erreichte nur {mbps:.1f} Mbps, zu wenig, um die Leitung auszulasten",
+  "diag.bufferbloat.refused": "Der Testserver hat die {phase}-Last abgelehnt (HTTP {status}: er begrenzt Testverkehr pro Adresse); in etwa {minutes} Min. erneut versuchen",
+  "diag.bufferbloat.refused_later": "Der Testserver hat die {phase}-Last abgelehnt (HTTP {status}: er begrenzt Testverkehr pro Adresse); später erneut versuchen",
+  "diag.bufferbloat.at_ceiling": "Die {phase}-Last stoppte an der eigenen Grenze des Tests ({mbps:.0f} Mbps): Die Leitung ist womöglich schneller, ihre Warteschlange hat sich dann nicht gefüllt",
+  "diag.bufferbloat.ok_incomplete": "Kein Anstieg, soweit messbar (höchstens +{delta:.0f} ms), aber die Messung ist unvollständig",
+  "diag.bufferbloat.advice_incomplete": "Nur ein Lauf, in dem beide Richtungen die Leitung auslasten, kann zeigen, dass alles in Ordnung ist; später erneut ausführen.",
+  "diag.bufferbloat.advice_later": "Warten, bis der Testserver die Last wieder annimmt, dann erneut ausführen.",
   "diag.bufferbloat.all_lost": "{label}: alle Pings gingen bei {phase} verloren",
   "diag.bufferbloat.line": "{label} bei {phase} ({mbps:.0f} Mbps): Median {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms zusätzlich, {loss:.0f}% verloren",
   "diag.bufferbloat.no_result": "Latenz unter Last konnte nicht gemessen werden",
@@ -539,7 +545,7 @@
   "ui.diag.advice": "Was zu tun ist",
   "ui.diag.open_tweak": "In „Optimieren“ öffnen",
   "ui.diag.on_demand": "Auf Abruf",
-  "ui.diag.bufferbloat_run": "Messen (ca. 30 s, bis zu 200 MB Datenverbrauch)",
+  "ui.diag.bufferbloat_run": "Messen (ca. 30 s, bei schneller Leitung bis zu 2 GB Datenverbrauch)",
 
   "ui.status.ok": "OK",
   "ui.status.warn": "Warnung",
@@ -657,7 +663,7 @@
   "ui.optimize.loading": "Aktuelle Einstellungen werden gelesen…",
 
   "ui.diag.never": "Es wurde noch keine Diagnose ausgeführt",
-  "ui.diag.bufferbloat_confirm": "Dabei werden etwa 30 Sekunden lang bis zu rund 200 MB von speed.cloudflare.com heruntergeladen und hochgeladen.",
+  "ui.diag.bufferbloat_confirm": "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB.",
   "ui.diag.measure": "Messen",
 
   "ui.common.on": "Ein",

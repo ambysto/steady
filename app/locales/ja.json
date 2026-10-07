@@ -211,6 +211,12 @@
   "diag.bufferbloat.upload": "アップロード",
   "diag.bufferbloat.no_load": "{phase}の負荷を生成できませんでした: {error}",
   "diag.bufferbloat.weak_load": "{phase}の負荷は {mbps:.1f} Mbps にとどまり、回線を満たすには不十分でした",
+  "diag.bufferbloat.refused": "テストサーバーが{phase}の負荷を拒否しました（HTTP {status}: アドレスごとにテスト通信を制限しています）。約 {minutes} 分後にもう一度試してください",
+  "diag.bufferbloat.refused_later": "テストサーバーが{phase}の負荷を拒否しました（HTTP {status}: アドレスごとにテスト通信を制限しています）。しばらくしてからもう一度試してください",
+  "diag.bufferbloat.at_ceiling": "{phase}の負荷はテスト自体の上限（{mbps:.0f} Mbps）で止まりました。回線はさらに速い可能性があり、キューが満たされていないかもしれません",
+  "diag.bufferbloat.ok_incomplete": "測定できた範囲では上昇はありません（最大 +{delta:.0f} ms）が、測定は不完全です",
+  "diag.bufferbloat.advice_incomplete": "両方向とも回線を満たした測定でなければ問題ないとは言えません。しばらくしてからもう一度実行してください。",
+  "diag.bufferbloat.advice_later": "テストサーバーが再び負荷を受け付けるまで待ってから、もう一度実行してください。",
   "diag.bufferbloat.all_lost": "{label}: {phase}中にすべての ping が失われました",
   "diag.bufferbloat.line": "{phase}中の{label}（{mbps:.0f} Mbps）: 中央値 {median:.0f} ms、p95 {p95:.0f} ms、{delta:+.0f} ms 増加、損失 {loss:.0f}%",
   "diag.bufferbloat.no_result": "負荷時のレイテンシを測定できませんでした",
@@ -539,7 +545,7 @@
   "ui.diag.advice": "対処方法",
   "ui.diag.open_tweak": "最適化で開く",
   "ui.diag.on_demand": "オンデマンド",
-  "ui.diag.bufferbloat_run": "測定（約 30 秒、最大 200 MB を使用）",
+  "ui.diag.bufferbloat_run": "測定（約 30 秒、高速回線では最大 2 GB を使用）",
 
   "ui.status.ok": "正常",
   "ui.status.warn": "警告",
@@ -657,7 +663,7 @@
   "ui.optimize.loading": "現在の設定を読み取り中…",
 
   "ui.diag.never": "診断はまだ実行されていません",
-  "ui.diag.bufferbloat_confirm": "speed.cloudflare.com から最大約 200 MB のダウンロードとアップロードを約 30 秒間行います。",
+  "ui.diag.bufferbloat_confirm": "speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行います。回線速度 100 Mbps あたり約 250 MB、最大 2 GB です。",
   "ui.diag.measure": "測定",
 
   "ui.common.on": "オン",
