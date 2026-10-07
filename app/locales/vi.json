@@ -756,6 +756,7 @@
   "installer.uninstall_failed": "Gỡ cài đặt xong nhưng có vấn đề.",
   "installer.keep_backup": "Có giá trị gốc chưa khôi phục được nên bản sao lưu được giữ lại",
   "installer.restored_all": "Mọi tối ưu đã về giá trị gốc",
+  "installer.store_kept": "Mọi tối ưu đã về giá trị gốc, nhưng chưa xoá được bản ghi sao lưu trong Registry: {error}",
 
   "installer.step.copy": "Chép chương trình vào {target}",
   "installer.step.task": "Cho monitor mạng chạy cùng Windows",

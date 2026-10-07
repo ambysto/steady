@@ -114,6 +114,15 @@ class Tweak:
         tweak off, which restores that backup. None: nothing to add."""
         return None
 
+    def backup_in_effect(self, sys_: System, original: dict[str, Any]) -> bool:
+        """Is the change made after `original` was captured still on the machine? Asked before an outside backup
+        (the old backup.json, ADR-0018) is trusted: a backup of a tweak that is off is stale, and one whose "on"
+        only the backup itself creates is forged. Call check_original first."""
+        if self.read(sys_).enabled:
+            return True
+        elsewhere = self.backup_reading(sys_, original)
+        return bool(elsewhere and elsewhere.enabled)
+
     def check_original(self, sys_: System, original: Any) -> None:
         """Raise ValueError unless `original` is shaped like this tweak's capture() AND every field lies in
         this tweak's own domain, judged from its declaration and the machine now, never from the file
@@ -736,6 +745,14 @@ class DnsFastestTweak(Tweak):
             return msg("tweak.reason.dns_other_interface")
         return None
 
+    def backup_in_effect(self, sys_: System, original: dict[str, Any]) -> bool:
+        """The interface the backup names (its GUID, or the uplink for a backup without one) has this tweak's
+        DNS now. backup_reading() only asks whether that interface exists, which a forged GUID satisfies."""
+        try:
+            return self._is_on(self._info(sys_, original.get("guid")), self._doh(sys_))
+        except Unsupported:
+            return False
+
     def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
         """The backup is another interface's (or the uplink cannot be read at all): the interface that was changed
         still has the tweak's DNS, so the switch must offer to turn it off. Gone adapter: nothing to restore."""
@@ -1041,6 +1058,14 @@ class MtuTweak(MeasuredTweak):
         except Unsupported as exc:
             return Reading(False, False, None, exc.message)
         return Reading(True, False, {"interface": info["alias"], "mtu": info["mtu"]})
+
+    def backup_in_effect(self, sys_: System, original: dict[str, Any]) -> bool:
+        """apply_value() only ever lowers the MTU: the tweak is in effect only where the MTU is below the saved
+        one. "Differs" (backup_reading) would let a forged MTU create the "on" it needs."""
+        try:
+            return int(self._info(sys_, original.get("guid"))["mtu"]) < int(original["mtu"])
+        except Unsupported:
+            return False
 
     def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
         try:

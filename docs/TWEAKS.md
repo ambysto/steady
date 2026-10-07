@@ -33,7 +33,7 @@ Registry values are recorded only where they were read from a card or are fixed 
 
 The `netsh` labels that `wifi_prefer_5g` reads are English too. When `netsh wlan show interfaces` cannot be read (translated labels, the interface not listed) the band is reported as unknown ("cannot tell which band the Wi‑Fi connection is on"), never as "not connected", and nothing is changed.
 
-Restore uses the value saved in `backup.json`, or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
+Restore uses the value saved in the backup store ([ADR-0018](adr/0018-backups-in-hklm.md)), or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
 
 ### Notes on `wifi_prefer_5g` and `wifi_tx_power_max`
 
@@ -105,7 +105,7 @@ The value is computed from a measurement of the network in use, taken before the
 | ID | Name | Mechanism | Notes |
 |---|---|---|---|
 | `watchdog` | Self-healing watchdog | `settings.json` | See [WATCHDOG.md](WATCHDOG.md). Recovery actions need 🛡 |
-| `failover` | Switch to a backup network path ([ADR-0008](adr/0008-failover.md)) | `settings.json` → `failover` (off by default). When switching: `Set-NetIPInterface -InterfaceIndex <backup> -AddressFamily IPv4 -InterfaceMetric <lower than the main path>`; back up the original `AutomaticMetric` + `InterfaceMetric` into `backup.json` under key `failover:<ifIndex>` before writing, read back to verify. Restore (`-AutomaticMetric Enabled` or the original metric) when the main path has been stable for 120s, when the feature is turned off, when the monitor starts and finds a leftover backup, on uninstall | 🛡 Without Admin ⇒ only notifies, switches when the user clicks (UAC) |
+| `failover` | Switch to a backup network path ([ADR-0008](adr/0008-failover.md)) | `settings.json` → `failover` (off by default). When switching: `Set-NetIPInterface -InterfaceIndex <backup> -AddressFamily IPv4 -InterfaceMetric <lower than the main path>`; back up the original `AutomaticMetric` + `InterfaceMetric` into the backup store under key `failover:<ifIndex>` before writing, read back to verify. Restore (`-AutomaticMetric Enabled` or the original metric) when the main path has been stable for 120s, when the feature is turned off, when the monitor starts and finds a leftover backup, on uninstall | 🛡 Without Admin ⇒ only notifies, switches when the user clicks (UAC) |
 | `autostart` | Start with Windows | Task Scheduler, created from XML (not `schtasks /SC ONLOGON`, because its defaults stop the task after 72 hours and do not run it on battery): logon trigger (20s delay), no run-time limit, runs on battery too, restarts automatically up to 3 times if it crashes, runs hidden with `pythonw.exe` via `scripts/monitor/run_monitor.pyw`, does not open a browser. Defaults to `/RL LIMITED` because the monitor only reads; use `--highest` (`/RL HIGHEST`) when watchdog/tweaks need Admin rights. Remove: `python -m app.autostart uninstall --apply` | 🛡 only with `--highest` |
 
 ## Candidates not yet included (need evaluation)
@@ -139,5 +139,5 @@ Enable/disable from the command line (by default only prints the plan; Admin is 
 python -m app.tweaks list
 python -m app.tweaks enable power_pcie_aspm_off            # show the plan
 python -m app.tweaks enable power_pcie_aspm_off --apply    # execute (PowerShell running as Admin)
-python -m app.tweaks disable power_pcie_aspm_off --apply   # restore from data/backup.json
+python -m app.tweaks disable power_pcie_aspm_off --apply   # restore from the backup in HKLM\SOFTWARE\Ambysto\Steady
 ```

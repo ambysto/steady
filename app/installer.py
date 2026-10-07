@@ -1,5 +1,5 @@
 """Install and uninstall the packaged app for the current Windows user (SIC-32). No Admin
-rights needed to install; uninstalling asks once (UAC) only if tweaks must be put back.
+rights needed to install; uninstalling asks once (UAC) only if tweaks must be put back or the backup store removed.
 
     install    copy the app to %LOCALAPPDATA%\\Programs\\Ambysto Steady, register the
                monitor task, add Start menu + logon (tray) shortcuts and an "Apps & features" entry,
@@ -147,6 +147,14 @@ class Ops:
         except Exception:
             return True       # unreadable: assume there is something to protect
 
+    def store_left(self) -> bool:
+        """The backup store (HKLM, ADR-0018) holds backups or quarantined entries: only the elevated restore-all can remove them."""
+        from . import backupstore
+        try:
+            return backupstore.has_data()
+        except Exception:
+            return True
+
     def restore_everything(self) -> tuple[bool, Any]:
         from .elevation import run_elevated
         res = run_elevated("restore-all", "-")
@@ -227,7 +235,7 @@ def uninstall_steps(target: Path, ops: Ops, delete_data: bool) -> list[Step]:
     state: dict[str, bool] = {"restored": True}
 
     def restore() -> None:
-        if not ops.backups_left():
+        if not ops.backups_left() and not ops.store_left():
             return
         ok, message = ops.restore_everything()
         state["restored"] = ok

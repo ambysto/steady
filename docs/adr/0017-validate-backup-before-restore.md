@@ -1,6 +1,6 @@
 # ADR-0017: The elevated helper validates every backup entry against the tweak's own domain before restoring it
 
-- **Status:** Accepted
+- **Status:** Accepted (amended by [ADR-0018](0018-backups-in-hklm.md), which takes option 1)
 - **Date:** 2026-10-07
 
 ## Context

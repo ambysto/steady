@@ -756,6 +756,7 @@
   "installer.uninstall_failed": "La desinstalación terminó con problemas.",
   "installer.keep_backup": "No se pudieron restaurar algunos valores originales, así que se conserva su copia de seguridad",
   "installer.restored_all": "Todas las optimizaciones volvieron a su valor original",
+  "installer.store_kept": "Todas las optimizaciones volvieron a su valor original, pero no se pudo eliminar el registro de la copia de seguridad en el Registro: {error}",
 
   "installer.step.copy": "Copiar el programa a {target}",
   "installer.step.task": "Iniciar el monitor de red con Windows",

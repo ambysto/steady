@@ -56,7 +56,7 @@ StableInternet/
 ├── spec/diagnosis/       Diagnosis test vectors shared by every platform
 ├── scripts/              Utility scripts (launcher, installation)
 ├── tests/                Tests
-└── data/                 Runtime data (not committed): settings, backup, metrics
+└── data/                 Runtime data (not committed): settings, metrics
 ```
 
 ## How to run

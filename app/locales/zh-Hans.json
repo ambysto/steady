@@ -756,6 +756,7 @@
   "installer.uninstall_failed": "卸载完成，但出现了问题。",
   "installer.keep_backup": "部分原始值无法还原，因此保留了它们的备份",
   "installer.restored_all": "所有优化项均已恢复为原始值",
+  "installer.store_kept": "所有优化项均已恢复为原始值，但无法删除注册表中的备份记录：{error}",
 
   "installer.step.copy": "将程序复制到 {target}",
   "installer.step.task": "让网络监控程序随 Windows 启动",

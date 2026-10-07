@@ -756,6 +756,7 @@
   "installer.uninstall_failed": "제거 중 문제가 발생했습니다.",
   "installer.keep_backup": "일부 원래 값을 복원할 수 없어 해당 백업은 유지됩니다",
   "installer.restored_all": "모든 최적화가 원래 값으로 되돌려졌습니다",
+  "installer.store_kept": "모든 최적화가 원래 값으로 되돌려졌지만 레지스트리의 백업 기록을 제거할 수 없습니다: {error}",
 
   "installer.step.copy": "프로그램을 {target}에 복사",
   "installer.step.task": "Windows와 함께 네트워크 모니터 시작",
