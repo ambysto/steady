@@ -78,7 +78,8 @@ struct DiagnosticsView: View {
         .accessibilityLabel(text(model.dnsRunning ? "ui.diag.running" : "ui.diag.run"))
     }
 
-    /// Check #14 runs only on request: it moves up to ~200 MB (docs/DIAGNOSTICS.md).
+    /// Check #14 runs only on request: it moves about 250 MB per 100 Mbps of line
+    /// speed, at most 2 GB (docs/DIAGNOSTICS.md).
     @ViewBuilder private var bufferbloatCard: some View {
         if let stage = model.bufferbloatStage {
             HStack(spacing: 10) {

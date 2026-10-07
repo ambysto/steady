@@ -2,7 +2,8 @@ import Foundation
 import Synchronization
 
 /// Measures check #14 like app/bufferbloat.py: pings while idle, then while downloading, then
-/// while uploading. Generates real traffic (up to ~200 MB), so it runs only when the user asks.
+/// while uploading. Generates real traffic (about 250 MB per 100 Mbps of line speed, at most 2 GB),
+/// so it runs only when the user asks.
 public enum BufferbloatTest {
     public enum Stage: Sendable {
         case idle, download, upload
@@ -13,7 +14,9 @@ public enum BufferbloatTest {
     static let idleSeconds = 4.0, loadSeconds = 10.0, interval = 0.2
     static let rampSeconds = 2.0   // samples taken while the line is still picking up speed are dropped
     static let connections = 4
-    static let maxBytes: Int64 = 100_000_000
+    /// Each direction runs for `loadSeconds` and stops early only here (MAX_BYTES in app/bufferbloat.py,
+    /// 800 Mbps over 10 s); a phase that reaches it is marked `capped`, as the line may be faster.
+    static let maxBytes: Int64 = 1_000_000_000
     /// speed.cloudflare.com refuses a single request above ~25 MB, so workers repeat 25 MB requests.
     static let bytesPerRequest = 25_000_000
 
@@ -27,7 +30,7 @@ public enum BufferbloatTest {
         targets.append(("internet", "1.1.1.1"))
 
         await stage(.idle)
-        let idle = Bufferbloat.Phase(rtts: await sample(targets, seconds: idleSeconds))
+        let idle = Bufferbloat.Phase(rtts: await sample(targets, seconds: idleSeconds).samples)
         await stage(.download)
         let download = await loaded(targets, upload: false)
         await stage(.upload)
@@ -35,13 +38,18 @@ public enum BufferbloatTest {
         return Bufferbloat.Measurement(idle: idle, download: download, upload: upload)
     }
 
-    /// Pings every target once per `interval` for `seconds`, the targets in parallel.
-    static func sample(_ targets: [(label: String, address: String)], seconds: Double) async -> [Bufferbloat.Samples] {
+    /// Pings every target once per `interval` for `seconds`, the targets in parallel. `starts` holds
+    /// when each round began, in seconds after `since` (or after the first round).
+    static func sample(_ targets: [(label: String, address: String)], seconds: Double,
+                       since: ContinuousClock.Instant? = nil) async -> (samples: [Bufferbloat.Samples], starts: [Double]) {
         var samples = targets.map { Bufferbloat.Samples(label: $0.label, samples: []) }
+        var starts: [Double] = []
         let clock = ContinuousClock()
+        let origin = since ?? clock.now
         let end = clock.now + .seconds(seconds)
         while clock.now < end, !Task.isCancelled {
             let started = clock.now
+            starts.append((started - origin).inMilliseconds / 1000)
             let round = await withTaskGroup(of: (Int, Double?).self) { group in
                 for (index, target) in targets.enumerated() {
                     group.addTask { (index, await ICMPPing.ping(target.address)) }
@@ -57,7 +65,14 @@ public enum BufferbloatTest {
             }
             try? await Task.sleep(until: started + .seconds(interval), clock: clock)
         }
-        return samples
+        return (samples, starts)
+    }
+
+    /// Drops the rounds that began during the ramp. By time, not by count, as app/bufferbloat.py does:
+    /// on a bloated line each round waits for slow or lost pings, so a fixed count can cover most of the phase.
+    static func droppingRamp(_ samples: [Bufferbloat.Samples], starts: [Double]) -> [Bufferbloat.Samples] {
+        let keep = starts.firstIndex { $0 >= rampSeconds } ?? starts.count
+        return samples.map { Bufferbloat.Samples(label: $0.label, samples: Array($0.samples.dropFirst(keep))) }
     }
 
     static func loaded(_ targets: [(label: String, address: String)], upload: Bool) async -> Bufferbloat.Phase {
@@ -65,41 +80,78 @@ public enum BufferbloatTest {
         let clock = ContinuousClock()
         let started = clock.now
         let loadTask = Task { await load.run(seconds: loadSeconds) }
-        let samples = await withTaskCancellationHandler {
-            await sample(targets, seconds: loadSeconds)
+        let (samples, starts) = await withTaskCancellationHandler {
+            await sample(targets, seconds: loadSeconds, since: started)
         } onCancel: {
-            load.stop()   // leaving the screen must not leave ~100 MB of transfers running
+            load.stop()   // leaving the screen must not leave up to 1 GB of transfers running
         }
         load.stop()
         let outcome = await loadTask.value
         let elapsed = max((clock.now - started).inMilliseconds / 1000, 1e-6)
-        let drop = Int(rampSeconds / interval)
-        let kept = samples.map { Bufferbloat.Samples(label: $0.label, samples: $0.samples.count > drop ? Array($0.samples.dropFirst(drop)) : []) }
-        return Bufferbloat.Phase(rtts: kept, mbps: Double(outcome.bytes) * 8 / elapsed / 1e6, error: outcome.error ?? "")
+        return phase(rtts: droppingRamp(samples, starts: starts), outcome: outcome, elapsed: elapsed, maxBytes: maxBytes)
+    }
+
+    /// The phase a load produced, as `loaded` in app/bufferbloat.py `measure` builds it.
+    static func phase(rtts: [Bufferbloat.Samples], outcome: LoadGenerator.Outcome, elapsed: Double,
+                      maxBytes: Int64) -> Bufferbloat.Phase {
+        var phase = Bufferbloat.Phase(rtts: rtts, mbps: Double(outcome.bytes) * 8 / elapsed / 1e6,
+                                      error: outcome.error ?? "", capped: outcome.bytes >= maxBytes)
+        if let refusal = outcome.refusal {
+            // Even after some data: the load was not kept up, so the phase measured a part-time load.
+            phase.refused = refusal.status
+            phase.retryAfterS = refusal.retryAfterS
+            phase.error = "HTTP \(refusal.status)"
+        }
+        return phase
+    }
+
+    /// Retry-After in seconds; nil when absent or an HTTP date (rare, and a rough "later" is enough).
+    static func retryAfter(_ value: String?) -> Double? {
+        guard let value, let seconds = Double(value.trimmingCharacters(in: .whitespaces)), seconds.isFinite else {
+            return nil
+        }
+        return max(0, seconds)
     }
 }
 
 /// Keeps the line busy over several connections (app/bufferbloat.py http_download / http_upload):
 /// each worker has its own URLSession, so each is its own TCP connection, and repeats 25 MB
-/// requests until the deadline, `stop()` or 100 MB in total.
+/// requests until the deadline, `stop()` or `maxBytes` in total.
 final class LoadGenerator: Sendable {
+    /// The test server refused the load (HTTP 429/403): a limit on its side, not a property of the line.
+    /// speed.cloudflare.com does this per address after a few runs and says when to come back.
+    struct Refusal: Equatable, Sendable {
+        let status: Int
+        let retryAfterS: Double?
+    }
+
     struct Outcome: Sendable {
         let bytes: Int64
         let error: String?
+        var refusal: Refusal? = nil
     }
 
     private let upload: Bool
+    let maxBytes: Int64
+    let downloadURL: URL
+    let configuration: URLSessionConfiguration?
     private let state = Mutex(State())
 
     private struct State {
         var bytes: Int64 = 0
         var errors: [String] = []
+        var refusal: Refusal?
         var stopped = false
         var workers: [LoadWorker] = []
     }
 
-    init(upload: Bool) {
+    /// - Parameter configuration: for tests (a stub URLProtocol); nil = an ephemeral session per worker.
+    init(upload: Bool, maxBytes: Int64 = BufferbloatTest.maxBytes, downloadURL: URL = BufferbloatTest.downloadURL,
+         configuration: URLSessionConfiguration? = nil) {
         self.upload = upload
+        self.maxBytes = maxBytes
+        self.downloadURL = downloadURL
+        self.configuration = configuration
     }
 
     func run(seconds: Double) async -> Outcome {
@@ -121,7 +173,9 @@ final class LoadGenerator: Sendable {
         }
         timer.cancel()
         workers.forEach { $0.close() }
-        return state.withLock { Outcome(bytes: $0.bytes, error: $0.bytes == 0 ? $0.errors.first : nil) }
+        return state.withLock {
+            Outcome(bytes: $0.bytes, error: $0.bytes == 0 ? $0.errors.first : nil, refusal: $0.refusal)
+        }
     }
 
     func stop() {
@@ -136,8 +190,16 @@ final class LoadGenerator: Sendable {
     func add(_ count: Int64) -> Bool {
         state.withLock { state in
             state.bytes += count
-            return state.bytes < BufferbloatTest.maxBytes
+            return state.bytes < maxBytes
         }
+    }
+
+    /// Records the first refusal and stops every worker: asking again would only prolong the limit.
+    func refuse(_ refusal: Refusal) {
+        state.withLock { state in
+            if state.refusal == nil { state.refusal = refusal }
+        }
+        stop()
     }
 
     func fail(_ message: String) {
@@ -151,7 +213,7 @@ final class LoadGenerator: Sendable {
     }
 
     private func isDone(deadline: ContinuousClock.Instant) -> Bool {
-        ContinuousClock.now >= deadline || state.withLock { $0.stopped || $0.bytes >= BufferbloatTest.maxBytes }
+        ContinuousClock.now >= deadline || state.withLock { $0.stopped || $0.bytes >= maxBytes }
     }
 
     private static let body = Data(count: BufferbloatTest.bytesPerRequest)
@@ -159,7 +221,7 @@ final class LoadGenerator: Sendable {
         + ((Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "0")
 
     private func request() -> URLRequest {
-        var request = URLRequest(url: upload ? BufferbloatTest.uploadURL : BufferbloatTest.downloadURL,
+        var request = URLRequest(url: upload ? BufferbloatTest.uploadURL : downloadURL,
                                  cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 5)
         request.httpMethod = upload ? "POST" : "GET"
         request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
@@ -182,7 +244,7 @@ final class LoadWorker: NSObject, URLSessionDataDelegate, Sendable {
     init(generator: LoadGenerator) {
         self.generator = generator
         super.init()
-        let configuration = URLSessionConfiguration.ephemeral
+        let configuration = generator.configuration ?? URLSessionConfiguration.ephemeral
         configuration.urlCache = nil
         configuration.httpMaximumConnectionsPerHost = 1
         configuration.waitsForConnectivity = false
@@ -215,7 +277,15 @@ final class LoadWorker: NSObject, URLSessionDataDelegate, Sendable {
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
                     completionHandler: @escaping @Sendable (URLSession.ResponseDisposition) -> Void) {
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let http = response as? HTTPURLResponse
+        let status = http?.statusCode ?? 0
+        if dataTask.originalRequest?.httpMethod == "GET", status == 429 || status == 403 {
+            refused.withLock { $0 = true }
+            generator.refuse(.init(status: status,
+                                   retryAfterS: BufferbloatTest.retryAfter(http?.value(forHTTPHeaderField: "Retry-After"))))
+            completionHandler(.cancel)
+            return
+        }
         if dataTask.originalRequest?.httpMethod == "GET", status != 200 {
             generator.fail("HTTP \(status)")
             refused.withLock { $0 = true }
