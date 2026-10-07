@@ -170,9 +170,10 @@ def _sample(ping: Ping, targets: dict[str, str], seconds: float, interval: float
     return out
 
 
-def measure(ping: Ping, targets: dict[str, str], download: Load, upload: Load, *, idle_s: float = 4,
+def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: Load, *, idle_s: float = 4,
             load_s: float = 10, interval: float = 0.2, ramp_s: float = RAMP_S,
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic) -> Measurement:
+    """download=None skips the download phase (a measured tweak only needs the upload, ADR-0016)."""
     idle = Phase("idle", _sample(ping, targets, idle_s, interval, sleep, clock))
 
     def loaded(name: str, load: Load) -> Phase:
@@ -199,7 +200,23 @@ def measure(ping: Ping, targets: dict[str, str], download: Load, upload: Load, *
         phase.error = failure[0] if failure else ""
         return phase
 
-    return Measurement(idle, loaded("download", download), loaded("upload", upload))
+    skipped = Phase("download", error="skipped")
+    return Measurement(idle, loaded("download", download) if download else skipped, loaded("upload", upload))
+
+
+def upload_summary(m: Measurement, label: str = "internet") -> dict[str, float | int] | None:
+    """The upload phase of `m` reduced to what a measured tweak keeps (ADR-0016): upload Mbps, median
+    idle and loaded latency to `label`, number of loaded samples. None when the load did not run."""
+    if m.upload.mbps is None or (m.upload.error and not m.upload.mbps):
+        return None
+    idle = [s for s in m.idle.rtts.get(label, []) if s is not None]
+    loaded = m.upload.rtts.get(label, [])
+    got = [s for s in loaded if s is not None]
+    if not idle or not got:
+        return None
+    return {"upload_mbps": round(float(m.upload.mbps), 2), "idle_ms": round(statistics.median(idle), 1),
+            "loaded_ms": round(statistics.median(got), 1), "samples": len(got),
+            "loss_pct": round(100.0 * (len(loaded) - len(got)) / len(loaded), 1)}
 
 
 def real_loads() -> tuple[Load, Load]:

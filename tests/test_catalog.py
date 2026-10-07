@@ -15,8 +15,8 @@ CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08
 
 
 def doc_tweaks():
-    """{id: risk} from the tables in sections 1-3 of docs/TWEAKS.md."""
-    section = DOC.split("## 4.")[0]
+    """{id: risk} from the tables in sections 1-4 of docs/TWEAKS.md."""
+    section = DOC.split("## 5.")[0]
     cell = r"(?:[^|\\]|\\.)*"   # a table cell may contain an escaped pipe (\|=)
     return {m.group(1): m.group(2) for m in re.finditer(rf"^\| `([a-z0-9_]+)` \|{cell}\|{cell}\|\s*(low|medium|experimental)\s*\|",
                                                       section, re.M)}
@@ -49,6 +49,12 @@ def catalog():
     return tweaks.build_catalog(dns_benchmark=lambda servers: bench_of(FAST_CLOUDFLARE), captive=lambda: False)
 
 
+def bloated_upload(mgr):
+    """An upload measurement taken now, with latency rising 180 ms under load (the 2026-08-31 kind)."""
+    return {"kind": "upload", "upload_mbps": 40.0, "idle_ms": 20.0, "loaded_ms": 200.0, "samples": 40,
+            "loss_pct": 0.0, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
+
+
 def manager(system=None):
     system = system or real_card_system()
     backup = MemoryBackup()   # one object for both directions, like backup.json
@@ -59,7 +65,7 @@ def manager(system=None):
 class CatalogMatchesDocsTests(unittest.TestCase):
     def test_ids_and_risks_match_docs_tweaks_md(self):
         docs = doc_tweaks()
-        self.assertEqual(len(docs), 17, docs)
+        self.assertEqual(len(docs), 18, docs)
         self.assertEqual({t.id: t.risk for t in tweaks.CATALOG}, docs)
 
     def test_ids_are_unique_and_names_vietnamese_present(self):
@@ -104,9 +110,12 @@ class RealCardTests(unittest.TestCase):
         self.assertFalse(st["wifi_roaming"].supported)                   # Intel-only property
         self.assertIn("không có thuộc tính", i18n.render(st["wifi_roaming"].reason, "vi"))
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_bw20_5g", "wifi_mode_ac",
-                    "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "power_wireless_max", "power_pcie_aspm_off",
-                    "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off", "dns_fastest"):
+                    "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "power_wireless_max",
+                    "power_pcie_aspm_off", "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off",
+                    "dns_fastest", "upload_shaping"):
             self.assertTrue(st[tid].supported, tid)
+        self.assertTrue(st["upload_shaping"].measured)
+        self.assertFalse(any(s.measured for tid, s in st.items() if tid != "upload_shaping"))
         # fresh machine: only these two read as on, and only because the driver ships that way
         self.assertEqual({tid for tid, s in st.items() if s.enabled}, {"wifi_prefer_5g", "wifi_tx_power_max"})
         self.assertEqual({tid for tid, s in st.items() if s.on_by_default}, {"wifi_prefer_5g", "wifi_tx_power_max"})
@@ -145,8 +154,9 @@ class RealCardTests(unittest.TestCase):
         before = s.snapshot()
         for t in catalog():
             if mgr.state(t.id).supported and not mgr.state(t.id).enabled:
-                out = mgr.enable(t.id)
-                self.assertTrue(out.ok and out.changed, (t.id, out.message))
+                measurement = bloated_upload(mgr) if isinstance(t, tweaks.MeasuredTweak) else None
+                out = mgr.enable(t.id, measurement)
+                self.assertTrue(out.ok and out.changed, (t.id, i18n.render(out.message)))
         self.assertTrue(all(st.enabled for st in mgr.states() if st.supported))
         for t in catalog():
             if mgr.state(t.id).supported and t.id not in ("wifi_prefer_5g", "wifi_tx_power_max"):   # on by default
