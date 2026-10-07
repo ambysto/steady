@@ -10,7 +10,7 @@ A static, English-only page for **Ambysto Steady**. It has no build step and nee
 
 ## Shared assets are not in this repository
 
-`index.html` expects the host site to provide `/assets/css/style.css` (design tokens, navigation, hero, cards, FAQ, footer), `/assets/img/logo.svg` and `/assets/img/apple-touch-icon.png`. The privacy and code signing pages already served at `https://steady.ambysto.com/privacy` and `/codesigningpolicy` use the same files, so the pages look alike.
+`index.html` expects the host site to provide `/assets/css/style.css` (design tokens, navigation, hero, cards, FAQ, footer), `/assets/img/logo.svg` and `/assets/img/apple-touch-icon.png`. The privacy page already served at `https://steady.ambysto.com/privacy` uses the same files, so the pages look alike.
 
 ## Preview locally
 
@@ -31,7 +31,7 @@ Then open `http://127.0.0.1:8799/`.
 
 ## Content rules
 
-- State only what the released app does (check `README.md` and `CHANGELOG.md`). No claim that releases are signed while they are not (see `CODE_SIGNING.md`), and no prices.
+- State only what the released app does (check `README.md` and `CHANGELOG.md`). No claim that releases are signed while they are not, and no prices.
 - The page must stay honest about limits: Ambysto Steady cannot make a provider faster.
 - The numbers in the "Real data" section come from the development machine (`docs/EXPERIMENT-LOG.md`). They carry no network identifiers and are labelled as a single case.
 - No personal names, SSIDs, MAC or IP addresses; use placeholders if an example needs one.

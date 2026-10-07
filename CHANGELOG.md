@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Removed
+- **The code signing policy is gone**: the project no longer applies to SignPath Foundation. `CODE_SIGNING.md` is deleted, and `README.md`, the release notes and the landing page no longer link to `/codesigningpolicy` or mention SignPath. Releases are still unsigned, so the SmartScreen guidance stays.
+
 ## [0.6.0] - 2026-10-07
 
 The app installs for all users under `Program Files`, so nothing a process without Administrator rights can change runs elevated. Installing and uninstalling each ask once for Administrator approval; an earlier per-user install is replaced and its data kept.
