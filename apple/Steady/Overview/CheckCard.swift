@@ -94,8 +94,9 @@ struct CheckCard: View {
         Section {
             LabeledContent(text("ui.overview.router"), value: milliseconds(run.measured.routerMs))
             LabeledContent(text("ui.overview.internet"), value: milliseconds(run.measured.internetMs))
+            // The Localizer's locale, so the decimal separator matches the "ms" values above.
             LabeledContent(text("ui.overview.loss"), value: run.measured.internetLossPercent.map {
-                ($0 / 100).formatted(.percent.precision(.fractionLength(1)).locale(locale))
+                ($0 / 100).formatted(.percent.precision(.fractionLength(1)).locale(text.locale))
             } ?? "—")
         } footer: {
             Text(text("ui.check.recent_note"))
