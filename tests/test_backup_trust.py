@@ -1,5 +1,5 @@
 """backup.json is writable without Admin; the elevated helper that restores it must not write outside each
-tweak's own domain (ADR-0016)."""
+tweak's own domain (ADR-0017)."""
 import copy
 import unittest
 
@@ -24,8 +24,8 @@ class RealCaptureStillRestoresTests(unittest.TestCase):
 
     def test_every_supported_catalog_tweak_round_trips(self):
         for t in catalog():
-            if t.id == "dns_fastest":
-                continue   # needs a benchmark; covered below
+            if t.id == "dns_fastest" or isinstance(t, tweaks.MeasuredTweak):
+                continue   # needs a benchmark or a measurement; their captures are checked below
             with self.subTest(t.id):
                 mgr, s, backup, _ = manager(tweak_list=[t])
                 try:
@@ -139,6 +139,15 @@ class TamperedBackupTests(unittest.TestCase):
         self.refused("tcp_ecn", {"setting": "ecncapability", "value": "enabled; shutdown /s"})
         self.refused("packet_coalescing_off", {"setting": "ReceiveSideScaling", "value": "Disabled"})
         self.refused("packet_coalescing_off", {"setting": "PacketCoalescingFilter", "value": "Off"})
+
+    def test_the_upload_limit_only_restores_its_own_policy_within_its_bounds(self):
+        self.refused("upload_shaping", {"policy": "Default", "rate_bps": 1_000_000})
+        for rate in (1_000, 2 * tweaks.UPLOAD_MAX_BPS, "50000000", 5e7):
+            with self.subTest(rate=rate):
+                self.refused("upload_shaping", {"policy": tweaks.UPLOAD_POLICY, "rate_bps": rate})
+        t = next(t for t in catalog() if t.id == "upload_shaping")
+        t.check_original(FakeSystem(), {"policy": tweaks.UPLOAD_POLICY, "rate_bps": None})
+        t.check_original(FakeSystem(), {"policy": tweaks.UPLOAD_POLICY, "rate_bps": 42_500_000})
 
     # -- DNS ----------------------------------------------------------------------------------
 

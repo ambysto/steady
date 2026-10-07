@@ -5,6 +5,8 @@ its caller: every argument is re-validated here, and the result may only be writ
 %LOCALAPPDATA%\\StableInternet\\results\\<32 hex>.json.
 
     python -m app.elevated tweak-enable <tweak_id>  --result-file <path>
+    python -m app.elevated tweak-enable <tweak_id>  --measurement <base64 JSON> --result-file <path>
+                                                    (a measured tweak, ADR-0016: the value is derived here)
     python -m app.elevated tweak-disable <tweak_id> --result-file <path>
     python -m app.elevated restart-adapter <name>   --result-file <path>
     python -m app.elevated path-prefer <ifIndex>    --result-file <path>
@@ -43,19 +45,29 @@ def _write(path: Path, payload: dict[str, Any]) -> None:
     os.replace(tmp, path)
 
 
-def run_op(op: str, value: str) -> dict[str, Any]:
+def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any]:
+    """measurement: base64 JSON for a measured tweak; only checked and handed to the manager, which
+    validates it again and derives the value itself (the caller never names the value)."""
     if op not in OPS:
         return {"ok": False, "message": f"unknown operation {op!r}"}
+    if measurement is not None and op != "tweak-enable":
+        return {"ok": False, "message": f"{op} takes no measurement"}
     if not winutil.is_admin():
         return {"ok": False, "message": msg("elevation.not_admin")}
     if op in ("tweak-enable", "tweak-disable"):
-        from . import tweaks
+        from . import calibration, tweaks
         from .storage import Storage
         if value not in {t.id for t in tweaks.CATALOG}:
             return {"ok": False, "message": msg("elevation.unknown_tweak", tweak=value)}
+        decoded = None
+        if measurement is not None:
+            try:
+                decoded = calibration.decode(measurement)
+            except ValueError as exc:
+                return {"ok": False, "message": msg("tweak.result.bad_measurement", error=str(exc))}
         with Storage(config.db_path()) as storage:
             mgr = tweaks.default_manager(storage)
-            out = mgr.enable(value) if op == "tweak-enable" else mgr.disable(value)
+            out = mgr.enable(value, decoded) if op == "tweak-enable" else mgr.disable(value)
         return {"ok": out.ok, "changed": out.changed, "message": out.message}
     if op in ("path-prefer", "path-restore"):
         return _path_op(op, value)
@@ -132,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("op", choices=OPS)
     ap.add_argument("value")
     ap.add_argument("--result-file", required=True)
+    ap.add_argument("--measurement")
     args = ap.parse_args(argv)
     try:
         path = check_result_path(args.result_file)
@@ -139,7 +152,7 @@ def main(argv: list[str] | None = None) -> int:
         print(exc, file=sys.stderr)
         return 2
     try:
-        result = run_op(args.op, args.value)
+        result = run_op(args.op, args.value, args.measurement)
     except Exception as exc:  # report, never leave the caller without an answer
         result = {"ok": False, "message": f"{type(exc).__name__}: {exc}"}
     _write(path, result)

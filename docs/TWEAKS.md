@@ -55,7 +55,23 @@ How `wifi_prefer_5g` reads the connected network (read-only, never triggers a sc
 - **Not supported** (and so never suggested) while: a VPN adapter is up, the PC is on a domain, the interface has a DNS suffix (an internal domain whose names only the DHCP DNS can resolve), it has a static IPv6 DNS (restoring with a reset would wipe it), or the network answers the connectivity probe like a captive portal.
 - **dnswatch**: the monitor does not report a DNS change as unusual when the app changed DNS in the last 5 minutes (`tweak_enabled` / `tweak_disabled` event of `dns_fastest`); it records it as `dns_observed` instead.
 
-## 4. Tool features
+## 4. Tweaks calibrated by a measurement
+
+The value is computed from a measurement of the network in use, taken before the tweak is turned on (unlike `dns_fastest`, whose benchmark runs inside apply, ADR-0015), and the measurement is kept with the backup ([ADR-0016](adr/0016-measured-tweaks.md)). Turning one on runs the measurement (real traffic, ~15 s), refuses when there is nothing to fix, applies, then measures again and records whether it helped (`tweak_verified` event). The UI shows the measurement behind the value and flags it when the PC is on another network or the measurement is older than 30 days; re-calibrating is turning the tweak off and on again. Nothing is re-measured or rewritten automatically.
+
+| ID | Name | Target value | Risk | Notes |
+|---|---|---|---|---|
+| `upload_shaping` | Limit the upload speed to keep latency low under load | `NetQosPolicy` named `StableInternet-Upload`, `-Default` (all outbound traffic), `ThrottleRateActionBitsPerSecond` = 85% of the measured upload, rounded down to 0.1 Mbps, between 1 and 1000 Mbps | medium | 🛡 Upload only; the download direction can only be shaped on the router (SQM). Refused when latency under upload rises < 30 ms (nothing to fix), when the upload load is < 1 Mbps, or with too few latency samples |
+
+`upload_shaping` details:
+
+- **Measure**: the bufferbloat measurement of check #14 (`app/bufferbloat.py`) without its download phase: 4 s idle, then 10 s of upload over 4 connections while pinging 1.1.1.1 (and the router) every 0.2 s. Kept: upload Mbps, idle and loaded median latency to 1.1.1.1, number of samples, the network id (SHA-256 of the gateway's IPv4 + MAC, first 16 hex digits). It must be taken with the tweak off, otherwise it measures the tool's own limit.
+- **Apply**: `New-NetQosPolicy -Name StableInternet-Upload -Default -ThrottleRateActionBitsPerSecond <cap>` in the default (persistent, `localhost`) policy store; when a policy with that name already exists, `Set-NetQosPolicy` changes its rate. Read back with `Get-NetQosPolicy` (works without Admin in the default store; the `ActiveStore` needs Admin, and `-PolicyStore PersistentStore` is not a NetQos store: "The network path was not found", checked 2026-10-07). Verified when the rate read back is within 1% of the cap. On the dev PC (EXP-015) the rate read back was exactly the one written, and the policy appeared in the `ActiveStore` at once.
+- **Restore**: remove the policy with exactly that name from the default store, then from the `ActiveStore` if it is still there. No other policy is touched. Without a backup the restore is the same (the name belongs to the tool), so it is safe.
+- **Prove**: after applying, the same measurement again; *helped* when the latency rise under upload dropped by ≥ 30% and ≥ 20 ms, otherwise the result suggests turning it off.
+- The 2026-08-31 hand-made policy (15 Mbps) lowered the worst latency under upload from 1880 to 403 ms; it has been removed and was measured before the hardware fault was found, so it is a hint, not evidence.
+
+## 5. Tool features
 
 | ID | Name | Mechanism | Notes |
 |---|---|---|---|
