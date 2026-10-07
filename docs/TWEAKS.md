@@ -64,6 +64,7 @@ The value is computed from a measurement of the network in use, taken before the
 | ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
 | `upload_shaping` | Limit the upload speed to keep latency low under load | `NetQosPolicy` named `StableInternet-Upload`, `-Default` (all outbound traffic), `ThrottleRateActionBitsPerSecond` = 85% of the measured upload, rounded down to 0.1 Mbps, between 1 and 1000 Mbps | medium | 🛡 Upload only; the download direction can only be shaped on the router (SQM). Refused when latency under upload rises < 30 ms (nothing to fix), when the upload load is < 1 Mbps, when the measurement reached its own ceiling (≥ 95% of the 80 Mbps a 100 MB, 10 s phase can show: the line may be faster), or with too few latency samples |
+| `mtu_path` | Lower the MTU to what the Internet path carries | IPv4 `NlMtu` of the uplink interface (`Set-NetIPInterface -AddressFamily IPv4 -NlMtuBytes`) = the path MTU measured by check #16, clamped to 1280–1500, only ever lower than the current MTU | medium | 🛡 IPv4 only. Refused when fewer than 2 targets answered, when the path already carries the interface MTU (nothing to fix), when the interface or its MTU changed since the measurement, or while a VPN is the uplink. Never raises the MTU; without a backup there is no default to restore |
 
 `upload_shaping` details:
 
@@ -72,6 +73,18 @@ The value is computed from a measurement of the network in use, taken before the
 - **Restore**: remove the policy with exactly that name from the default store, then from the `ActiveStore` if it is still there. No other policy is touched. Without a backup the restore is the same (the name belongs to the tool), so it is safe.
 - **Prove**: after applying, the same measurement again; *helped* when the latency rise under upload dropped by ≥ 30% and ≥ 20 ms, otherwise the result suggests turning it off.
 - The 2026-08-31 hand-made policy (15 Mbps) lowered the worst latency under upload from 1880 to 403 ms; it has been removed and was measured before the hardware fault was found, so it is a hint, not evidence.
+
+`mtu_path` details:
+
+- **Measure**: the path-MTU probe of check #16 (`app/pmtu.py`): "do not fragment" pings to 1.1.1.1, 8.8.8.8 and 9.9.9.9, from 576 bytes up to the interface MTU (capped at 1500), no Admin. Kept: the interface's GUID and IPv4 MTU, the largest path MTU any target reached, how many targets answered, whether any answered "packet too big", the network id. It must be taken with the tweak off: Windows refuses a "do not fragment" packet above the interface's own MTU, so a probe taken with the MTU already lowered cannot see a larger path.
+- **Derive**: value = the measured path MTU, clamped to 1280 (the IPv6 minimum, so a broken probe cannot shrink packets further) – 1500. Refused, before any write or UAC prompt, when fewer than 2 targets answered (one target's own ping loss can fake a small path, as in check #16), or when the path already carries the interface MTU, or 1500 below a jumbo-frame MTU, so the value would not be lower (nothing to fix, as check #16 says ok; the MTU is never raised).
+- **Confirm** (also in the elevated helper, against the live machine): the uplink is still the interface that was measured (same GUID) and its MTU is still the one measured; otherwise refused and nothing is written, with a hint to measure again.
+- **Apply**: `Set-NetIPInterface -InterfaceIndex <idx> -AddressFamily IPv4 -NlMtuBytes <value>` (active and persistent store); verified when `NlMtu` reads back the value. It does not restart the adapter. A VPN as the uplink is not supported: its client manages the tunnel's MTU.
+- **Restore**: the backed-up MTU is written back to the interface the backup names (found by GUID, like `dns_fastest`), and only when it differs. Restore writes the value explicitly, so an MTU that came from the adapter before is pinned at the same number afterwards. Without a backup nothing is guessed: it is refused. If the interface is gone, it says so and keeps the backup.
+- **Enabled** means: a backup exists and the interface it names has an MTU different from the backed-up one. A backup for another interface than the current uplink also shows as on, with a warning, so the switch can restore it; turning it on again is refused until then.
+- **Prove**: after applying, the probe runs again with the new MTU as its ceiling; *helped* when packets of the new MTU reach at least 2 targets, otherwise the result suggests turning it off.
+- A changed network never rewrites it (ADR-0016 §6). A value that is too low for another network only makes packets smaller; it cannot disconnect anyone. IPv6 keeps its own MTU (its PMTUD relies on ICMPv6, which is rarely filtered).
+- On the dev PC (PPPoE line, 2026-08-31 and SIC-82) the path MTU measured read-only is 1492 behind a 1500 Wi‑Fi interface.
 
 ## 5. Tool features
 

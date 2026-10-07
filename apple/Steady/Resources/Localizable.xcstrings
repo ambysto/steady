@@ -21124,6 +21124,65 @@
         }
       }
     },
+    "ui.optimize.measured.mtu_path" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ Byte — die am %2$@ gemessene Pfad-MTU (vorher %3$@)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ bytes — the path MTU measured on %2$@ (was %3$@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU de %1$@ bytes — la MTU de la ruta medida el %2$@ (antes %3$@)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU de %1$@ octets — la MTU du chemin mesurée le %2$@ (avant %3$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ バイト — %2$@ に測定した経路 MTU（変更前 %3$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@바이트 — %2$@에 측정한 경로 MTU(이전 %3$@)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU de %1$@ bytes — a MTU do caminho medida em %2$@ (antes %3$@)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ byte — MTU đường truyền đo ngày %2$@ (trước là %3$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ 字节 — %2$@ 测得的路径 MTU（原为 %3$@）"
+          }
+        }
+      }
+    },
     "ui.optimize.measured.upload_shaping" : {
       "extractionState" : "manual",
       "localizations" : {

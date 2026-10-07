@@ -101,6 +101,7 @@ public enum MessageCatalog {
         "ui.live.rtt": [MessageArgument("value", ".0f")],
         "ui.log.lasted": [MessageArgument("duration", nil)],
         "ui.optimize.enabled_count": [MessageArgument("enabled", nil), MessageArgument("total", nil)],
+        "ui.optimize.measured.mtu_path": [MessageArgument("mtu", nil), MessageArgument("date", nil), MessageArgument("was", nil)],
         "ui.optimize.measured.upload_shaping": [MessageArgument("limit", ".1f"), MessageArgument("upload", ".1f"), MessageArgument("date", nil)],
         "ui.overview.router_loss": [MessageArgument("loss", ".1f")],
         "ui.overview.window": [MessageArgument("count", nil)],

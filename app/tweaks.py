@@ -29,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from . import bufferbloat, calibration, config, dnsprobe, i18n, winutil
+from . import bufferbloat, calibration, config, dnsprobe, i18n, pmtu, winutil
 from .i18n import msg
 from .winsys import System
 
@@ -669,6 +669,7 @@ class MeasuredTweak(Tweak):
     `applied_value` reads back what is in effect. Plain `apply` has no value to write."""
 
     measurement_kind = ""
+    verdict_messages = "tweak"   # prefix of the <prefix>.event.verified_* and <prefix>.verdict.* messages
 
     def check(self, measurement: Any, now: float) -> dict[str, Any]:
         """The measurement validated (ValueError when it is malformed or too old)."""
@@ -677,6 +678,17 @@ class MeasuredTweak(Tweak):
     def derive(self, measurement: dict[str, Any]) -> int:
         """The value to apply, or Refused."""
         raise NotImplementedError
+
+    def confirm(self, sys_: System, measurement: dict[str, Any]) -> None:
+        """Refused when the machine no longer matches what was measured (reads only; nothing by default)."""
+
+    def verdict(self, value: int, before: dict[str, Any], after: dict[str, Any] | None) -> dict[str, Any]:
+        """Did it help, from the measurement taken again right after applying: {"helped": bool | None, ...}."""
+        return calibration.verdict(before, after)
+
+    def verdict_params(self, verdict: dict[str, Any]) -> dict[str, Any]:
+        """The verdict's numbers for its messages."""
+        return {"before": verdict["before_ms"], "after": verdict["after_ms"]}
 
     def apply(self, sys_: System) -> None:
         raise Refused(msg("tweak.reason.needs_measurement"))
@@ -763,11 +775,138 @@ class UploadShapingTweak(MeasuredTweak):
         return (original["policy"], None if rate is None else int(rate))
 
 
+MTU_LOW, MTU_HIGH = 1280, pmtu.MAX_MTU   # 1280: the IPv6 minimum, so a broken probe cannot shrink packets further
+
+
+class MtuPathTweak(MeasuredTweak):
+    """The uplink's IPv4 MTU lowered to the path MTU of check #16's probe, clamped to 1280-1500 and never raised.
+
+    Windows refuses a "do not fragment" packet above the interface's own MTU, so a probe cannot see past the
+    current MTU: the measurement names the interface (GUID) and MTU it was taken at, and confirm() refuses
+    when either changed. read() reports off: there is no name of our own to recognise, so "on" is a backup
+    whose interface no longer has the backed-up MTU (backup_reading). Like dns_fastest the backup belongs to
+    one interface, found again by its GUID; without a backup nothing is guessed."""
+
+    measurement_kind = "path_mtu"
+    verdict_messages = "tweak.mtu_path"
+    has_default_restore = False
+
+    @staticmethod
+    def _uplink(sys_: System) -> dict[str, Any]:
+        info = sys_.mtu_interface()
+        if info is None:
+            raise Unsupported(msg("tweak.reason.mtu_no_uplink"))
+        return info
+
+    @staticmethod
+    def _named(sys_: System, guid: str) -> dict[str, Any]:
+        info = sys_.mtu_interface(guid)
+        if info is None:
+            raise Unsupported(msg("tweak.reason.mtu_interface_gone"))
+        return info
+
+    def check(self, measurement: Any, now: float) -> dict[str, Any]:
+        return calibration.check_path_mtu(measurement, now)
+
+    def derive(self, measurement: dict[str, Any]) -> int:
+        path, answered = measurement["path_mtu"], int(measurement["answered"])
+        if path is None or answered < calibration.MIN_PATH_TARGETS:
+            raise Refused(msg("tweak.mtu_path.refused.weak", answered=answered, targets=int(measurement["targets"])))
+        value = min(max(int(path), MTU_LOW), MTU_HIGH)
+        mtu = int(measurement["interface_mtu"])
+        # Only ever lower; a path that carries 1500 is what check #16 calls ok, even below a jumbo-frame MTU.
+        if int(path) >= min(mtu, MTU_HIGH) or value >= mtu:
+            raise Refused(msg("tweak.mtu_path.refused.not_needed", mtu=mtu, path=int(path)))
+        return value
+
+    def confirm(self, sys_: System, measurement: dict[str, Any]) -> None:
+        info = self._uplink(sys_)
+        if info["guid"] != measurement["guid"] or info["mtu"] != measurement["interface_mtu"]:
+            raise Refused(msg("tweak.mtu_path.refused.changed", name=info["alias"], mtu=info["mtu"],
+                              measured=int(measurement["interface_mtu"])))
+
+    def verdict(self, value: int, before: dict[str, Any], after: dict[str, Any] | None) -> dict[str, Any]:
+        return calibration.path_mtu_verdict(value, after)
+
+    def verdict_params(self, verdict: dict[str, Any]) -> dict[str, Any]:
+        return {"mtu": verdict["mtu"], "path": verdict["path_mtu"] or 0}
+
+    def describe_value(self, value: int, measurement: dict[str, Any]) -> Message:
+        return msg("tweak.mtu_path.value", mtu=value, was=int(measurement["interface_mtu"]),
+                   path=int(measurement["path_mtu"]))
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            info = self._uplink(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        current = {"interface": info["alias"], "mtu": info["mtu"]}
+        if info["vpn"]:
+            return Reading(False, False, current, msg("tweak.reason.mtu_vpn"))
+        return Reading(True, False, current)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        info = self._uplink(sys_)
+        return {"guid": info["guid"], "interface_index": info["index"], "alias": info["alias"], "mtu": info["mtu"]}
+
+    def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
+        info = self._named(sys_, original["guid"])
+        return {"guid": info["guid"], "interface_index": info["index"], "alias": info["alias"], "mtu": info["mtu"]}
+
+    def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
+        named = sys_.mtu_interface(original["guid"])
+        if named is not None and named["mtu"] != original["mtu"]:
+            return msg("tweak.reason.mtu_already_lowered", name=named["alias"])
+        uplink = sys_.mtu_interface()
+        if uplink is not None and uplink["guid"] != original["guid"]:
+            return msg("tweak.reason.mtu_other_interface")
+        return None
+
+    def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
+        """On while the backed-up interface has another MTU than the backup; a backup of another interface than
+        the uplink also reads as on (with a warning), so the switch can restore it and clear it."""
+        try:
+            named = sys_.mtu_interface(original["guid"])
+        except Exception:
+            return None
+        if named is None:
+            return None
+        try:
+            uplink = sys_.mtu_interface()
+        except Exception:
+            uplink = None
+        elsewhere = uplink is None or uplink["guid"] != named["guid"]
+        if named["mtu"] == original["mtu"] and not elsewhere:
+            return None   # a leftover backup equal to the machine: off, and turning it on reuses it
+        return Reading(True, True, {"interface": named["alias"], "mtu": named["mtu"]},
+                       warning=msg("tweak.reason.mtu_backup_elsewhere", name=named["alias"]) if elsewhere else "")
+
+    def applied_value(self, sys_: System) -> int | None:
+        info = sys_.mtu_interface()
+        return None if info is None else int(info["mtu"])
+
+    def apply_value(self, sys_: System, value: int) -> None:
+        info = self._uplink(sys_)
+        if not MTU_LOW <= value < info["mtu"]:   # never raised, never outside the bounds
+            raise Refused(msg("tweak.mtu_path.refused.not_needed", mtu=info["mtu"], path=value))
+        sys_.interface_mtu_set(info["index"], value)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_mtu"))
+        info = self._named(sys_, original["guid"])
+        if info["mtu"] != int(original["mtu"]):
+            sys_.interface_mtu_set(info["index"], int(original["mtu"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return (str(original["guid"]), int(original["mtu"]))
+
+
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
                  "binding_get", "wifi_ssid_bands", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface",
-                 "doh_get", "qos_policy_get")
+                 "doh_get", "qos_policy_get", "mtu_interface")
 
 
 class _CachedReads:
@@ -914,7 +1053,7 @@ class TweakManager:
 
     def derive(self, tweak_id: str, measurement: Any) -> tuple[dict[str, Any], int]:
         """For a measured tweak: (checked measurement, value), or Refused. Writes nothing, so callers
-        can refuse before a UAC prompt."""
+        can refuse before a UAC prompt; reads the machine only to confirm the measurement still fits it."""
         t = self.get(tweak_id)
         if not isinstance(t, MeasuredTweak):
             raise ValueError(f"{tweak_id} is not a measured tweak")
@@ -922,7 +1061,12 @@ class TweakManager:
             checked = t.check(measurement, self._clock())
         except ValueError as exc:
             raise Refused(msg("tweak.result.bad_measurement", error=str(exc))) from None
-        return checked, t.derive(checked)
+        value = t.derive(checked)
+        try:
+            t.confirm(self.system, checked)
+        except Unsupported as exc:
+            raise Refused(exc.message) from None
+        return checked, value
 
     def enable(self, tweak_id: str, measurement: Any = None) -> Outcome:
         """measurement: required by a measured tweak (ADR-0016), ignored by the others."""
@@ -1240,6 +1384,7 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
         # 4. Measured tweaks (ADR-0016)
         UploadShapingTweak("upload_shaping", _name("upload_shaping"), "medium", group=GROUP_MEASURED,
                            note=_note("upload_shaping")),
+        MtuPathTweak("mtu_path", _name("mtu_path"), "medium", group=GROUP_MEASURED, note=_note("mtu_path")),
     ]
 
 
@@ -1273,18 +1418,19 @@ def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict
     if not (out.ok and result["changed"]):
         return result
     after = measure()
-    v = calibration.verdict(before, after)
+    v = t.verdict(value, before, after)
     key = {True: "helped", False: "no_help", None: "unknown"}[v["helped"]]
-    params = dict(name=t.name, before=v["before_ms"], after=v["after_ms"], tweak_id=t.id)
-    record_event("tweak_verified", msg(f"tweak.event.verified_{key}", **params), "warn" if key == "no_help" else "info")
+    params = dict(name=t.name, tweak_id=t.id, **t.verdict_params(v))
+    prefix = t.verdict_messages
+    record_event("tweak_verified", msg(f"{prefix}.event.verified_{key}", **params), "warn" if key == "no_help" else "info")
     result.update(verdict=v, message=msg("tweak.result.measured_enabled", value=t.describe_value(value, before),
-                                         verdict=msg(f"tweak.verdict.{key}", **params)))
+                                         verdict=msg(f"{prefix}.verdict.{key}", **params)))
     return result
 
 
 def measure_for(t: MeasuredTweak) -> Callable[[], dict | None]:
     """The real measurement a measured tweak derives its value from (generates traffic)."""
-    return {"upload": calibration.measure_upload}[t.measurement_kind]
+    return {"upload": calibration.measure_upload, "path_mtu": calibration.measure_path_mtu}[t.measurement_kind]
 
 
 def default_manager(storage: Any = None) -> TweakManager:

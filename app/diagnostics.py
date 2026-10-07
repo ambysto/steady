@@ -820,7 +820,7 @@ def evaluate_path_mtu(interface: dict | None, paths: list[pmtu.PathResult], ipv4
         details.append(msg("diag.path_mtu.one_target"))
         return CheckResult(**base, status=INFO, summary=summary, details=details, advice=advice)
     details.append(msg("diag.path_mtu.silent"))
-    return CheckResult(**base, status=WARN, summary=summary, details=details, advice=advice)
+    return CheckResult(**base, status=WARN, summary=summary, details=details, advice=advice, tweak="mtu_path")
 
 
 # --- context: lazy, cached data access ----------------------------------------------------------

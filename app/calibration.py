@@ -4,7 +4,8 @@ A measured tweak derives its value from a measurement taken on the network in us
 before it is turned on. This module checks such a measurement (the elevated helper trusts
 nothing from its caller), names the network it was taken on without keeping the gateway's
 address, tells when a stored measurement no longer fits, and judges the measurement taken
-again right after applying. Everything is pure except measure_upload / current_network_id.
+again right after applying. Everything is pure except measure_upload / measure_path_mtu /
+current_network_id.
 """
 from __future__ import annotations
 
@@ -26,6 +27,8 @@ MIN_SAMPLES = 8                 # loaded latency samples needed
 NOT_NEEDED_MS = 30              # rise under load below this: nothing to fix (diagnostics "ok")
 HELPED_MIN_DROP_MS, HELPED_MIN_DROP = 20.0, 0.30
 _NETWORK_RE = re.compile(r"^[0-9a-f]{16}$")
+_GUID_RE = re.compile(r"^\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
+MIN_PATH_TARGETS = 2            # one target that drops some pings can fake a small path (check #16)
 
 
 def network_id(gateway: str | None, physical: str | None) -> str | None:
@@ -49,6 +52,16 @@ def upload_record(summary: dict[str, Any], network: str | None, now: float) -> d
     return {"kind": "upload", **summary, "measured_at": int(now), "network": network}
 
 
+def path_mtu_record(interface: dict[str, Any], paths: list[Any], network: str | None, now: float) -> dict[str, Any]:
+    """A path-MTU measurement (check #16's probe) as the mtu_path tweak receives and stores it. `interface` is
+    System.mtu_interface(): the probe could not see past its MTU, so the measurement names it."""
+    answered = [p for p in paths if p.mtu]
+    return {"kind": "path_mtu", "guid": interface["guid"], "interface_mtu": int(interface["mtu"]),
+            "path_mtu": max((int(p.mtu) for p in answered), default=None), "answered": len(answered),
+            "targets": len(paths), "too_big": any(p.too_big for p in answered),
+            "measured_at": int(now), "network": network}
+
+
 def _number(m: dict, key: str, lo: float, hi: float) -> float:
     value = m.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)) or not lo <= value <= hi:
@@ -65,9 +78,22 @@ def check_upload(m: Any, now: float) -> dict[str, Any]:
                            "idle_ms": _number(m, "idle_ms", 0, 60_000),
                            "loaded_ms": _number(m, "loaded_ms", 0, 60_000),
                            "loss_pct": _number(m, "loss_pct", 0, 100)}
-    samples, measured_at = m.get("samples"), m.get("measured_at")
+    samples = m.get("samples")
     if isinstance(samples, bool) or not isinstance(samples, int) or not 0 <= samples <= 100_000:
         raise ValueError(f"measurement samples out of range: {samples!r}")
+    out.update(samples=samples, **_when_and_where(m, now))
+    return out
+
+
+def _integer(m: dict, key: str, lo: int, hi: int) -> int:
+    value = m.get(key)
+    if isinstance(value, bool) or not isinstance(value, int) or not lo <= value <= hi:
+        raise ValueError(f"measurement {key} missing or out of range: {value!r}")
+    return value
+
+
+def _when_and_where(m: dict, now: float) -> dict[str, Any]:
+    measured_at = m.get("measured_at")
     if isinstance(measured_at, bool) or not isinstance(measured_at, int):
         raise ValueError("measurement has no time")
     if not now - MAX_AGE_S <= measured_at <= now + 60:
@@ -75,7 +101,29 @@ def check_upload(m: Any, now: float) -> dict[str, Any]:
     network = m.get("network")
     if network is not None and not (isinstance(network, str) and _NETWORK_RE.match(network)):
         raise ValueError("bad network id")
-    out.update(samples=samples, measured_at=measured_at, network=network)
+    return {"measured_at": measured_at, "network": network}
+
+
+def check_path_mtu(m: Any, now: float) -> dict[str, Any]:
+    """The path-MTU measurement `m`, validated and reduced to its known fields; ValueError otherwise."""
+    if not isinstance(m, dict) or m.get("kind") != "path_mtu":
+        raise ValueError("not a path MTU measurement")
+    guid = m.get("guid")
+    if not (isinstance(guid, str) and _GUID_RE.match(guid)):
+        raise ValueError("bad interface GUID")
+    targets = _integer(m, "targets", 1, 16)
+    out: dict[str, Any] = {"kind": "path_mtu", "guid": guid,
+                           "interface_mtu": _integer(m, "interface_mtu", 576, 65535),
+                           "answered": _integer(m, "answered", 0, targets), "targets": targets}
+    path = m.get("path_mtu")
+    if path is not None:
+        path = _integer(m, "path_mtu", 576, min(out["interface_mtu"], 1500))
+    if (path is None) != (out["answered"] == 0):
+        raise ValueError("path_mtu and answered disagree")
+    too_big = m.get("too_big")
+    if not isinstance(too_big, bool):
+        raise ValueError("measurement too_big missing")
+    out.update(path_mtu=path, too_big=too_big, **_when_and_where(m, now))
     return out
 
 
@@ -119,6 +167,27 @@ def verdict(before: dict[str, Any], after: dict[str, Any] | None) -> dict[str, A
     drop = was - now_ms
     helped = drop >= HELPED_MIN_DROP_MS and drop >= HELPED_MIN_DROP * was
     return {"before_ms": round(was, 1), "after_ms": round(now_ms, 1), "helped": helped}
+
+
+def path_mtu_verdict(value: int, after: dict[str, Any] | None) -> dict[str, Any]:
+    """Did lowering the MTU to `value` help? Right after applying, packets of the new MTU must reach enough targets."""
+    if after is None:
+        return {"mtu": value, "path_mtu": None, "helped": None}
+    helped = (after["interface_mtu"] == value and after["path_mtu"] is not None and after["path_mtu"] >= value
+              and after["answered"] >= MIN_PATH_TARGETS)
+    return {"mtu": value, "path_mtu": after["path_mtu"], "helped": helped}
+
+
+def measure_path_mtu(now: Callable[[], float] = time.time, system: Any = None) -> dict[str, Any] | None:
+    """Check #16's probe (~1 s, a few dozen pings, no Admin) up to the uplink's MTU. None if there is no uplink."""
+    from . import pmtu
+    if system is None:
+        from .winsys import WindowsSystem
+        system = WindowsSystem()
+    interface = system.mtu_interface()
+    if interface is None:
+        return None
+    return path_mtu_record(interface, pmtu.measure(interface["mtu"]), current_network_id(), now())
 
 
 def measure_upload(now: Callable[[], float] = time.time) -> dict[str, Any] | None:

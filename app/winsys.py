@@ -3,7 +3,7 @@
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
 active plan, adapter protocol bindings, TCP global parameters (netsh), receive segment
 coalescing, global offload settings, the DNS servers of the uplink and the DoH entries
-Windows keeps for them, the tool's own QoS throttle policy. Every write raises SystemWriteError on failure;
+Windows keeps for them, the tool's own QoS throttle policy, the IPv4 MTU of an interface. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -39,6 +39,7 @@ OFFLOAD_SETTINGS = ("PacketCoalescingFilter",)
 OFFLOAD_VALUES = ("Default", "Enabled", "Disabled")
 _QOS_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 QOS_MIN_BPS, QOS_MAX_BPS = 1_000_000, 1_000_000_000
+MTU_MIN, MTU_MAX = 576, 65535   # what IPv4 allows; a tweak keeps its own, narrower bounds
 
 
 class SystemReadError(RuntimeError):
@@ -98,6 +99,7 @@ class System(Protocol):
     def doh_get(self) -> dict[str, dict[str, Any]] | None: ...
 
     def qos_policy_get(self, name: str) -> int | None: ...
+    def mtu_interface(self, guid: str | None = None) -> dict[str, Any] | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -115,6 +117,7 @@ class System(Protocol):
 
     def qos_policy_set(self, name: str, bits_per_second: int) -> None: ...
     def qos_policy_remove(self, name: str) -> None: ...
+    def interface_mtu_set(self, interface_index: int, mtu: int) -> None: ...
 
 
 def _as_list(value: Any) -> list[str]:
@@ -268,6 +271,35 @@ class WindowsSystem:
         if not rows:
             return None
         return int(rows[0].get("ThrottleRateAction") or 0)
+
+    def mtu_interface(self, guid: str | None = None) -> dict[str, Any] | None:
+        """The IPv4 MTU of the uplink, or of the interface with this InterfaceGuid ("{...}"): {"index", "guid",
+        "alias", "mtu", "vpn"}. None when there is no such interface (no uplink; the adapter is gone)."""
+        if guid is not None:
+            if not _ADAPTER_GUID_RE.match(guid):
+                raise ValueError(f"not an interface GUID: {guid!r}")
+            find = ("$a = Get-NetAdapter -ErrorAction Stop | Where-Object { $_.InterfaceGuid -eq "
+                    f"{ps_literal(guid)} " "} | Select-Object -First 1; ")
+        else:
+            route = self._route()
+            if not route:
+                return None
+            find = (f"$a = Get-NetAdapter -InterfaceIndex {int(route['interface_index'])} "
+                    "-ErrorAction SilentlyContinue; ")
+        try:
+            rows = self._ps_json(
+                find + "if ($a) { $ip = Get-NetIPInterface -InterfaceIndex $a.InterfaceIndex -AddressFamily IPv4 "
+                "-ErrorAction SilentlyContinue; if ($ip) { [pscustomobject]@{ Index = $a.InterfaceIndex; "
+                "Guid = [string]$a.InterfaceGuid; Alias = $a.Name; Description = $a.InterfaceDescription; "
+                "Mtu = $ip.NlMtu } } }")
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the interface MTU: {exc}") from exc
+        if not rows or rows[0].get("Mtu") is None:
+            return None
+        r = rows[0]
+        alias = str(r.get("Alias") or "")
+        return {"index": int(r["Index"]), "guid": str(r.get("Guid") or ""), "alias": alias, "mtu": int(r["Mtu"]),
+                "vpn": bool(VPN_RE.search(f"{alias} {r.get('Description') or ''}"))}
 
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
@@ -459,6 +491,14 @@ class WindowsSystem:
                        "Where-Object { $_.Name -eq $name }).Count) { "
                        "Remove-NetQosPolicy -Name $name -PolicyStore ActiveStore -Confirm:$false -ErrorAction Stop }",
                        f"removing QoS policy {name}")
+
+    def interface_mtu_set(self, interface_index: int, mtu: int) -> None:
+        """The IPv4 MTU (NlMtu) of one interface, in the active and persistent store."""
+        idx, value = int(interface_index), int(mtu)
+        if not MTU_MIN <= value <= MTU_MAX:
+            raise ValueError(f"MTU out of range: {value}")
+        self._ps_write(f"Set-NetIPInterface -InterfaceIndex {idx} -AddressFamily IPv4 -NlMtuBytes {value} "
+                       "-ErrorAction Stop", f"setting the MTU of interface {idx} to {value}")
 
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None:
         if not _COMPONENT_RE.match(component):

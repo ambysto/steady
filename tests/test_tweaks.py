@@ -59,6 +59,9 @@ class FakeSystem:
                     for address, (_, template) in tweaks.DOH_ADDRESSES.items()}
         self.qos = {"Backup-Agent": 5_000_000}   # policy name -> throttle bit/s; someone else's policy
         self.qos_rounding = 0          # Windows may store a slightly different rate
+        # IPv4 MTU per interface GUID; mtu_uplink names the one in use (None: offline)
+        self.mtus = {WIFI_GUID: {"index": 6, "guid": WIFI_GUID, "alias": "Wi-Fi", "mtu": 1500, "vpn": False}}
+        self.mtu_uplink = WIFI_GUID
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -122,6 +125,10 @@ class FakeSystem:
     def wifi_ssid_bands(self, adapter):
         self._r("wifi_ssid_bands", adapter)
         return self.ssid_bands
+
+    def mtu_interface(self, guid=None):
+        self._r("mtu_interface", guid)
+        return copy.deepcopy(self.mtus.get(self.mtu_uplink if guid is None else guid))
 
     def qos_policy_get(self, name):
         self._r("qos_policy_get", name)
@@ -201,6 +208,10 @@ class FakeSystem:
         if self._w("qos_policy_set", name, bits_per_second):
             self.qos[name] = bits_per_second + self.qos_rounding
 
+    def interface_mtu_set(self, interface_index, mtu):
+        if self._w("interface_mtu_set", interface_index, mtu):
+            next(i for i in self.mtus.values() if i["index"] == interface_index)["mtu"] = mtu
+
     def qos_policy_remove(self, name):
         if self._w("qos_policy_remove", name):
             self.qos.pop(name, None)
@@ -211,7 +222,7 @@ class FakeSystem:
 
     def snapshot(self):
         return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.tcp_global, self.rsc,
-                              self.offload, self.dns, self.extra_interfaces, self.doh, self.qos))
+                              self.offload, self.dns, self.extra_interfaces, self.doh, self.qos, self.mtus))
 
 
 def power_saving():
