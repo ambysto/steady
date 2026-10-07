@@ -482,6 +482,100 @@
         }
       }
     },
+    "apple.ui.check.idle_body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Führt %1$@ Prüfungen für Verbindung, Router und DNS aus. Es wird nichts geändert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Runs %1$@ checks on your connection, the router and DNS. Nothing is changed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ejecuta %1$@ comprobaciones de la conexión, el router y el DNS. No se cambia nada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lance %1$@ vérifications sur la connexion, le routeur et le DNS. Rien n'est modifié."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Executa %1$@ verificações na conexão, no roteador e no DNS. Nada é alterado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chạy %1$@ kiểm tra kết nối, router và DNS. Không thay đổi gì trên thiết bị."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对连接、路由器和 DNS 运行 %1$@ 项检查。不会做任何更改。"
+          }
+        }
+      }
+    },
+    "apple.ui.check.kind.none" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auf diesem Gerät nicht behebbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing on this device fixes this"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada en este dispositivo lo arregla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien sur cet appareil ne le corrige"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada neste dispositivo corrige isso"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thiết bị này không sửa được"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备上无法修复"
+          }
+        }
+      }
+    },
     "apple.ui.language.auto" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14741,6 +14835,53 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "您可以修复"
+          }
+        }
+      }
+    },
+    "ui.check.recent_note" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Median der Latenz und Verlust über die letzten 60 Messungen je Ziel."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Median latency and loss over each target's last 60 measurements."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latencia mediana y pérdida en las últimas 60 mediciones de cada destino."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latence médiane et perte sur les 60 dernières mesures de chaque cible."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Latência mediana e perda nas últimas 60 medições de cada destino."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Độ trễ trung vị và tỉ lệ mất gói tính trên 60 lần đo gần nhất của mỗi đích."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "延迟中位数和丢包按每个目标最近 60 次测量计算。"
           }
         }
       }

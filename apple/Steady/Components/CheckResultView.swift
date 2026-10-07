@@ -78,7 +78,7 @@ struct StatusLabel: View {
         }
     }
 
-    private var symbol: String {
+    var symbol: String {
         switch status {
         case .ok: "checkmark.circle.fill"
         case .info: "info.circle.fill"
@@ -87,7 +87,7 @@ struct StatusLabel: View {
         }
     }
 
-    private var color: Color {
+    var color: Color {
         switch status {
         case .ok: .green
         case .info: .blue

@@ -38,6 +38,21 @@ final class AppModel {
     private var windows = 0
     private var measuring: Task<Void, Never>?
 
+    /// The Overview's "Check my connection" (ADR-0020): the latest run, kept while the app is open.
+    private(set) var checkRun: CheckRun?
+    private var checkTask: Task<Void, Never>?
+
+    /// The checks the run goes through on this platform, in the order of docs/DIAGNOSTICS.md.
+    /// Bufferbloat (#14) loads the line, so it stays on the Diagnostics tab.
+    static var checkSteps: [CheckRun.Step] {
+        #if os(macOS)
+        [.init(id: 2, key: "signal"), .init(id: 3, key: "interference"), .init(id: 5, key: "ping"),
+         .init(id: 6, key: "dns"), .init(id: 8, key: "vpn"), .init(id: 13, key: "physical_link")]
+        #else
+        [.init(id: 5, key: "ping"), .init(id: 6, key: "dns"), .init(id: 8, key: "vpn")]
+        #endif
+    }
+
     /// The checks that have a result, in the order of docs/DIAGNOSTICS.md.
     var checks: [CheckResult] {
         [signal, interference, monitor.pingQuality, vpn, dns, monitor.physicalLink, bufferbloat]
@@ -48,22 +63,31 @@ final class AppModel {
 
     init() {
         #if DEBUG
-        // `-StoreScreenshots [-StoreTab diagnostics]`: the made-up network of apple/AppStore.
+        // `-StoreScreenshots [-StoreTab diagnostics] [-SampleProblems] [-RunCheck [-StaleCheck]]`: the made-up
+        // network of apple/AppStore; with `-SampleProblems` it has a fair signal (Mac), failing DNS
+        // and loss past the router, and `-RunCheck` runs Check my connection on it at launch.
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-StoreScreenshots") {
             isStoreScreenshots = true
+            let problems = arguments.contains("-SampleProblems")
+            let now = Date().timeIntervalSince1970
             #if os(macOS)
-            monitor = SampleNetwork.monitor(now: Date().timeIntervalSince1970, wifi: SampleNetwork.wifi)
-            signal = WiFiSignal.evaluate(SampleNetwork.wifi)
+            let wifi = problems ? SampleNetwork.fairWiFi : SampleNetwork.wifi
+            monitor = SampleNetwork.monitor(now: now, wifi: wifi, internetLoss: problems)
+            signal = WiFiSignal.evaluate(wifi)
             interference = SampleNetwork.interference
             #else
-            monitor = SampleNetwork.monitor(now: Date().timeIntervalSince1970, wifi: nil)
+            monitor = SampleNetwork.monitor(now: now, wifi: nil, internetLoss: problems)
             #endif
             path = SampleNetwork.path
             vpn = VPNCheck.evaluate([])
-            dns = SampleNetwork.dns
+            dns = problems ? SampleNetwork.brokenDNS : SampleNetwork.dns
             if let index = arguments.firstIndex(of: "-StoreTab"), arguments.indices.contains(index + 1) {
                 selectedTab = AppTab(rawValue: arguments[index + 1]) ?? .overview
+            }
+            if arguments.contains("-RunCheck") {
+                // `-StaleCheck`: as if that run had ended 3 h 25 min ago, for the stale state.
+                runCheck(endedAgo: arguments.contains("-StaleCheck") ? 3 * 3600 + 25 * 60 : 0)
             }
             return
         }
@@ -117,15 +141,81 @@ final class AppModel {
         }
     }
 
+    /// Runs the checks one after another and records each as it really starts and finishes: no
+    /// minimum duration, so a check that only reads what the app already measured is instant.
+    func runCheck() {
+        runCheck(endedAgo: 0)
+    }
+
+    private func runCheck(endedAgo: TimeInterval) {
+        guard checkTask == nil else { return }
+        checkTask = Task {
+            checkRun = CheckRun(steps: Self.checkSteps)
+            for step in Self.checkSteps {
+                checkRun?.current = step.id
+                if let result = await evaluate(step) {
+                    checkRun?.results.append(result)
+                }
+                checkRun?.done += 1
+            }
+            checkRun?.current = nil
+            checkRun?.measured = measuredNow()
+            checkRun?.finishedAt = .now - endedAgo
+            checkTask = nil
+        }
+    }
+
+    /// The numbers behind a result with nothing to fix, from the live measurements.
+    private func measuredNow() -> CheckRun.Measured {
+        let router = monitor.targets.first { $0.id == LiveMonitor.router }.map { monitor.stats(for: $0) }
+        let internet = LiveMonitor.internetTargets.first.map { monitor.stats(for: $0) }
+        return CheckRun.Measured(routerMs: router?.medianRTT, internetMs: internet?.medianRTT,
+                                 internetLossPercent: internet.flatMap { $0.isEmpty ? nil : $0.lossPercent })
+    }
+
+    /// One check of the run. The live checks the other tabs show are refreshed with it.
+    private func evaluate(_ step: CheckRun.Step) async -> CheckResult? {
+        switch step.id {
+        #if os(macOS)
+        case 2:
+            if !isStoreScreenshots {
+                monitor.wifi = WiFiReader.current()
+                signal = WiFiSignal.evaluate(monitor.wifi)
+            }
+            return signal
+        case 3:
+            if !isStoreScreenshots {
+                interference = await lookAround()
+            }
+            return interference
+        case 13:
+            return monitor.physicalLink
+        #endif
+        case 5:
+            return monitor.pingQuality
+        case 6:
+            if !isStoreScreenshots {
+                dnsTask?.cancel()   // this run measures DNS itself
+                await measureDNS()
+            }
+            return dns
+        case 8:
+            if !isStoreScreenshots, let path {
+                readVPN(path)
+            }
+            return vpn
+        default:
+            return nil
+        }
+    }
+
     private func followPath() async {
         for await update in NetworkPath.updates() {
             path = update
             monitor.networkChanged(to: update)
             monitor.routerAddress = update.routerIPv4
             // Turning a VPN on or off changes the path, so check #8 follows it.
-            let adapters = VPNReader.adapters(pathInterfaces: update.interfaces)
-            vpn = VPNCheck.evaluate(adapters)
-            vpnUp = adapters.contains { $0.isTunnel && $0.status == "Up" }
+            readVPN(update)
             // Check #6 runs once connected, and again when the router changes.
             let trigger = update.status == .connected ? (update.routerIPv4 ?? "-") : nil
             if trigger != dnsTrigger {
@@ -133,6 +223,12 @@ final class AppModel {
                 if trigger != nil { runDNS() }
             }
         }
+    }
+
+    private func readVPN(_ path: NetworkPath) {
+        let adapters = VPNReader.adapters(pathInterfaces: path.interfaces)
+        vpn = VPNCheck.evaluate(adapters)
+        vpnUp = adapters.contains { $0.isTunnel && $0.status == "Up" }
     }
 
     private func measureDNS() async {
@@ -161,16 +257,54 @@ final class AppModel {
             if lastLook.map({ $0.duration(to: .now) >= .seconds(300) }) ?? true || state?.channel != lastChannel {
                 lastLook = .now
                 lastChannel = state?.channel
-                let seen = await Task.detached { WiFiReader.surroundings(allowScan: true) }.value
-                if let seen {
-                    let (connection, networks) = Interference.anonymous(current: seen.current, around: seen.around)
-                    interference = Interference.evaluate(connection, scan: networks)
-                } else {
-                    interference = Interference.evaluate(nil, scan: [])
-                }
+                interference = await lookAround()
             }
             try? await Task.sleep(for: .seconds(5))
         }
     }
+
+    /// Check #3 from the networks around (the system's cached scan, see WiFiReader).
+    private func lookAround() async -> CheckResult {
+        guard let seen = await Task.detached(operation: { WiFiReader.surroundings(allowScan: true) }).value else {
+            return Interference.evaluate(nil, scan: [])
+        }
+        let (connection, networks) = Interference.anonymous(current: seen.current, around: seen.around)
+        return Interference.evaluate(connection, scan: networks)
+    }
     #endif
+}
+
+/// One run of "Check my connection": the steps, the results as they come in, and when it ended.
+struct CheckRun {
+    struct Step: Identifiable {
+        let id: Int
+        let key: String
+
+        var title: Message { Message("diag.\(key).title") }
+    }
+
+    let steps: [Step]
+    /// In the order the checks finished; a check with nothing to report (no reading) is absent.
+    var results: [CheckResult] = []
+    /// The check running now, and how many have finished.
+    var current: Int?
+    var done = 0
+    var finishedAt: Date?
+
+    /// Median latency and Internet loss over the live window when the run ended.
+    struct Measured {
+        var routerMs: Double?
+        var internetMs: Double?
+        var internetLossPercent: Double?
+    }
+
+    var measured = Measured()
+
+    var isRunning: Bool { finishedAt == nil }
+    var problems: [CheckFlow.Problem] { CheckFlow.problems(results) }
+    var okCount: Int { CheckFlow.okCount(results) }
+
+    func result(of step: Step) -> CheckResult? {
+        results.first { $0.id == step.id }
+    }
 }
