@@ -660,14 +660,12 @@
 
   "manual.no_run": "Run diagnostics to get suggestions for this network",
 
-  "ui.suggest.title": "Suggestions",
   "ui.suggest.manual_group": "Manual steps",
   "ui.suggest.manual_hint": "Things only you can do. Mark one as done and the app compares the connection before and after.",
   "ui.suggest.done_button": "I did this",
   "ui.suggest.done_at": "Done {time}",
   "ui.suggest.because": "Because: {reason}",
   "ui.suggest.turn_on": "Turn on",
-  "ui.suggest.none": "Nothing to do: the latest diagnostics found no problems",
 
   "ui.impact.title": "Effect",
 
@@ -870,6 +868,7 @@
   "ui.check.kind.none": "Nothing on this PC fixes this",
   "ui.check.clear_title": "Your connection is in good shape",
   "ui.check.clear_body": "All {total} checks are fine · checked at {time}",
+  "ui.check.stale": "Last checked {duration} ago. Check again to see how it is now.",
   "ui.check.drops_24h": "Drops in 24 h",
   "ui.check.details": "Details",
   "ui.check.sheet.title": {"one": "Turn on {count} change?", "other": "Turn on {count} changes?"},

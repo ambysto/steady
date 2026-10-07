@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 import re
 import socket
@@ -33,6 +34,8 @@ from typing import Any, Callable, Iterable
 from . import calibration, config, dnsprobe, i18n, pmtu, probe, winutil
 from .i18n import msg
 from .storage import Storage
+
+log = logging.getLogger("stableinternet.diagnostics")
 
 OK, WARN, BAD, INFO = "ok", "warn", "bad", "info"
 _ORDER = {OK: 0, INFO: 1, WARN: 2, BAD: 3}
@@ -1098,18 +1101,32 @@ class Report:
         return worst([r.status for r in self.results])
 
 
-def run_all(ctx: Context, only: set[int] | None = None) -> Report:
+Progress = Callable[[int, int, "str | None", "str | None"], None]
+
+
+def run_all(ctx: Context, only: set[int] | None = None, progress: Progress | None = None) -> Report:
+    """`progress(done, total, key, status)` is called as each check starts (key = that check,
+    status None) and once more at the end (key None): ADR-0020 shows the real progress, never a timer."""
     results = []
     # On-demand checks join the run only when named in `only`.
     wanted = CHECKS + [c for c in ON_DEMAND_CHECKS if only is not None and c[0] in only]
+    wanted = [c for c in wanted if only is None or c[0] in only]
+
+    def report(key: str | None) -> None:
+        if progress is not None:
+            try:
+                progress(len(results), len(wanted), key, results[-1].status if results else None)
+            except Exception:   # a broken listener must not stop the checks
+                log.exception("diagnostics progress listener failed")
+
     for cid, key, fn in wanted:
-        if only is not None and cid not in only:
-            continue
+        report(key)
         try:
             results.append(fn(ctx))
         except Exception as exc:  # one broken check must not hide the others
             results.append(CheckResult(cid, key, title_of(key), INFO, msg("diag.not_run"),
                                        details=[f"{type(exc).__name__}: {exc}"], error=f"{type(exc).__name__}: {exc}"))
+    report(None)
     return Report(int(ctx.now), results)
 
 

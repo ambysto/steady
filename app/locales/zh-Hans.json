@@ -658,14 +658,12 @@
 
   "manual.no_run": "运行诊断以获取针对此网络的建议",
 
-  "ui.suggest.title": "建议",
   "ui.suggest.manual_group": "手动步骤",
   "ui.suggest.manual_hint": "只有你自己才能完成的事项。标记为完成后，应用会对比前后的连接情况。",
   "ui.suggest.done_button": "我已完成",
   "ui.suggest.done_at": "完成于 {time}",
   "ui.suggest.because": "原因：{reason}",
   "ui.suggest.turn_on": "启用",
-  "ui.suggest.none": "无需操作：最近一次诊断未发现问题",
 
   "ui.impact.title": "效果",
 
@@ -868,6 +866,7 @@
   "ui.check.kind.none": "此电脑上无法修复",
   "ui.check.clear_title": "您的连接状况良好",
   "ui.check.clear_body": "全部 {total} 项检查正常 · 检查于 {time}",
+  "ui.check.stale": "上次检查是在 {duration}前。再次检查以了解当前情况。",
   "ui.check.drops_24h": "24 小时内断线",
   "ui.check.details": "详情",
   "ui.check.sheet.title": {"one": "启用 {count} 项更改？", "other": "启用 {count} 项更改？"},

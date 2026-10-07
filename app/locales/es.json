@@ -658,14 +658,12 @@
 
   "manual.no_run": "Ejecuta el diagnóstico para obtener sugerencias para esta red",
 
-  "ui.suggest.title": "Sugerencias",
   "ui.suggest.manual_group": "Pasos manuales",
   "ui.suggest.manual_hint": "Cosas que solo puedes hacer tú. Marca una como hecha y la aplicación compara la conexión antes y después.",
   "ui.suggest.done_button": "Ya lo hice",
   "ui.suggest.done_at": "Hecho {time}",
   "ui.suggest.because": "Motivo: {reason}",
   "ui.suggest.turn_on": "Activar",
-  "ui.suggest.none": "Nada que hacer: el último diagnóstico no encontró problemas",
 
   "ui.impact.title": "Efecto",
 
@@ -868,6 +866,7 @@
   "ui.check.kind.none": "Nada en este PC lo arregla",
   "ui.check.clear_title": "Tu conexión está en buen estado",
   "ui.check.clear_body": "Las {total} comprobaciones están bien · comprobado a las {time}",
+  "ui.check.stale": "Última comprobación hace {duration}. Comprueba de nuevo para ver cómo está ahora.",
   "ui.check.drops_24h": "Cortes en 24 h",
   "ui.check.details": "Detalles",
   "ui.check.sheet.title": {"one": "¿Activar {count} cambio?", "other": "¿Activar {count} cambios?"},

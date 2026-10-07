@@ -15498,6 +15498,53 @@
         }
       }
     },
+    "ui.check.stale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zuletzt vor %1$@ geprüft. Prüfen Sie erneut, um den aktuellen Stand zu sehen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last checked %1$@ ago. Check again to see how it is now."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Última comprobación hace %1$@. Comprueba de nuevo para ver cómo está ahora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dernière vérification il y a %1$@. Vérifiez à nouveau pour voir l'état actuel."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Última verificação há %1$@. Verifique de novo para ver como está agora."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lần kiểm tra cuối cách đây %1$@. Kiểm tra lại để biết tình hình hiện tại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上次检查是在 %1$@前。再次检查以了解当前情况。"
+          }
+        }
+      }
+    },
     "ui.check.start" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -25087,100 +25134,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "只有你自己才能完成的事项。标记为完成后，应用会对比前后的连接情况。"
-          }
-        }
-      }
-    },
-    "ui.suggest.none" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nichts zu tun: Die letzte Diagnose hat keine Probleme gefunden"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nothing to do: the latest diagnostics found no problems"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nada que hacer: el último diagnóstico no encontró problemas"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rien à faire : le dernier diagnostic n'a trouvé aucun problème"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nada a fazer: o último diagnóstico não encontrou problemas"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không có gì cần làm: lần chẩn đoán gần nhất không thấy vấn đề"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无需操作：最近一次诊断未发现问题"
-          }
-        }
-      }
-    },
-    "ui.suggest.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorschläge"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suggestions"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sugerencias"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suggestions"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sugestões"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gợi ý"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建议"
           }
         }
       }

@@ -658,14 +658,12 @@
 
   "manual.no_run": "Chạy chẩn đoán để có gợi ý cho mạng này",
 
-  "ui.suggest.title": "Gợi ý",
   "ui.suggest.manual_group": "Việc làm bằng tay",
   "ui.suggest.manual_hint": "Những việc chỉ bạn làm được. Đánh dấu đã làm, app sẽ so sánh kết nối trước và sau.",
   "ui.suggest.done_button": "Tôi đã làm",
   "ui.suggest.done_at": "Đã làm lúc {time}",
   "ui.suggest.because": "Vì: {reason}",
   "ui.suggest.turn_on": "Bật",
-  "ui.suggest.none": "Không có gì cần làm: lần chẩn đoán gần nhất không thấy vấn đề",
 
   "ui.impact.title": "Hiệu quả",
 
@@ -868,6 +866,7 @@
   "ui.check.kind.none": "Máy này không sửa được",
   "ui.check.clear_title": "Kết nối của bạn đang ổn",
   "ui.check.clear_body": "Cả {total} mục đều ổn · kiểm tra lúc {time}",
+  "ui.check.stale": "Lần kiểm tra cuối cách đây {duration}. Kiểm tra lại để biết tình hình hiện tại.",
   "ui.check.drops_24h": "Rớt mạng trong 24 giờ",
   "ui.check.details": "Chi tiết",
   "ui.check.sheet.title": {"one": "Bật {count} thay đổi?", "other": "Bật {count} thay đổi?"},

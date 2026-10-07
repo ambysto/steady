@@ -1,7 +1,7 @@
 // node --test tests/js/   (run from tests/test_web.py when node is installed)
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { bucketLoss, historySeries, liveNumbers, liveTicks, lossVerdict, probesOk } from "../../web/js/metrics.js";
+import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../../web/js/metrics.js";
 
 const INET = ["cloudflare", "google"];
 
@@ -62,4 +62,11 @@ test("history: a bucket is limited when the probes got through", () => {
   assert.deepEqual(s.loss, [[0, 25, true], [300, 50, false]]);
   assert.deepEqual(s.internet, [[0, 30], [300, 30]]);
   assert.deepEqual(s.router, [[0, 2], [300, 2]]);
+});
+
+test("latency is the median of the ticks that answered", () => {
+  const lat = liveLatency(liveTicks(samples(100, { routerLost: 10, inetLost: 20 }), INET));
+  assert.equal(lat.router, 2.5);                             // 2 and 3 alternate over the 90 answered ticks
+  assert.equal(lat.internet, 30);                            // best target per tick
+  assert.deepEqual(liveLatency([]), { router: null, internet: null });
 });
