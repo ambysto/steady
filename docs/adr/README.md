@@ -18,3 +18,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0012](0012-user-sent-problem-reports.md) | Problem reports are written by the app, read in full and sent by the user | Accepted |
 | [0013](0013-apple-release-from-a-mac.md) | Apple builds are archived and uploaded from a Mac, by script | Accepted |
 | [0014](0014-merge-internet-drops.md) | Internet drops close together are one unstable episode | Accepted |
+| [0015](0015-measured-tweaks.md) | Tweaks whose value comes from a measurement | Accepted |
