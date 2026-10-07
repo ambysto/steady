@@ -8,7 +8,7 @@ Common mechanism (back up first, verify, undo, restore when there is no backup):
 
 ## 1. Wi‑Fi card (driver advanced properties)
 
-Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Reset-NetAdapterAdvancedProperty`. Property names differ by chip vendor → matched by `DisplayName` (regex); a tweak with no matching property is shown as "not supported".
+Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Reset-NetAdapterAdvancedProperty`. Property names differ by chip vendor, and `DisplayName` / `DisplayValue` are translated on a localized driver or Windows, so a property is found by its `RegistryKeyword` first (never translated) and only then by `DisplayName` (regex); see "How a property and its value are matched" below. A tweak with no matching property is shown as "not supported".
 
 | ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
@@ -21,7 +21,21 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 | `wifi_prefer_5g` | Prefer the 5 GHz band | `Preferred Band` / `Band Preference` = Prefer 5GHz (never "5G only") | low | 🔌🛡 A card that clings to a 2.4 GHz access point (802.11n, 65 Mbps link, 5% router loss) moved to 5 GHz 802.11ac (175 Mbps, 0% loss) when this was set. It only prefers 5 GHz: the card still falls back to 2.4 GHz where 5 GHz is out of range, which is why "5G only" is not used (some drivers ignore it anyway). Offered only while the card is on a 2.4 GHz access point and the connected network has a 5 GHz one in Windows' last scan; otherwise it is shown as not supported, with the reason. Not offered on a 6 GHz connection (Wi‑Fi 6E/7): preferring 5 GHz could pull the card down from 6 GHz |
 | `wifi_tx_power_max` | Highest transmit power | `Transmit Power` / `Transmit Power Level` / `Tx Power` = Highest | low | 🔌🛡 Some drivers lower the transmit power on their own to save energy; this keeps the card at its top level. Slightly more heat and battery use on a laptop |
 
-Matching rules for both: the property is found by `DisplayName` and the value by `DisplayValue`, each a full-match regular expression that tolerates a numeric prefix such as `3. ` (Intel and MediaTek add one). A card with no such property, or with no matching value, is shown as "not supported". Restore uses the value saved in `backup.json`, or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
+### How a property and its value are matched
+
+Applies to every tweak in this section (SIC-94). Each tweak lists, per known driver family, a `RegistryKeyword`, the registry value that means "target" (when it is known), and the English `DisplayName` / `DisplayValue` regular expressions as a fallback.
+
+1. **Property.** First by `RegistryKeyword` (case-insensitive, a leading `*` ignored), in the order the tweak lists them; the first keyword present on the card wins. Only if none is present, by `DisplayName` (full-match regular expression that tolerates a numeric prefix such as `3. `, which Intel and MediaTek add).
+2. **Value.** When the property was found by its keyword and the tweak knows the registry value for that keyword, the target is that registry value, provided the driver lists it among its valid values. This does not depend on any translated text. Otherwise the target is the valid value whose `DisplayValue` matches the English regular expression.
+3. **Not supported.** No property found: "the card does not have this property". Property found but no value matched (for example a translated `DisplayValue` where the registry value is not known): "no suitable value", with the values the driver lists. Nothing is ever written in these cases.
+
+Registry values are recorded only where they were read from a card or are fixed by Microsoft. Verified on the dev PC's MediaTek MT7922 (read 2026-10-07): `LowPowerEnable` Disabled = 0, `DisableWakeOnMagic` and `DisableWakeOnPattern` Disabled = 1, `BWSelection5G` 20MHz only = 1, `CurrPhyMode` 802.11ac = 1, `PreferredBand` Prefer 5GHz band = 2, `TxPowerLevel` Highest = 0. Standard NDIS keywords `*WakeOnMagicPacket` and `*WakeOnPattern`: 0 = Disabled. For Intel and Realtek only the keyword is listed (`MIMOPowerSaveMode`, `RoamingAggressiveness`, `RoamingPreferredBandType`, `TransmitPower`), which finds the property on a translated driver; its value still comes from the English `DisplayValue` until a registry value is read from a real card. A tweak is shown as "not supported" rather than guessed.
+
+The `netsh` labels that `wifi_prefer_5g` reads are English too. When `netsh wlan show interfaces` cannot be read (translated labels, the interface not listed) the band is reported as unknown ("cannot tell which band the Wi‑Fi connection is on"), never as "not connected", and nothing is changed.
+
+Restore uses the value saved in `backup.json`, or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
+
+### Notes on `wifi_prefer_5g` and `wifi_tx_power_max`
 
 **On by the driver default.** A property can already hold the target value because the driver ships that way (the MediaTek card's `PreferredBand` and `TxPowerLevel` defaults are `Prefer 5GHz` and `Highest`). Without a backup that is not a change the tool made, so the tweak is shown as on *by the driver default*, its switch is disabled, and turning it off writes nothing: `Reset-NetAdapterAdvancedProperty` would only restart the adapter and leave the same value. When a backup exists (the tool did write it) it is restored as usual. After any reset to the default the value is read back and a value that did not change is reported as a failure.
 

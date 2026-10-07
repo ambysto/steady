@@ -324,6 +324,117 @@ def manager_without_admin():
                         save_backup=MemoryBackup().save, is_admin=lambda: False)
 
 
+def translated_mt7922():
+    """The MT7922's keywords and registry values (read 2026-10-07) with every DisplayName and DisplayValue
+    translated to French, as a localized driver shows them."""
+    s = real_card_system()
+    s.props["Wi-Fi"] = [
+        prop("Largeur de bande 5 GHz", "BWSelection5G", "0", [("1. Auto", "0"), ("2. 20 MHz uniquement", "1")], "0"),
+        prop("802.11ax/ac/n/abg", "CurrPhyMode", "0",
+             [("1. 802.11ax", "0"), ("2. 802.11ac", "1"), ("3. 802.11n", "2"), ("4. 802.11a/b/g", "3")], "0"),
+        prop("Réveil par paquet magique", "DisableWakeOnMagic", "0", [("Désactivé", "1"), ("Activé", "0")], "0"),
+        prop("Réveil par motif", "DisableWakeOnPattern", "0", [("Désactivé", "1"), ("Activé", "0")], "0"),
+        prop("Économie d'énergie", "LowPowerEnable", "1", [("Désactivé", "0"), ("Auto", "1")], "1"),
+        prop("Bande préférée", "PreferredBand", "0",
+             [("1. Aucune préférence", "0"), ("2. Préférer la bande 2,4 GHz", "1"), ("3. Préférer la bande 5 GHz", "2")],
+             "2"),
+        prop("Niveau de puissance d'émission", "TxPowerLevel", "1",
+             [("1. Maximale", "0"), ("2. Moyenne", "1"), ("3. Minimale", "2")], "0"),
+    ]
+    return s
+
+
+class LocalizedDriverTests(unittest.TestCase):
+    """SIC-94: a property is found by its RegistryKeyword and the value by its registry value, so a driver
+    or Windows that translated the display texts still works."""
+
+    EXPECTED = {"wifi_power_saving": ("LowPowerEnable", "0"), "wifi_wake_magic": ("DisableWakeOnMagic", "1"),
+                "wifi_wake_pattern": ("DisableWakeOnPattern", "1"), "wifi_bw20_5g": ("BWSelection5G", "1"),
+                "wifi_mode_ac": ("CurrPhyMode", "1"), "wifi_prefer_5g": ("PreferredBand", "2"),
+                "wifi_tx_power_max": ("TxPowerLevel", "0")}
+
+    def test_every_keyword_tweak_resolves_and_writes_the_known_registry_value(self):
+        for tid, (keyword, value) in self.EXPECTED.items():
+            s = translated_mt7922()
+            mgr, _ = manager(s)
+            st = mgr.state(tid)
+            self.assertTrue(st.supported, (tid, st.reason))
+            if st.enabled:
+                continue        # already at the target (the driver's default or the card's current value)
+            out = mgr.enable(tid)
+            self.assertTrue(out.ok and out.changed, (tid, out.message))
+            self.assertEqual(s.writes()[-1], ("write", "adapter_property_set", ("Wi-Fi", keyword, value)), tid)
+
+    def test_a_translated_card_round_trips(self):
+        s = translated_mt7922()
+        mgr, _ = manager(s)
+        before = s.snapshot()
+        for tid in self.EXPECTED:
+            if mgr.state(tid).supported and not mgr.state(tid).enabled:
+                self.assertTrue(mgr.enable(tid).ok, tid)
+        for tid in self.EXPECTED:
+            st = mgr.state(tid)
+            if st.has_backup:
+                self.assertTrue(mgr.disable(tid).ok, tid)
+        self.assertEqual(s.snapshot(), before)
+
+    def test_translated_names_do_not_fall_through_to_the_english_regexes(self):
+        s = translated_mt7922()
+        mgr, _ = manager(s)
+        for tid in self.EXPECTED:
+            self.assertNotIn("không có thuộc tính", i18n.render(mgr.state(tid).reason, "vi"), tid)
+
+    def test_wake_keywords_are_matched_without_the_star_and_in_any_case(self):
+        s = card_with(prop("Réveil par paquet magique", "*wakeonmagicpacket", "1",
+                           [("Désactivé", "0"), ("Activé", "1")], "1"))
+        mgr, _ = manager(s)
+        self.assertTrue(mgr.enable("wifi_wake_magic").ok)
+        self.assertEqual(s._prop("Wi-Fi", "*wakeonmagicpacket")["RegistryValue"], ["0"])
+
+    def test_the_keyword_wins_over_an_english_name_on_another_property(self):
+        decoy = prop("Preferred Band", "SomethingElse", "0", [("Auto", "0"), ("Prefer 5GHz", "1")], "0")
+        real = translated_mt7922()._prop("Wi-Fi", "PreferredBand")
+        s = card_with(decoy, real)
+        mgr, _ = manager(s)
+        self.assertTrue(mgr.enable("wifi_prefer_5g").ok)
+        self.assertEqual(s._prop("Wi-Fi", "PreferredBand")["RegistryValue"], ["2"])
+        self.assertEqual(s._prop("Wi-Fi", "SomethingElse")["RegistryValue"], ["0"])   # decoy untouched
+
+    def test_a_listed_keyword_without_a_known_registry_value_needs_the_english_text(self):
+        # Intel keywords are listed so the property is found, but no Intel registry value has been read from a
+        # real card: a translated value is "no suitable value", and nothing is written.
+        s = card_with(prop("Agressivité de l'itinérance", "RoamingAggressiveness", "3",
+                           [("1. La plus basse", "1"), ("3. Moyenne", "3"), ("5. La plus haute", "5")], "3"))
+        mgr, _ = manager(s)
+        st = mgr.state("wifi_roaming")
+        self.assertFalse(st.supported)
+        self.assertIn("no suitable value", i18n.render(st.reason, "en"))
+        self.assertFalse(mgr.enable("wifi_roaming").ok)
+        self.assertEqual(s.writes(), [])
+
+    def test_the_same_keyword_numbered_differently_is_not_written_blindly(self):
+        # English texts, but "Highest" is 4 here, not the 0 recorded for the MT7922: refuse.
+        s = card_with(prop("Transmit Power Level", "TxPowerLevel", "1",
+                           [("1. Lowest", "0"), ("2. Medium", "1"), ("3. Highest", "4")], "1"))
+        mgr, _ = manager(s)
+        st = mgr.state("wifi_tx_power_max")
+        self.assertFalse(st.supported)
+        self.assertFalse(mgr.enable("wifi_tx_power_max").ok)
+        self.assertEqual(s.writes(), [])
+
+    def test_a_known_registry_value_the_driver_does_not_list_falls_back_to_the_text(self):
+        s = card_with(prop("Transmit Power Level", "TxPowerLevel", "1",
+                           [("Highest", "7"), ("Medium", "1")], "1"))
+        mgr, _ = manager(s)
+        self.assertTrue(mgr.enable("wifi_tx_power_max").ok)
+        self.assertEqual(s._prop("Wi-Fi", "TxPowerLevel")["RegistryValue"], ["7"])
+
+    def test_listing_a_translated_card_never_writes(self):
+        s = translated_mt7922()
+        manager(s)[0].states()
+        self.assertEqual(s.writes(), [])
+
+
 class DriverDefaultTests(unittest.TestCase):
     """A property that already holds the target because the driver ships that way (the dev PC's MT7922)."""
 
