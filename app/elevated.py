@@ -12,6 +12,10 @@ its caller: every argument is re-validated here, and the result may only be writ
     python -m app.elevated path-prefer <ifIndex>    --result-file <path>
     python -m app.elevated path-restore <ifIndex|all> --result-file <path>
     python -m app.elevated restore-all -              --result-file <path>   (uninstall)
+    "<exe>" elevated install-machine -                --result-file <path>   (ADR-0019: copy this exe's folder
+                                                      under Program Files, register it for all users)
+    "<exe>" elevated uninstall-machine <caller pid>   --result-file <path>   (restore everything, then remove
+                                                      the all-users parts and the program folder)
 """
 from __future__ import annotations
 
@@ -30,7 +34,8 @@ from .i18n import msg
 
 log = logging.getLogger("stableinternet.elevated")
 
-OPS = ("tweak-enable", "tweak-disable", "restart-adapter", "path-prefer", "path-restore", "restore-all")
+OPS = ("tweak-enable", "tweak-disable", "restart-adapter", "path-prefer", "path-restore", "restore-all",
+       "install-machine", "uninstall-machine")
 _RESULT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
 
 
@@ -57,7 +62,20 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
         return {"ok": False, "message": f"{op} takes no measurement"}
     if not winutil.is_admin():
         return {"ok": False, "message": msg("elevation.not_admin")}
+    from . import runtime
+    if op == "install-machine":
+        if value != "-":
+            return {"ok": False, "message": f"{op} takes no argument"}   # the source is always this exe's folder
+        from . import installer
+        return installer.install_machine()
+    if not runtime.elevation_allowed():
+        return {"ok": False, "message": msg("elevation.not_installed")}
     _close_backup_import()
+    if op == "uninstall-machine":
+        if not (value.isascii() and value.isdigit()):
+            return {"ok": False, "message": f"{op} takes the caller's process id"}
+        from . import installer
+        return installer.uninstall_machine(int(value))
     if op in ("tweak-enable", "tweak-disable"):
         from . import calibration, tweaks
         from .storage import Storage

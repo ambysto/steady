@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Security
+- **The app installs for all users under `Program Files`** (SIC-97, [ADR-0019](docs/adr/0019-per-machine-install.md)). Up to 0.5.0 it installed into `%LOCALAPPDATA%\Programs`, which a process without Admin rights can write, and the elevated helper (and a monitor task with highest privileges, at every logon) ran from there: replacing a file in it meant running code as Administrator at the next UAC prompt. Now:
+  - Installing asks once for Administrator approval. The elevated part copies the helper's own folder (never a path it is given) to `Program Files`, adds the "Apps & features" entry in HKLM and the all-users Start menu shortcut; the monitor task and the sign-in (tray) shortcut stay per user, created by the user's own installer (so over-the-shoulder UAC does not give them to the administrator's account). When the helper's result cannot come back (over-the-shoulder UAC), the installer checks the effect itself.
+  - An earlier per-user install is stopped, its entry, Start menu shortcut and folder removed; measurements, settings and backups carry over.
+  - Uninstall: one elevated step restores every tweak and failover metric, then removes the HKLM entry, the all-users shortcut and the program folder (after the uninstaller exits); this user's task and shortcut go too. A failed restore still keeps the app installed.
+  - A packaged copy outside `Program Files` never runs elevated: it asks for UAC only to install itself, the helper refuses everything else from there, and the monitor task gets highest privileges only for an exe under `Program Files`. `Program Files` and the all-users Start menu come from `SHGetKnownFolderPath`, not from environment variables.
+  - `install --target` is gone. 7 new keys and 1 changed in all 9 catalogs; 4 keys that nothing used any more removed.
+
 ## [0.5.0] - 2026-10-07
 
 `dns_fastest` now compares the public DNS with the DNS already in use and switches only when that helps; a refusal comes before the UAC prompt.

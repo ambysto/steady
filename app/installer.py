@@ -1,17 +1,21 @@
-"""Install and uninstall the packaged app for the current Windows user (SIC-32). No Admin
-rights needed to install; uninstalling asks once (UAC) only if tweaks must be put back or the backup store removed.
+"""Install and uninstall the packaged app for all users of the PC (SIC-32, ADR-0019). Installing and
+uninstalling each ask once for Administrator approval (UAC).
 
-    install    copy the app to %LOCALAPPDATA%\\Programs\\Ambysto Steady, register the
-               monitor task, add Start menu + logon (tray) shortcuts and an "Apps & features" entry,
-               start the monitor and open the window
-    uninstall  stop the app, put every tweak and failover metric back to its original value,
-               remove the task, shortcuts and entry, delete the program folder; measurement data is
-               kept unless asked (and always kept while a backup could not be restored)
+    install    elevated, for all users: copy the app to <Program Files>\\Ambysto Steady, add the "Apps &
+               features" entry (HKLM) and the Start menu shortcut. Then, for this user: remove a per-user
+               copy of an earlier version (%LOCALAPPDATA%\\Programs), register the monitor task, add the
+               sign-in (tray) shortcut, start the monitor and open the window
+    uninstall  stop the app; elevated: put every tweak and failover metric back to its original value,
+               remove the all-users entry and shortcut, delete the program folder; then this user's task
+               and shortcut. Measurement data is kept unless asked (and always kept while a backup could
+               not be restored)
 
-    "Ambysto Steady.exe" install [--target DIR] [--dry-run] [--yes]
+    "Ambysto Steady.exe" install [--dry-run] [--yes]
     "Ambysto Steady.exe" uninstall [--delete-data] [--dry-run] [--yes]
 
-Every side effect goes through Ops, so the plans are tested with a fake and --dry-run prints them.
+The elevated part runs as another account under over-the-shoulder UAC, so it never touches per-user
+things (task, Startup shortcut, data). Every side effect goes through Ops, so the plans are tested with
+a fake and --dry-run prints them.
 """
 from __future__ import annotations
 
@@ -31,13 +35,13 @@ from .i18n import msg
 
 log = logging.getLogger("stableinternet.installer")
 
-UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\AmbystoSteady"
+UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\AmbystoSteady"   # HKLM; HKCU up to 0.5.0
 PUBLISHER = "Ambysto"
 CREATE_NO_WINDOW, DETACHED, NEW_GROUP = 0x08000000, 0x00000008, 0x00000200
 
 
 def default_target() -> Path:
-    return Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "Programs" / runtime.APP_NAME
+    return runtime.program_files() / runtime.APP_NAME
 
 
 def programs_dir() -> Path:
@@ -45,7 +49,13 @@ def programs_dir() -> Path:
 
 
 def start_menu_link() -> Path:
+    """This user's Start menu shortcut: what a per-user install up to 0.5.0 created."""
     return programs_dir() / f"{runtime.APP_NAME}.lnk"
+
+
+def common_start_menu_link() -> Path:
+    from . import winutil
+    return Path(winutil.known_folder(winutil.FOLDERID_COMMON_PROGRAMS)) / f"{runtime.APP_NAME}.lnk"
 
 
 def startup_link() -> Path:
@@ -70,6 +80,9 @@ class Ops:
             f"$s.WorkingDirectory = {ps_literal(str(target.parent))}; $s.IconLocation = {ps_literal(str(target) + ',0')}; "
             "$s.Save()")
 
+    def is_file(self, path: Path) -> bool:
+        return Path(path).is_file()
+
     def remove_file(self, path: Path) -> None:
         try:
             path.unlink()
@@ -77,8 +90,10 @@ class Ops:
             pass
 
     def register(self, values: dict[str, Any]) -> None:
+        """The all-users "Apps & features" entry (HKLM, 64-bit view). Needs Admin."""
         import winreg
-        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY) as k:
+        with winreg.CreateKeyEx(winreg.HKEY_LOCAL_MACHINE, UNINSTALL_KEY, 0,
+                                winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY) as k:
             for name, value in values.items():
                 kind = winreg.REG_DWORD if isinstance(value, int) else winreg.REG_SZ
                 winreg.SetValueEx(k, name, 0, kind, value)
@@ -86,17 +101,33 @@ class Ops:
     def unregister(self) -> None:
         import winreg
         try:
-            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY)
+            winreg.DeleteKeyEx(winreg.HKEY_LOCAL_MACHINE, UNINSTALL_KEY, winreg.KEY_WOW64_64KEY)
         except FileNotFoundError:
             pass
 
     def registered_location(self) -> str | None:
+        return _install_location(machine=True)
+
+    def legacy_location(self) -> str | None:
+        """Where this user's per-user install of 0.5.0 or earlier is, if any (its HKCU entry)."""
+        return _install_location(machine=False)
+
+    def unregister_legacy(self) -> None:
         import winreg
         try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY) as k:
-                return winreg.QueryValueEx(k, "InstallLocation")[0]
-        except OSError:
-            return None
+            winreg.DeleteKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY)
+        except FileNotFoundError:
+            pass
+
+    def install_machine(self) -> Any:
+        """The elevated half of install (one UAC prompt); returns the ElevationResult."""
+        from .elevation import run_elevated
+        return run_elevated("install-machine", "-", timeout_s=600)
+
+    def uninstall_machine(self) -> Any:
+        """The elevated half of uninstall; it deletes the program folder once this process has exited."""
+        from .elevation import run_elevated
+        return run_elevated("uninstall-machine", str(os.getpid()), timeout_s=600)
 
     def task_install(self, exe: Path) -> None:
         """Keeps "highest privileges" if the user had set it (an upgrade must not quietly turn
@@ -164,13 +195,26 @@ class Ops:
         check_deletable(path, marker=None)
         shutil.rmtree(path, ignore_errors=True)
 
-    def delete_after_exit(self, folder: Path) -> None:
-        """The program folder holds the running uninstaller (its exe and DLLs stay locked until
-        the result box is closed): remove it once this process has ended."""
+    def delete_program_folder(self, folder: Path) -> None:
+        """A program folder that runs nothing any more (an earlier copy, stopped first)."""
+        check_deletable(folder, marker=runtime.EXE_NAME)
+        shutil.rmtree(folder)
+
+    def replace_tree(self, src: Path, dst: Path) -> None:
+        """The program folder becomes an exact copy of `src`: an earlier version's files must not linger."""
+        if Path(dst).exists() and (Path(dst) / runtime.EXE_NAME).is_file():
+            check_deletable(dst, marker=runtime.EXE_NAME)
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+
+    def delete_after_exit(self, folder: Path, also_wait: int | None = None) -> None:
+        """The program folder holds this running process (its exe and DLLs stay locked until it ends,
+        and so does the uninstaller's, `also_wait`): remove it once both have exited."""
         import base64
         from .winsys import ps_literal
         check_deletable(folder, marker=runtime.EXE_NAME)
-        script = (f"Wait-Process -Id {os.getpid()} -Timeout 3600 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; "
+        pids = ",".join(str(p) for p in (os.getpid(), also_wait) if p)
+        script = (f"Wait-Process -Id {pids} -Timeout 3600 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; "
                   f"Remove-Item -LiteralPath {ps_literal(str(Path(folder).resolve()))} -Recurse -Force")
         encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
         # Not DETACHED: powershell.exe without any console exits at once and does nothing (seen on
@@ -178,6 +222,17 @@ class Ops:
         subprocess.Popen(["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
                          cwd=os.environ.get("TEMP") or None,       # never inside the folder it deletes
                          creationflags=NEW_GROUP | CREATE_NO_WINDOW, close_fds=True)
+
+
+def _install_location(machine: bool) -> str | None:
+    import winreg
+    root, access = ((winreg.HKEY_LOCAL_MACHINE, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) if machine
+                    else (winreg.HKEY_CURRENT_USER, winreg.KEY_READ))
+    try:
+        with winreg.OpenKeyEx(root, UNINSTALL_KEY, 0, access) as k:
+            return winreg.QueryValueEx(k, "InstallLocation")[0]
+    except OSError:
+        return None
 
 
 def check_deletable(path: Path, marker: str | None) -> None:
@@ -209,58 +264,129 @@ def check_target(source: Path, target: Path) -> None:
         raise ValueError(i18n.t("installer.target_not_empty", target=str(target)))
 
 
-def install_steps(source: Path, target: Path, ops: Ops) -> list[Step]:
+def machine_steps(source: Path, target: Path, ops: Ops) -> list[Step]:
+    """The elevated half of install, for all users (ADR-0019). `source` is the folder of the exe that runs
+    it: the helper copies its own folder, never a path its caller names."""
     exe = target / runtime.EXE_NAME
-    # An earlier copy may be running (upgrade, or the monitor started from source): its exe is
-    # locked against the copy, and its monitor would keep the port and ignore the new task.
-    steps = [Step(msg("installer.step.stop"), lambda: (ops.stop_other_instances(target), ops.task_stop()),
-                  required=False)]
+    # An earlier copy may be running (upgrade): its exe is locked against the copy.
+    steps = [Step(msg("installer.step.stop"), lambda: ops.stop_other_instances(target), required=False)]
     if source.resolve() != target.resolve():
-        steps.append(Step(msg("installer.step.copy", target=str(target)), lambda: ops.copy_tree(source, target)))
+        steps.append(Step(msg("installer.step.copy", target=str(target)), lambda: ops.replace_tree(source, target)))
     steps += [
-        Step(msg("installer.step.task"), lambda: ops.task_install(exe)),
-        Step(msg("installer.step.shortcuts"), lambda: (ops.shortcut(start_menu_link(), exe),
-                                                       ops.shortcut(startup_link(), exe, "desktop --minimized"))),
         Step(msg("installer.step.register"), lambda: ops.register({
             "DisplayName": runtime.APP_NAME, "DisplayVersion": __version__, "Publisher": PUBLISHER,
             "InstallLocation": str(target), "DisplayIcon": f"{exe},0",
             "UninstallString": f'"{exe}" uninstall', "QuietUninstallString": f'"{exe}" uninstall --yes',
             "NoModify": 1, "NoRepair": 1})),
+        Step(msg("installer.step.shortcut_all"), lambda: ops.shortcut(common_start_menu_link(), exe)),
+    ]
+    return steps
+
+
+def remove_legacy(folder: Path, ops: Ops) -> None:
+    """A per-user install of 0.5.0 or earlier: stop it, drop its entry and shortcut, delete its folder.
+    Its data folder and the backups are shared with the new install and stay."""
+    ops.stop_other_instances(folder)
+    ops.remove_file(start_menu_link())
+    ops.unregister_legacy()
+    ops.delete_program_folder(folder)
+
+
+def user_steps(target: Path, ops: Ops) -> list[Step]:
+    """The half of install that belongs to the user who runs it, not elevated (ADR-0019)."""
+    exe = target / runtime.EXE_NAME
+    steps = []
+    legacy = ops.legacy_location()
+    if legacy and Path(legacy).resolve() != target.resolve():
+        steps.append(Step(msg("installer.step.legacy", folder=legacy), lambda: remove_legacy(Path(legacy), ops),
+                          required=False))
+    steps += [
+        Step(msg("installer.step.task"), lambda: ops.task_install(exe)),
+        Step(msg("installer.step.startup"), lambda: ops.shortcut(startup_link(), exe, "desktop --minimized")),
         Step(msg("installer.step.start"), lambda: (ops.task_start(), ops.launch(exe, ["desktop"])), required=False),
     ]
     return steps
 
 
+def install(target: Path, ops: Ops) -> list[tuple[str, bool, str]]:
+    """The elevated half first (one UAC prompt), then this user's half. Under over-the-shoulder UAC the
+    helper's result cannot reach this user (ADR-0005), so a missing result is checked by its effect."""
+    exe = target / runtime.EXE_NAME
+    text = i18n.render(msg("installer.step.machine", target=str(target)))
+    res = ops.install_machine()
+    if getattr(res, "cancelled", False):
+        return [(text, False, i18n.render(res.message))]
+    done = res.ok or (ops.registered_location() == str(target) and ops.is_file(exe))
+    if not done:
+        return [(text, False, i18n.render(res.message))]
+    return [(text, True, "")] + run_steps(user_steps(target, ops))
+
+
+def install_machine(ops: Ops | None = None) -> dict[str, Any]:
+    """Run by the elevated helper (`install-machine`): this exe's folder becomes the all-users install."""
+    ops = ops or Ops()
+    if not runtime.FROZEN:
+        return {"ok": False, "message": msg("installer.packaged_only")}
+    source, target = runtime.install_dir(), default_target()
+    try:
+        check_target(source, target)
+    except ValueError as exc:
+        return {"ok": False, "message": str(exc)}
+    results = run_steps(machine_steps(source, target, ops))
+    failed = [f"{text}: {err}" for text, ok, err in results if not ok]
+    return {"ok": not failed, "message": "; ".join(failed) if failed else msg("installer.installed"),
+            "target": str(target)}
+
+
 def uninstall_steps(target: Path, ops: Ops, delete_data: bool) -> list[Step]:
     state: dict[str, bool] = {"restored": True}
 
-    def restore() -> None:
-        if not ops.backups_left() and not ops.store_left():
-            return
-        ok, message = ops.restore_everything()
-        state["restored"] = ok
-        if not ok:
-            raise RuntimeError(i18n.render(message))
+    def machine() -> None:
+        """Elevated: restore everything, then remove the all-users parts and (after exit) the folder."""
+        res = ops.uninstall_machine()
+        if res.ok or (not getattr(res, "cancelled", False) and ops.registered_location() is None):
+            return     # done (or, under over-the-shoulder UAC, no result but the entry is gone)
+        state["restored"] = False
+        raise RuntimeError(i18n.render(res.message))
 
     def data() -> None:
         if not delete_data:
             return
         if not state["restored"] or ops.backups_left():
-            raise RuntimeError(i18n.t("installer.keep_backup"))   # backup.json is the only copy of the originals
+            raise RuntimeError(i18n.t("installer.keep_backup"))   # the backups are the only copy of the originals
         ops.delete_tree(config.user_dir())
 
     # Put everything back first, with the app stopped so it cannot switch anything meanwhile. If
     # that fails (UAC declined...) stop there: the app stays installed, able to try again later.
     return [
         Step(msg("installer.step.stop"), lambda: (ops.stop_other_instances(target), ops.task_stop()), required=False),
-        Step(msg("installer.step.restore"), restore),
+        Step(msg("installer.step.machine_uninstall"), machine),
         Step(msg("installer.step.untask"), ops.task_stop_and_delete, required=False),
-        Step(msg("installer.step.unshortcut"), lambda: (ops.remove_file(start_menu_link()), ops.remove_file(startup_link())),
+        Step(msg("installer.step.unshortcut"), lambda: (ops.remove_file(startup_link()), ops.remove_file(start_menu_link())),
              required=False),
-        Step(msg("installer.step.unregister"), ops.unregister, required=False),
         Step(msg("installer.step.data" if delete_data else "installer.step.keep_data"), data, required=False),
-        Step(msg("installer.step.remove", target=str(target)), lambda: ops.delete_after_exit(target), required=False),
     ]
+
+
+def uninstall_machine(wait_pid: int, ops: Ops | None = None) -> dict[str, Any]:
+    """Run by the elevated helper (`uninstall-machine`): put everything back; only then remove the
+    all-users entry and shortcut, and delete the program folder once the helper and the uninstaller
+    (`wait_pid`) have exited. If anything cannot be restored, the app stays installed."""
+    from .elevated import restore_everything
+    ops = ops or Ops()
+    target = runtime.install_dir()
+    if not (runtime.FROZEN and is_installed(ops)):
+        return {"ok": False, "message": msg("installer.not_installed", folder=str(target))}
+    restored = restore_everything()
+    if not restored.get("ok"):
+        return restored
+    for step in (ops.unregister, lambda: ops.remove_file(common_start_menu_link()),
+                 lambda: ops.delete_after_exit(target, also_wait=wait_pid)):
+        try:
+            step()
+        except Exception as exc:
+            log.warning("uninstall step failed: %r", exc)
+    return restored
 
 
 def run_steps(steps: list[Step], dry_run: bool = False) -> list[tuple[str, bool, str]]:
@@ -283,7 +409,7 @@ def run_steps(steps: list[Step], dry_run: bool = False) -> list[tuple[str, bool,
 
 
 def is_installed(ops: Ops | None = None) -> bool:
-    """True when this exe runs from its registered install folder."""
+    """True when this exe runs from its registered all-users install folder."""
     location = (ops or Ops()).registered_location()
     return bool(location) and Path(location).resolve() == runtime.install_dir().resolve()
 
@@ -316,14 +442,13 @@ def main(argv: list[str] | None = None, ops: Ops | None = None) -> int:
     ap = argparse.ArgumentParser(prog=runtime.EXE_NAME, description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("action", choices=["install", "uninstall"])
-    ap.add_argument("--target", help="install folder (default: %%LOCALAPPDATA%%\\Programs\\Ambysto Steady)")
     ap.add_argument("--delete-data", action="store_true", help="uninstall: also delete measurements and settings")
     ap.add_argument("--dry-run", action="store_true", help="only list the steps")
     ap.add_argument("--yes", action="store_true", help="do not ask")
     args = ap.parse_args(argv)
     ops = ops or Ops()
     if args.action == "install":
-        target = Path(args.target) if args.target else default_target()
+        target = default_target()
         if not runtime.FROZEN and not args.dry_run:
             print("install works from the packaged build only (scripts/build.py); use --dry-run here")
             return 2
@@ -334,16 +459,14 @@ def main(argv: list[str] | None = None, ops: Ops | None = None) -> int:
             if not args.yes:
                 _message_box(str(exc), runtime.APP_NAME, MB_OK | MB_ICONWARN)
             return 2
-        steps = install_steps(runtime.install_dir(), target, ops)
-        if not args.yes and not args.dry_run and _message_box(
-                i18n.t("installer.confirm_install", target=str(target)), runtime.APP_NAME,
-                MB_YESNO | MB_ICONQUESTION) != IDYES:
-            return 1
-        results = run_steps(steps, args.dry_run)
         if args.dry_run:
-            print("\n".join(text for text, _, _ in results))
+            plan = machine_steps(runtime.install_dir(), target, ops) + user_steps(target, ops)
+            print("\n".join(text for text, _, _ in run_steps(plan, dry_run=True)))
             return 0
-        return report(results, "installer.installed", "installer.install_failed", quiet=args.yes)
+        if not args.yes and _message_box(i18n.t("installer.confirm_install", target=str(target)), runtime.APP_NAME,
+                                         MB_YESNO | MB_ICONQUESTION) != IDYES:
+            return 1
+        return report(install(target, ops), "installer.installed", "installer.install_failed", quiet=args.yes)
     target = runtime.install_dir()
     # Uninstalling deletes the program folder: only ever the packaged app's own, registered folder.
     # From source (that would be the repository) or from an unzipped copy that was never installed: refuse.

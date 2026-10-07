@@ -103,6 +103,32 @@ def is_admin() -> bool:
         return False
 
 
+# Known folders (SHGetKnownFolderPath): read from the shell, never from environment variables a user
+# can set in HKCU\Environment (ADR-0019).
+FOLDERID_PROGRAM_FILES = "905e63b6-c1bf-494e-b29c-65b732d3d21a"
+FOLDERID_COMMON_PROGRAMS = "0139d44e-6afe-49f2-8690-3dafcae6ffb8"   # Start menu programs of all users
+
+
+class _Guid(ctypes.Structure):
+    _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort),
+                ("Data4", ctypes.c_ubyte * 8)]
+
+
+def known_folder(folder_id: str) -> str:
+    """The path of a known folder; raises OSError when the shell cannot give it."""
+    import uuid
+    u = uuid.UUID(folder_id)
+    guid = _Guid(u.fields[0], u.fields[1], u.fields[2], (ctypes.c_ubyte * 8)(*u.bytes[8:]))
+    path = ctypes.c_wchar_p()
+    hr = ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(guid), 0, None, ctypes.byref(path))
+    try:
+        if hr != 0:
+            raise OSError(f"SHGetKnownFolderPath({folder_id}) failed: 0x{hr & 0xFFFFFFFF:08x}")
+        return path.value
+    finally:
+        ctypes.windll.ole32.CoTaskMemFree(path)
+
+
 # --- netsh wlan show interfaces ------------------------------------------------
 
 _KV_RE = re.compile(r"^\s*([^:]+?)\s*:\s*(.*)$")

@@ -265,6 +265,8 @@
   "server.action.no_wifi_card": "Keine Wi‑Fi-Karte gefunden",
 
   "elevation.not_admin": "Der Prozess hat keine Administratorrechte",
+
+  "elevation.not_installed": "Zum Ändern von Windows-Einstellungen muss Ambysto Steady für alle Benutzer installiert sein (unter Programme). Öffnen Sie die heruntergeladene App einmal, um sie zu installieren.",
   "elevation.unknown_tweak": "Im Katalog gibt es keine Optimierung „{tweak}“",
   "elevation.cancelled": "Abgebrochen: Administratorrechte wurden nicht gewährt",
   "elevation.launch_failed": "Der Administratorprozess konnte nicht gestartet werden (Fehler {error})",
@@ -748,8 +750,14 @@
   "ui.failover.kind.ethernet": "Kabel",
   "ui.failover.kind.other": "Andere",
 
-  "installer.confirm_install": "Ambysto Steady für diesen Windows-Benutzer installieren?\n\nOrdner: {target}\nDer Netzwerkmonitor startet mit Windows, und die App erscheint im Startmenü und im Infobereich. Es sind keine Administratorrechte nötig.",
+  "installer.confirm_install": "Ambysto Steady für alle Benutzer dieses PCs installieren?\n\nOrdner: {target}\nWindows fragt einmal nach Administratorzustimmung. Der Netzwerkmonitor startet für Sie mit Windows, und die App erscheint im Startmenü und im Infobereich.",
   "installer.confirm_uninstall": "Ambysto Steady deinstallieren?\n\nJede von der App eingeschaltete Optimierung wird zuvor auf ihren ursprünglichen Wert zurückgesetzt (Windows fragt eventuell einmal nach Administratorbestätigung).",
+  "installer.step.machine_uninstall": "Alle Optimierungen zurücksetzen und das Programm für alle Benutzer entfernen (Administratorzustimmung)",
+  "installer.step.startup": "Infobereich-Symbol bei der Anmeldung anzeigen",
+  "installer.step.shortcut_all": "Startmenü-Verknüpfung für alle Benutzer hinzufügen",
+  "installer.step.legacy": "Die frühere, nur für diesen Benutzer installierte Kopie entfernen: {folder}",
+  "installer.step.machine": "Programm für alle Benutzer in {target} installieren (Administratorzustimmung)",
+  "installer.packaged_only": "Die Installation funktioniert nur aus der gepackten App.",
   "installer.ask_delete_data": "Auch die Messwerte, Einstellungen und Protokolle löschen?\n\n{folder}\n\n„Nein“ wählen, um sie für eine spätere Neuinstallation zu behalten.",
   "installer.installed": "Ambysto Steady ist installiert.",
   "installer.install_failed": "Die Installation wurde nicht abgeschlossen.",
@@ -761,16 +769,12 @@
 
   "installer.step.copy": "Programm nach {target} kopieren",
   "installer.step.task": "Netzwerkmonitor mit Windows starten",
-  "installer.step.shortcuts": "Verknüpfungen im Startmenü und im Infobereich hinzufügen",
   "installer.step.register": "Zu Apps & Features hinzufügen",
   "installer.step.start": "Monitor starten und das Fenster öffnen",
   "installer.step.stop": "App und Monitor beenden",
-  "installer.step.restore": "Jede Optimierung auf ihren ursprünglichen Wert zurücksetzen",
   "installer.step.unshortcut": "Verknüpfungen entfernen",
-  "installer.step.unregister": "Aus Apps & Features entfernen",
   "installer.step.data": "Messwerte, Einstellungen und Protokolle löschen",
   "installer.step.keep_data": "Messwerte, Einstellungen und Protokolle behalten",
-  "installer.step.remove": "Programmordner {target} entfernen",
 
   "installer.not_installed": "Keine Deinstallation: {folder} ist keine installierte Kopie von Ambysto Steady.",
 

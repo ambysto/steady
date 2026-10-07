@@ -236,7 +236,17 @@ def _apply(args: list[str], ok_message: str, runner: Runner | None) -> ActionRes
 
 
 def install(highest: bool = False, runner: Runner | None = None, exe: Path | None = None) -> ActionResult:
-    """Creates/replaces the logon task. Changes the machine. `exe`: a packaged build to run."""
+    """Creates/replaces the logon task. Changes the machine. `exe`: a packaged build to run.
+
+    Highest privileges run the monitor elevated at every logon with no prompt, so a packaged exe gets
+    them only from a folder under Program Files, which a process without Admin rights cannot change
+    (ADR-0019). From source they stay available (development)."""
+    from . import runtime
+    if highest and (exe is not None or runtime.FROZEN):
+        program = _task_command(exe)[0]
+        if not runtime.is_protected(program.parent):
+            return ActionResult(False, f"highest privileges need the app installed under Program Files, not {program.parent}"
+                                       " (ADR-0019)", [])
     fd, path = tempfile.mkstemp(prefix="stableinternet-task-", suffix=".xml")
     try:
         with os.fdopen(fd, "wb") as fh:

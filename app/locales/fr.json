@@ -265,6 +265,8 @@
   "server.action.no_wifi_card": "Aucune carte Wi‑Fi trouvée",
 
   "elevation.not_admin": "Le processus n'a pas les droits d'administrateur",
+
+  "elevation.not_installed": "Pour modifier les paramètres de Windows, Ambysto Steady doit être installé pour tous les utilisateurs (dans Program Files). Ouvrez une fois l'application téléchargée pour l'installer.",
   "elevation.unknown_tweak": "Il n'existe aucun tweak « {tweak} » dans le catalogue",
   "elevation.cancelled": "Annulé : les droits d'administrateur n'ont pas été accordés",
   "elevation.launch_failed": "Impossible de lancer le processus administrateur (erreur {error})",
@@ -748,8 +750,14 @@
   "ui.failover.kind.ethernet": "Câble",
   "ui.failover.kind.other": "Autre",
 
-  "installer.confirm_install": "Installer Ambysto Steady pour cet utilisateur Windows ?\n\nDossier : {target}\nLe moniteur réseau démarrera avec Windows, et l'application apparaîtra dans le menu Démarrer et la zone de notification. Aucun droit d'administrateur n'est nécessaire.",
+  "installer.confirm_install": "Installer Ambysto Steady pour tous les utilisateurs de ce PC ?\n\nDossier : {target}\nWindows demandera une fois l'approbation d'un administrateur. Le moniteur réseau démarrera avec Windows pour vous, et l'application apparaîtra dans le menu Démarrer et la zone de notification.",
   "installer.confirm_uninstall": "Désinstaller Ambysto Steady ?\n\nChaque optimisation activée par l'application est d'abord remise à sa valeur d'origine (Windows peut demander une fois l'approbation de l'administrateur).",
+  "installer.step.machine_uninstall": "Rétablir toutes les optimisations et supprimer le programme pour tous les utilisateurs (approbation administrateur)",
+  "installer.step.startup": "Afficher l'icône de la zone de notification à l'ouverture de session",
+  "installer.step.shortcut_all": "Ajouter le raccourci du menu Démarrer pour tous les utilisateurs",
+  "installer.step.legacy": "Supprimer la copie précédente installée pour cet utilisateur seulement : {folder}",
+  "installer.step.machine": "Installer le programme pour tous les utilisateurs dans {target} (approbation administrateur)",
+  "installer.packaged_only": "L'installation ne fonctionne qu'à partir de l'application empaquetée.",
   "installer.ask_delete_data": "Supprimer aussi les mesures, les paramètres et les journaux ?\n\n{folder}\n\nChoisissez Non pour les conserver en vue d'une réinstallation ultérieure.",
   "installer.installed": "Ambysto Steady est installé.",
   "installer.install_failed": "L'installation ne s'est pas terminée.",
@@ -761,16 +769,12 @@
 
   "installer.step.copy": "Copier le programme dans {target}",
   "installer.step.task": "Démarrer le moniteur réseau avec Windows",
-  "installer.step.shortcuts": "Ajouter les raccourcis du menu Démarrer et de la zone de notification",
   "installer.step.register": "Ajouter à Applications et fonctionnalités",
   "installer.step.start": "Démarrer le moniteur et ouvrir la fenêtre",
   "installer.step.stop": "Arrêter l'application et le moniteur",
-  "installer.step.restore": "Remettre chaque optimisation à sa valeur d'origine",
   "installer.step.unshortcut": "Supprimer les raccourcis",
-  "installer.step.unregister": "Retirer de Applications et fonctionnalités",
   "installer.step.data": "Supprimer les mesures, les paramètres et les journaux",
   "installer.step.keep_data": "Conserver les mesures, les paramètres et les journaux",
-  "installer.step.remove": "Supprimer le dossier du programme {target}",
 
   "installer.not_installed": "Pas de désinstallation : {folder} n'est pas une copie installée de Ambysto Steady.",
 
