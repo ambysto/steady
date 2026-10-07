@@ -255,9 +255,9 @@ The speed changes made by hand on 2026-08-31 were applied together and measured 
 | `rsc_off` | not supported | **Not applicable:** the card reports no RSC hardware (`RscHardwareCapabilities` IPv4/IPv6 = False). The "RSC off" done by hand on 08-31 never had an effect on this card. |
 | `packet_coalescing_off` | ON (global `PacketCoalescingFilter` = Disabled) | Measured in EXP-018: no clear difference (upload only). |
 | `tcp_ecn` | ON (set by hand 08-31) | Measured in EXP-017: no clear difference. |
-| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Not to be enabled from the app yet:** the code review found that its restore broke when the uplink changed, and that the static DNS followed the card to other networks. PR #30 fixes both; a remaining gap (switching it off from the UI while offline or on another uplink) is being fixed. Then the baseline needs DNS back to DHCP (write). |
-| `upload_shaping` (upload limit) | built after this inventory (PR #25) | First run in EXP-015: refused, latency rose only 25 ms under upload. That load was capped at 80 Mbps (see EXP-017), so the line's real behaviour under a full upload is still unknown. |
-| MTU from path MTU | not built yet (interface MTU 1492 set by hand) | Waits for the tweak. Baseline needs MTU 1500 (write). |
+| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Measured in EXP-021: about 3× slower than the router's DNS.** Now experimental. |
+| `upload_shaping` (upload limit) | built after this inventory (PR #25) | **Measured in EXP-019: better** (p95 under upload about halved, loss 26–33% → 10–12%). EXP-015's refusal was an artifact of the old 80 Mbps load limit. |
+| MTU from path MTU (`mtu_pmtu`) | built after this inventory (PR #40) | **Measured in EXP-020:** refused at 1500 (path MTU discovery works); 1492 vs 1500 shows no latency difference and ~9% more upload. |
 
 Conditions seen at the same time:
 
@@ -308,6 +308,53 @@ Conditions seen at the same time:
 - The bufferbloat check caps each 10-second load phase at `MAX_BYTES` = 100 MB, i.e. **80 Mbps**. Every phase here ran at 79–80 Mbps, so on a faster line the check never fills the queue and reports "OK" without having tested it. The upload limit (`upload_shaping`, ADR-0016) inherits the blind spot: its value is the measured upload speed times a margin, so on a line faster than 80 Mbps it either says "not needed" (as in EXP-015) or, when latency already rises at 80 Mbps, sets a limit below what the line can carry.
 - After about 6 runs in 10 minutes, speed.cloudflare.com answers `HTTP 429` to the download, and the check carries on with upload only.
 - Internet ICMP loss of 5–23% under load matches the ICMP-only loss seen in EXP-014, so loss under load is a weak signal on this line.
+
+## EXP-019 — `upload_shaping`: A/B/A/B (2026-10-07 11:20, +07)
+
+- **Done with:** an elevated helper script, with the tunnel off and the app at `main` fa7507f (with the 1 GB load limit of SIC-93 and the review fixes of #36). A = no limit (`python -m app.tweaks disable upload_shaping --apply`); B = `enable upload_shaping --apply`: the tool measures the upload, sets 85% of it, measures again, and adds six unthrottled policies for the local network. Each round then runs `python -m app.diagnostics --bufferbloat`. The tweak was turned off at the end; no QoS policy was left.
+- **What the tool itself measured on enable:** limit 197.1 Mbps (upload 232 Mbps), rise under upload **96 → 17 ms**; second time limit 192.0 Mbps (upload 226 Mbps), **148 → 18 ms**.
+
+  | Round | Limit | Upload | Internet under upload: added / p95 / loss | Router under upload: added / p95 / loss |
+  |---|---|---|---|---|
+  | 1 | A none | 156 Mbps | +91 ms / 340 ms / 33% | +76 ms / 217 ms / 31% |
+  | 2 | B 197 Mbps | 154 Mbps | −38 ms* / 163 ms / 10% | −2 ms / 34 ms / 2% |
+  | 3 | A none | 244 Mbps | +32 ms / 317 ms / 26% | +16 ms / 193 ms / 8% |
+  | 4 | B 192 Mbps | 170 Mbps | +9 ms / 122 ms / 12% | +13 ms / 110 ms / 8% |
+
+  *The idle reading of round 2 was disturbed (Internet 93 ms instead of ~50), so its "added" figure is not meaningful; its p95 and loss are.
+- **Result: better.** With the limit, p95 latency under upload is about halved, loss drops from 26–33% to 10–12%, and the median rise falls to the noise; the tool's own before/after agrees (96 → 17 ms, 148 → 18 ms). The cost is ~15% of the peak upload speed. The queue builds on the PC ↔ router hop (the router target rises as much as the Internet one), which is where a limit set on the PC helps.
+- `upload_shaping` stays at **medium** risk; it has earned its place on this line.
+- **Left on** (11:4x, with the owner's agreement): limit 191.8 Mbps (85% of 225.7), the tool's own check 104 → 52 ms.
+
+## EXP-020 — MTU 1500 vs 1492, and `mtu_pmtu` (2026-10-07 11:25, +07)
+
+- **Done with:** the same script. A = `netsh interface ipv4 set subinterface "Wi-Fi" mtu=1500 store=persistent` (the Windows default), B = 1492 (the hand-set value of 08-31). Each round: check #16 and `--bufferbloat` (the download was refused by the test server, HTTP 429, so upload only). Put back to 1492 at the end.
+- **`mtu_pmtu` at 1500:** refused, "routers answer 'packet too big' (the path allows 1492 of 1500 bytes), so connections already adapt by themselves; nothing was changed". Check #16 agrees (info at 1500, ok at 1492). This is the intended behavior.
+
+  | Round | MTU | Upload | Internet under upload: added / p95 / loss |
+  |---|---|---|---|
+  | 1 | A 1500 | 223 Mbps | +82 ms / 281 ms / 26% |
+  | 2 | B 1492 | 243 Mbps | +69 ms / 289 ms / 36% |
+  | 3 | A 1500 | 212 Mbps | +46 ms / 279 ms / 21% |
+  | 4 | B 1492 | 241 Mbps | +41 ms / 212 ms / 22% |
+
+- **Result: latency, no clear difference; upload throughput about 9% higher at 1492** in both B rounds (243 / 241 vs 223 / 212 Mbps, a gap larger than the A-to-A spread). Two rounds each is thin evidence. A plausible cause: every new upload connection at 1500 has to learn the path MTU from a "too big" reply first.
+- The hand-set 1492 stays. `mtu_pmtu` refusing when path MTU discovery works is right for latency, but it may leave a small throughput gain unused; worth re-checking with more rounds before changing the rule.
+
+## EXP-021 — `dns_fastest` vs the router's DNS (2026-10-07 11:29, +07)
+
+- **Done with:** the same script. A = DNS from DHCP (the router), B = `python -m app.tweaks enable dns_fastest --apply` (it benchmarked and chose 8.8.8.8, 149.112.112.112, 8.8.4.4, then 8.8.8.8, 1.1.1.1, 8.8.4.4 with DoH). Per round, after `Clear-DnsClientCache`: 40 lookups of names that cannot be cached anywhere (a random label under 8 large domains, so every resolver recurses) and 20 popular names, timed through the Windows resolver. The hand-set DNS (static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 with DoH) and all DoH entries were put back exactly at the end.
+
+  | Round | DNS | Uncached: median / p90 | Popular: median / p90 |
+  |---|---|---|---|
+  | 1 | A router | 79 / 117 ms | 29 / 63 ms |
+  | 2 | B `dns_fastest` | 285 / 384 ms | 77 / 84 ms |
+  | 3 | A router | 86 / 102 ms | 12 / 75 ms |
+  | 4 | B `dns_fastest` | 260 / 502 ms | 73 / 158 ms |
+
+- **Result: worse, by about 3×.** The router (the ISP's resolver behind it) answers uncached names in ~80 ms and popular ones in 12–29 ms; the public servers over DoH take ~270 ms and ~75 ms. The tweak's benchmark only ranks the public providers against each other and never against the DNS already in use, so it "chooses the fastest" of a slower group.
+- `dns_fastest` is now **experimental** ([TWEAKS.md](TWEAKS.md)); it should compare against the current DNS and refuse when it is not faster (follow-up item). The hand-set public DNS on this PC is the same kind of setup as B, so it is slow too: the router's DNS is the better choice here.
+- **This PC now uses the router's DNS** (DHCP; with the owner's agreement). The DoH entries were left as they were; they are not used with the router's DNS.
 
 ## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 

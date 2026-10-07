@@ -1444,7 +1444,7 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
         OffloadGlobalTweak("packet_coalescing_off", _name("packet_coalescing_off"), "experimental",
                            setting="PacketCoalescingFilter", target="Disabled", group=GROUP_STACK,
                            note=_note("packet_coalescing_off")),
-        DnsFastestTweak("dns_fastest", _name("dns_fastest"), "medium", benchmark=dns_benchmark, captive=captive,
+        DnsFastestTweak("dns_fastest", _name("dns_fastest"), "experimental", benchmark=dns_benchmark, captive=captive,
                         group=GROUP_STACK, note=_note("dns_fastest")),
         # 4. Measured tweaks (ADR-0016)
         UploadShapingTweak("upload_shaping", _name("upload_shaping"), "medium", group=GROUP_MEASURED,
