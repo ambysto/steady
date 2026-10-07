@@ -638,6 +638,7 @@ def fake_context(**overrides):
         "ping_rows_5m": lambda: [], "minutes": lambda: [minute(i) for i in range(100)],
         "dns_bench": lambda: ([bench("1.1.1.1", [40] * 5)], ["1.1.1.1"], {"1.1.1.1": "in_use"}),
         "tweak_states": lambda: None,
+        "route_rtts": lambda: dict(zip(diagnostics.ROUTE_HOSTS, (31, 35, 38, 42, 47))),
         "path_mtu": lambda: ({"alias": "Wi-Fi", "mtu": 1500}, [diagnostics.pmtu.PathResult("1.1.1.1", 1500, 2)]),
     }
     loaders.update(overrides)
@@ -647,8 +648,8 @@ def fake_context(**overrides):
 class RunAllTests(unittest.TestCase):
     def test_runs_all_default_checks_in_order(self):
         report = d.run_all(fake_context())
-        self.assertEqual([r.id for r in report.results], [*range(1, 14), 15])   # 14 runs only on demand
-        self.assertEqual(len({r.key for r in report.results}), 14)
+        self.assertEqual([r.id for r in report.results], [*range(1, 14), 15, 16])   # 14 runs only on demand
+        self.assertEqual(len({r.key for r in report.results}), 15)
         self.assertFalse([r for r in report.results if r.error])
 
     def test_a_broken_check_does_not_hide_the_others(self):
@@ -660,7 +661,7 @@ class RunAllTests(unittest.TestCase):
             self.assertEqual(by_key[key].status, d.INFO, key)
             self.assertIn("netsh died", by_key[key].error)
         self.assertIsNone(by_key["signal"].error)
-        self.assertEqual(len(report.results), 14)
+        self.assertEqual(len(report.results), 15)
 
     def test_only_filter(self):
         report = d.run_all(fake_context(), only={2, 13})
@@ -769,6 +770,103 @@ class LocalizationTests(unittest.TestCase):
         results = i18n.localize([r.to_dict() for r in d.run_all(fake_context(scan=boom)).results], "en")
         failed = next(r for r in results if r["key"] == "interference")
         self.assertEqual((failed["title"], failed["summary"]), ("Channel interference", "This check could not run"))
+
+
+def en(message):
+    return i18n.render(message, "en")
+
+
+def route(**ms):
+    """Sites with the given TCP connect times; the names stand for the real ones."""
+    return {host: ms.get(host.split(".")[0]) for host in diagnostics.ROUTE_HOSTS}
+
+
+class RouteTests(unittest.TestCase):
+    """Check 15: does one site take a detour the others do not?"""
+
+    def test_similar_times_are_fine(self):
+        r = diagnostics.evaluate_route(route(cloudflare=31, google=35, microsoft=38, wikipedia=42, apple=47))
+        self.assertEqual((r.id, r.key, r.status), (15, "route", diagnostics.OK))
+        self.assertEqual(en(r.summary), "Every reference site answers in a similar time (nearest 31 ms)")
+        self.assertEqual(r.advice, "")
+
+    def test_the_detour_of_the_31_august_session(self):
+        # google.com took 161 ms where the other sites took about 50 ms.
+        r = diagnostics.evaluate_route(route(cloudflare=48, google=161, microsoft=52, wikipedia=55, apple=60))
+        self.assertEqual(r.status, diagnostics.INFO)
+        self.assertEqual(r.summary["key"], "diag.route.detour")
+        self.assertEqual(r.summary["params"], {"near": 48.0, "hosts": "google.com"})
+        self.assertTrue(r.advice)
+        self.assertEqual([en(x) for x in r.details][:2], ["cloudflare.com: 48 ms (TCP connect)", "microsoft.com: 52 ms (TCP connect)"])
+        self.assertEqual(en(r.details[-1]), "google.com: 161 ms (TCP connect)")
+
+    def test_both_the_ratio_and_the_gap_must_be_exceeded(self):
+        # 3x but only 30 ms more: close sites at 10 ms and 30 ms are not a detour
+        self.assertEqual(diagnostics.evaluate_route(route(cloudflare=10, google=30, microsoft=11, wikipedia=12, apple=13)).status,
+                         diagnostics.OK)
+        # 90 ms more but only 1.9x: a slow line, not a detour
+        self.assertEqual(diagnostics.evaluate_route(route(cloudflare=100, google=190, microsoft=105, wikipedia=110, apple=115)).status,
+                         diagnostics.OK)
+
+    def test_several_far_sites_are_all_named_nearest_first(self):
+        r = diagnostics.evaluate_route(route(cloudflare=20, google=200, microsoft=22, wikipedia=150, apple=25))
+        self.assertEqual(r.summary["params"]["hosts"], "wikipedia.org, google.com")
+
+    def test_too_few_answers_say_nothing(self):
+        r = diagnostics.evaluate_route(route(cloudflare=20, google=300))
+        self.assertEqual((r.status, r.summary["key"]), (diagnostics.INFO, "diag.route.no_data"))
+        self.assertEqual(r.advice, "")
+        r = diagnostics.evaluate_route({})
+        self.assertEqual(r.summary["key"], "diag.route.no_data")
+
+    def test_a_tunnel_makes_the_measurement_meaningless(self):
+        r = diagnostics.evaluate_route(route(cloudflare=48, google=161, microsoft=52), tunnel_up=True)
+        self.assertEqual((r.status, r.summary["key"], r.advice), (diagnostics.INFO, "diag.route.tunnel_on", ""))
+
+    def test_the_check_does_not_measure_while_a_vpn_is_up(self):
+        def must_not_run():
+            raise AssertionError("measured through a tunnel")
+        vpn = adapter("WARP", "Cloudflare WARP Interface Tunnel", "Up", virtual=True)
+        r = diagnostics.run_all(fake_context(adapters=lambda: [adapter(), vpn], route_rtts=must_not_run), only={15}).results[0]
+        self.assertEqual((r.summary["key"], r.error), ("diag.route.tunnel_on", None))
+        off = adapter("WARP", "Cloudflare WARP Interface Tunnel", "Disconnected", virtual=True)
+        r = diagnostics.run_all(fake_context(adapters=lambda: [adapter(), off]), only={15}).results[0]
+        self.assertEqual(r.summary["key"], "diag.route.ok")
+
+    def test_measuring_resolves_first_and_takes_the_median(self):
+        calls = []
+
+        def resolve(host):
+            if host == "nodns.example":
+                raise OSError("no such host")
+            return {"a.example": "192.0.2.1", "b.example": "192.0.2.2", "c.example": "192.0.2.3"}[host]
+        times = {"192.0.2.1": [10.0, 50.0, 12.0], "192.0.2.2": [None, None, None], "192.0.2.3": [None, 30.0, 40.0]}
+
+        def connect(target, timeout):
+            host, port = target.split(":")
+            calls.append((host, port))
+            rtt = times[host].pop(0)
+            return diagnostics.probe.ProbeResult(rtt is not None, rtt)
+        got = diagnostics.measure_route(["a.example", "b.example", "c.example", "nodns.example"], resolve=resolve, connect=connect)
+        self.assertEqual(got, {"a.example": 12.0, "b.example": None, "c.example": 35.0, "nodns.example": None})
+        self.assertTrue(all(port == "443" for _, port in calls))      # to the address, so DNS time is not counted
+        self.assertEqual(len(calls), 9)
+
+    def test_it_is_in_the_default_run_and_not_on_demand(self):
+        self.assertIn((15, "route"), [(cid, key) for cid, key, _ in diagnostics.CHECKS])
+        self.assertNotIn(15, [cid for cid, _, _ in diagnostics.ON_DEMAND_CHECKS])
+
+
+class DnsTweakLinkTests(unittest.TestCase):
+    def test_a_broken_dns_in_use_points_at_the_dns_tweak(self):
+        r = diagnostics.evaluate_dns([bench("192.168.1.1", [40] * 4, failures=1), bench("1.1.1.1", [20] * 5)],
+                                     ["192.168.1.1"], {"192.168.1.1": "in_use"})
+        self.assertEqual((r.status, r.tweak), (diagnostics.WARN, "dns_fastest"))
+
+    def test_other_dns_results_do_not(self):
+        slower = diagnostics.evaluate_dns([bench("192.168.1.1", [80] * 5), bench("1.1.1.1", [20] * 5)],
+                                          ["192.168.1.1"], {"192.168.1.1": "in_use"})
+        self.assertIsNone(slower.tweak)
 
 
 class CliTests(unittest.TestCase):

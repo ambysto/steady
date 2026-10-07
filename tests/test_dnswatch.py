@@ -1,10 +1,12 @@
 import copy
 import socket
 import sys
+import time
 import unittest
 
 from app import config, i18n, winutil
-from app.dnswatch import DnsWatch, network_key
+from app.dnswatch import APP_CHANGE_WINDOW_S, DnsWatch, app_changed, network_key
+from app.i18n import msg
 from app.monitor import Monitor
 from app.storage import Storage
 
@@ -48,6 +50,38 @@ class DnsWatchTests(unittest.TestCase):
         w.observe(HOME, ["1.1.1.1", "8.8.8.8"])
         self.assertEqual([k for k, _, _ in w.observe(HOME, ["8.8.8.8", "1.1.1.1"])], ["dns_changed"])
 
+    def test_a_change_made_by_the_app_is_recorded_without_an_alarm(self):
+        w = DnsWatch()
+        w.observe(HOME, ["192.168.3.1"])
+        asked = []
+
+        def by_app():
+            asked.append(1)
+            return True
+        self.assertEqual(w.observe(HOME, ["1.1.1.1", "8.8.8.8"], by_app), [])
+        self.assertEqual(asked, [])                                  # not asked before the change is confirmed
+        (kind, message, level), = w.observe(HOME, ["1.1.1.1", "8.8.8.8"], by_app)
+        self.assertEqual((kind, level, len(asked)), ("dns_observed", "info", 1))
+        self.assertEqual(i18n.render(message, "en"),
+                         "This app changed the DNS servers of this network: 1.1.1.1, 8.8.8.8")
+        self.assertEqual(w.known[HOME], ["1.1.1.1", "8.8.8.8"])
+        self.assertEqual(w.observe(HOME, ["1.1.1.1", "8.8.8.8"], by_app), [])
+
+    def test_a_change_the_app_did_not_make_is_still_reported(self):
+        w = DnsWatch(confirm=1)
+        w.observe(HOME, ["1.1.1.1"])
+        self.assertEqual([k for k, _, _ in w.observe(HOME, ["6.6.6.6"], lambda: False)], ["dns_changed"])
+
+    def test_the_app_change_is_remembered_across_a_restart(self):
+        with Storage() as db:
+            first = DnsWatch(confirm=1)
+            first.observe(HOME, ["192.168.3.1"])
+            for kind, message, level in first.observe(HOME, ["1.1.1.1"], lambda: True):
+                db.add_event(100, kind, message, level=level)
+            second = DnsWatch(confirm=1)
+            second.seed(reversed(db.query_events(kinds=["dns_observed", "dns_changed"])))
+        self.assertEqual(second.known[HOME], ["1.1.1.1"])
+
     def test_seeded_from_stored_events_survives_a_restart(self):
         with Storage() as db:
             first = DnsWatch(confirm=1)
@@ -58,6 +92,23 @@ class DnsWatchTests(unittest.TestCase):
             second.seed(reversed(db.query_events(kinds=["dns_observed", "dns_changed"])))
         self.assertEqual(second.known[HOME], ["6.6.6.6"])
         self.assertEqual(second.observe(HOME, ["6.6.6.6"]), [])
+
+
+class AppChangedTests(unittest.TestCase):
+    @staticmethod
+    def event(kind, tweak_id, ts):
+        return {"ts": ts, "kind": kind, "message": msg("tweak.event.enabled", name="x", tweak_id=tweak_id)}
+
+    def test_only_a_recent_event_of_a_dns_tweak_counts(self):
+        now = 10_000
+        recent = self.event("tweak_enabled", "dns_fastest", now - 60)
+        self.assertTrue(app_changed([recent], now))
+        self.assertTrue(app_changed([self.event("tweak_disabled", "dns_fastest", now - 1)], now))
+        self.assertFalse(app_changed([self.event("tweak_enabled", "dns_fastest", now - APP_CHANGE_WINDOW_S - 1)], now))
+        self.assertFalse(app_changed([self.event("tweak_enabled", "tcp_ecn", now - 5)], now))      # not a DNS tweak
+        self.assertFalse(app_changed([self.event("tweak_failed", "dns_fastest", now - 5)], now))
+        self.assertFalse(app_changed([{"ts": now - 5, "kind": "tweak_enabled", "message": "plain text"}], now))
+        self.assertFalse(app_changed([], now))
 
 
 class MonitorDnsTests(unittest.TestCase):
@@ -86,6 +137,27 @@ class MonitorDnsTests(unittest.TestCase):
         self.assertEqual(len(self.toasts), 1)
         self.assertEqual(self.toasts[0][0], i18n.t("notify.dns_changed.title"))
         self.assertIn("6.6.6.6", self.toasts[0][1])
+
+    def test_a_change_the_app_just_made_is_not_toasted(self):
+        self.mon.check_dns()
+        self.db.add_event(int(time.time()), "tweak_enabled", msg("tweak.event.enabled", name="DNS", tweak_id="dns_fastest"))
+        self.table = {6: ["1.1.1.1", "8.8.8.8"]}
+        self.mon.check_dns()
+        self.mon.check_dns()
+        changed = self.db.query_events(kinds=["dns_changed"])
+        self.assertEqual(changed, [])
+        self.assertEqual(self.toasts, [])
+        last = self.db.query_events(kinds=["dns_observed"])[0]
+        self.assertEqual(last["message"]["key"], "event.dns_app_changed")
+
+    def test_another_tweak_does_not_excuse_a_dns_change(self):
+        self.mon.check_dns()
+        self.db.add_event(int(time.time()), "tweak_enabled", msg("tweak.event.enabled", name="ECN", tweak_id="tcp_ecn"))
+        self.table = {6: ["6.6.6.6"]}
+        self.mon.check_dns()
+        self.mon.check_dns()
+        self.assertEqual(len(self.db.query_events(kinds=["dns_changed"])), 1)
+        self.assertEqual(len(self.toasts), 1)
 
     def test_lookup_failure_is_contained(self):
         def boom():

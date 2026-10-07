@@ -195,7 +195,13 @@
   "diag.path_mtu.ok": "Gói bằng đúng MTU của card ({mtu} byte) đi qua được",
   "diag.path_mtu.too_big": "MTU của card ({mtu} byte) lớn hơn đường truyền cho phép ({path} byte)",
   "diag.path_mtu.pppoe": "1492 byte là giá trị thường gặp của kết nối Internet PPPoE",
-  "diag.path_mtu.advice": "Gói lớn có thể bị rơi dọc đường nên trang treo nửa chừng, tải xuống chập chờn. Đặt MTU của {name} thành {path} (quyền Admin: netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent), hoặc bật MSS clamping trên router.",
+  "diag.path_mtu.advice": "Gói lớn có thể bị rơi dọc đường nên trang treo nửa chừng, tải xuống chập chờn. Đặt MTU của {name} thành {path} (quyền Admin: netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent; với IPv6: netsh interface ipv6 set subinterface \"{name}\" mtu={path} store=persistent), hoặc bật MSS clamping trên router.",
+  "diag.path_mtu.no_ipv4": "Không có tuyến IPv4 ra Internet: kiểm tra này chỉ đo IPv4",
+  "diag.path_mtu.capped": "MTU của card trên {cap} byte (jumbo frame); Internet chỉ chở tối đa {cap} nên chỉ dò tới đó",
+  "diag.path_mtu.ok_capped": "Gói {cap} byte, mức tối đa Internet chở được, đi qua được",
+  "diag.path_mtu.reported": "Router trả lời \"gói quá lớn\" nên Windows tự giảm kích thước gói; gói lớn không bị mất",
+  "diag.path_mtu.one_target": "Chỉ một đích trả lời và đích đó có thể vốn đã rơi ping, nên đường truyền nhỏ hơn chưa được xác nhận",
+  "diag.path_mtu.silent": "Gói lớn biến mất mà không có trả lời \"gói quá lớn\": kết nối có thể treo (PMTUD blackhole)",
 
   "diag.bufferbloat.title": "Bufferbloat (độ trễ khi đường truyền bận)",
   "diag.bufferbloat.no_idle": "Không đo được: lúc rảnh không có phản hồi ping tới Internet",
@@ -217,6 +223,14 @@
   "diag.bufferbloat.by": "thêm {delta:.0f} ms",
   "diag.bufferbloat.rise": "Độ trễ ra Internet tăng {amount} khi đường truyền bận{where}",
   "diag.bufferbloat.advice": "Bật SQM / QoS thông minh (fq_codel hoặc CAKE) trên router và đặt giới hạn tải lên/xuống thấp hơn băng thông thật khoảng 5–10%. Nếu router không có SQM, giảm tốc độ tải lên của ứng dụng gây tải.",
+
+  "diag.route.title": "Đường đi tới các đích ở xa",
+  "diag.route.no_data": "Không so sánh được đường đi: có chưa đến 3 trang tham chiếu trả lời",
+  "diag.route.tunnel_on": "Đang bật VPN hoặc tunnel nên đường đo được là của tunnel, không phải của nhà mạng",
+  "diag.route.line": "{host}: {median:.0f} ms (kết nối TCP)",
+  "diag.route.ok": "Mọi trang tham chiếu đều trả lời trong thời gian gần nhau (gần nhất {near:.0f} ms)",
+  "diag.route.detour": "Một số trang tham chiếu đi đường dài hơn hẳn các trang còn lại (gần nhất {near:.0f} ms): {hosts}",
+  "diag.route.advice": "Thường là do tuyến của nhà mạng tới các đích đó, không phải do máy này. Không chỉnh gì trên máy được: một dịch vụ tunnel có thể đi đường ngắn hơn (nhưng có thể làm chậm các trang ở gần), hoặc hỏi nhà mạng.",
 
   "diag.cli.header": "Chẩn đoán lúc {time} — kết quả chung: {status}",
   "diag.cli.saved": "Đã lưu lần chạy #{run_id}",
@@ -325,6 +339,18 @@
   "tweak.ipv6_off.name": "Tắt IPv6 trên Wi‑Fi",
   "tweak.ipv6_off.note": "Chỉ thử khi nghi IPv6/DNS IPv6 của router gây chậm",
 
+  "tweak.tcp_ecn.name": "Bật TCP ECN",
+  "tweak.tcp_ecn.note": "Thử nghiệm: router có thể báo nghẽn thay vì bỏ gói, có thể giảm độ trễ khi mạng bận. Một số thiết bị trung gian xử lý sai gói ECN, nên chỉ bật khi đo trước/sau thấy có lợi",
+
+  "tweak.rsc_off.name": "Tắt Receive Segment Coalescing trên card Wi‑Fi",
+  "tweak.rsc_off.note": "Thử nghiệm: gói nhận được chuyển cho Windows từng gói một, có thể giảm độ trễ nhưng giảm chút thông lượng và tốn thêm CPU. Muốn khôi phục cần bản sao lưu",
+
+  "tweak.packet_coalescing_off.name": "Tắt Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "Thử nghiệm: card không còn giữ lại gói nhận được để tiết kiệm điện: trễ thấp hơn, tốn điện hơn một chút. Muốn khôi phục cần bản sao lưu",
+
+  "tweak.dns_fastest.name": "Dùng DNS công khai nhanh nhất qua HTTPS",
+  "tweak.dns_fastest.note": "Đo Cloudflare, Google và Quad9 rồi dùng hai nhà cung cấp nhanh nhất, mã hóa bằng DoH. Tắt đi sẽ trả lại DNS của chính mạng. Không đề xuất khi có VPN, mạng miền (domain), có hậu tố DNS hoặc sau trang đăng nhập Wi‑Fi (captive portal)",
+
   "tweak.reason.no_wifi_card": "không tìm thấy card Wi‑Fi",
   "tweak.reason.no_matching_value": "'{property}' không có giá trị phù hợp (có: {values})",
   "tweak.reason.no_property": "card không có thuộc tính này",
@@ -337,6 +363,19 @@
   "tweak.reason.unreadable": "không đọc được trạng thái",
   "tweak.reason.no_default_registry": "không có bản sao lưu và không biết giá trị mặc định",
   "tweak.reason.no_default_powercfg": "powercfg không có giá trị mặc định đã biết; cần bản sao lưu",
+  "tweak.reason.no_tcp_setting": "Windows không báo '{setting}'",
+  "tweak.reason.no_default_tcp": "Không có bản sao lưu, và không biết giá trị mặc định",
+  "tweak.reason.no_rsc": "Card này không hỗ trợ Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "Không có bản sao lưu; không biết thiết lập ban đầu của card",
+  "tweak.reason.no_offload_setting": "Windows không báo '{setting}'",
+  "tweak.reason.no_default_offload": "Không biết giá trị mặc định; cần có bản sao lưu",
+  "tweak.reason.no_uplink": "Không có kết nối mạng nào để đổi DNS",
+  "tweak.reason.dns_vpn": "Đang bật VPN; để nguyên DNS của VPN",
+  "tweak.reason.dns_domain": "Máy này thuộc một domain hoặc mạng có hậu tố DNS; tên nội bộ cần DNS của chính mạng",
+  "tweak.reason.dns_static_v6": "Card mạng có DNS IPv6 đặt tay, khôi phục sẽ xóa mất nó",
+  "tweak.reason.dns_captive": "Mạng này giống trang đăng nhập Wi‑Fi (captive portal)",
+  "tweak.reason.dns_no_fast_servers": "Phép đo không tìm được hai nhà cung cấp DNS công khai trả lời ổn định; chưa đổi gì",
+  "tweak.reason.no_default_dns": "Không có bản sao lưu; không biết thiết lập DNS ban đầu",
 
   "tweak.result.read_failed": "không đọc được trạng thái: {error}",
   "tweak.result.unsupported": "Không hỗ trợ trên máy này: {reason}",
@@ -533,10 +572,13 @@
   "manual.use_cable.body": "Máy có cổng LAN đang trống. Dùng dây là tránh được mọi vấn đề Wi‑Fi cùng lúc và ổn định nhất.",
 
   "manual.router_sqm.title": "Bật SQM / QoS thông minh trên router",
-  "manual.router_sqm.body": "Dùng fq_codel hoặc CAKE và đặt giới hạn thấp hơn tốc độ thật của đường truyền khoảng 5–10%, để tải lớn không làm nghẽn hàng đợi.",
+  "manual.router_sqm.body": "Phần lớn độ trễ dồn ở chiều tải xuống, chỉ router có định hình luồng đi vào mới kiểm soát được. Bật SQM / QoS thông minh (CAKE hoặc fq_codel) và đặt giới hạn thấp hơn tốc độ thật của đường truyền khoảng 5–10%. Nếu router chưa có SQM, OpenWrt (trên router hỗ trợ) có sẵn trong gói sqm-scripts. Nếu vẫn bị, đường truyền đã đầy và nên nâng gói cước.",
 
   "manual.dns_server.title": "Dùng DNS server khác",
   "manual.dns_server.body": "DNS đang dùng có lỗi hoặc timeout. Đặt DNS công cộng như 1.1.1.1 hoặc 8.8.8.8 trong Windows hoặc trên router.",
+
+  "manual.tunnel_route.title": "Cân nhắc dùng tunnel cho các đích ở xa",
+  "manual.tunnel_route.body": "Một số đích đi đường dài hơn hẳn các đích khác, cho thấy do tuyến của nhà mạng chứ không phải do máy này. Một dịch vụ tunnel đáng tin có thể đi đường ngắn hơn tới chúng nhưng có thể làm chậm các đích ở gần. Đánh dấu đã làm, app sẽ so sánh kết nối trước và sau; tắt tunnel nếu không có lợi.",
 
   "manual.event.done": "Đã đánh dấu làm xong: {step}",
 
@@ -555,6 +597,7 @@
 
   "event.dns_observed": "DNS của mạng này: {servers}",
   "event.dns_changed": "DNS của mạng này đã bị đổi: {old} → {new}",
+  "event.dns_app_changed": "App đã đổi DNS của mạng này: {servers}",
 
   "notify.dns_changed.title": "DNS đã bị đổi",
 

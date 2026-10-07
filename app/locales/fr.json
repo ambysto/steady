@@ -195,7 +195,13 @@
   "diag.path_mtu.ok": "Les paquets de la taille complète de la MTU de l'interface ({mtu} octets) passent",
   "diag.path_mtu.too_big": "La MTU de l'interface ({mtu} octets) dépasse ce que le chemin autorise ({path} octets)",
   "diag.path_mtu.pppoe": "1492 octets est typique d'une connexion Internet PPPoE",
-  "diag.path_mtu.advice": "Les gros paquets peuvent être perdus en route : les pages restent à moitié chargées et les téléchargements calent. Réglez la MTU de {name} sur {path} (en administrateur : netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent) ou activez le MSS clamping sur le routeur.",
+  "diag.path_mtu.advice": "Les gros paquets peuvent être perdus en route : les pages restent à moitié chargées et les téléchargements calent. Réglez la MTU de {name} sur {path} (en administrateur : netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent ; pour l'IPv6 : netsh interface ipv6 set subinterface \"{name}\" mtu={path} store=persistent) ou activez le MSS clamping sur le routeur.",
+  "diag.path_mtu.no_ipv4": "Aucune route IPv4 vers Internet : cette vérification ne mesure que l'IPv4",
+  "diag.path_mtu.capped": "La MTU de l'interface dépasse {cap} octets (trames jumbo) ; Internet transporte au plus {cap}, la mesure s'arrête donc là",
+  "diag.path_mtu.ok_capped": "Les paquets de {cap} octets, le maximum transporté par Internet, passent",
+  "diag.path_mtu.reported": "Les routeurs répondent « paquet trop gros », Windows réduit donc lui-même la taille des paquets ; les gros paquets ne sont pas perdus",
+  "diag.path_mtu.one_target": "Une seule destination a répondu et elle peut perdre des pings de toute façon : le chemin plus petit n'est pas confirmé",
+  "diag.path_mtu.silent": "Les gros paquets disparaissent sans réponse « paquet trop gros » : les connexions peuvent se bloquer (trou noir PMTUD)",
 
   "diag.bufferbloat.title": "Bufferbloat (latence en charge)",
   "diag.bufferbloat.no_idle": "Mesure impossible : aucune réponse de ping depuis Internet au repos",
@@ -217,6 +223,14 @@
   "diag.bufferbloat.by": "de {delta:.0f} ms",
   "diag.bufferbloat.rise": "La latence vers Internet augmente {amount} quand la ligne est occupée{where}",
   "diag.bufferbloat.advice": "Activez SQM / QoS intelligent (fq_codel ou CAKE) sur le routeur et réglez les limites d'envoi/téléchargement environ 5 à 10% sous la bande passante réelle. Si le routeur n'a pas de SQM, réduisez le débit d'envoi de l'application qui provoque la charge.",
+
+  "diag.route.title": "Route vers les destinations lointaines",
+  "diag.route.no_data": "Impossible de comparer les routes : moins de 3 sites de référence ont répondu",
+  "diag.route.tunnel_on": "Un VPN ou un tunnel est actif : les routes mesurées sont celles du tunnel, pas celles du fournisseur",
+  "diag.route.line": "{host} : {median:.0f} ms (connexion TCP)",
+  "diag.route.ok": "Tous les sites de référence répondent en un temps voisin (le plus proche : {near:.0f} ms)",
+  "diag.route.detour": "Certains sites de référence suivent un chemin bien plus long que les autres (le plus proche : {near:.0f} ms) : {hosts}",
+  "diag.route.advice": "Cela désigne en général la route du fournisseur vers ces destinations, pas ce PC. Rien sur le PC ne le corrige : un service de tunnel peut prendre un chemin plus court (mais peut ralentir les sites proches), ou interrogez le fournisseur.",
 
   "diag.cli.header": "Diagnostic de {time} — état global : {status}",
   "diag.cli.saved": "Exécution n° {run_id} enregistrée",
@@ -325,6 +339,18 @@
   "tweak.ipv6_off.name": "Désactiver IPv6 sur le Wi‑Fi",
   "tweak.ipv6_off.note": "À essayer seulement si vous soupçonnez que l'IPv6 du routeur ou le DNS IPv6 ralentit la connexion",
 
+  "tweak.tcp_ecn.name": "Activer TCP ECN",
+  "tweak.tcp_ecn.note": "Expérimental : les routeurs peuvent signaler la congestion au lieu de perdre des paquets, ce qui peut réduire la latence en charge. Certains équipements intermédiaires gèrent mal les paquets ECN : laissez-le désactivé sauf si une mesure avant/après montre un gain",
+
+  "tweak.rsc_off.name": "Désactiver Receive Segment Coalescing sur la carte Wi‑Fi",
+  "tweak.rsc_off.note": "Expérimental : les paquets reçus arrivent un par un dans Windows, ce qui peut réduire la latence au prix d'un peu de débit et de plus de CPU. La restauration nécessite la sauvegarde",
+
+  "tweak.packet_coalescing_off.name": "Désactiver le Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "Expérimental : la carte ne retient plus les paquets reçus pour économiser l'énergie : latence plus faible, consommation un peu plus élevée. La restauration nécessite la sauvegarde",
+
+  "tweak.dns_fastest.name": "Utiliser le DNS public le plus rapide via HTTPS",
+  "tweak.dns_fastest.note": "Mesure Cloudflare, Google et Quad9 et utilise les deux fournisseurs les plus rapides, chiffrés avec DoH. En le désactivant, le DNS propre au réseau revient. Non proposé avec un VPN, sur un réseau de domaine, avec un suffixe DNS ou derrière un portail captif",
+
   "tweak.reason.no_wifi_card": "Aucune carte Wi‑Fi trouvée",
   "tweak.reason.no_matching_value": "« {property} » n'a aucune valeur adaptée (disponibles : {values})",
   "tweak.reason.no_property": "La carte n'a pas cette propriété",
@@ -337,6 +363,19 @@
   "tweak.reason.unreadable": "Impossible de lire l'état",
   "tweak.reason.no_default_registry": "Aucune sauvegarde, et la valeur par défaut est inconnue",
   "tweak.reason.no_default_powercfg": "powercfg n'a pas de valeur par défaut connue ; une sauvegarde est nécessaire",
+  "tweak.reason.no_tcp_setting": "Windows ne signale pas « {setting} »",
+  "tweak.reason.no_default_tcp": "Pas de sauvegarde, et la valeur par défaut est inconnue",
+  "tweak.reason.no_rsc": "Cette carte ne prend pas en charge Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "Pas de sauvegarde ; le réglage d'origine de la carte est inconnu",
+  "tweak.reason.no_offload_setting": "Windows ne signale pas « {setting} »",
+  "tweak.reason.no_default_offload": "Aucune valeur par défaut connue ; une sauvegarde est nécessaire",
+  "tweak.reason.no_uplink": "Aucune connexion réseau dont le DNS puisse être modifié",
+  "tweak.reason.dns_vpn": "Un VPN est actif ; son propre DNS n'est pas touché",
+  "tweak.reason.dns_domain": "Ce PC est dans un domaine ou le réseau a un suffixe DNS ; les noms internes ont besoin du DNS propre au réseau",
+  "tweak.reason.dns_static_v6": "La carte réseau a un serveur DNS IPv6 statique, que la restauration effacerait",
+  "tweak.reason.dns_captive": "Le réseau ressemble à un portail captif (une page de connexion)",
+  "tweak.reason.dns_no_fast_servers": "La mesure n'a pas trouvé deux fournisseurs de DNS public qui répondent de façon fiable ; rien n'a été modifié",
+  "tweak.reason.no_default_dns": "Pas de sauvegarde ; les réglages DNS d'origine sont inconnus",
 
   "tweak.result.read_failed": "Impossible de lire l'état : {error}",
   "tweak.result.unsupported": "Non pris en charge sur ce PC : {reason}",
@@ -533,10 +572,13 @@
   "manual.use_cable.body": "Ce PC a un port LAN libre. Un câble évite d'un coup tous les problèmes de Wi‑Fi et reste l'option la plus stable.",
 
   "manual.router_sqm.title": "Activer SQM / QoS intelligent sur le routeur",
-  "manual.router_sqm.body": "Utilisez fq_codel ou CAKE et réglez les limites environ 5 à 10% sous le débit réel de la ligne, afin que les gros téléchargements et envois cessent de saturer la file.",
+  "manual.router_sqm.body": "L'essentiel du délai s'accumule en téléchargement, que seul un routeur qui façonne le trafic entrant peut maîtriser. Activez SQM / QoS intelligent (CAKE ou fq_codel) et réglez les limites environ 5 à 10% sous le débit réel de la ligne. Si le routeur n'a pas de SQM, OpenWrt (sur les routeurs compatibles) en propose un dans le paquet sqm-scripts. Si cela persiste, la ligne elle-même est saturée et une offre plus rapide aide.",
 
   "manual.dns_server.title": "Utiliser un autre serveur DNS",
   "manual.dns_server.body": "Le serveur DNS utilisé présente des erreurs ou des délais d'attente dépassés. Définissez-en un public, comme 1.1.1.1 ou 8.8.8.8, dans Windows ou sur le routeur.",
+
+  "manual.tunnel_route.title": "Envisager un tunnel pour les destinations lointaines",
+  "manual.tunnel_route.body": "Certaines destinations suivent un chemin bien plus long que d'autres, ce qui désigne la route du fournisseur et non ce PC. Un service de tunnel de confiance peut prendre un chemin plus court vers elles, mais peut ralentir les destinations proches. Marquez l'étape comme faite et l'application compare la connexion avant et après ; coupez le tunnel s'il n'aide pas.",
 
   "manual.event.done": "Marqué comme fait : {step}",
 
@@ -555,6 +597,7 @@
 
   "event.dns_observed": "Serveurs DNS sur ce réseau : {servers}",
   "event.dns_changed": "Les serveurs DNS de ce réseau ont changé : {old} → {new}",
+  "event.dns_app_changed": "Cette application a modifié les serveurs DNS de ce réseau : {servers}",
 
   "notify.dns_changed.title": "Serveurs DNS modifiés",
 

@@ -16,6 +16,7 @@ from typing import Callable, Iterable
 
 OVERHEAD = 28            # IPv4 header (20) + ICMP echo header (8): packet size = payload + 28
 MIN_MTU = 576            # every IPv4 host must accept this; the search never goes below it
+MAX_MTU = 1500           # Internet paths do not carry jumbo frames: a larger interface is probed up to here
 TARGETS = ("1.1.1.1", "8.8.8.8", "9.9.9.9")
 TIMEOUT_MS = 800
 TRIES = 2                # a lost packet is retried once before it counts as "too big"
@@ -30,31 +31,35 @@ class PathResult:
     target: str
     mtu: int | None      # largest packet that got through; None when the target never answered
     probes: int = 0      # packets sent
+    too_big: bool = False   # some packet was refused with "too big" (PMTUD works) rather than lost
 
 
-def probe(send: Send, ceiling: int, tries: int = TRIES) -> tuple[int | None, int]:
-    """(path MTU, packets sent). Binary search between MIN_MTU and `ceiling` (the interface MTU).
+def probe(send: Send, ceiling: int, tries: int = TRIES) -> tuple[int | None, int, bool]:
+    """(path MTU, packets sent, saw "too big"). Binary search between MIN_MTU and `ceiling`.
 
+    `ceiling` is the interface MTU, capped at MAX_MTU, so the search costs at most ~24 packets.
     A TOO_BIG answer is final; a LOST packet is retried, so one random loss does not shrink the
-    result. Returns (None, n) when even a MIN_MTU packet gets no reply (target filters ICMP).
+    result. The MTU is None when even a MIN_MTU packet gets no reply (target filters ICMP).
     """
-    sent = 0
+    sent, too_big = 0, False
+    ceiling = min(ceiling, MAX_MTU)
 
     def fits(size: int) -> bool:
-        nonlocal sent
+        nonlocal sent, too_big
         for _ in range(tries):
             sent += 1
             outcome = send(size)
             if outcome == PASSED:
                 return True
             if outcome == TOO_BIG:
+                too_big = True
                 return False
         return False
 
     if ceiling < MIN_MTU or not fits(MIN_MTU):
-        return None, sent
+        return None, sent, too_big
     if fits(ceiling):
-        return ceiling, sent
+        return ceiling, sent, too_big
     good, bad = MIN_MTU, ceiling
     while bad - good > 1:
         mid = (good + bad) // 2
@@ -62,7 +67,7 @@ def probe(send: Send, ceiling: int, tries: int = TRIES) -> tuple[int | None, int
             good = mid
         else:
             bad = mid
-    return good, sent
+    return good, sent, too_big
 
 
 def real_send(target: str, timeout_ms: int = TIMEOUT_MS) -> tuple[Send, Callable[[], None]]:
@@ -85,10 +90,10 @@ def measure(ceiling: int, targets: Iterable[str] = TARGETS,
     def one(target: str) -> PathResult:
         send, close = sender(target)
         try:
-            mtu, sent = probe(send, ceiling)
+            mtu, sent, too_big = probe(send, ceiling)
         finally:
             close()
-        return PathResult(target, mtu, sent)
+        return PathResult(target, mtu, sent, too_big)
 
     targets = list(targets)
     with ThreadPoolExecutor(max_workers=max(1, len(targets))) as pool:

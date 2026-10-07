@@ -8242,55 +8242,114 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Große Pakete können unterwegs verworfen werden: Seiten laden nur halb, Downloads stocken. Setzen Sie die MTU von %1$@ auf %2$@ (als Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) oder aktivieren Sie MSS-Clamping am Router."
+            "value" : "Große Pakete können unterwegs verworfen werden: Seiten laden nur halb, Downloads stocken. Setzen Sie die MTU von %1$@ auf %2$@ (als Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent; für IPv6: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent) oder aktivieren Sie MSS-Clamping am Router."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Large packets can be dropped on the way, so pages hang half-loaded and downloads stall. Set the MTU of %1$@ to %2$@ (as Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), or turn on MSS clamping on the router."
+            "value" : "Large packets can be dropped on the way, so pages hang half-loaded and downloads stall. Set the MTU of %1$@ to %2$@ (as Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent; for IPv6: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent), or turn on MSS clamping on the router."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los paquetes grandes pueden perderse por el camino: las páginas se quedan a medio cargar y las descargas se atascan. Ajuste la MTU de %1$@ a %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) o active el MSS clamping en el router."
+            "value" : "Los paquetes grandes pueden perderse por el camino: las páginas se quedan a medio cargar y las descargas se atascan. Ajuste la MTU de %1$@ a %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent; para IPv6: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent) o active el MSS clamping en el router."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les gros paquets peuvent être perdus en route : les pages restent à moitié chargées et les téléchargements calent. Réglez la MTU de %1$@ sur %2$@ (en administrateur : netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou activez le MSS clamping sur le routeur."
+            "value" : "Les gros paquets peuvent être perdus en route : les pages restent à moitié chargées et les téléchargements calent. Réglez la MTU de %1$@ sur %2$@ (en administrateur : netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent ; pour l'IPv6 : netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou activez le MSS clamping sur le routeur."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大きなパケットが途中で破棄され、ページが途中で止まったりダウンロードが停滞したりすることがあります。%1$@ の MTU を %2$@ に設定するか（管理者として: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent）、ルーターで MSS クランプを有効にしてください。"
+            "value" : "大きなパケットが途中で破棄され、ページが途中で止まったりダウンロードが停滞したりすることがあります。%1$@ の MTU を %2$@ に設定するか（管理者として: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent。IPv6 の場合: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent）、ルーターで MSS クランプを有効にしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "큰 패킷이 도중에 버려져 페이지가 반쯤 로드된 채 멈추거나 다운로드가 끊길 수 있습니다. %1$@의 MTU를 %2$@(으)로 설정하거나(관리자 권한: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), 라우터에서 MSS 클램핑을 켜세요."
+            "value" : "큰 패킷이 도중에 버려져 페이지가 반쯤 로드된 채 멈추거나 다운로드가 끊길 수 있습니다. %1$@의 MTU를 %2$@(으)로 설정하거나(관리자 권한: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent; IPv6의 경우: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent), 라우터에서 MSS 클램핑을 켜세요."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pacotes grandes podem se perder no caminho: páginas ficam carregadas pela metade e downloads travam. Defina a MTU de %1$@ como %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou ative o MSS clamping no roteador."
+            "value" : "Pacotes grandes podem se perder no caminho: páginas ficam carregadas pela metade e downloads travam. Defina a MTU de %1$@ como %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent; para IPv6: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou ative o MSS clamping no roteador."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gói lớn có thể bị rơi dọc đường nên trang treo nửa chừng, tải xuống chập chờn. Đặt MTU của %1$@ thành %2$@ (quyền Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), hoặc bật MSS clamping trên router."
+            "value" : "Gói lớn có thể bị rơi dọc đường nên trang treo nửa chừng, tải xuống chập chờn. Đặt MTU của %1$@ thành %2$@ (quyền Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent; với IPv6: netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent), hoặc bật MSS clamping trên router."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大数据包可能在途中被丢弃，导致网页加载到一半卡住、下载停滞。请将 %1$@ 的 MTU 设为 %2$@（以管理员身份：netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent），或在路由器上开启 MSS 钳制。"
+            "value" : "大数据包可能在途中被丢弃，导致网页加载到一半卡住、下载停滞。请将 %1$@ 的 MTU 设为 %2$@（以管理员身份：netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent；IPv6：netsh interface ipv6 set subinterface \"%1$@\" mtu=%2$@ store=persistent），或在路由器上开启 MSS 钳制。"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.capped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die MTU der Schnittstelle liegt über %1$@ Byte (Jumbo-Frames); das Internet transportiert höchstens %1$@, daher endet die Messung dort"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The interface MTU is above %1$@ bytes (jumbo frames); the Internet carries at most %1$@, so the probe stops there"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La MTU de la interfaz supera los %1$@ bytes (jumbo frames); Internet transporta como máximo %1$@, así que la prueba se detiene ahí"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La MTU de l'interface dépasse %1$@ octets (trames jumbo) ; Internet transporte au plus %1$@, la mesure s'arrête donc là"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インターフェイスの MTU が %1$@ バイトを超えています（ジャンボ フレーム）。インターネットが運べるのは最大 %1$@ のため、そこで測定を止めます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인터페이스 MTU가 %1$@바이트를 넘습니다(점보 프레임). 인터넷은 최대 %1$@까지만 전달하므로 거기까지만 측정합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A MTU da interface passa de %1$@ bytes (jumbo frames); a Internet transporta no máximo %1$@, então o teste para aí"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU của card trên %1$@ byte (jumbo frame); Internet chỉ chở tối đa %1$@ nên chỉ dò tới đó"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接口 MTU 超过 %1$@ 字节（巨型帧）；互联网最多传输 %1$@，因此只探测到这里"
           }
         }
       }
@@ -8413,6 +8472,65 @@
         }
       }
     },
+    "diag.path_mtu.no_ipv4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine IPv4-Route ins Internet: diese Prüfung misst nur IPv4"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No IPv4 route to the Internet: this check measures IPv4 only"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay ruta IPv4 a Internet: esta comprobación solo mide IPv4"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune route IPv4 vers Internet : cette vérification ne mesure que l'IPv4"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インターネットへの IPv4 経路がありません。このチェックは IPv4 のみを測定します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인터넷으로 가는 IPv4 경로가 없습니다. 이 검사는 IPv4만 측정합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem rota IPv4 para a Internet: esta verificação mede apenas IPv4"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có tuyến IPv4 ra Internet: kiểm tra này chỉ đo IPv4"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有通往互联网的 IPv4 路由：此检查只测量 IPv4"
+          }
+        }
+      }
+    },
     "diag.path_mtu.no_reply" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8531,6 +8649,124 @@
         }
       }
     },
+    "diag.path_mtu.ok_capped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakete mit %1$@ Byte, dem Maximum im Internet, kommen durch"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Packets of %1$@ bytes, the most the Internet carries, get through"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasan paquetes de %1$@ bytes, el máximo que transporta Internet"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les paquets de %1$@ octets, le maximum transporté par Internet, passent"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インターネットの上限である %1$@ バイトのパケットが届きます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인터넷이 전달하는 최대 크기인 %1$@바이트 패킷이 통과합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pacotes de %1$@ bytes, o máximo que a Internet transporta, passam"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói %1$@ byte, mức tối đa Internet chở được, đi qua được"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "互联网可传输的最大 %1$@ 字节数据包可以通过"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.one_target" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur ein Ziel hat geantwortet, und es verwirft womöglich ohnehin Pings, daher ist der kleinere Pfad nicht bestätigt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only one destination answered and it may drop pings anyway, so the smaller path is not confirmed"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo respondió un destino y puede descartar pings de todos modos, así que la ruta más pequeña no está confirmada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une seule destination a répondu et elle peut perdre des pings de toute façon : le chemin plus petit n'est pas confirmé"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "応答した宛先は 1 つだけで、もともと ping を落とすことがあるため、小さい経路 MTU は確定していません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "응답한 대상이 하나뿐이고 원래 ping을 버릴 수 있어, 더 작은 경로는 확인되지 않았습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Só um destino respondeu e ele pode descartar pings de qualquer forma, então o caminho menor não está confirmado"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ một đích trả lời và đích đó có thể vốn đã rơi ping, nên đường truyền nhỏ hơn chưa được xác nhận"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有一个目标响应，且它本身可能会丢弃 ping，因此较小的路径未得到确认"
+          }
+        }
+      }
+    },
     "diag.path_mtu.pppoe" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8586,6 +8822,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1492 字节是 PPPoE 宽带连接的常见值"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.reported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Router antworten mit \"Paket zu groß\", daher verkleinert Windows die Pakete selbst; große Pakete gehen nicht verloren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Routers answer \"packet too big\", so Windows lowers the packet size by itself; large packets are not lost"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los routers responden \"paquete demasiado grande\", así que Windows reduce el tamaño por sí mismo; los paquetes grandes no se pierden"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les routeurs répondent « paquet trop gros », Windows réduit donc lui-même la taille des paquets ; les gros paquets ne sont pas perdus"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ルーターが「パケットが大きすぎる」と応答するため、Windows が自動でパケット サイズを下げます。大きなパケットは失われません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "라우터가 \"패킷이 너무 큼\"으로 응답하므로 Windows가 스스로 패킷 크기를 줄입니다. 큰 패킷은 손실되지 않습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os roteadores respondem \"pacote grande demais\", então o Windows reduz o tamanho sozinho; pacotes grandes não se perdem"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Router trả lời \"gói quá lớn\" nên Windows tự giảm kích thước gói; gói lớn không bị mất"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "路由器会回复“数据包过大”，Windows 会自行减小数据包；大数据包不会丢失"
+          }
+        }
+      }
+    },
+    "diag.path_mtu.silent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Große Pakete verschwinden ohne Antwort \"Paket zu groß\": Verbindungen können hängen (PMTUD-Blackhole)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Large packets vanish without any \"packet too big\" answer: connections can hang (PMTUD blackhole)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los paquetes grandes desaparecen sin respuesta \"paquete demasiado grande\": las conexiones pueden colgarse (agujero negro de PMTUD)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les gros paquets disparaissent sans réponse « paquet trop gros » : les connexions peuvent se bloquer (trou noir PMTUD)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大きなパケットが「パケットが大きすぎる」の応答なしに消えます。接続が止まることがあります（PMTUD ブラックホール）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "큰 패킷이 \"패킷이 너무 큼\" 응답 없이 사라집니다. 연결이 멈출 수 있습니다(PMTUD 블랙홀)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pacotes grandes somem sem resposta \"pacote grande demais\": as conexões podem travar (buraco negro de PMTUD)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói lớn biến mất mà không có trả lời \"gói quá lớn\": kết nối có thể treo (PMTUD blackhole)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大数据包在没有“数据包过大”回复的情况下消失：连接可能卡住（PMTUD 黑洞）"
           }
         }
       }
@@ -10766,6 +11120,419 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "路由器正常，但互联网有丢包（仅有 ping 数据，暂无 TCP/HTTP 数据）：ISP/WAN 问题，或 ICMP 被限速"
+          }
+        }
+      }
+    },
+    "diag.route.advice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das deutet meist auf die Route des Internetanbieters zu diesen Zielen hin, nicht auf diesen PC. Am PC lässt sich das nicht beheben: Ein Tunnel-Dienst kann einen kürzeren Weg nehmen (kann aber nahe Seiten bremsen), oder den Anbieter fragen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This usually points at the ISP's route to those destinations, not at this PC. Nothing on the PC fixes it: a tunnel service may take a shorter path (but can slow nearby sites), or ask the ISP."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suele apuntar a la ruta del proveedor hacia esos destinos, no a este PC. Nada en el PC lo arregla: un servicio de túnel puede tomar un camino más corto (pero puede ralentizar los sitios cercanos), o consulta al proveedor."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela désigne en général la route du fournisseur vers ces destinations, pas ce PC. Rien sur le PC ne le corrige : un service de tunnel peut prendre un chemin plus court (mais peut ralentir les sites proches), ou interrogez le fournisseur."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多くの場合、この PC ではなく、プロバイダーからそれらの宛先への経路が原因です。PC 側では直せません。トンネルサービスなら近い経路を通れることがあります（ただし近くのサイトが遅くなる場合があります）。またはプロバイダーに問い合わせてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대개 이 PC가 아니라 통신사에서 해당 목적지로 가는 경로가 원인입니다. PC에서는 고칠 수 없습니다. 터널 서비스가 더 짧은 경로를 택할 수 있지만(가까운 사이트는 느려질 수 있음), 통신사에 문의하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso costuma apontar para a rota do provedor até esses destinos, não para este PC. Nada no PC resolve: um serviço de túnel pode seguir um caminho mais curto (mas pode deixar sites próximos mais lentos), ou fale com o provedor."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thường là do tuyến của nhà mạng tới các đích đó, không phải do máy này. Không chỉnh gì trên máy được: một dịch vụ tunnel có thể đi đường ngắn hơn (nhưng có thể làm chậm các trang ở gần), hoặc hỏi nhà mạng."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这通常指向运营商到这些目的地的路由，而不是这台电脑。电脑上无法修复：隧道服务可能走更短的路径（但可能拖慢近处的网站），也可以咨询运营商。"
+          }
+        }
+      }
+    },
+    "diag.route.detour" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Referenzseiten brauchen einen deutlich längeren Weg als die übrigen (die nächste: %1$@ ms): %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some reference sites take a much longer path than the others (nearest %1$@ ms): %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Algunos sitios de referencia siguen un camino mucho más largo que el resto (el más cercano, %1$@ ms): %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certains sites de référence suivent un chemin bien plus long que les autres (le plus proche : %1$@ ms) : %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部の参照サイトは他よりはるかに遠回りの経路を通っています（最短 %1$@ ms）：%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일부 기준 사이트는 다른 곳보다 훨씬 먼 경로를 거칩니다 (가장 가까운 곳 %1$@ ms): %2$@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alguns sites de referência seguem um caminho bem mais longo que os demais (o mais próximo, %1$@ ms): %2$@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Một số trang tham chiếu đi đường dài hơn hẳn các trang còn lại (gần nhất %1$@ ms): %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部分参考网站走的路径比其他的长得多（最近的 %1$@ ms）：%2$@"
+          }
+        }
+      }
+    },
+    "diag.route.line" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (TCP-Verbindungsaufbau)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (TCP connect)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (conexión TCP)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ : %2$@ ms (connexion TCP)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@ ms（TCP 接続）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (TCP 연결)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (conexão TCP)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@ ms (kết nối TCP)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@ ms（TCP 连接）"
+          }
+        }
+      }
+    },
+    "diag.route.no_data" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wege lassen sich nicht vergleichen: weniger als 3 Referenzseiten haben geantwortet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cannot compare routes: fewer than 3 reference sites answered"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pueden comparar las rutas: respondieron menos de 3 sitios de referencia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de comparer les routes : moins de 3 sites de référence ont répondu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "経路を比較できません：応答した参照サイトが 3 つ未満です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "경로를 비교할 수 없습니다: 응답한 기준 사이트가 3곳 미만입니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível comparar as rotas: menos de 3 sites de referência responderam"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không so sánh được đường đi: có chưa đến 3 trang tham chiếu trả lời"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法比较路由：响应的参考网站不足 3 个"
+          }
+        }
+      }
+    },
+    "diag.route.ok" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle Referenzseiten antworten in ähnlicher Zeit (die nächste in %1$@ ms)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every reference site answers in a similar time (nearest %1$@ ms)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los sitios de referencia responden en un tiempo parecido (el más cercano, %1$@ ms)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les sites de référence répondent en un temps voisin (le plus proche : %1$@ ms)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての参照サイトがほぼ同じ時間で応答しています（最短 %1$@ ms）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 기준 사이트가 비슷한 시간에 응답합니다 (가장 가까운 곳 %1$@ ms)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos os sites de referência respondem em tempo parecido (o mais próximo, %1$@ ms)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mọi trang tham chiếu đều trả lời trong thời gian gần nhau (gần nhất %1$@ ms)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有参考网站的响应时间相近（最近的 %1$@ ms）"
+          }
+        }
+      }
+    },
+    "diag.route.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weg zu weit entfernten Zielen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route to far-away destinations"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruta hacia destinos lejanos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Route vers les destinations lointaines"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遠方の宛先への経路"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼 목적지로 가는 경로"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rota até destinos distantes"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đường đi tới các đích ở xa"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "到远方目的地的路由"
+          }
+        }
+      }
+    },
+    "diag.route.tunnel_on" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein VPN oder Tunnel ist aktiv, die gemessenen Wege sind also die des Tunnels, nicht die des Anbieters"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A VPN or tunnel is up, so the routes measured are the tunnel's, not the ISP's"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hay una VPN o un túnel activo, así que las rutas medidas son las del túnel, no las del proveedor"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un VPN ou un tunnel est actif : les routes mesurées sont celles du tunnel, pas celles du fournisseur"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN またはトンネルが有効なため、測定した経路はプロバイダーのものではなくトンネルのものです"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 또는 터널이 켜져 있어, 측정된 경로는 통신사가 아니라 터널의 경로입니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Há uma VPN ou túnel ativo, então as rotas medidas são as do túnel, não as do provedor"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang bật VPN hoặc tunnel nên đường đo được là của tunnel, không phải của nhà mạng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 或隧道已开启，所测路由是隧道的，而不是运营商的"
           }
         }
       }

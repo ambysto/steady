@@ -73,6 +73,76 @@ class SuggestTests(unittest.TestCase):
             self.assertNotRegex(text, r'"(manual|diag)\.[a-z_.]+"', code)   # every key resolved
 
 
+def route_result(**ms):
+    rtts = {host: ms.get(host.split(".")[0]) for host in diagnostics.ROUTE_HOSTS}
+    return json.loads(json.dumps(diagnostics.evaluate_route(rtts).to_dict()))
+
+
+class ExternalCauseTests(unittest.TestCase):
+    """Bottlenecks the PC cannot fix: the router's queue and the ISP's route abroad (SIC-89)."""
+
+    DETOUR = dict(cloudflare=48, google=161, microsoft=52, wikipedia=55, apple=60)
+    FINE = dict(cloudflare=31, google=35, microsoft=38, wikipedia=42, apple=47)
+
+    def test_a_detour_suggests_a_tunnel(self):
+        items = suggestions.suggest([route_result(**self.DETOUR)], None, {}, META)
+        self.assertEqual(ids(items), [("manual", "tunnel_route")])
+        self.assertEqual(items[0]["reason"]["check"], "route")
+
+    def test_no_tunnel_suggestion_when_routes_are_fine_unknown_or_already_tunnelled(self):
+        for name, r in {"fine": route_result(**self.FINE), "too few answers": route_result(cloudflare=20),
+                        "tunnel up": json.loads(json.dumps(diagnostics.evaluate_route({}, tunnel_up=True).to_dict()))}.items():
+            self.assertEqual(suggestions.suggest([r], None, {}, META), [], name)
+
+    def test_bufferbloat_suggests_sqm_on_the_router(self):
+        for status in ("warn", "bad"):
+            items = suggestions.suggest([result("bufferbloat", status)], None, {}, META)
+            self.assertEqual(ids(items), [("manual", "router_sqm")], status)
+        self.assertEqual(suggestions.suggest([result("bufferbloat", "ok")], None, {}, META), [])
+
+    def test_the_texts_say_what_to_do_without_naming_a_product(self):
+        sqm, tunnel = suggestions.STEPS["router_sqm"], suggestions.STEPS["tunnel_route"]
+        body = i18n.render(sqm.body, "en")
+        for word in ("CAKE", "fq_codel", "OpenWrt", "download"):
+            self.assertIn(word, body)
+        text = i18n.render(tunnel.title, "en") + i18n.render(tunnel.body, "en")
+        self.assertIn("tunnel", text)
+        for brand in ("WARP", "Cloudflare", "NordVPN", "ExpressVPN", "Tailscale", "WireGuard"):
+            self.assertNotIn(brand, text)
+
+    def test_both_steps_are_translated_everywhere(self):
+        for code in [entry["code"] for entry in i18n.available()]:
+            for step in ("router_sqm", "tunnel_route"):
+                for part in ("title", "body"):
+                    key = f"manual.{step}.{part}"
+                    self.assertNotEqual(i18n.t(key, code), key, (code, key))
+        # translated, not left in English (the catalog falls back to English for a missing key)
+        english = {k: i18n.t(k, "en") for k in ("manual.router_sqm.body", "manual.tunnel_route.body", "diag.route.advice")}
+        for code in [entry["code"] for entry in i18n.available() if entry["code"] != "en"]:
+            for key, en_text in english.items():
+                self.assertNotEqual(i18n.t(key, code), en_text, (code, key))
+
+    def test_the_detour_goes_through_build_and_can_be_marked_done(self):
+        with Storage() as db:
+            db.save_diagnostic_run(int(NOW), "info", [route_result(**self.DETOUR)])
+            out = suggestions.build(db, NOW, None, META)
+            self.assertEqual(ids(out["items"]), [("manual", "tunnel_route")])
+            suggestions.mark_done(db, "tunnel_route", NOW - H)
+            item = suggestions.build(db, NOW, None, META)["items"][0]
+            self.assertEqual((item["id"], item["done_at"]), ("tunnel_route", int(NOW - H)))
+            self.assertEqual(item["impact"]["status"], "collecting")      # measured before and after, like any step
+
+
+class DnsTweakSuggestionTests(unittest.TestCase):
+    def test_a_broken_dns_suggests_the_tweak_unless_it_is_on_or_not_possible(self):
+        meta = {**META, "dns_fastest": {"name": msg("tweak.dns_fastest.name"), "note": "", "risk": "medium"}}
+        broken = result("dns", "warn", tweak="dns_fastest")
+        self.assertIn(("tweak", "dns_fastest"), ids(suggestions.suggest([broken], None, {}, meta)))
+        for state in ({"enabled": True, "supported": True}, {"enabled": False, "supported": False}):   # on, or a VPN/captive network
+            items = suggestions.suggest([broken], {"dns_fastest": state}, {}, meta)
+            self.assertNotIn(("tweak", "dns_fastest"), ids(items), state)
+
+
 class BuildTests(unittest.TestCase):
     def setUp(self):
         self.db = Storage()

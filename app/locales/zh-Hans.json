@@ -195,7 +195,13 @@
   "diag.path_mtu.ok": "接口 MTU 满长（{mtu} 字节）的数据包可以通过",
   "diag.path_mtu.too_big": "接口 MTU（{mtu} 字节）大于路径允许的大小（{path} 字节）",
   "diag.path_mtu.pppoe": "1492 字节是 PPPoE 宽带连接的常见值",
-  "diag.path_mtu.advice": "大数据包可能在途中被丢弃，导致网页加载到一半卡住、下载停滞。请将 {name} 的 MTU 设为 {path}（以管理员身份：netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent），或在路由器上开启 MSS 钳制。",
+  "diag.path_mtu.advice": "大数据包可能在途中被丢弃，导致网页加载到一半卡住、下载停滞。请将 {name} 的 MTU 设为 {path}（以管理员身份：netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent；IPv6：netsh interface ipv6 set subinterface \"{name}\" mtu={path} store=persistent），或在路由器上开启 MSS 钳制。",
+  "diag.path_mtu.no_ipv4": "没有通往互联网的 IPv4 路由：此检查只测量 IPv4",
+  "diag.path_mtu.capped": "接口 MTU 超过 {cap} 字节（巨型帧）；互联网最多传输 {cap}，因此只探测到这里",
+  "diag.path_mtu.ok_capped": "互联网可传输的最大 {cap} 字节数据包可以通过",
+  "diag.path_mtu.reported": "路由器会回复“数据包过大”，Windows 会自行减小数据包；大数据包不会丢失",
+  "diag.path_mtu.one_target": "只有一个目标响应，且它本身可能会丢弃 ping，因此较小的路径未得到确认",
+  "diag.path_mtu.silent": "大数据包在没有“数据包过大”回复的情况下消失：连接可能卡住（PMTUD 黑洞）",
 
   "diag.bufferbloat.title": "Bufferbloat（负载下的延迟）",
   "diag.bufferbloat.no_idle": "无法测量：空闲时没有收到来自互联网的 ping 应答",
@@ -217,6 +223,14 @@
   "diag.bufferbloat.by": "上升 {delta:.0f} ms",
   "diag.bufferbloat.rise": "线路繁忙时到互联网的延迟{amount}{where}",
   "diag.bufferbloat.advice": "请在路由器上开启 SQM / 智能 QoS（fq_codel 或 CAKE），并将上传/下载限速设为比实际带宽低约 5–10%。如果路由器没有 SQM，请降低造成负载的应用的上传速度。",
+
+  "diag.route.title": "到远方目的地的路由",
+  "diag.route.no_data": "无法比较路由：响应的参考网站不足 3 个",
+  "diag.route.tunnel_on": "VPN 或隧道已开启，所测路由是隧道的，而不是运营商的",
+  "diag.route.line": "{host}：{median:.0f} ms（TCP 连接）",
+  "diag.route.ok": "所有参考网站的响应时间相近（最近的 {near:.0f} ms）",
+  "diag.route.detour": "部分参考网站走的路径比其他的长得多（最近的 {near:.0f} ms）：{hosts}",
+  "diag.route.advice": "这通常指向运营商到这些目的地的路由，而不是这台电脑。电脑上无法修复：隧道服务可能走更短的路径（但可能拖慢近处的网站），也可以咨询运营商。",
 
   "diag.cli.header": "{time} 的诊断 — 总体：{status}",
   "diag.cli.saved": "已保存第 {run_id} 次运行",
@@ -325,6 +339,18 @@
   "tweak.ipv6_off.name": "在 Wi‑Fi 上关闭 IPv6",
   "tweak.ipv6_off.note": "仅在怀疑路由器的 IPv6 或 IPv6 DNS 导致变慢时尝试",
 
+  "tweak.tcp_ecn.name": "开启 TCP ECN",
+  "tweak.tcp_ecn.note": "实验性：路由器可以标记拥塞而不是丢包，可能降低高负载时的延迟。中间的某些设备会错误处理 ECN 数据包，因此除非前后测量显示有改善，否则请保持关闭",
+
+  "tweak.rsc_off.name": "关闭 Wi‑Fi 网卡的 Receive Segment Coalescing",
+  "tweak.rsc_off.note": "实验性：收到的数据包逐个交给 Windows，可能降低延迟，代价是吞吐量略降、CPU 占用增加。恢复需要备份",
+
+  "tweak.packet_coalescing_off.name": "关闭 Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "实验性：网卡不再为省电而扣留收到的数据包：延迟更低，耗电略增。恢复需要备份",
+
+  "tweak.dns_fastest.name": "通过 HTTPS 使用最快的公共 DNS",
+  "tweak.dns_fastest.note": "测量 Cloudflare、Google 和 Quad9，使用最快的两家服务商，并用 DoH 加密。关闭后恢复网络自带的 DNS。使用 VPN、在域网络、带有 DNS 后缀或位于强制门户之后时不会提供",
+
   "tweak.reason.no_wifi_card": "未找到 Wi‑Fi 网卡",
   "tweak.reason.no_matching_value": "“{property}”没有合适的值（可用值：{values}）",
   "tweak.reason.no_property": "网卡没有此属性",
@@ -337,6 +363,19 @@
   "tweak.reason.unreadable": "无法读取状态",
   "tweak.reason.no_default_registry": "没有备份，且默认值未知",
   "tweak.reason.no_default_powercfg": "powercfg 没有已知的默认值；需要备份",
+  "tweak.reason.no_tcp_setting": "Windows 未报告“{setting}”",
+  "tweak.reason.no_default_tcp": "没有备份，也不知道默认值",
+  "tweak.reason.no_rsc": "此网卡不支持 Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "没有备份；不知道网卡的原始设置",
+  "tweak.reason.no_offload_setting": "Windows 未报告“{setting}”",
+  "tweak.reason.no_default_offload": "没有已知的默认值；需要备份",
+  "tweak.reason.no_uplink": "没有可以更改 DNS 的网络连接",
+  "tweak.reason.dns_vpn": "VPN 已开启；不会改动它自己的 DNS",
+  "tweak.reason.dns_domain": "此电脑已加入域，或网络带有 DNS 后缀；内部名称需要网络自带的 DNS",
+  "tweak.reason.dns_static_v6": "网卡上有手动设置的 IPv6 DNS 服务器，恢复时会被清除",
+  "tweak.reason.dns_captive": "此网络看起来是强制门户（登录页面）",
+  "tweak.reason.dns_no_fast_servers": "测量没有找到两家响应稳定的公共 DNS 服务商；未做任何更改",
+  "tweak.reason.no_default_dns": "没有备份；不知道原来的 DNS 设置",
 
   "tweak.result.read_failed": "无法读取状态：{error}",
   "tweak.result.unsupported": "此电脑不支持：{reason}",
@@ -533,10 +572,13 @@
   "manual.use_cable.body": "这台电脑有一个空闲的网口。使用网线可一次避开所有 Wi‑Fi 问题，是最稳定的选择。",
 
   "manual.router_sqm.title": "在路由器上开启 SQM / 智能 QoS",
-  "manual.router_sqm.body": "使用 fq_codel 或 CAKE，并将限速设为比实际线路速度低约 5–10%，这样大量下载和上传就不会再塞满队列。",
+  "manual.router_sqm.body": "大部分延迟积累在下载方向，只有能对入站流量整形的路由器才能控制。开启 SQM / 智能 QoS（CAKE 或 fq_codel），并将限速设为比实际线路速度低约 5–10%。如果路由器没有 SQM，支持的路由器可通过 OpenWrt 的 sqm-scripts 软件包获得。如果仍然出现，说明线路本身已满，换更高速的套餐会有帮助。",
 
   "manual.dns_server.title": "改用其他 DNS 服务器",
   "manual.dns_server.body": "正在使用的 DNS 服务器出现错误或超时。请在 Windows 或路由器中设置一个公共 DNS，例如 1.1.1.1 或 8.8.8.8。",
+
+  "manual.tunnel_route.title": "考虑为远方目的地使用隧道",
+  "manual.tunnel_route.body": "有些目的地走的路径比其他的长得多，问题出在运营商的路由，而不是这台电脑。可信的隧道服务可能走更短的路径，但可能拖慢近处的目的地。标记为完成后，应用会对比前后的连接情况；如果没有帮助，请关闭隧道。",
 
   "manual.event.done": "已标记为完成：{step}",
 
@@ -555,6 +597,7 @@
 
   "event.dns_observed": "此网络上的 DNS 服务器：{servers}",
   "event.dns_changed": "此网络的 DNS 服务器已更改：{old} → {new}",
+  "event.dns_app_changed": "本应用更改了此网络的 DNS 服务器：{servers}",
 
   "notify.dns_changed.title": "DNS 服务器已更改",
 

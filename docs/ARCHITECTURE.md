@@ -27,7 +27,7 @@
 | `config.py` | Paths, `settings.json`, `backup.json` (original values before a tweak) |
 | `winutil.py` | Helpers for calling PowerShell (`-EncodedCommand`, returns JSON), `netsh`, Admin check, detection of the Wi‑Fi card and the main network path (uplink) |
 | `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned; optional payload size and "do not fragment" flag |
-| `pmtu.py` | Path MTU: binary search with "do not fragment" pings, pure over an injected send function (diagnostic #15) |
+| `pmtu.py` | Path MTU: binary search with "do not fragment" pings, pure over an injected send function (diagnostic #16) |
 | `dnsprobe.py` | UDP DNS queries with hand-built packets to benchmark each DNS server |
 | `storage.py` | SQLite: per-minute statistics, Wi‑Fi signal, events; cleanup of old data |
 | `monitor.py` | Ping thread per target, reads Wi‑Fi state, detects incidents, aggregates per-minute statistics |
@@ -48,7 +48,7 @@
 | `installer.py`, `entry.py` | Packaged build `Ambysto Steady.exe` (PyInstaller, bundles Python): subcommands `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; per-user install into `%LOCALAPPDATA%\Programs`, uninstall first restores every tweak + metric. Data of the packaged build lives in `%LOCALAPPDATA%\StableInternet\data` |
 | `impact.py` | Measures the effect of a change (tweak, manual step) using monitor data before/after — [ADR-0007](adr/0007-measured-impact.md) |
 | `suggestions.py` | Suggestions from the latest diagnostic run: tweaks + manual steps (rotate the antenna, turn off the modem's Wi‑Fi…), "I did this" |
-| `dnswatch.py` | Detects DNS being changed on the same network (read-only), warns via an event + toast |
+| `dnswatch.py` | Detects DNS being changed on the same network (read-only), warns via an event + toast; a change the app made itself (`dns_fastest`, ADR-0015) is only recorded |
 | `i18n.py`, `locales/*.json` | Translations (ADR-0006): `t(key, **params)`, `msg()` to store messages for later translation, `format_duration()`; English is the reference and fallback |
 
 ## Monitored targets

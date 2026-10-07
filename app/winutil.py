@@ -213,6 +213,11 @@ def is_wifi_adapter(adapter: dict[str, Any]) -> bool:
     return _WIFI_MEDIA in str(adapter.get("PhysicalMediaType", ""))
 
 
+# Adapter names/descriptions of VPN and tunnel software.
+VPN_RE = re.compile(r"VPN|WireGuard|Wintun|\bTAP\b|TAP-|OpenVPN|NetBird|Surfshark|Tailscale|ZeroTier|NordLynx|"
+                     r"Proton|WARP|Fortinet|Cisco AnyConnect|Cloudflare", re.I)
+
+
 def get_adapters(physical_only: bool = True) -> list[dict[str, Any]]:
     """Network adapters. Physical (Wi-Fi, Ethernet) by default; False adds virtual/VPN ones."""
     return run_powershell_json(_adapters_ps(physical_only))

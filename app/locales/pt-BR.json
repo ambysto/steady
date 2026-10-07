@@ -195,7 +195,13 @@
   "diag.path_mtu.ok": "Pacotes do tamanho total da MTU da interface ({mtu} bytes) passam",
   "diag.path_mtu.too_big": "A MTU da interface ({mtu} bytes) é maior do que o caminho permite ({path} bytes)",
   "diag.path_mtu.pppoe": "1492 bytes é típico de uma conexão de Internet PPPoE",
-  "diag.path_mtu.advice": "Pacotes grandes podem se perder no caminho: páginas ficam carregadas pela metade e downloads travam. Defina a MTU de {name} como {path} (como administrador: netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent) ou ative o MSS clamping no roteador.",
+  "diag.path_mtu.advice": "Pacotes grandes podem se perder no caminho: páginas ficam carregadas pela metade e downloads travam. Defina a MTU de {name} como {path} (como administrador: netsh interface ipv4 set subinterface \"{name}\" mtu={path} store=persistent; para IPv6: netsh interface ipv6 set subinterface \"{name}\" mtu={path} store=persistent) ou ative o MSS clamping no roteador.",
+  "diag.path_mtu.no_ipv4": "Sem rota IPv4 para a Internet: esta verificação mede apenas IPv4",
+  "diag.path_mtu.capped": "A MTU da interface passa de {cap} bytes (jumbo frames); a Internet transporta no máximo {cap}, então o teste para aí",
+  "diag.path_mtu.ok_capped": "Pacotes de {cap} bytes, o máximo que a Internet transporta, passam",
+  "diag.path_mtu.reported": "Os roteadores respondem \"pacote grande demais\", então o Windows reduz o tamanho sozinho; pacotes grandes não se perdem",
+  "diag.path_mtu.one_target": "Só um destino respondeu e ele pode descartar pings de qualquer forma, então o caminho menor não está confirmado",
+  "diag.path_mtu.silent": "Pacotes grandes somem sem resposta \"pacote grande demais\": as conexões podem travar (buraco negro de PMTUD)",
 
   "diag.bufferbloat.title": "Bufferbloat (latência sob carga)",
   "diag.bufferbloat.no_idle": "Não foi possível medir: sem resposta de ping da Internet em repouso",
@@ -217,6 +223,14 @@
   "diag.bufferbloat.by": "em {delta:.0f} ms",
   "diag.bufferbloat.rise": "A latência até a Internet sobe {amount} quando a linha está ocupada{where}",
   "diag.bufferbloat.advice": "Ative SQM / QoS inteligente (fq_codel ou CAKE) no roteador e defina os limites de upload/download cerca de 5–10% abaixo da banda real. Se o roteador não tiver SQM, reduza a velocidade de upload do aplicativo que causa a carga.",
+
+  "diag.route.title": "Rota até destinos distantes",
+  "diag.route.no_data": "Não foi possível comparar as rotas: menos de 3 sites de referência responderam",
+  "diag.route.tunnel_on": "Há uma VPN ou túnel ativo, então as rotas medidas são as do túnel, não as do provedor",
+  "diag.route.line": "{host}: {median:.0f} ms (conexão TCP)",
+  "diag.route.ok": "Todos os sites de referência respondem em tempo parecido (o mais próximo, {near:.0f} ms)",
+  "diag.route.detour": "Alguns sites de referência seguem um caminho bem mais longo que os demais (o mais próximo, {near:.0f} ms): {hosts}",
+  "diag.route.advice": "Isso costuma apontar para a rota do provedor até esses destinos, não para este PC. Nada no PC resolve: um serviço de túnel pode seguir um caminho mais curto (mas pode deixar sites próximos mais lentos), ou fale com o provedor.",
 
   "diag.cli.header": "Diagnóstico em {time} — geral: {status}",
   "diag.cli.saved": "Execução nº {run_id} salva",
@@ -325,6 +339,18 @@
   "tweak.ipv6_off.name": "Desativar o IPv6 no Wi‑Fi",
   "tweak.ipv6_off.note": "Experimente apenas quando suspeitar que o IPv6 do roteador ou o DNS IPv6 deixa tudo lento",
 
+  "tweak.tcp_ecn.name": "Ativar o TCP ECN",
+  "tweak.tcp_ecn.note": "Experimental: os roteadores podem sinalizar congestionamento em vez de descartar pacotes, o que pode reduzir a latência sob carga. Alguns dispositivos no caminho tratam mal pacotes ECN; deixe desativado, a menos que uma medição antes/depois mostre ganho",
+
+  "tweak.rsc_off.name": "Desativar o Receive Segment Coalescing na placa Wi‑Fi",
+  "tweak.rsc_off.note": "Experimental: os pacotes recebidos chegam ao Windows um a um, o que pode reduzir a latência ao custo de um pouco de velocidade e mais uso de CPU. Para restaurar é preciso o backup",
+
+  "tweak.packet_coalescing_off.name": "Desativar o Packet Coalescing Filter",
+  "tweak.packet_coalescing_off.note": "Experimental: a placa deixa de segurar os pacotes recebidos para economizar energia: latência menor e um pouco mais de consumo. Para restaurar é preciso o backup",
+
+  "tweak.dns_fastest.name": "Usar o DNS público mais rápido por HTTPS",
+  "tweak.dns_fastest.note": "Mede Cloudflare, Google e Quad9 e usa os dois provedores mais rápidos, criptografados com DoH. Ao desativar, o DNS da própria rede volta. Não é oferecido com VPN, em rede de domínio, com sufixo DNS ou atrás de um portal cativo",
+
   "tweak.reason.no_wifi_card": "Nenhuma placa Wi‑Fi encontrada",
   "tweak.reason.no_matching_value": "'{property}' não tem um valor adequado (disponíveis: {values})",
   "tweak.reason.no_property": "A placa não possui esta propriedade",
@@ -337,6 +363,19 @@
   "tweak.reason.unreadable": "Não foi possível ler o estado",
   "tweak.reason.no_default_registry": "Sem backup, e o valor padrão é desconhecido",
   "tweak.reason.no_default_powercfg": "O powercfg não tem valor padrão conhecido; é necessário um backup",
+  "tweak.reason.no_tcp_setting": "O Windows não informa '{setting}'",
+  "tweak.reason.no_default_tcp": "Sem backup e o valor padrão é desconhecido",
+  "tweak.reason.no_rsc": "Esta placa não oferece suporte ao Receive Segment Coalescing",
+  "tweak.reason.no_default_rsc": "Sem backup; a configuração original da placa é desconhecida",
+  "tweak.reason.no_offload_setting": "O Windows não informa '{setting}'",
+  "tweak.reason.no_default_offload": "Nenhum valor padrão conhecido; é preciso um backup",
+  "tweak.reason.no_uplink": "Não há conexão de rede cujo DNS possa ser alterado",
+  "tweak.reason.dns_vpn": "Há uma VPN ativa; o DNS dela é deixado como está",
+  "tweak.reason.dns_domain": "Este PC está em um domínio ou a rede tem sufixo DNS; nomes internos precisam do DNS da própria rede",
+  "tweak.reason.dns_static_v6": "O adaptador de rede tem um servidor DNS IPv6 estático, que a restauração apagaria",
+  "tweak.reason.dns_captive": "A rede parece um portal cativo (uma página de login)",
+  "tweak.reason.dns_no_fast_servers": "A medição não encontrou dois provedores de DNS público que respondam de forma confiável; nada foi alterado",
+  "tweak.reason.no_default_dns": "Sem backup; as configurações originais de DNS são desconhecidas",
 
   "tweak.result.read_failed": "Não foi possível ler o estado: {error}",
   "tweak.result.unsupported": "Não suportado neste PC: {reason}",
@@ -533,10 +572,13 @@
   "manual.use_cable.body": "Este PC tem uma porta LAN livre. Um cabo evita todos os problemas de Wi‑Fi de uma só vez e é a opção mais estável.",
 
   "manual.router_sqm.title": "Ative o SQM / QoS inteligente no roteador",
-  "manual.router_sqm.body": "Use fq_codel ou CAKE e defina os limites cerca de 5–10% abaixo da velocidade real da linha, para que downloads e uploads grandes parem de encher a fila.",
+  "manual.router_sqm.body": "A maior parte do atraso se acumula no download, que só um roteador que molda o tráfego de entrada consegue controlar. Ative SQM / QoS inteligente (CAKE ou fq_codel) e defina os limites cerca de 5–10% abaixo da velocidade real da linha. Se o roteador não tiver SQM, o OpenWrt (em roteadores compatíveis) oferece um no pacote sqm-scripts. Se ainda acontecer, a própria linha está cheia e um plano mais rápido ajuda.",
 
   "manual.dns_server.title": "Use outro servidor DNS",
   "manual.dns_server.body": "O servidor DNS em uso apresenta erros ou tempos esgotados. Defina um público, como 1.1.1.1 ou 8.8.8.8, no Windows ou no roteador.",
+
+  "manual.tunnel_route.title": "Considere um túnel para destinos distantes",
+  "manual.tunnel_route.body": "Alguns destinos seguem um caminho bem mais longo que outros, o que aponta para a rota do provedor e não para este PC. Um serviço de túnel de confiança pode seguir um caminho mais curto até eles, mas pode deixar destinos próximos mais lentos. Marque o passo como feito e o app compara a conexão antes e depois; desligue o túnel se não ajudar.",
 
   "manual.event.done": "Marcado como feito: {step}",
 
@@ -555,6 +597,7 @@
 
   "event.dns_observed": "Servidores DNS desta rede: {servers}",
   "event.dns_changed": "Os servidores DNS desta rede mudaram: {old} → {new}",
+  "event.dns_app_changed": "Este app alterou os servidores DNS desta rede: {servers}",
 
   "notify.dns_changed.title": "Servidores DNS alterados",
 

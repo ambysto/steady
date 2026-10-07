@@ -6,6 +6,7 @@ from pathlib import Path
 
 from app import config, i18n, tweaks
 from app.tweaks import TweakManager
+from tests.test_network_tweaks import FAST_CLOUDFLARE, bench_of
 from tests.test_tweaks import MemoryBackup, FakeSystem, prop
 
 DOC = Path(config.ROOT, "docs", "TWEAKS.md").read_text(encoding="utf-8")
@@ -38,17 +39,22 @@ def real_card_system():
     return s
 
 
+def catalog():
+    """The real catalog, with the network questions of dns_fastest answered by fakes."""
+    return tweaks.build_catalog(dns_benchmark=lambda servers: bench_of(FAST_CLOUDFLARE), captive=lambda: False)
+
+
 def manager(system=None):
     system = system or real_card_system()
     backup = MemoryBackup()   # one object for both directions, like backup.json
-    return TweakManager(system, tweaks.build_catalog(), load_backup=backup.load,
+    return TweakManager(system, catalog(), load_backup=backup.load,
                         save_backup=backup.save, is_admin=lambda: True), system
 
 
 class CatalogMatchesDocsTests(unittest.TestCase):
     def test_ids_and_risks_match_docs_tweaks_md(self):
         docs = doc_tweaks()
-        self.assertEqual(len(docs), 13, docs)
+        self.assertEqual(len(docs), 17, docs)
         self.assertEqual({t.id: t.risk for t in tweaks.CATALOG}, docs)
 
     def test_ids_are_unique_and_names_vietnamese_present(self):
@@ -62,8 +68,11 @@ class CatalogMatchesDocsTests(unittest.TestCase):
         self.assertTrue(by["tcp_timedwait"].needs_reboot)              # 🔁
         self.assertFalse(any(t.needs_reboot for t in tweaks.CATALOG if t.id != "tcp_timedwait"))
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_roaming", "wifi_bw20_5g",
-                    "wifi_mode_ac", "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "ipv6_off"):
+                    "wifi_mode_ac", "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "ipv6_off",
+                    "rsc_off"):
             self.assertTrue(by[tid].disrupts_network, tid)             # 🔌
+        for tid in ("tcp_ecn", "packet_coalescing_off", "dns_fastest"):
+            self.assertFalse(by[tid].disrupts_network, tid)
         for t in tweaks.CATALOG:
             self.assertTrue(t.needs_admin, t.id)                       # 🛡
 
@@ -77,6 +86,9 @@ class CatalogMatchesDocsTests(unittest.TestCase):
         self.assertFalse(by["device_power_off"].has_default_restore)    # driver INF value: don't guess
         self.assertTrue(by["tcp_timedwait"].has_default_restore)        # Windows default is "not set"
         self.assertFalse(by["power_pcie_aspm_off"].has_default_restore)
+        self.assertTrue(by["tcp_ecn"].has_default_restore)              # Windows' own value is "disabled"
+        for tid in ("rsc_off", "packet_coalescing_off", "dns_fastest"):
+            self.assertFalse(by[tid].has_default_restore, tid)          # the original is only in the backup
 
 
 class RealCardTests(unittest.TestCase):
@@ -89,7 +101,7 @@ class RealCardTests(unittest.TestCase):
         self.assertFalse(st["wifi_prefer_5g"].supported)                 # no band property on this card
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_bw20_5g", "wifi_mode_ac",
                     "wifi_tx_power_max", "device_power_off", "power_wireless_max", "power_pcie_aspm_off",
-                    "tcp_timedwait", "ipv6_off"):
+                    "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off", "dns_fastest"):
             self.assertTrue(st[tid].supported, tid)
         # fresh machine: only the transmit power reads as on, because the driver default is already Highest
         self.assertEqual({tid for tid, s in st.items() if s.enabled}, {"wifi_tx_power_max"})
@@ -126,12 +138,12 @@ class RealCardTests(unittest.TestCase):
     def test_round_trip_of_every_supported_tweak_restores_the_machine(self):
         mgr, s = manager()
         before = s.snapshot()
-        for t in tweaks.build_catalog():
+        for t in catalog():
             if mgr.state(t.id).supported and not mgr.state(t.id).enabled:
                 out = mgr.enable(t.id)
                 self.assertTrue(out.ok and out.changed, (t.id, out.message))
         self.assertTrue(all(st.enabled for st in mgr.states() if st.supported))
-        for t in tweaks.build_catalog():
+        for t in catalog():
             if mgr.state(t.id).supported and t.id != "wifi_tx_power_max":   # already on: the tool never changed it
                 out = mgr.disable(t.id)
                 self.assertTrue(out.ok, (t.id, out.message))
