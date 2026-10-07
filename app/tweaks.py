@@ -32,7 +32,7 @@ from typing import Any, Callable
 
 from . import calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
-from .winsys import OFFLOAD_VALUES, TCP_GLOBAL_VALUES, System
+from .winsys import _ADAPTER_GUID_RE, OFFLOAD_VALUES, TCP_GLOBAL_VALUES, System
 
 RISKS = ("low", "medium", "experimental")
 Message = Any   # an i18n.msg() dict, or plain text (ADR-0006)
@@ -63,6 +63,7 @@ class Reading:
     current: Any = None
     reason: Message = ""
     driver_default: bool = False   # enabled only because the driver ships with the target value
+    warning: Message = ""   # on, but something about the machine now deserves a look (shown beside the switch)
 
 
 # --- the primitive kinds -------------------------------------------------------------
@@ -97,6 +98,15 @@ class Tweak:
     def restore_key(self, original: dict[str, Any]) -> Any:
         """The part of an `original` that a successful restore must reproduce."""
         return original
+
+    def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
+        """capture() after restoring `original`, to compare with it. A tweak whose subject can move (the uplink
+        changes) reads the subject `original` names, not whatever is current."""
+        return self.capture(sys_)
+
+    def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
+        """Why turning the tweak on must wait while `original` is the saved backup (None: nothing in the way)."""
+        return None
 
     def check_original(self, sys_: System, original: Any) -> None:
         """Raise ValueError unless `original` is shaped like this tweak's capture() AND every field lies in
@@ -562,26 +572,45 @@ def choose_dns_servers(bench: list[dnsprobe.ServerBenchmark]) -> list[str]:
     return [winner[0][1], runner_up[0][1]] + [row[1] for row in winner[1:]]
 
 
+def _looks_ours(entry: dict[str, Any]) -> bool:
+    """A DoH entry in the state apply() leaves it in (auto-upgrade on, fallback to UDP on)."""
+    return bool(entry["auto_upgrade"] and entry["fallback_to_udp"])
+
+
 class DnsFastestTweak(Tweak):
     """The uplink's IPv4 DNS set to the fastest public servers, each with DoH auto-upgrade on.
 
     read() never measures: "on" is a property of the configuration (static servers, all from the
     candidate list, two providers or more, DoH auto-upgrade on). The benchmark runs in apply().
-    capture() therefore records the DoH flags of every candidate, not only the chosen ones."""
+    capture() therefore records the DoH flags of every candidate, not only the chosen ones.
+
+    The backup belongs to one interface, found again by its GUID (an ifIndex can be reused). Turning
+    the tweak off, and checking that it worked, look at that interface and not at whichever one is the
+    uplink now; turning it on while the backup is another interface's is refused. restore() touches only
+    what apply() could have changed: a DoH entry somebody else has changed since is left alone."""
 
     has_default_restore = False
+    CAPTIVE_TTL_S = 60.0
 
     def __init__(self, id: str, name: str, risk: str, *, benchmark: Benchmark = benchmark_servers,
-                 captive: CaptiveCheck = captive_portal, **kw: Any) -> None:
+                 captive: CaptiveCheck = captive_portal, clock: Callable[[], float] = time.monotonic, **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
-        self._benchmark, self._captive = benchmark, captive
+        self._benchmark, self._captive, self._clock = benchmark, captive, clock
+        self._captive_seen: tuple[float, bool] | None = None
 
     @staticmethod
-    def _info(sys_: System) -> dict[str, Any]:
-        info = sys_.dns_interface()
+    def _info(sys_: System, guid: str | None = None) -> dict[str, Any]:
+        info = sys_.dns_interface(guid) if guid else sys_.dns_interface()
         if info is None:
-            raise Unsupported(msg("tweak.reason.no_uplink"))
+            raise Unsupported(msg("tweak.reason.dns_interface_gone" if guid else "tweak.reason.no_uplink"))
         return info
+
+    @staticmethod
+    def _doh(sys_: System) -> dict[str, dict[str, Any]]:
+        doh = sys_.doh_get()
+        if doh is None:
+            raise Unsupported(msg("tweak.reason.no_doh"))
+        return doh
 
     @staticmethod
     def _is_on(info: dict[str, Any], doh: dict[str, dict[str, Any]]) -> bool:
@@ -590,7 +619,14 @@ class DnsFastestTweak(Tweak):
                     and len({DOH_ADDRESSES[s][0] for s in servers}) >= 2
                     and all(doh.get(s, {}).get("auto_upgrade") for s in servers))
 
-    def _blocked(self, info: dict[str, Any]) -> Message | None:
+    def _captive_portal(self, fresh: bool) -> bool:
+        """The probe is a web request: listings reuse an answer for a minute, apply() always asks."""
+        now = self._clock()
+        if fresh or self._captive_seen is None or now - self._captive_seen[0] > self.CAPTIVE_TTL_S:
+            self._captive_seen = (now, self._captive())
+        return self._captive_seen[1]
+
+    def _blocked(self, info: dict[str, Any], fresh: bool = False) -> Message | None:
         """Why this network should be left alone (None: fine). The cheap checks come first."""
         if info["vpn_up"]:
             return msg("tweak.reason.dns_vpn")
@@ -598,32 +634,55 @@ class DnsFastestTweak(Tweak):
             return msg("tweak.reason.dns_domain")
         if info["static_v6"]:
             return msg("tweak.reason.dns_static_v6")
-        if self._captive():
+        if self._captive_portal(fresh):
             return msg("tweak.reason.dns_captive")
         return None
 
     def read(self, sys_: System) -> Reading:
         try:
             info = self._info(sys_)
+            doh = self._doh(sys_)
         except Unsupported as exc:
             return Reading(False, False, None, exc.message)
         current = {"servers": info["servers"], "static": info["static"]}
-        if self._is_on(info, sys_.doh_get()):
-            return Reading(True, True, current)
         blocked = self._blocked(info)
+        if self._is_on(info, doh):
+            # Static DNS stays with the interface, not with the network: another network may need its own.
+            return Reading(True, True, current, warning=blocked or "")
         return Reading(blocked is None, False, current, blocked or "")
 
-    def capture(self, sys_: System) -> dict[str, Any]:
-        info, doh = self._info(sys_), sys_.doh_get()
-        return {"interface_index": info["index"], "static": info["static"], "servers": list(info["servers"]),
+    @staticmethod
+    def _snapshot(info: dict[str, Any], doh: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        return {"guid": info["guid"], "interface_index": info["index"], "static": info["static"],
+                "servers": list(info["servers"]),
                 "doh": {address: {"present": address in doh, "template": doh.get(address, {}).get("template", ""),
                                   "auto_upgrade": doh.get(address, {}).get("auto_upgrade", False),
                                   "fallback_to_udp": doh.get(address, {}).get("fallback_to_udp", False)}
                         for address in DOH_ADDRESSES}}
 
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return self._snapshot(self._info(sys_), self._doh(sys_))
+
+    def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
+        snapshot = self._snapshot(self._info(sys_, original["guid"]), self._doh(sys_))
+        for address, now in snapshot["doh"].items():   # an entry somebody else changed is not ours to compare
+            was = original["doh"][address]
+            same = (now["present"], now["auto_upgrade"], now["fallback_to_udp"]) == \
+                   (was["present"], was["auto_upgrade"], was["fallback_to_udp"])
+            if not same and not (now["present"] and _looks_ours(now)) and not (was["present"] and not now["present"]):
+                snapshot["doh"][address] = dict(was)
+        return snapshot
+
+    def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
+        info = sys_.dns_interface()
+        if info is not None and original.get("guid") and info["guid"] != original["guid"]:
+            return msg("tweak.reason.dns_other_interface")
+        return None
+
     def apply(self, sys_: System) -> None:
         info = self._info(sys_)
-        blocked = self._blocked(info)
+        self._doh(sys_)
+        blocked = self._blocked(info, fresh=True)
         if blocked is not None:   # the state may have changed since it was read (a VPN came up...)
             raise Unsupported(blocked)
         servers = choose_dns_servers(self._benchmark(list(DOH_ADDRESSES)))
@@ -634,17 +693,26 @@ class DnsFastestTweak(Tweak):
     def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
         if original is None:
             raise NoDefaultRestore(msg("tweak.reason.no_default_dns"))
-        sys_.dns_servers_set(original["interface_index"], list(original["servers"]) if original["static"] else None)
+        info = self._info(sys_, original["guid"])   # the interface that was changed, wherever it is now
+        wanted = list(original["servers"]) if original["static"] else None
+        if (wanted is None and info["static"]) or (wanted is not None and (not info["static"] or info["servers"] != wanted)):
+            sys_.dns_servers_set(info["index"], wanted)
+        doh = self._doh(sys_)
         for address, was in original["doh"].items():
-            if was["present"]:
+            now = doh.get(address)
+            if was["present"] and now is None:   # the entry vanished: put it back
                 # Always the provider's own template: a URL from the file could send DNS anywhere (ADR-0017).
                 sys_.doh_set(address, DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]), bool(was["fallback_to_udp"]))
-            else:
+            elif was["present"]:
+                if (now["auto_upgrade"], now["fallback_to_udp"]) != (was["auto_upgrade"], was["fallback_to_udp"]) \
+                        and _looks_ours(now):
+                    sys_.doh_set(address, None, bool(was["auto_upgrade"]), bool(was["fallback_to_udp"]))
+            elif now is not None and _looks_ours(now):   # not there before: apply() added it
                 sys_.doh_remove(address)
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         # DHCP servers come and go with the lease: only "static" and a static list must come back.
-        return (original["interface_index"], bool(original["static"]),
+        return (original.get("guid"), bool(original["static"]),
                 tuple(original["servers"]) if original["static"] else None,
                 tuple(sorted((a, bool(d["present"]), bool(d["auto_upgrade"]) if d["present"] else None,
                               bool(d["fallback_to_udp"]) if d["present"] else None)
@@ -653,7 +721,9 @@ class DnsFastestTweak(Tweak):
     MAX_SERVERS = 8
 
     def check_original(self, sys_: System, original: Any) -> None:
-        _fields(original, {"interface_index", "static", "servers", "doh"})
+        _fields(original, {"guid", "interface_index", "static", "servers", "doh"})
+        _require(isinstance(original["guid"], str) and _ADAPTER_GUID_RE.match(original["guid"]) is not None,
+                 f"{original['guid']!r} is not an interface GUID")
         _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
         _require(isinstance(original["static"], bool), "static is not true or false")
         servers = original["servers"]
@@ -839,6 +909,7 @@ class TweakState:
     error: str | None = None     # reading failed (not the same as "unsupported")
     note: Message = ""
     on_by_default: bool = False  # on only because the driver ships that way: the tool wrote nothing, nothing to turn off
+    warning: Message = ""
     measured: bool = False       # the value comes from a measurement (ADR-0016)
     measurement: dict[str, Any] | None = None   # the one stored with the backup, while on
 
@@ -901,7 +972,7 @@ class TweakManager:
         return TweakState(t.id, t.name, t.risk, t.group, r.supported, r.enabled, r.current,
                           msg("tweak.reason.driver_default") if on_by_default else r.reason,
                           has_backup, t.needs_admin, t.disrupts_network, t.needs_reboot,
-                          t.has_default_restore, error, t.note, on_by_default,
+                          t.has_default_restore, error, t.note, on_by_default, r.warning,
                           isinstance(t, MeasuredTweak), measurement)
 
     def states(self) -> list[TweakState]:
@@ -925,7 +996,7 @@ class TweakManager:
     def _rollback(self, t: Tweak, to: dict[str, Any]) -> bool:
         try:
             t.restore(self.system, to)
-            return t.restore_key(t.capture(self.system)) == t.restore_key(to)
+            return t.restore_key(t.recapture(self.system, to)) == t.restore_key(to)
         except Exception:
             return False
 
@@ -970,6 +1041,13 @@ class TweakManager:
                 return self._fail(t, msg("tweak.result.backup_unreadable_apply", error=str(exc)))
 
             created = t.id not in backup
+            if not created:
+                try:
+                    conflict = t.backup_conflict(self.system, backup[t.id]["original"])
+                except Exception as exc:
+                    return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
+                if conflict is not None:
+                    return Outcome(False, False, msg("tweak.result.backup_other", reason=conflict), self.state(t.id))
             try:
                 before = t.capture(self.system)
             except Exception as exc:
@@ -989,7 +1067,7 @@ class TweakManager:
                     applied = t.read(self.system).enabled
                 problem = None if applied else msg("tweak.result.no_effect")
             except Exception as exc:
-                problem = msg("tweak.result.apply_failed", error=str(exc))
+                problem = msg("tweak.result.apply_failed", error=exc.message if isinstance(exc, _MessageError) else str(exc))
             if problem is None:
                 self.last_change_ts = self._clock()
                 if measured:
@@ -1022,21 +1100,24 @@ class TweakManager:
     def disable(self, tweak_id: str) -> Outcome:
         t = self.get(tweak_id)
         with self._lock:
+            read_error = None
             try:
                 r = t.read(self.system)
             except Exception as exc:
-                return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
+                r, read_error = None, exc   # with a backup, restoring does not need the current state
             try:
                 backup = self._load()
             except Exception as exc:
                 return self._fail(t, msg("tweak.result.backup_unreadable", error=str(exc)))
             entry = backup.get(t.id)
+            if entry is None and read_error is not None:
+                return self._fail(t, msg("tweak.result.read_failed", error=str(read_error)))
             if entry is None and not r.enabled:
                 return Outcome(True, False, msg("tweak.result.already_off"), self.state(t.id))
             if entry is None and r.enabled and r.driver_default:
                 # Resetting to the driver default would restart the adapter and leave the same value.
                 return Outcome(True, False, msg("tweak.result.driver_default"), self.state(t.id))
-            if not r.supported and entry is None:
+            if entry is None and not r.supported:
                 return Outcome(False, False, msg("tweak.result.unsupported", reason=r.reason), self.state(t.id))
             if t.needs_admin and not self._is_admin():
                 return Outcome(False, False, msg("tweak.result.needs_admin"), self.state(t.id))
@@ -1070,7 +1151,7 @@ class TweakManager:
                 return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
             try:
                 t.restore(self.system, original)
-                matches = t.restore_key(t.capture(self.system)) == t.restore_key(original)
+                matches = t.restore_key(t.recapture(self.system, original)) == t.restore_key(original)
             except Exception as exc:
                 self.last_change_ts = self._clock()
                 return self._fail(t, msg("tweak.result.restore_failed", error=str(exc)), changed=True, level="bad")
@@ -1246,7 +1327,7 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
         BindingTweak("ipv6_off", _name("ipv6_off"), "experimental", component="ms_tcpip6", enabled=False,
                      group=GROUP_STACK, note=_note("ipv6_off")),
         TcpGlobalTweak("tcp_ecn", _name("tcp_ecn"), "experimental", setting="ecncapability", target="enabled",
-                       default="disabled", group=GROUP_STACK, note=_note("tcp_ecn")),
+                       default="default", group=GROUP_STACK, note=_note("tcp_ecn")),
         RscTweak("rsc_off", _name("rsc_off"), "experimental", group=GROUP_STACK, note=_note("rsc_off")),
         OffloadGlobalTweak("packet_coalescing_off", _name("packet_coalescing_off"), "experimental",
                            setting="PacketCoalescingFilter", target="Disabled", group=GROUP_STACK,
@@ -1346,7 +1427,7 @@ def main(argv: list[str] | None = None) -> int:
             for s in ([] if args.json else states):
                 flag = (i18n.t("tweak.cli.on", args.lang) if s.enabled
                         else "—" if s.supported else i18n.t("tweak.cli.unsupported", args.lang))
-                why = i18n.render(s.reason, args.lang) or s.error
+                why = i18n.render(s.reason, args.lang) or i18n.render(s.warning, args.lang) or s.error
                 print(f"{s.id:24} {flag:14} {s.risk:12} {i18n.render(s.name, args.lang)}  [{s.current!r}]"
                       + (f"  ({why})" if why else ""))
             return 0

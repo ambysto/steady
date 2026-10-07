@@ -6,7 +6,7 @@ import unittest
 from app import i18n, tweaks
 from app.failover import MetricSwitch, check_metric_original
 from tests.test_failover import FakeSystem as MetricSystem
-from tests.test_tweaks import CLASS_KEY, SUB_PCIE, SET_ASPM, TCPIP, FakeSystem, MemoryBackup, manager
+from tests.test_tweaks import CLASS_KEY, SUB_PCIE, SET_ASPM, TCPIP, WIFI_GUID, FakeSystem, MemoryBackup, manager
 
 LUA = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
 
@@ -154,7 +154,7 @@ class TamperedBackupTests(unittest.TestCase):
     def dns(self, **changes):
         doh = {address: {"present": True, "template": template, "auto_upgrade": False, "fallback_to_udp": False}
                for address, (_, template) in tweaks.DOH_ADDRESSES.items()}
-        return {"interface_index": 6, "static": False, "servers": ["192.168.1.1"], "doh": doh, **changes}
+        return {"guid": WIFI_GUID, "interface_index": 6, "static": False, "servers": ["192.168.1.1"], "doh": doh, **changes}
 
     def test_a_doh_template_can_only_be_the_providers_own(self):
         original = self.dns()
@@ -173,6 +173,14 @@ class TamperedBackupTests(unittest.TestCase):
             with self.subTest(servers=servers):
                 self.refused("dns_fastest", self.dns(static=True, servers=servers))
 
+    def test_the_interface_guid_must_be_a_guid(self):
+        for guid in (None, "", "Wi-Fi", "{0}; Remove-Item", WIFI_GUID.strip("{}")):
+            with self.subTest(guid=guid):
+                self.refused("dns_fastest", self.dns(guid=guid))
+        backup = self.dns()
+        del backup["guid"]
+        self.refused("dns_fastest", backup)
+
     def test_the_interface_must_be_an_index(self):
         for index in (0, -1, "6", True, 6.0):
             with self.subTest(index=index):
@@ -181,7 +189,9 @@ class TamperedBackupTests(unittest.TestCase):
     def test_restore_writes_the_built_in_template_even_when_the_stored_one_is_empty(self):
         original = self.dns(static=True, servers=["10.0.0.53"])
         original["doh"]["1.1.1.1"]["template"] = ""
-        mgr, s, backup, _ = manager(backup=MemoryBackup({"dns_fastest": {"original": original}}), tweak_list=catalog())
+        s = FakeSystem()
+        s.doh.clear()                      # every entry vanished: restore puts each one back
+        mgr, s, backup, _ = manager(s, MemoryBackup({"dns_fastest": {"original": original}}), tweak_list=catalog())
         mgr.disable("dns_fastest")
         templates = {args[0]: args[1] for _, name, args in s.writes() if name == "doh_set"}
         self.assertEqual(templates, {a: t for a, (_, t) in tweaks.DOH_ADDRESSES.items()})
