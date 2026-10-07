@@ -8239,10 +8239,46 @@
     "diag.path_mtu.advice" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Optimierung „MTU an die Leitung anpassen“ einschalten. Typisch für PPPoE-Leitungen (1492)."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Turn on the tweak \"Match the MTU to the line\". Typical of PPPoE lines (1492)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activa la optimización \"Ajustar la MTU a la línea\". Típico de las líneas PPPoE (1492)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Activez le tweak « Adapter la MTU à la ligne ». Typique des lignes PPPoE (1492)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "調整「MTU を回線に合わせる」をオンにしてください。PPPoE 回線によく見られます（1492）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "\"MTU를 회선에 맞추기\" 최적화를 켜십시오. PPPoE 회선에서 흔히 나타납니다 (1492)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ative o tweak \"Ajustar a MTU à linha\". Típico de linhas PPPoE (1492)."
           }
         },
         "vi" : {
@@ -8250,16 +8286,58 @@
             "state" : "translated",
             "value" : "Bật tối ưu \"Khớp MTU với đường truyền\". Thường gặp ở đường PPPoE (1492)."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请开启优化项“让 MTU 匹配线路”。常见于 PPPoE 线路（1492）。"
+          }
         }
       }
     },
     "diag.path_mtu.measured" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Größtes durchkommendes Paket: %1$@ Byte"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Largest packet that gets through: %1$@ bytes"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paquete más grande que pasa: %1$@ bytes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus gros paquet qui passe : %1$@ octets"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通過できる最大パケット: %1$@ バイト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통과하는 가장 큰 패킷: %1$@바이트"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maior pacote que passa: %1$@ bytes"
           }
         },
         "vi" : {
@@ -8267,16 +8345,58 @@
             "state" : "translated",
             "value" : "Gói lớn nhất đi qua được: %1$@ byte"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "能通过的最大数据包：%1$@ 字节"
+          }
         }
       }
     },
     "diag.path_mtu.no_reply" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Antwort auf große Pings, daher lässt sich die Paketgröße nicht messen (ICMP wird möglicherweise blockiert)"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "No reply to large pings, so the packet size cannot be measured (ICMP may be blocked)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay respuesta a los pings grandes, por lo que no se puede medir el tamaño de paquete (puede que se bloquee ICMP)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune réponse aux gros pings : la taille des paquets ne peut pas être mesurée (ICMP est peut-être bloqué)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大きな ping に応答がないため、パケットサイズを測定できません（ICMP がブロックされている可能性があります）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "큰 ping에 응답이 없어 패킷 크기를 측정할 수 없습니다 (ICMP가 차단되었을 수 있습니다)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sem resposta aos pings grandes, então o tamanho do pacote não pode ser medido (o ICMP pode estar bloqueado)"
           }
         },
         "vi" : {
@@ -8284,16 +8404,58 @@
             "state" : "translated",
             "value" : "Không có phản hồi cho ping cỡ lớn nên không đo được kích thước gói (có thể ICMP bị chặn)"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大型 ping 没有回应，因此无法测量数据包大小（ICMP 可能被拦截）"
+          }
         }
       }
     },
     "diag.path_mtu.ok" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakete in voller Größe (%1$@ Byte) kommen durch"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Full-size packets (%1$@ bytes) get through"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los paquetes de tamaño completo (%1$@ bytes) pasan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les paquets de taille maximale (%1$@ octets) passent"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フルサイズのパケット（%1$@ バイト）が通過できます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 크기 패킷(%1$@바이트)이 통과합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pacotes de tamanho total (%1$@ bytes) passam"
           }
         },
         "vi" : {
@@ -8301,16 +8463,58 @@
             "state" : "translated",
             "value" : "Gói kích thước đầy đủ (%1$@ byte) đi qua được"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完整大小的数据包（%1$@ 字节）可以通过"
+          }
         }
       }
     },
     "diag.path_mtu.ok_lowered" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die verwendete MTU (%1$@) passt zur Leitung"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "The MTU in use (%1$@) fits the line"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La MTU en uso (%1$@) se ajusta a la línea"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La MTU utilisée (%1$@) convient à la ligne"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用中の MTU（%1$@）は回線に合っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용 중인 MTU(%1$@)가 회선에 맞습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A MTU em uso (%1$@) é adequada à linha"
           }
         },
         "vi" : {
@@ -8318,16 +8522,58 @@
             "state" : "translated",
             "value" : "MTU đang dùng (%1$@) khớp với đường truyền"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在使用的 MTU（%1$@）与线路匹配"
+          }
         }
       }
     },
     "diag.path_mtu.target" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: größtes durchgekommenes Paket %2$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@: largest packet that got through %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: paquete más grande que pasó %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ : plus gros paquet passé %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: 通過できた最大パケット %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: 통과한 가장 큰 패킷 %2$@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: maior pacote que passou %2$@"
           }
         },
         "vi" : {
@@ -8335,16 +8581,58 @@
             "state" : "translated",
             "value" : "%1$@: gói lớn nhất đi qua được %2$@"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：能通过的最大数据包 %2$@"
+          }
         }
       }
     },
     "diag.path_mtu.title" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paketgröße (MTU)"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Packet size (MTU)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamaño de paquete (MTU)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille des paquets (MTU)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "パケットサイズ（MTU）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "패킷 크기 (MTU)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamanho do pacote (MTU)"
           }
         },
         "vi" : {
@@ -8352,22 +8640,70 @@
             "state" : "translated",
             "value" : "Kích thước gói (MTU)"
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "数据包大小（MTU）"
+          }
         }
       }
     },
     "diag.path_mtu.too_big" : {
       "extractionState" : "manual",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pakete über %1$@ Byte gehen verloren, diese Verbindung sendet aber bis zu %2$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Packets larger than %1$@ bytes are lost, but this connection sends up to %2$@"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los paquetes de más de %1$@ bytes se pierden, pero esta conexión envía hasta %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les paquets de plus de %1$@ octets sont perdus, mais cette connexion en envoie jusqu'à %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ バイトを超えるパケットは失われますが、この接続は最大 %2$@ バイトで送信しています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@바이트보다 큰 패킷은 손실되지만, 이 연결은 최대 %2$@바이트로 전송합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pacotes maiores que %1$@ bytes são perdidos, mas esta conexão envia até %2$@"
+          }
+        },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Gói lớn hơn %1$@ byte bị mất, nhưng kết nối này gửi tới %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大于 %1$@ 字节的数据包会丢失，但此连接最大发送 %2$@ 字节"
           }
         }
       }
