@@ -43,9 +43,11 @@ struct ContentView: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         // The language picked in Settings, for every view at once: texts through `localizer`,
-        // numbers, dates and the system's own controls through `locale`.
+        // dates, times and the system's own controls through `locale`, which keeps the
+        // system's region and clock.
         .environment(\.localizer, text)
-        .environment(\.locale, language == AppLanguage.automatic ? .autoupdatingCurrent : text.locale)
+        .environment(\.locale, language == AppLanguage.automatic
+                     ? .autoupdatingCurrent : AppLanguage.locale(language: text.language))
         .task {
             await model.run()
         }

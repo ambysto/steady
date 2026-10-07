@@ -34,6 +34,21 @@ struct AppLanguageTests {
         #expect(AppLanguage.name(of: "zh-Hans") == "简体中文")
     }
 
+    @Test func aChosenLanguageKeepsTheSystemRegionAndClock() {
+        let english = AppLanguage.locale(language: "en", system: Locale(identifier: "vi_VN"))
+        #expect(english.language.languageCode == .english)
+        #expect(english.region == .vietnam)
+        #expect(english.hourCycle == .zeroToTwentyThree)   // not the US 12-hour clock
+        // A 12-hour clock picked in the system settings stays too.
+        let vietnamese = AppLanguage.locale(language: "vi", system: Locale(identifier: "de_DE@hours=h12"))
+        #expect(vietnamese.language.languageCode == .vietnamese)
+        #expect(vietnamese.region == .germany)
+        #expect(vietnamese.hourCycle == .oneToTwelve)
+        let chinese = AppLanguage.locale(language: "zh-Hans", system: Locale(identifier: "en_US"))
+        #expect(chinese.language.script == .hanSimplified)
+        #expect(chinese.region == .unitedStates)
+    }
+
     @Test func aChosenLanguageWinsOverTheSystem() throws {
         let bundle = try Self.bundle()
         let text = Localizer(bundle: bundle, choice: "vi", preferences: ["zh-Hans-CN"])
