@@ -9,8 +9,9 @@ import unittest
 from app import config, i18n, tweaks
 from app.tweaks import (AdapterPropertyTweak, BindingTweak, NoDefaultRestore, PowerCfgTweak, RegistryDwordTweak,
                         TweakManager)
-from app.winsys import SystemWriteError
+from app.winsys import SystemReadError, SystemWriteError
 
+WIFI_GUID = "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}"
 CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\0011"
 
 
@@ -48,8 +49,11 @@ class FakeSystem:
         self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
         self.offload = {"PacketCoalescingFilter": "Enabled"}
         self.dhcp_dns = ["192.168.1.1"]
-        self.dns = {"index": 6, "alias": "Wi-Fi", "servers": list(self.dhcp_dns), "static": False, "static_v6": False,
-                    "suffix": "", "domain_joined": False, "vpn_up": False}
+        self.dns = {"index": 6, "guid": WIFI_GUID, "alias": "Wi-Fi", "servers": list(self.dhcp_dns), "static": False,
+                    "static_v6": False, "suffix": "", "domain_joined": False, "vpn_up": False}
+        self.extra_interfaces = []    # other connections (a dock's Ethernet...), found by their GUID
+        self.uplink = "dns"           # "dns": the interface above; else the dict of another one (or None: offline)
+        self.uplink_read_error = False
         # What Windows 11 ships: a template for each public server, auto-upgrade for none of them.
         self.doh = {address: {"template": template, "auto_upgrade": False, "fallback_to_udp": False}
                     for address, (_, template) in tweaks.DOH_ADDRESSES.items()}
@@ -98,13 +102,20 @@ class FakeSystem:
         self._r("offload_global_get", setting)
         return self.offload.get(setting)
 
-    def dns_interface(self):
-        self._r("dns_interface")
-        return copy.deepcopy(self.dns)
+    def interfaces(self):
+        return ([self.dns] if self.dns else []) + self.extra_interfaces
+
+    def dns_interface(self, guid=None):
+        self._r("dns_interface", guid)
+        if guid is not None:
+            return copy.deepcopy(next((i for i in self.interfaces() if i["guid"] == guid), None))
+        if self.uplink_read_error:
+            raise SystemReadError("the uplink cannot be read")
+        return copy.deepcopy(self.dns if self.uplink == "dns" else self.uplink)
 
     def doh_get(self):
         self._r("doh_get")
-        return copy.deepcopy(self.doh)
+        return copy.deepcopy(self.doh)       # None: this Windows has no DoH
 
     def wifi_ssid_bands(self):
         self._r("wifi_ssid_bands")
@@ -164,11 +175,15 @@ class FakeSystem:
 
     def dns_servers_set(self, interface_index, servers):
         if self._w("dns_servers_set", interface_index, servers):
-            self.dns.update(servers=list(self.dhcp_dns) if servers is None else list(servers),
-                            static=servers is not None)
+            target = next(i for i in self.interfaces() if i["index"] == interface_index)
+            target.update(servers=list(self.dhcp_dns) if servers is None else list(servers), static=servers is not None)
 
     def doh_set(self, address, template, auto_upgrade, fallback_to_udp):
         if self._w("doh_set", address, template, auto_upgrade, fallback_to_udp):
+            if template is None:      # Set-DnsClientDohServerAddress: only an entry that exists, its template stays
+                if address not in self.doh:
+                    raise SystemWriteError(f"no DoH entry for {address}")
+                template = self.doh[address]["template"]
             self.doh[address] = {"template": template, "auto_upgrade": auto_upgrade,
                                  "fallback_to_udp": fallback_to_udp}
 
@@ -182,7 +197,7 @@ class FakeSystem:
 
     def snapshot(self):
         return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.tcp_global, self.rsc,
-                              self.offload, self.dns, self.doh))
+                              self.offload, self.dns, self.extra_interfaces, self.doh))
 
 
 def power_saving():

@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **`dns_fastest` restore after the uplink changed** (review of the 0.4.0 work): the backup now holds the interface's GUID, and turning the tweak off, and checking the result, look at that interface instead of whichever one is the uplink at that moment. Turning it on while the backup belongs to another interface is refused until it has been turned off, so a second original is never lost. Turning it off also works offline, with an unreadable uplink or a DoH list that cannot be read at that moment, and says so when the adapter is gone. New hooks `Tweak.recapture` and `Tweak.backup_conflict`.
+- `dns_fastest` while on now checks the network again: a VPN, a domain, a DNS suffix or a captive portal that appeared since shows a "Worth a look" warning beside the switch (the captive-portal probe is reused for a minute).
+- `dns_fastest` restore only undoes what the tweak could have changed: a DoH entry somebody else has changed is left alone, and nothing already as it was is rewritten. DoH templates with `{?dns}` or a query string are accepted and only ever reach PowerShell as base64. A Windows without the DoH cmdlets reads as "not supported" instead of an error.
+- `tcp_ecn` is read through `Get-NetTCPSetting`, so it works on a non-English Windows (the `netsh show` labels are translated), and turning it off without a backup sets Windows' own `default` instead of `disabled`.
+- A tweak's reason (no fast DNS servers, a VPN...) now stays in the UI language when a change fails, and a failed `dns_fastest` change is no longer reported as an unexpected DNS change by the monitor.
+- Diagnostics check numbers and keys are tested to be unique.
+
 ## [0.3.0] - 2026-10-07
 
 Two new Wi‑Fi tweaks: prefer the 5 GHz band and highest transmit power.

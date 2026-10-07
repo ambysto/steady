@@ -26,11 +26,12 @@ NET_CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc
 _GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 _COMPONENT_RE = re.compile(r"^[A-Za-z0-9_]+$")
 _POWER_RE = re.compile(r"Current (AC|DC) Power Setting Index:\s*0x([0-9a-fA-F]+)")
-_NETSH_LINE_RE = re.compile(r"^\s*(.+?)\s*:\s*(.*?)\s*$")
-_DOH_TEMPLATE_RE = re.compile(r"^https://[A-Za-z0-9.-]+(?::\d+)?(?:/[A-Za-z0-9._~/-]*)?$")
+_ADAPTER_GUID_RE = re.compile(r"^\{[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}$")
 
-# `netsh int tcp set global <key>=<value>` parameters a tweak may change -> the label of `show global`.
-TCP_GLOBAL_SETTINGS = {"ecncapability": "ECN Capability"}
+# `netsh int tcp set global <key>=<value>` parameters a tweak may change -> the property of Get-NetTCPSetting that
+# holds it. netsh sets every TCP template at once; the value is read back from Get-NetTCPSetting because the labels
+# of `netsh int tcp show global` are translated on a non-English Windows, the property names are not.
+TCP_GLOBAL_SETTINGS = {"ecncapability": "EcnCapability"}
 TCP_GLOBAL_VALUES = ("enabled", "disabled", "default")
 # Set-NetOffloadGlobalSetting parameters a tweak may change.
 OFFLOAD_SETTINGS = ("PacketCoalescingFilter",)
@@ -76,8 +77,8 @@ class System(Protocol):
     def tcp_global_get(self, setting: str) -> str | None: ...
     def rsc_get(self, adapter: str) -> dict[str, Any] | None: ...
     def offload_global_get(self, setting: str) -> str | None: ...
-    def dns_interface(self) -> dict[str, Any] | None: ...
-    def doh_get(self) -> dict[str, dict[str, Any]]: ...
+    def dns_interface(self, guid: str | None = None) -> dict[str, Any] | None: ...
+    def doh_get(self) -> dict[str, dict[str, Any]] | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -90,7 +91,7 @@ class System(Protocol):
     def rsc_set(self, adapter: str, ipv4: bool | None, ipv6: bool | None) -> None: ...
     def offload_global_set(self, setting: str, value: str) -> None: ...
     def dns_servers_set(self, interface_index: int, servers: list[str] | None) -> None: ...
-    def doh_set(self, address: str, template: str, auto_upgrade: bool, fallback_to_udp: bool) -> None: ...
+    def doh_set(self, address: str, template: str | None, auto_upgrade: bool, fallback_to_udp: bool) -> None: ...
     def doh_remove(self, address: str) -> None: ...
 
 
@@ -118,16 +119,6 @@ def _ps_bool(value: bool) -> str:
 
 def _uplink_route() -> dict[str, Any] | None:
     return default_route_native() or get_uplink()
-
-
-def parse_netsh_table(text: str) -> dict[str, str]:
-    """`label : value` lines of a netsh `show` command (labels as printed, values lower-cased)."""
-    out: dict[str, str] = {}
-    for line in text.splitlines():
-        m = _NETSH_LINE_RE.match(line)
-        if m and m.group(2):
-            out[m.group(1)] = m.group(2).lower()
-    return out
 
 
 class WindowsSystem:
@@ -253,13 +244,14 @@ class WindowsSystem:
         return proc.returncode, out or ""
 
     def tcp_global_get(self, setting: str) -> str | None:
-        """Lower-case value of a `netsh int tcp show global` parameter ("enabled"...); None when not listed."""
+        """Lower-case value of a TCP global parameter ("enabled"...); None when Windows does not report it."""
         if setting not in TCP_GLOBAL_SETTINGS:
             raise ValueError(f"unknown TCP global setting: {setting!r}")
-        code, out = self._netsh("int", "tcp", "show", "global")
-        if code != 0:
-            raise SystemReadError(f"netsh int tcp show global exited {code}")
-        return parse_netsh_table(out).get(TCP_GLOBAL_SETTINGS[setting])
+        try:
+            value = self._ps(f"(Get-NetTCPSetting -SettingName Internet -ErrorAction Stop).{TCP_GLOBAL_SETTINGS[setting]}")
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the TCP setting {setting}: {exc}") from exc
+        return value.strip().lower() or None
 
     def rsc_get(self, adapter: str) -> dict[str, Any] | None:
         """Receive Segment Coalescing of an adapter: {"ipv4", "ipv6"} enabled flags and {"ipv4_supported",
@@ -289,45 +281,58 @@ class WindowsSystem:
             raise SystemReadError(f"cannot read {setting}: {exc}") from exc
         return value or None
 
-    def dns_interface(self) -> dict[str, Any] | None:
-        """The uplink's IPv4 DNS configuration: {"index", "alias", "servers", "static", "static_v6", "suffix",
-        "domain_joined", "vpn_up"}. `static` is a DNS server typed in by hand (the interface's NameServer
-        value), as opposed to one from DHCP. None when there is no uplink."""
-        route = self._route()
-        if not route:
-            return None
-        idx = int(route["interface_index"])
+    def dns_interface(self, guid: str | None = None) -> dict[str, Any] | None:
+        """The IPv4 DNS configuration of the uplink, or of the interface with this InterfaceGuid ("{...}", the
+        way a backup finds it again: an ifIndex can be reused, a GUID cannot): {"index", "guid", "alias",
+        "servers", "static", "static_v6", "suffix", "domain_joined", "vpn_up"}. `static` is a DNS server typed in
+        by hand (the interface's NameServer value), as opposed to one from DHCP. None when there is no such
+        interface (no uplink; the adapter is gone)."""
+        if guid is not None:
+            if not _ADAPTER_GUID_RE.match(guid):
+                raise ValueError(f"not an interface GUID: {guid!r}")
+            find = ("$a = Get-NetAdapter -ErrorAction Stop | Where-Object { $_.InterfaceGuid -eq "
+                        f"{ps_literal(guid)} " "} | Select-Object -First 1; ")
+        else:
+            route = self._route()
+            if not route:
+                return None
+            find = f"$a = Get-NetAdapter -InterfaceIndex {int(route['interface_index'])} -ErrorAction Stop; "
         try:
             rows = self._ps_json(
-                f"$i = {idx}; $a = Get-NetAdapter -InterfaceIndex $i -ErrorAction Stop; $g = $a.InterfaceGuid; "
+                find + "if ($a) { $i = $a.InterfaceIndex; $g = $a.InterfaceGuid; "
                 "$v4 = Get-ItemProperty \"HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\$g\" "
                 "-ErrorAction SilentlyContinue; "
                 "$v6 = Get-ItemProperty \"HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters\\Interfaces\\$g\" "
                 "-ErrorAction SilentlyContinue; "
-                "[pscustomobject]@{ Alias = $a.Name; StaticV4 = [bool]$v4.NameServer; StaticV6 = [bool]$v6.NameServer; "
+                "[pscustomobject]@{ Index = $i; Guid = [string]$g; Alias = $a.Name; StaticV4 = [bool]$v4.NameServer; "
+                "StaticV6 = [bool]$v6.NameServer; "
                 "Servers = @(Get-DnsClientServerAddress -InterfaceIndex $i -AddressFamily IPv4 "
                 "-ErrorAction SilentlyContinue | ForEach-Object { $_.ServerAddresses }); "
                 "Suffix = [string](Get-DnsClient -InterfaceIndex $i -ErrorAction SilentlyContinue).ConnectionSpecificSuffix; "
                 "Domain = [bool](Get-CimInstance Win32_ComputerSystem).PartOfDomain; "
                 "Up = @(Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' } | "
-                "ForEach-Object { \"$($_.Name) $($_.InterfaceDescription)\" }) }")
+                "ForEach-Object { \"$($_.Name) $($_.InterfaceDescription)\" }) } }")
         except PowerShellError as exc:
-            raise SystemReadError(f"cannot read the DNS configuration of interface {idx}: {exc}") from exc
+            raise SystemReadError(f"cannot read the DNS configuration: {exc}") from exc
         if not rows:
             return None
         r = rows[0]
-        return {"index": idx, "alias": r.get("Alias") or "", "servers": _as_list(r.get("Servers")),
+        return {"index": int(r["Index"]), "guid": str(r.get("Guid") or ""), "alias": r.get("Alias") or "",
+                "servers": _as_list(r.get("Servers")),
                 "static": bool(r.get("StaticV4")), "static_v6": bool(r.get("StaticV6")),
                 "suffix": (r.get("Suffix") or "").strip(), "domain_joined": bool(r.get("Domain")),
                 "vpn_up": any(VPN_RE.search(name) for name in _as_list(r.get("Up")))}
 
-    def doh_get(self) -> dict[str, dict[str, Any]]:
-        """DoH entries Windows knows: address -> {"template", "auto_upgrade", "fallback_to_udp"}."""
+    def doh_get(self) -> dict[str, dict[str, Any]] | None:
+        """DoH entries Windows knows: address -> {"template", "auto_upgrade", "fallback_to_udp"}. None when this
+        Windows has no DoH support at all (Windows 10 before 21H2 lacks the cmdlets)."""
         try:
             rows = self._ps_json(
                 "Get-DnsClientDohServerAddress -ErrorAction Stop | Select-Object ServerAddress, DohTemplate, "
                 "@{n='AutoUpgrade';e={[bool]$_.AutoUpgrade}}, @{n='Fallback';e={[bool]$_.AllowFallbackToUdp}}")
         except PowerShellError as exc:
+            if re.search(r"not recognized|CommandNotFound|is not a cmdlet", str(exc), re.I):
+                return None
             raise SystemReadError(f"cannot read the DoH server list: {exc}") from exc
         return {str(r["ServerAddress"]): {"template": r.get("DohTemplate") or "",
                                           "auto_upgrade": bool(r.get("AutoUpgrade")),
@@ -436,17 +441,21 @@ class WindowsSystem:
         self._ps_write(f"Set-DnsClientServerAddress -InterfaceIndex {idx} {how} -ErrorAction Stop",
                        f"setting the DNS servers of interface {idx}")
 
-    def doh_set(self, address: str, template: str, auto_upgrade: bool, fallback_to_udp: bool) -> None:
-        """Make Windows use DoH for `address` (adds the entry with `template` if it is missing)."""
+    def doh_set(self, address: str, template: str | None, auto_upgrade: bool, fallback_to_udp: bool) -> None:
+        """Make Windows use DoH for `address`. With a `template` the entry is added when it is missing; without
+        one only an existing entry is changed (restoring an entry never has to invent its template)."""
         addr = _check_address(address)
-        if not _DOH_TEMPLATE_RE.match(template):
-            raise ValueError(f"bad DoH template: {template!r}")
         flags = f"-AutoUpgrade {_ps_bool(auto_upgrade)} -AllowFallbackToUdp {_ps_bool(fallback_to_udp)}"
+        change = f"Set-DnsClientDohServerAddress -ServerAddress '{addr}' {flags} -ErrorAction Stop"
+        if template is None:
+            self._ps_write(change, f"setting DoH for {addr}")
+            return
+        if not template.startswith("https://") or any(ord(c) < 32 for c in template):
+            raise ValueError(f"bad DoH template: {template!r}")
         self._ps_write(
             f"$e = Get-DnsClientDohServerAddress -ServerAddress '{addr}' -ErrorAction SilentlyContinue; "
-            f"if ($e) {{ Set-DnsClientDohServerAddress -ServerAddress '{addr}' {flags} -ErrorAction Stop }} "
-            f"else {{ Add-DnsClientDohServerAddress -ServerAddress '{addr}' -DohTemplate '{template}' {flags} "
-            "-ErrorAction Stop }", f"setting DoH for {addr}")
+            f"if ($e) {{ {change} }} else {{ Add-DnsClientDohServerAddress -ServerAddress '{addr}' "
+            f"-DohTemplate {ps_literal(template)} {flags} -ErrorAction Stop }}", f"setting DoH for {addr}")
 
     def doh_remove(self, address: str) -> None:
         addr = _check_address(address)
