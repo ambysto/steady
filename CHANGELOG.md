@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-07
+
+After a check, what it found opens in its own view: the problems to fix ticked on the left, each finding on the right, Back and Fix below. "Nothing to fix" shows a screen with a tick and what is left on Optimize. The sidebar no longer repeats the app name.
+
 ### Changed
 - **The check result has its own view** (SIC-110, [ADR-0020](docs/adr/0020-check-fix-result-flow.md) point 12). When a check finds problems, the Overview turns into a result view until "Back": on the left a summary to tick (the problems Fix covers, the other low-risk changes as one row with their count, then the other findings with their status), on the right one card per finding or, for a chosen row, its advice and changes, and below the count of ticked changes, the Wi‑Fi and approval notes, "Back" and "Fix". It replaces the Fix confirmation sheet, and it opens by itself when a check finishes. The Overview card keeps the headline with "See what was found". "Nothing to fix" now shows a screen with a tick and points to Optimize, saying how many low-risk changes are still off. 13 new keys in all 7 catalogs; `ui.check.sheet.title` and `ui.check.sheet.confirm` removed.
 - **The sidebar no longer repeats the app name** (SIC-111). Windows' title bar (or the browser tab) already shows the icon and "Ambysto Steady", so the row above Overview is gone, and the first item now lines up with the screen's heading.
