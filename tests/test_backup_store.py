@@ -8,12 +8,13 @@ from pathlib import Path
 from unittest import mock
 
 from app import backupstore, config, elevated, failover, i18n, tweaks, winutil
+from app.tweaks import Reading, TweakManager
 from tests.test_backup_trust import catalog
 from tests.test_failover import FakeSystem as MetricSystem
 from tests.test_tweaks import FakeSystem
-from app.tweaks import TweakManager
 
 DOH_FLAGS = {"auto_upgrade": False, "fallback_to_udp": False}
+ECN_OFF = {"original": {"setting": "ecncapability", "value": "disabled"}}
 
 
 class FakeWinreg:
@@ -21,7 +22,7 @@ class FakeWinreg:
     HKLM\\SOFTWARE's ACL does (BUILTIN\\Users: ReadKey)."""
     HKEY_LOCAL_MACHINE = "HKLM"
     KEY_READ, KEY_WRITE, KEY_WOW64_64KEY = 0x20019, 0x20006, 0x0100
-    REG_SZ, REG_MULTI_SZ = 1, 7
+    REG_SZ, REG_DWORD = 1, 4
 
     class Handle:
         def __init__(self, path):
@@ -69,17 +70,22 @@ class FakeWinreg:
         self._need_admin()
         self.keys[handle.path][name] = (value, kind)
 
-    def DeleteKeyEx(self, root, path, access=KEY_WOW64_64KEY, reserved=0):
-        self.views.append(access)
+    def DeleteValue(self, handle, name):
         self._need_admin()
-        if path not in self.keys:
-            raise FileNotFoundError(2, "The system cannot find the file specified")
-        if any(k.startswith(path + "\\") for k in self.keys):
-            raise PermissionError(5, "Access is denied")     # what RegDeleteKeyEx says for a key with subkeys
-        del self.keys[path]
+        try:
+            del self.keys[handle.path][name]
+        except KeyError:
+            raise FileNotFoundError(2, "The system cannot find the file specified") from None
+
+    def value(self, name):
+        return self.keys.get(backupstore.STORE_KEY, {}).get(name, (None,))[0]
 
     def backup(self):
-        return json.loads(self.keys[backupstore.STORE_KEY][backupstore.BACKUP_VALUE][0])
+        return json.loads(self.value(backupstore.BACKUP_VALUE))
+
+    def quarantine(self):
+        text = self.value(backupstore.QUARANTINE_VALUE)
+        return json.loads(text) if text else {}
 
 
 def dns_original(servers, static=True):
@@ -95,12 +101,32 @@ def dns_on(system):
     return system
 
 
+class ElsewhereTweak:
+    """A tweak whose own reading is off while its backup belongs to a subject it does not read (dns_fastest
+    of a docked or VPN interface, mtu_pmtu): only backup_reading() says it is on."""
+    id = "elsewhere"
+
+    def __init__(self, on_there=True):
+        self.on_there = on_there
+
+    def check_original(self, system, original):
+        if original != {"subject": "there"}:
+            raise ValueError("not this tweak's")
+
+    def read(self, system):
+        return Reading(True, False, None)
+
+    def backup_reading(self, system, original):
+        return Reading(True, True, None) if self.on_there else None
+
+
 class StoreCase(unittest.TestCase):
     """The registry backend (STABLEINTERNET_BACKUP unset), a fake HKLM, the old backup.json in a temp folder."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
         env = {k: v for k, v in os.environ.items() if k != backupstore.ENV_BACKEND}
         env["STABLEINTERNET_DATA"] = tmp.name
         for patcher in (mock.patch.dict(os.environ, env, clear=True),
@@ -109,19 +135,23 @@ class StoreCase(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.reg = FakeWinreg()
-        backupstore.REGISTRY = backupstore.RegistryStore(self.reg)
-        self.legacy = Path(tmp.name) / "backup.json"
+        self.new_process()
+        self.legacy = self.tmp / "backup.json"
         self.system = FakeSystem()
         self.check = backupstore.entry_check(self.system, catalog())
         self.events = []
 
-    def plant(self, data):
+    def new_process(self):
+        """The same HKLM seen by a new process (the quarantine is retried once per process)."""
+        backupstore.REGISTRY = backupstore.RegistryStore(self.reg)
+
+    def plant(self, data, path=None):
         """What a process of the user, without Admin, can do: write backup.json."""
-        self.legacy.write_text(json.dumps(data), encoding="utf-8")
+        (path or self.legacy).write_text(json.dumps(data), encoding="utf-8")
 
     def store(self, data):
-        self.reg.CreateKeyEx(self.reg.HKEY_LOCAL_MACHINE, backupstore.STORE_KEY)
         backupstore.REGISTRY.write(data)
+        backupstore.REGISTRY.mark_imported()
 
     def load(self):
         return backupstore.load(check=self.check)
@@ -134,24 +164,25 @@ class StoreCase(unittest.TestCase):
 
 class StoreTests(StoreCase):
     def test_backups_are_one_json_value_in_hklm_in_the_64_bit_view(self):
-        config.put_backup_entry("tcp_ecn", {"original": {"setting": "ecncapability", "value": "disabled"}})
-        self.assertEqual(self.reg.backup(), {"tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}}})
+        config.put_backup_entry("tcp_ecn", ECN_OFF)
+        self.assertEqual(self.reg.backup(), {"tcp_ecn": ECN_OFF})
         self.assertEqual(self.reg.keys[backupstore.STORE_KEY][backupstore.BACKUP_VALUE][1], self.reg.REG_SZ)
         self.assertTrue(all(access & self.reg.KEY_WOW64_64KEY for access in self.reg.views))
         self.assertFalse(self.legacy.exists())
 
     def test_without_admin_nothing_can_be_written(self):
-        self.store({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}}})
+        self.store({"tcp_ecn": ECN_OFF})
         self.reg.admin = False
         with self.assertRaises(PermissionError):
             config.put_backup_entry("tcp_ecn", {"original": {"setting": "ecncapability", "value": "enabled"}})
         with self.assertRaises(PermissionError):
             config.save_backup({})
-        self.assertEqual(self.reg.backup()["tcp_ecn"]["original"]["value"], "disabled")
+        self.assertEqual(self.reg.backup(), {"tcp_ecn": ECN_OFF})
 
     def test_an_unelevated_reader_sees_the_store(self):
-        self.store({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}}})
+        self.store({"tcp_ecn": ECN_OFF})
         self.reg.admin = False
+        self.new_process()
         self.assertEqual(list(config.load_backup()), ["tcp_ecn"])
         mgr = self.manager()
         mgr._load = config.load_backup
@@ -159,18 +190,19 @@ class StoreTests(StoreCase):
         self.assertFalse(mgr.state("rsc_off").has_backup)
 
     def test_no_key_means_no_backup(self):
+        self.reg.admin = False
         self.assertEqual(config.load_backup(), {})
-        self.assertFalse(backupstore.exists())
+        self.assertFalse(backupstore.has_data())
 
     def test_a_corrupt_value_is_an_error_not_an_empty_backup(self):
-        self.reg.CreateKeyEx(self.reg.HKEY_LOCAL_MACHINE, backupstore.STORE_KEY)
+        self.store({})
         self.reg.keys[backupstore.STORE_KEY][backupstore.BACKUP_VALUE] = ("[1, 2]", self.reg.REG_SZ)
         with self.assertRaises(ValueError):
             config.load_backup()
         self.assertIsNone(self.manager().state("tcp_ecn").has_backup)
 
     def test_the_lock_is_reentrant_so_an_import_can_run_inside_a_write(self):
-        self.plant({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}}})
+        self.plant({"tcp_ecn": ECN_OFF})
         self.system.tcp_global["ecncapability"] = "enabled"
         with config.backup_lock():
             config.put_backup_entry("failover:21", {"original": {"automatic": True}},
@@ -183,68 +215,129 @@ class StoreTests(StoreCase):
             with mock.patch("sys.frozen", True, create=True):
                 self.assertFalse(backupstore.file_backend())
 
+    def test_an_elevated_packaged_process_ignores_the_folder_overrides(self):
+        """HKCU\\Environment reaches the elevated helper: it must not read or write where the user points it."""
+        other = self.tmp / "elsewhere"
+        with mock.patch.dict(os.environ, {"STABLEINTERNET_DATA": str(other), "STABLEINTERNET_USERDIR": str(other),
+                                          "LOCALAPPDATA": str(self.tmp / "local")}), \
+                mock.patch("sys.frozen", True, create=True):
+            self.reg.admin = False
+            self.assertEqual(config.data_dir(), other)          # the build's smoke test runs unelevated
+            self.reg.admin = True
+            self.assertEqual(config.user_dir(), self.tmp / "local" / "StableInternet")
+            self.assertEqual(config.data_dir(), self.tmp / "local" / "StableInternet" / "data")
+
 
 class ImportTests(StoreCase):
     def test_entries_that_would_be_restored_are_imported_once(self):
         dns_on(self.system)
         self.system.tcp_global["ecncapability"] = "enabled"
         good = {"dns_fastest": {"original": dns_original(["192.0.2.53"]), "captured_at": 1},
-                "tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}},
+                "tcp_ecn": ECN_OFF,
                 "failover:21": {"original": {"automatic": False, "metric": 25}, "home": 6}}
         self.plant(good)
         self.assertEqual(self.load(), good)
         self.assertEqual(self.reg.backup(), good)
-        self.assertFalse(self.legacy.exists())
-        self.assertTrue(self.legacy.with_name("backup.json.imported").is_file())
-        self.assertEqual(backupstore.REGISTRY.imported(), [backupstore.legacy_id(self.legacy)])
+        self.assertEqual(self.reg.value(backupstore.IMPORTED_VALUE), 1)
+        self.assertEqual(json.loads(self.legacy.read_text(encoding="utf-8")), good)   # never moved by the elevated side
 
-    def test_refused_entries_stay_out_of_the_store(self):
+    def test_unknown_entries_are_dropped_refused_ones_wait_in_quarantine(self):
         dns_on(self.system)
-        planted = {
-            "tcp_timedwait": {"original": {"path": r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-                                           "name": "TcpTimedWaitDelay", "value": 0}},         # ADR-0017 check fails
-            "tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}},     # the tweak is off: stale
-            "dns_fastest": {"captured_at": 1},                                               # no original
-            "failover:6": {"original": {"automatic": False, "metric": 0}},                  # metric out of range
-            "failover:x": {"original": {"automatic": True}},
-            "anything_else": {"original": {}},
-        }
-        self.plant(planted)
+        stale = {"tcp_ecn": ECN_OFF,                                                   # the tweak is off now
+                 "tcp_timedwait": {"original": {"path": r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+                                                "name": "TcpTimedWaitDelay", "value": 0}},   # ADR-0017 check fails
+                 "failover:6": {"original": {"automatic": False, "metric": 0}}}            # metric out of range
+        self.plant({**stale, "dns_fastest": {"captured_at": 1}, "failover:x": {"original": {"automatic": True}},
+                    "anything_else": {"original": {}}})
         self.assertEqual(self.load(), {})
-        self.assertEqual(self.reg.backup(), {})
-        self.assertEqual(json.loads(self.legacy.with_name("backup.json.imported").read_text(encoding="utf-8")),
-                         planted)   # kept for the record
+        self.assertEqual(self.reg.quarantine(), stale)
+
+    def test_a_quarantined_entry_is_imported_once_it_passes(self):
+        """A transient refusal (the tweak read as off, the Wi-Fi card switched off at the first elevated run)
+        is not a loss: the next elevated process tries again."""
+        self.plant({"tcp_ecn": ECN_OFF})
+        self.assertEqual(self.load(), {})
+        self.system.tcp_global["ecncapability"] = "enabled"
+        self.assertEqual(self.load(), {})                     # once per process: no machine reads on every load
+        self.new_process()
+        self.assertEqual(self.load(), {"tcp_ecn": ECN_OFF})
+        self.assertEqual(self.reg.quarantine(), {})
+
+    def test_a_quarantined_entry_never_replaces_a_backup_taken_since(self):
+        self.plant({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "enabled"}}})
+        self.load()
+        self.assertTrue(self.manager().enable("tcp_ecn").ok)     # captures "disabled" itself
+        self.new_process()
+        self.assertEqual(self.load()["tcp_ecn"]["original"]["value"], "disabled")
+        self.assertEqual(self.reg.quarantine(), {})
+
+    def test_a_backup_of_a_subject_the_tweak_does_not_read_is_imported(self):
+        """mtu_pmtu and dns_fastest of another interface read "off": backup_reading() is what says they are on."""
+        self.plant({"elsewhere": {"original": {"subject": "there"}}})
+        self.assertEqual(backupstore.load(check=backupstore.entry_check(self.system, [ElsewhereTweak()])),
+                         {"elsewhere": {"original": {"subject": "there"}}})
+
+    def test_a_backup_whose_subject_is_gone_waits(self):
+        self.plant({"elsewhere": {"original": {"subject": "there"}}})
+        self.assertEqual(backupstore.load(check=backupstore.entry_check(self.system, [ElsewhereTweak(False)])), {})
+        self.assertEqual(set(self.reg.quarantine()), {"elsewhere"})
+
+    def test_a_check_that_cannot_read_the_machine_waits_too(self):
+        def broken(key, entry):
+            raise OSError("PowerShell timed out")
+        self.plant({"tcp_ecn": ECN_OFF})
+        self.assertEqual(backupstore.load(check=broken), {})
+        self.assertEqual(self.reg.quarantine(), {"tcp_ecn": ECN_OFF})
 
     def test_an_entry_the_store_has_is_never_overwritten(self):
         dns_on(self.system)
-        self.store({"dns_fastest": {"original": dns_original(["192.0.2.53"])}})
+        backupstore.REGISTRY.write({"dns_fastest": {"original": dns_original(["192.0.2.53"])}})
         self.plant({"dns_fastest": {"original": dns_original(["203.0.113.66"])}})
         self.load()
         self.assertEqual(self.reg.backup()["dns_fastest"]["original"]["servers"], ["192.0.2.53"])
+        self.assertEqual(self.reg.quarantine(), {})
 
-    def test_a_new_backup_json_at_the_same_path_is_never_imported(self):
-        self.plant({})
-        self.load()
-        dns_on(self.system)
-        self.plant({"dns_fastest": {"original": dns_original(["203.0.113.66"])}})
+    def test_the_first_elevated_run_closes_the_import_even_without_a_backup_json(self):
         self.assertEqual(self.load(), {})
-        self.assertTrue(self.legacy.exists())     # left alone: it is not read any more
+        self.assertEqual(self.reg.value(backupstore.IMPORTED_VALUE), 1)
+        self.system.tcp_global["ecncapability"] = "enabled"
+        self.plant({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "enabled"}}})
+        self.new_process()
+        self.assertEqual(self.load(), {})
+
+    def test_backup_json_at_another_path_is_never_imported(self):
+        """The import is per machine, not per path: pointing the data folder elsewhere (STABLEINTERNET_DATA, a
+        junction in place of the folder) gives no second import."""
+        self.load()
+        other = self.tmp / "other"
+        other.mkdir()
+        self.system.tcp_global["ecncapability"] = "enabled"
+        self.plant({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "enabled"}}}, other / "backup.json")
+        with mock.patch.dict(os.environ, {"STABLEINTERNET_DATA": str(other)}):
+            self.new_process()
+            self.assertEqual(self.load(), {})
 
     def test_without_admin_nothing_is_imported_and_the_reader_sees_both(self):
-        self.store({"tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}}})
+        backupstore.REGISTRY.write({"tcp_ecn": ECN_OFF})
         self.plant({"rsc_off": {"original": {"adapter": "Wi-Fi", "ipv4": True, "ipv6": True}},
                     "tcp_ecn": {"original": {"setting": "ecncapability", "value": "enabled"}}})
         self.reg.admin = False
         self.assertEqual(self.load(), {"rsc_off": {"original": {"adapter": "Wi-Fi", "ipv4": True, "ipv6": True}},
-                                       "tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}}})
-        self.assertEqual(backupstore.REGISTRY.imported(), [])
-        self.assertTrue(self.legacy.is_file())
+                                       "tcp_ecn": ECN_OFF})
+        self.assertIsNone(self.reg.value(backupstore.IMPORTED_VALUE))
+
+    def test_after_the_import_an_unelevated_reader_sees_only_the_store(self):
+        self.load()
+        self.plant({"tcp_ecn": ECN_OFF})
+        self.reg.admin = False
+        self.new_process()
+        self.assertEqual(self.load(), {})
 
     def test_a_corrupt_backup_json_is_not_imported_as_empty(self):
         self.legacy.write_text("{not json", encoding="utf-8")
         with self.assertRaises(ValueError):
             self.load()
-        self.assertEqual(backupstore.REGISTRY.imported(), [])
+        self.assertIsNone(self.reg.value(backupstore.IMPORTED_VALUE))
 
 
 class TamperedBackupJsonTests(StoreCase):
@@ -254,8 +347,6 @@ class TamperedBackupJsonTests(StoreCase):
     def test_a_forged_dns_server_list_no_longer_reaches_the_restore(self):
         dns_on(self.system)
         self.store({"dns_fastest": {"original": dns_original(["192.0.2.53"]), "captured_at": 1}})
-        self.plant({})
-        self.load()                                           # imported: nothing in it
         self.plant({"dns_fastest": {"original": dns_original(["203.0.113.66"]), "captured_at": 2}})
         out = self.manager().disable("dns_fastest")
         self.assertTrue(out.ok, i18n.render(out.message, "en"))
@@ -263,9 +354,18 @@ class TamperedBackupJsonTests(StoreCase):
         self.assertNotIn("203.0.113.66", json.dumps(self.system.writes()))
         self.assertNotIn("dns_fastest", self.reg.backup())   # restored, entry removed from the store
 
-    def test_a_forged_entry_for_a_tweak_that_is_off_is_never_imported(self):
-        """Before the first elevated run the file is still read once: a forged dns_fastest entry is
-        imported only if dns_fastest is on (ADR-0018's narrowed window)."""
+    def test_a_forged_dns_entry_planted_after_the_first_elevated_run_is_never_imported(self):
+        """Even with dns_fastest reading "on" (DoH set up by hand) and no backup in the store."""
+        self.load()
+        dns_on(self.system)
+        self.plant({"dns_fastest": {"original": dns_original(["203.0.113.66"])}})
+        self.new_process()
+        mgr = self.manager()
+        self.assertFalse(mgr.state("dns_fastest").has_backup)
+        mgr.disable("dns_fastest")
+        self.assertNotIn("203.0.113.66", json.dumps(self.system.writes()))
+
+    def test_a_forged_entry_for_a_tweak_that_is_off_is_never_restored(self):
         self.plant({"dns_fastest": {"original": dns_original(["203.0.113.66"])}})
         mgr = self.manager()
         self.assertFalse(mgr.state("dns_fastest").has_backup)
@@ -286,8 +386,6 @@ class TamperedBackupJsonTests(StoreCase):
     def test_a_forged_failover_metric_no_longer_reaches_the_restore(self):
         s = MetricSystem()
         self.store({"failover:21": {"original": {"automatic": True}, "home": 6}})
-        self.plant({})
-        self.load()
         self.plant({"failover:21": {"original": {"automatic": False, "metric": 1}, "home": 6}})
         switch = failover.MetricSwitch(s, load_backup=self.load, save_backup=config.save_backup)
         self.assertTrue(switch.restore(21).ok)
@@ -303,27 +401,29 @@ class UninstallTests(StoreCase):
                 mock.patch.object(backupstore, "default_check", self.check):
             return elevated.restore_everything()
 
-    def test_restore_all_removes_the_store_and_the_empty_company_key(self):
+    def test_restore_all_removes_the_backups_and_keeps_the_import_mark(self):
         dns_on(self.system)
         self.store({"dns_fastest": {"original": dns_original(["192.0.2.53"])}})
         res = self.restore_all(self.manager())
         self.assertTrue(res["ok"], res)
         self.assertIn(("write", "dns_servers_set", (6, ["192.0.2.53"])), self.system.writes())
-        self.assertEqual(self.reg.keys, {"SOFTWARE": {}})
-        self.assertFalse(backupstore.exists())
+        self.assertEqual(self.reg.keys[backupstore.STORE_KEY], {backupstore.IMPORTED_VALUE: (1, self.reg.REG_DWORD)})
+        self.assertFalse(backupstore.has_data())
 
-    def test_an_empty_store_is_removed_too(self):
+    def test_a_reinstall_never_imports_a_backup_json_planted_meanwhile(self):
         self.store({})
-        self.assertTrue(backupstore.exists())
         self.assertTrue(self.restore_all(self.manager())["ok"])
-        self.assertFalse(backupstore.exists())
+        dns_on(self.system)
+        self.plant({"dns_fastest": {"original": dns_original(["203.0.113.66"])}})
+        self.new_process()
+        self.assertEqual(self.load(), {})
 
-    def test_another_product_of_the_company_keeps_its_key(self):
+    def test_quarantined_entries_go_with_the_store(self):
         self.store({})
-        self.reg.CreateKeyEx(self.reg.HKEY_LOCAL_MACHINE, backupstore.COMPANY_KEY + r"\Other")
+        backupstore.REGISTRY.write_quarantine({"tcp_ecn": ECN_OFF})
+        self.assertTrue(backupstore.has_data())
         self.assertTrue(self.restore_all(self.manager())["ok"])
-        self.assertIn(backupstore.COMPANY_KEY + r"\Other", self.reg.keys)
-        self.assertNotIn(backupstore.STORE_KEY, self.reg.keys)
+        self.assertFalse(backupstore.has_data())
 
     def test_a_backup_that_could_not_be_restored_keeps_the_store(self):
         self.store({"power_pcie_aspm_off": {"original": {"subgroup": tweaks.SUB_PCIE, "setting": tweaks.SET_ASPM,
@@ -337,11 +437,12 @@ class UninstallTests(StoreCase):
         self.plant({"dns_fastest": {"original": dns_original(["192.0.2.53"])}})
         self.assertTrue(self.restore_all(self.manager())["ok"])
         self.assertIn(("write", "dns_servers_set", (6, ["192.0.2.53"])), self.system.writes())
-        self.assertFalse(backupstore.exists())
+        self.assertFalse(backupstore.has_data())
 
     def test_the_uninstaller_asks_for_the_store_even_without_backups(self):
         from app import installer
         self.store({})
+        backupstore.REGISTRY.write_quarantine({"tcp_ecn": ECN_OFF})
         self.reg.admin = False
         ops = installer.Ops()
         self.assertFalse(ops.backups_left())

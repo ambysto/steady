@@ -148,10 +148,10 @@ class Ops:
             return True       # unreadable: assume there is something to protect
 
     def store_left(self) -> bool:
-        """The backup store (HKLM, ADR-0018) exists: only the elevated restore-all can remove it."""
+        """The backup store (HKLM, ADR-0018) holds backups or quarantined entries: only the elevated restore-all can remove them."""
         from . import backupstore
         try:
-            return backupstore.exists()
+            return backupstore.has_data()
         except Exception:
             return True
 

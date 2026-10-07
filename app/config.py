@@ -21,10 +21,22 @@ from typing import Any, Callable, Iterator
 ROOT = Path(__file__).resolve().parent.parent
 
 
+def _override(name: str) -> str | None:
+    """A folder override from the environment (tests, the build's smoke test). Ignored by an elevated
+    process of the packaged build: user environment variables (HKCU\\Environment) are writable without
+    Admin and reach the elevated helper, which must not read or write where the user points it (ADR-0018)."""
+    value = os.environ.get(name)
+    if value and getattr(sys, "frozen", False):
+        from . import winutil
+        if winutil.is_admin():
+            return None
+    return value or None
+
+
 def data_dir() -> Path:
     """Runtime data directory; STABLEINTERNET_DATA overrides it (used by tests). The packaged
     build keeps data outside its install folder (an upgrade replaces that folder)."""
-    override = os.environ.get("STABLEINTERNET_DATA")
+    override = _override("STABLEINTERNET_DATA")
     if override:
         path = Path(override)
     elif getattr(sys, "frozen", False):
@@ -39,7 +51,7 @@ def user_dir() -> Path:
     """Per-user private directory (%LOCALAPPDATA%\\StableInternet): the server runtime file and
     the results of elevated operations live here, not in the repo (other local accounts may read it).
     STABLEINTERNET_USERDIR overrides it (tests)."""
-    override = os.environ.get("STABLEINTERNET_USERDIR")
+    override = _override("STABLEINTERNET_USERDIR")
     base = Path(override) if override else Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "StableInternet"
     base.mkdir(parents=True, exist_ok=True)
     return base
