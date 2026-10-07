@@ -1,4 +1,4 @@
-"""Diagnostics: 13 read-only checks, each returning ok / warn / bad / info.
+"""Diagnostics: 14 read-only checks (plus one on demand), each returning ok / warn / bad / info.
 
 Every check is split in two:
   * `evaluate_*`  pure function over already-collected data - this is what the tests exercise
@@ -28,7 +28,7 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 from typing import Any, Callable, Iterable
 
-from . import config, dnsprobe, i18n, winutil
+from . import config, dnsprobe, i18n, pmtu, winutil
 from .i18n import msg
 from .storage import Storage
 
@@ -723,6 +723,36 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
     return CheckResult(**base, status=status, summary=summary, details=details, advice=advice)
 
 
+# --- 15. path MTU -------------------------------------------------------------------------------
+
+PPPOE_MTU = 1492
+
+
+def evaluate_path_mtu(interface: dict | None, paths: list[pmtu.PathResult]) -> CheckResult:
+    """`interface`: {"alias", "mtu"} of the interface Internet traffic leaves by; `paths`: one probe per target.
+
+    The largest MTU any target reached is the access link's: a smaller one at a single target is
+    that destination's own path, not something this PC can fix.
+    """
+    base = dict(id=15, key="path_mtu", title=title_of("path_mtu"))
+    if not interface:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.no_interface"))
+    mtu, name = interface["mtu"], interface.get("alias") or ""
+    details: list[Message] = [msg("diag.path_mtu.interface", name=name, mtu=mtu)]
+    details += [msg("diag.path_mtu.target", target=p.target, mtu=p.mtu) if p.mtu
+                else msg("diag.path_mtu.target_silent", target=p.target) for p in paths]
+    measured = [p.mtu for p in paths if p.mtu]
+    if not measured:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.no_reply"), details=details)
+    path = max(measured)
+    if path >= mtu:
+        return CheckResult(**base, status=OK, summary=msg("diag.path_mtu.ok", mtu=mtu), details=details)
+    if path == PPPOE_MTU:
+        details.append(msg("diag.path_mtu.pppoe"))
+    return CheckResult(**base, status=WARN, summary=msg("diag.path_mtu.too_big", mtu=mtu, path=path),
+                       details=details, advice=msg("diag.path_mtu.advice", path=path, name=name))
+
+
 # --- context: lazy, cached data access ----------------------------------------------------------
 
 class Context:
@@ -749,6 +779,7 @@ class Context:
             "dns_bench": self._load_dns_bench,
             "tweak_states": self._load_tweak_states,
             "bufferbloat": self._load_bufferbloat,
+            "path_mtu": self._load_path_mtu,
         }
         self._loaders.update(loaders or {})
 
@@ -820,6 +851,12 @@ class Context:
             targets = {"router": gateway, **targets}
         down, up = bufferbloat.real_loads()
         return bufferbloat.measure(bufferbloat.real_ping(), targets, down, up)
+
+    def _load_path_mtu(self) -> tuple[dict | None, list[pmtu.PathResult]]:
+        """The MTU of the interface the probes leave by (a VPN's while it is up), then the probes."""
+        route = winutil.internet_route_native(pmtu.TARGETS[0]) or self.get("uplink")
+        interface = winutil.get_interface_mtu(route["interface_index"]) if route else None
+        return interface, (pmtu.measure(interface["mtu"]) if interface else [])
 
     def _load_tweak_states(self) -> dict[str, dict] | None:
         try:
@@ -896,6 +933,10 @@ def check_link(ctx: Context) -> CheckResult:
     return evaluate_link(ctx.get("minutes"), ctx.now)
 
 
+def check_path_mtu(ctx: Context) -> CheckResult:
+    return evaluate_path_mtu(*ctx.get("path_mtu"))
+
+
 # (id, key, function). The title of each is the message "diag.<key>.title".
 CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (1, "driver", check_driver),
@@ -911,6 +952,7 @@ CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (11, "wifi7_mlo", check_mlo),
     (12, "modem_wifi", check_modem_wifi),
     (13, "physical_link", check_link),
+    (15, "path_mtu", check_path_mtu),
 ]
 
 

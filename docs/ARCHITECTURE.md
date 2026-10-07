@@ -26,7 +26,8 @@
 |---|---|
 | `config.py` | Paths, `settings.json`, `backup.json` (original values before a tweak) |
 | `winutil.py` | Helpers for calling PowerShell (`-EncodedCommand`, returns JSON), `netsh`, Admin check, detection of the Wi‑Fi card and the main network path (uplink) |
-| `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned |
+| `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned; optional payload size and "do not fragment" flag |
+| `pmtu.py` | Path MTU: binary search with "do not fragment" pings, pure over an injected send function (diagnostic #15) |
 | `dnsprobe.py` | UDP DNS queries with hand-built packets to benchmark each DNS server |
 | `storage.py` | SQLite: per-minute statistics, Wi‑Fi signal, events; cleanup of old data |
 | `monitor.py` | Ping thread per target, reads Wi‑Fi state, detects incidents, aggregates per-minute statistics |

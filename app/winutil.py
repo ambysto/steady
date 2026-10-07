@@ -539,6 +539,18 @@ def get_dns_servers(interface_index: int) -> list[str]:
     return [str(r) for r in rows]
 
 
+def get_interface_mtu(interface_index: int) -> dict[str, Any] | None:
+    """{"alias", "mtu"} of one interface's IPv4 side (NlMtu), or None if it has none."""
+    idx = int(interface_index)
+    rows = run_powershell_json(
+        f"Get-NetIPInterface -InterfaceIndex {idx} -AddressFamily IPv4 -ErrorAction SilentlyContinue | "
+        "Select-Object InterfaceAlias, NlMtu"
+    )
+    if not rows or rows[0].get("NlMtu") is None:
+        return None
+    return {"alias": str(rows[0].get("InterfaceAlias") or ""), "mtu": int(rows[0]["NlMtu"])}
+
+
 # One PowerShell process for every event-log query: process start-up dominates the cost.
 # "No events found" is a normal empty result; any other failure is reported in `errors`
 # so an unreadable log is never mistaken for a clean one.

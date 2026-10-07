@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Diagnostic #15, Path MTU** (SIC-86): finds the largest packet that crosses the path with "do not fragment" pings (`app/pmtu.py`, `IcmpSendEcho`, no Admin, no `ping.exe`) to 1.1.1.1, 8.8.8.8 and 9.9.9.9, and warns when the interface MTU is larger. This is the PPPoE case (1492 behind a 1500 Wi‑Fi interface) where large packets can vanish, pages hang half-loaded and downloads stall. It runs in the default diagnostics run: about 1 s, or a few seconds when large packets vanish silently. It is read-only; the tweak that sets the MTU comes later, after the ADR on tweaks whose value comes from a measurement.
+
 ## [0.2.0] - 2026-10-06
 
 This is the first section of this file: it lists the project's work from the start, including what 0.1.0 shipped. New since 0.1.0 on Windows: the desktop window uses the native frame (Snap Layouts, resizing), a new app icon, a watchdog that stays out of the way when another connection carries the traffic, safer failover, and a code signing and privacy policy. The Apple app lives in `apple/` and is not part of this download.
