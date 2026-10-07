@@ -447,6 +447,7 @@
   "tweak.result.restore_mismatch": "Restaurado, pero el valor no coincide con la copia de seguridad; se conserva la copia de seguridad",
   "tweak.result.restored": "Valor original restaurado",
   "tweak.result.bad_backup": "La copia de seguridad está mal formada: {error}",
+  "tweak.result.backup_rejected": "La copia de seguridad apunta fuera de lo que cambia este ajuste; no se restauró nada y se conserva la copia: {error}",
   "tweak.result.bad_measurement": "La medición no es utilizable: {error}",
   "tweak.result.measure_failed": "No se pudo medir la conexión (sin carga o sin respuestas); no se cambió nada",
   "tweak.result.measured_enabled": "Activado: {value}. {verdict}",
@@ -722,6 +723,7 @@
   "failover.result.restore_failed": "Error al volver: {error}",
   "failover.result.restored": "De nuevo en la conexión principal (se restauraron los ajustes de {path})",
   "failover.result.unknown_path": "Conexión de red desconocida {path}",
+  "failover.result.backup_rejected": "La copia de seguridad de esta conexión no es una métrica de interfaz válida; no se volvió a cambiar: {error}",
 
   "notify.failover.switched.title": "Se cambió a la conexión de respaldo",
   "notify.failover.available.title": "Hay una conexión de respaldo disponible",

@@ -134,4 +134,4 @@ UI turns toggle on → POST /api/tweaks/{id} {enable:true}
   → read() again and return the new state to the UI
 ```
 
-Disable: `restore(backup)` → delete backup → write event. If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.
+Disable: `check_original(backup)` (the entry must lie in the tweak's own domain, [ADR-0017](adr/0017-validate-backup-before-restore.md)) → `restore(backup)` → delete backup → write event. If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.

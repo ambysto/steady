@@ -43,6 +43,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - `dns_fastest` with a saved backup of another interface (docked onto Ethernet, a VPN as the uplink, no route) now shows as **on** with the warning "On for another network connection", so the switch can turn it off and restore that interface; before, the switch was disabled or offered a turn-on that was refused. New hook `Tweak.backup_reading`.
 - `dns_fastest` puts back a vanished DoH entry only when apply was using that address; a backup written before the GUID was recorded still restores (the restore check no longer includes the interface).
 
+### Security
+- **The elevated helper no longer restores values from a tampered `backup.json`** ([ADR-0017](docs/adr/0017-validate-backup-before-restore.md)). The file is writable without Admin, so a process of the user could make the helper write any HKLM DWORD (registry tweaks), any DoH template URL and DNS servers (`dns_fastest`), or another adapter, property, power setting or `netsh` setting, the next time the user approved turning a tweak off or uninstalled.
+  - Every tweak kind has `check_original(system, original)`: fixed setting names must match the declaration, the registry path, Wi‑Fi card and property keyword must be the ones the tweak resolves now, and values must be ones the setting accepts (a DWORD, a power index in the setting's range, the property's `ValidRegistryValues`, `TCP_GLOBAL_VALUES` / `OFFLOAD_VALUES`, unicast IPv4 DNS servers). The base class refuses everything, so a kind without a check fails closed.
+  - `upload_shaping` restores only its own `StableInternet-Upload` policy, at a rate within 1–1000 Mbps, and only its own `StableInternet-Upload-Local1`…`Local6` LAN exemptions.
+  - `mtu_pmtu` restores only an MTU of 1280–1500 on an interface named by a well-formed GUID.
+  - A Wi‑Fi property backup must name exactly the `RegistryKeyword` the tweak resolves on the card (found by keyword or name, so translated drivers still pass).
+  - `dns_fastest` accepts DoH entries only for its six candidate addresses with each provider's own template, and always restores the built-in template.
+  - Turning a tweak off with a refused entry restores nothing, keeps the backup and logs `tweak.result.backup_rejected` (level `bad`). `adopt_backup` uses the same check. Failover's metric restore refuses an entry that is not `{"automatic": true}` or a metric in 1–9999 (`failover.result.backup_rejected`). 2 new keys in all 9 catalogs.
+  - Residual risk: a forged `dns_fastest` entry can still choose which unicast IPv4 DNS servers come back and on which interface, and a forged `mtu_pmtu` entry which interface gets an MTU of 1280–1500. Closing it needs backups the user cannot write (ADR-0018).
+
 ## [0.3.0] - 2026-10-07
 
 Two new Wi‑Fi tweaks: prefer the 5 GHz band and highest transmit power.

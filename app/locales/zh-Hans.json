@@ -447,6 +447,7 @@
   "tweak.result.restore_mismatch": "已还原，但值与备份不一致；备份已保留",
   "tweak.result.restored": "已还原为原始值",
   "tweak.result.bad_backup": "备份格式不正确：{error}",
+  "tweak.result.backup_rejected": "备份指向此优化项更改范围之外的内容，因此未恢复任何内容并保留了备份：{error}",
   "tweak.result.bad_measurement": "测量结果无法使用：{error}",
   "tweak.result.measure_failed": "无法测量连接（无法产生负载或没有响应）；未做任何更改",
   "tweak.result.measured_enabled": "已开启：{value}。{verdict}",
@@ -722,6 +723,7 @@
   "failover.result.restore_failed": "切换回去失败：{error}",
   "failover.result.restored": "已切换回主连接（已还原 {path} 的设置）",
   "failover.result.unknown_path": "未知的网络连接 {path}",
+  "failover.result.backup_rejected": "此连接的备份不是有效的接口跃点数，因此未切换回去：{error}",
 
   "notify.failover.switched.title": "已切换到备用连接",
   "notify.failover.available.title": "有可用的备用连接",
