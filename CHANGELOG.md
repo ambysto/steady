@@ -8,10 +8,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [0.4.0] - 2026-10-07
 
-A DNS tweak chosen by a benchmark, measured tweaks and an upload limit, three experimental network-stack tweaks, and two diagnostics checks: the route to far-away destinations and the path MTU.
+An upload limit that keeps latency low under load (measured: p95 under upload about halved), tweaks whose value comes from a measurement, an MTU tweak, a DNS tweak and three network-stack tweaks (all experimental), two diagnostics checks (the route to far-away destinations and the path MTU), a bufferbloat check that fills lines up to 800 Mbps, and backups the elevated helper can trust: validated before restore and kept where only Administrators can write.
 
 ### Added
-- **Tweak `dns_fastest`** (SIC-87, medium risk, [ADR-0015](docs/adr/0015-tweak-value-from-measurement.md)): switches the uplink's DNS to the fastest public servers over HTTPS.
+- **Tweak `dns_fastest`** (SIC-87, experimental, [ADR-0015](docs/adr/0015-tweak-value-from-measurement.md)): switches the uplink's DNS to the fastest public servers over HTTPS.
   - At apply time it benchmarks Cloudflare, Google and Quad9 (the providers Windows has a DoH template for) and keeps two different providers, the winner's two servers and the runner-up's fastest; DoH auto-upgrade is turned on for them (with fallback to plain UDP).
   - The backup holds whether DNS was static or from DHCP and the DoH flags of all six candidates; turning it off resets to DHCP (`-ResetServerAddresses`) or puts the static servers back, and removes DoH entries that did not exist.
   - Not offered (and never suggested) with a VPN, on a domain, with a DNS suffix, with a static IPv6 DNS or behind a captive portal. A hand-made setup counts as on.
@@ -26,7 +26,7 @@ A DNS tweak chosen by a benchmark, measured tweaks and an upload limit, three ex
 - **Upload limit against bufferbloat** (`upload_shaping`, SIC-85): measures the upload (~15 s, without the download phase of check #14), then throttles all outbound traffic to 85% of it with a `NetQosPolicy` of the tool's own name (`StableInternet-Upload`, 1–1000 Mbps). Refused when latency rises less than 30 ms under upload. After applying it measures again and records whether it helped (`tweak_verified` event); if it did not, the result suggests turning it off. Turning it off removes exactly that policy. The bufferbloat check now suggests it when the upload direction is bloated. 27 new keys in all 9 catalogs. Uses the default (`localhost`) policy store: `-PolicyStore PersistentStore` is not a NetQos store. On the dev PC (EXP-015) the measurement refused, since latency rose only 25 ms under upload, and the QoS create, re-rate and remove commands worked in both stores.
 
 ### Changed
-- **`dns_fastest` is now experimental** (SIC-91, EXP-021). On the dev PC it made DNS about 3× slower than the router's own DNS (uncached lookups ~270 ms vs ~80 ms, popular names ~75 ms vs 12–29 ms): its benchmark ranks the public providers against each other but never against the DNS already in use. Measured the same session: `upload_shaping` about halves p95 latency under upload (EXP-019), and `mtu_pmtu` correctly declines when path MTU discovery works (EXP-020).
+- **`dns_fastest` ships as experimental** (SIC-91, EXP-021). On the dev PC it made DNS about 3× slower than the router's own DNS (uncached lookups ~270 ms vs ~80 ms, popular names ~75 ms vs 12–29 ms): its benchmark ranks the public providers against each other but never against the DNS already in use. Measured the same session: `upload_shaping` about halves p95 latency under upload (EXP-019), and `mtu_pmtu` correctly declines when path MTU discovery works (EXP-020).
 - Check #16: the advice leaves out the IPv6 `netsh` command when the path is below 1280 bytes (IPv6's minimum), and the no-IPv4 summary says it can mean the PC is offline.
 - `enable_measured` takes the verification right after applying from the tweak (`MeasuredTweak.verdict`), so each measured tweak judges its own effect; the upload limit's verdict and messages are unchanged.
 
