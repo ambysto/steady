@@ -65,6 +65,10 @@ While the app has a window open, whichever tab is shown, `LiveMonitor` measures 
 - When the route changes (connected or not, the preferred interface such as `en0` → `utun5` when a VPN starts, the router), the live numbers start afresh so they do not mix two routes. The history keeps those minutes (they are real measurements), but check #5 leaves out the minute of the change and the next one, as on Windows, when traffic moves from one working route to another (losing the connection and getting the same route back is an outage and still counts: there is no check #4 here); the times are stored as `route_change` rows in the Windows `events` table, so this holds across launches.
 - The iOS Simulator does not report the router address, IPv4/IPv6 or DNS support of the path, so the router row is missing there; Internet pings and TCP probes work.
 
+## Check my connection
+
+The Overview's main button ([ADR-0020](../docs/adr/0020-check-fix-result-flow.md) point 11): `AppModel.runCheck()` goes through `AppModel.checkSteps` one by one and keeps the run in `CheckRun`; `CheckFlow` (SteadyKit) decides what counts (warn and bad only), worst first, and whether the user can fix it. Nothing is changed on the device, so there is no Fix step.
+
 ## History and problem reports
 
 - **History** draws latency and loss to the router and to the Internet from the stored minutes (`HistorySeries`: per minute over an hour, 10-minute buckets over a day, hours over a week; a gap starts a new line segment).

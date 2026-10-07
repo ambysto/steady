@@ -4,6 +4,7 @@ public enum MessageCatalog {
     /// Parameters of each key with arguments, in the order of the positional specifiers.
     public static let arguments: [String: [MessageArgument]] = [
         "apple.diag.physical_link.bad_minutes": [MessageArgument("bad", nil), MessageArgument("total", nil), MessageArgument("fraction", ".0%")],
+        "apple.ui.check.idle_body": [MessageArgument("count", nil)],
         "diag.ago.days": [MessageArgument("count", nil)],
         "diag.ago.hours": [MessageArgument("count", nil)],
         "diag.ago.minutes": [MessageArgument("count", nil)],
@@ -189,6 +190,8 @@ public enum MessageCatalog {
         "diag.ping.router_jitter",
         "diag.ping.router_loss",
         "diag.signal.advice",
+        "ui.check.idle_body",
+        "ui.check.kind.none",
         "ui.language.auto",
     ]
 }
