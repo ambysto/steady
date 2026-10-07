@@ -16912,18 +16912,6 @@
             "value" : "Vérifier à nouveau"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "もう一度チェック"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 점검"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -16969,18 +16957,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Les %1$@ vérifications sont bonnes · vérifié à %2$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ 項目すべて問題なし · %2$@ にチェック"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@개 점검 모두 정상 · %2$@에 점검"
           }
         },
         "pt-BR" : {
@@ -17030,18 +17006,6 @@
             "value" : "Votre connexion est en bon état"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続は良好です"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연결 상태가 좋습니다"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17087,18 +17051,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Détails"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "詳細"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자세히"
           }
         },
         "pt-BR" : {
@@ -17148,18 +17100,6 @@
             "value" : "Terminé"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完了"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "완료"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17205,18 +17145,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Coupures sur 24 h"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24 時間の切断"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "24시간 내 끊김"
           }
         },
         "pt-BR" : {
@@ -17266,18 +17194,6 @@
             "value" : "Non pris en charge"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "非対応"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지원되지 않음"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17323,18 +17239,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Activé"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オン"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "켜짐"
           }
         },
         "pt-BR" : {
@@ -17384,18 +17288,6 @@
             "value" : "Corriger %1$@ sur %2$@"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$@ 件中 %1$@ 件を修正"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$@개 중 %1$@개 해결"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17443,18 +17335,6 @@
             "value" : "Activation %1$@ sur %2$@…"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オンにしています %1$@/%2$@…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "켜는 중 %1$@/%2$@…"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17500,18 +17380,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vérifié à %1$@ · %2$@ vérifications sur %3$@ sont bonnes"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ にチェック · %3$@ 項目中 %2$@ 項目は問題なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@에 점검 · %3$@개 중 %2$@개 정상"
           }
         },
         "pt-BR" : {
@@ -17649,50 +17517,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "接続を悪くしている原因が %arg 件見つかりました"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "연결을 나쁘게 하는 원인 %arg개를 찾았습니다"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17794,18 +17618,6 @@
             "value" : "Lance %1$@ vérifications sur le Wi‑Fi, le routeur, le DNS et la route vers Internet. Rien n'est modifié."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wi‑Fi、ルーター、DNS、インターネットまでの経路を %1$@ 項目チェックします。何も変更しません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wi‑Fi, 라우터, DNS, 인터넷까지의 경로를 %1$@가지 점검합니다. 아무것도 변경하지 않습니다."
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17851,18 +17663,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Comment va votre connexion ?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続の調子はどうですか？"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연결 상태는 어떤가요?"
           }
         },
         "pt-BR" : {
@@ -17912,18 +17712,6 @@
             "value" : "L'app peut le corriger"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリで修正できます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱이 해결할 수 있음"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -17969,18 +17757,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rien sur ce PC ne le corrige"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この PC では修正できません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 PC에서는 해결할 수 없음"
           }
         },
         "pt-BR" : {
@@ -18030,18 +17806,6 @@
             "value" : "Vous pouvez le corriger"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ご自身で修正できます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "직접 해결할 수 있음"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18087,18 +17851,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nouvelle vérification…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再チェック中…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 점검 중…"
           }
         },
         "pt-BR" : {
@@ -18148,18 +17900,6 @@
             "value" : "Mieux maintenant"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "改善しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "좋아짐"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18205,18 +17945,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas encore de changement"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "まだ変化なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아직 변화 없음"
           }
         },
         "pt-BR" : {
@@ -18266,18 +17994,6 @@
             "value" : "Nouvelle vérification : les chiffres sont les mêmes. Les modifications restent actives sauf si vous les annulez, et certaines n'agissent qu'au fil des jours."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再チェックしました。数値は変わっていません。元に戻さない限り変更はオンのままです。効果が数日後に出るものもあります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 점검했습니다. 수치가 그대로입니다. 되돌리지 않는 한 변경은 켜진 상태로 유지되며, 며칠 뒤에야 효과가 보이는 것도 있습니다."
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18325,18 +18041,6 @@
             "value" : "Mesure en cours"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "測定中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "측정 중"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18382,18 +18086,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Son effet sur les coupures apparaît dans les prochains jours : l'app les compare à la semaine précédente (%1$@ coupures)."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切断への効果は数日かけて現れます。アプリが前の週（切断 %1$@ 回）と比較します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "끊김에 대한 효과는 앞으로 며칠에 걸쳐 나타납니다. 앱이 이전 일주일(끊김 %1$@회)과 비교합니다."
           }
         },
         "pt-BR" : {
@@ -18531,50 +18223,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg 件の変更をオンにしました"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "변경 %arg개를 켰습니다"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18676,18 +18324,6 @@
             "value" : "Vérification %1$@ sur %2$@…"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "チェック中 %1$@/%2$@…"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "점검 중 %1$@/%2$@…"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18733,18 +18369,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Windows demande une fois l'autorisation d'administrateur. Chaque modification est sauvegardée et peut être désactivée dans la page Optimiser."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Windows が管理者の承認を 1 回だけ求めます。すべての変更はバックアップされ、最適化ページでオフにできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Windows가 관리자 승인을 한 번 요청합니다. 모든 변경은 백업되며 최적화 페이지에서 끌 수 있습니다."
           }
         },
         "pt-BR" : {
@@ -18794,18 +18418,6 @@
             "value" : "Également recommandé, risque faible"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "こちらもおすすめ（低リスク）"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "함께 권장, 위험 낮음"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18851,18 +18463,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Activer"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オンにする"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "켜기"
           }
         },
         "pt-BR" : {
@@ -18912,18 +18512,6 @@
             "value" : "Le Wi‑Fi est coupé quelques secondes pendant le redémarrage de la carte."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カードの再起動中、Wi‑Fi が数秒間切断されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카드가 다시 시작되는 동안 Wi‑Fi가 몇 초간 끊깁니다."
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -18971,18 +18559,6 @@
             "value" : "Corrige ce que la vérification a trouvé"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "チェックで見つかった問題を修正"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "점검에서 찾은 문제 해결"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19028,18 +18604,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pour : %1$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "対象: %1$@"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대상: %1$@"
           }
         },
         "pt-BR" : {
@@ -19177,50 +18741,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg 件の変更をオンにしますか？"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "변경 %arg개를 켤까요?"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19322,18 +18842,6 @@
             "value" : "Vérifier ma connexion"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続をチェック"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연결 점검"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19381,18 +18889,6 @@
             "value" : "Reste à faire"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "残りの項目"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "남은 항목"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -19438,18 +18934,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Annuler ces modifications"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "これらの変更を元に戻す"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 변경 되돌리기"
           }
         },
         "pt-BR" : {
@@ -23561,18 +23045,6 @@
             "value" : "La vérification trouve"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "チェック結果"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "점검 결과"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23618,18 +23090,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Rien"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "問題なし"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "문제 없음"
           }
         },
         "pt-BR" : {
@@ -23679,18 +23139,6 @@
             "value" : "Des problèmes"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "問題あり"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "문제 있음"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23736,18 +23184,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Après correction"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "修正後"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "해결 후"
           }
         },
         "pt-BR" : {
@@ -23915,18 +23351,6 @@
             "value" : "Carte de bilan"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "成果カード"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "성과 카드"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -23974,18 +23398,6 @@
             "value" : "Avec données"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "データあり"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "데이터 있음"
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -24031,18 +23443,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Vide"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "空"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "비어 있음"
           }
         },
         "pt-BR" : {
@@ -31726,50 +31126,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg 日間接続を監視しています。修正が必要なことはありませんでした。"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "%arg일째 연결을 지켜보고 있습니다. 고칠 것이 없었습니다."
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31959,50 +31315,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "予備の接続に %arg 回切り替えました"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "예비 연결로 %arg번 전환함"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32102,18 +31414,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Voir dans le journal"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ログで見る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기록에서 보기"
           }
         },
         "pt-BR" : {
@@ -32251,50 +31551,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "自動で %arg 回再接続しました"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "자동으로 %arg번 다시 연결함"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32394,18 +31650,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "De retour en ligne après %1$@ en moyenne"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "平均 %1$@ でオンラインに復帰"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "평균 %1$@ 만에 다시 온라인"
           }
         },
         "pt-BR" : {
@@ -32543,50 +31787,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "あなたの対応 %arg 件で改善"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "직접 하신 조치 %arg개로 개선됨"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32686,18 +31886,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ce que Steady a fait pour vous"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Steady がしたこと"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Steady가 한 일"
           }
         },
         "pt-BR" : {
@@ -32835,50 +32023,6 @@
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "効果が測定された変更 %arg 件"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%#@count@"
-          },
-          "substitutions" : {
-            "count" : {
-              "argNum" : 1,
-              "formatSpecifier" : "lld",
-              "variations" : {
-                "plural" : {
-                  "other" : {
-                    "stringUnit" : {
-                      "state" : "translated",
-                      "value" : "효과가 측정된 변경 %arg개"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -32978,18 +32122,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "7 derniers jours"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "過去 7 日間"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "최근 7일"
           }
         },
         "pt-BR" : {
