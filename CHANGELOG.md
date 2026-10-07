@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-07
+
+`dns_fastest` now compares the public DNS with the DNS already in use and switches only when that helps; a refusal comes before the UAC prompt.
+
 ### Changed
 - **`dns_fastest` switches only when it helps** (SIC-96, ADR-0015 point 8). It benchmarks the DNS in use as well as the public servers, on common names and on names no resolver has cached, and switches only when the DNS in use is broken or the chosen public server is at least 20% and 10 ms faster on both. Otherwise it is refused with the numbers and nothing is written. The check runs before the UAC prompt (new hook `Tweak.preflight`, used by the server before elevating) and again inside `apply()`. On the dev PC, where the router's DNS answers common names in ~7 ms, it now declines (it had made DNS ~3× slower, EXP-021). 1 new key in all 9 catalogs. The tweak stays experimental until it has been measured again.
 
