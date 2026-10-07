@@ -12,13 +12,16 @@ from ctypes import wintypes
 from dataclasses import dataclass
 
 IP_SUCCESS = 0
+IP_PACKET_TOO_BIG = 11009
 IP_REQ_TIMED_OUT = 11010
+IP_FLAG_DF = 0x02   # IP_OPTION_INFORMATION.Flags: do not fragment
 
 _STATUS_TEXT = {
     11002: "network unreachable",
     11003: "host unreachable",
     11004: "protocol unreachable",
     11005: "port unreachable",
+    11009: "packet too big",
     11010: "timed out",
     11013: "TTL expired in transit",
     11050: "general failure",
@@ -26,6 +29,7 @@ _STATUS_TEXT = {
 
 _PAYLOAD = b"StableInternet"
 _REPLY_BUFFER = 256  # >= sizeof(ICMP_ECHO_REPLY) + payload + 8 bytes of ICMP error data
+_REPLY_SLACK = 64    # room for the reply header and ICMP error data on top of a sized payload
 
 
 class _IpOptionInformation(ctypes.Structure):
@@ -93,8 +97,14 @@ class Pinger:
             raise OSError(ctypes.get_last_error(), "IcmpCreateFile failed")
         self._buf = ctypes.create_string_buffer(_REPLY_BUFFER)
 
-    def ping(self, address: str, timeout_ms: int = 900) -> PingResult:
-        """One echo. Never raises for network failures; they come back as ok=False."""
+    def ping(self, address: str, timeout_ms: int = 900, size: int | None = None,
+             dont_fragment: bool = False) -> PingResult:
+        """One echo. Never raises for network failures; they come back as ok=False.
+
+        `size` is the ICMP payload in bytes (the IP packet is 28 bytes larger). With
+        `dont_fragment` a packet larger than the path allows fails with IP_PACKET_TOO_BIG
+        (when a router or the local stack says so) or times out (when it is dropped silently).
+        """
         try:
             dest = _ipv4_to_ulong(address)
         except (OSError, ValueError, TypeError):
@@ -102,17 +112,23 @@ class Pinger:
         if self._handle is None:
             return PingResult(False, None, -1, "pinger closed")
 
+        payload = _PAYLOAD if size is None else (_PAYLOAD * (size // len(_PAYLOAD) + 1))[:max(0, size)]
+        buf = self._buf
+        if len(payload) + _REPLY_SLACK > _REPLY_BUFFER:
+            buf = ctypes.create_string_buffer(ctypes.sizeof(_IcmpEchoReply) + len(payload) + _REPLY_SLACK)
+        options = ctypes.byref(_IpOptionInformation(Ttl=128, Flags=IP_FLAG_DF)) if dont_fragment else None
+
         started = time.perf_counter()
         replies = self._lib.IcmpSendEcho(
-            self._handle, dest, _PAYLOAD, len(_PAYLOAD), None,
-            self._buf, _REPLY_BUFFER, timeout_ms,
+            self._handle, dest, payload, len(payload), options,
+            buf, len(buf), timeout_ms,
         )
         elapsed_ms = (time.perf_counter() - started) * 1000.0
         if replies == 0:
             err = ctypes.get_last_error()
             return PingResult(False, None, err, status_text(err))
 
-        reply = _IcmpEchoReply.from_buffer(self._buf)
+        reply = _IcmpEchoReply.from_buffer(buf)
         if reply.Status != IP_SUCCESS:
             return PingResult(False, None, reply.Status, status_text(reply.Status))
         # RoundTripTime has 1 ms resolution; fall back to wall clock when it reads 0
