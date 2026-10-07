@@ -106,14 +106,14 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
 ## Finding: the ISP modem still broadcasts Wi‑Fi even though it is bridged (13:40)
 
 - User: the ISP modem has been switched to **bridge**, "OldModemNet" is the old network; **the modem and the BE3 are placed right next to each other**.
-- The SSIDs OldModemNet / CNBN / NeighborNet / a hidden SSID share the MAC family `c4/c6:2c:7b:…` ⇒ most likely **all broadcast by the old modem** (bridge only disables the routing function, not the Wi‑Fi radio). They occupy **5G channel 36** and **2.4G channel 4**.
+- The SSIDs OldModemNet / OtherNet / NeighborNet / a hidden SSID share the MAC family `c4/c6:2c:7b:…` ⇒ most likely **all broadcast by the old modem** (bridge only disables the routing function, not the Wi‑Fi radio). They occupy **5G channel 36** and **2.4G channel 4**.
 - Two transmitters placed right next to each other ⇒ (a) channel contention when on the same channel; (b) **blocking/desensitizing the BE3's receiver** even on different channels, because the modem's signal is too strong at a distance of a few cm.
 - Proposal: turn off Wi‑Fi on the modem (WLAN button / admin page via the OldModemNet SSID / ask the ISP hotline) + place the BE3 ≥ 1–2 m away from the modem, in a high, open spot, facing the PC. ⇒ **EXP-008**.
 
 ## EXP-008 — Turn off the old modem's Wi‑Fi + move the BE3 > 1 m away from the modem
 
 - **When:** before 13:54 (+07), done by the user; antennas **not yet** tilted.
-- **Scan at 13:54:** OldModemNet, CNBN and the hidden SSID `c6:2c:7b:d8:ea:99` **have disappeared** ⇒ confirms they were broadcast by the modem. **NeighborNet** (`c4:2c:7b:d4:ea:9a`, channel 36, 63%) **is still there** ⇒ either the modem's 5G radio is not fully off, or NeighborNet is a different device.
+- **Scan at 13:54:** OldModemNet, OtherNet and the hidden SSID `c6:2c:7b:00:40:99` **have disappeared** ⇒ confirms they were broadcast by the modem. **NeighborNet** (`c4:2c:7b:00:40:9a`, channel 36, 63%) **is still there** ⇒ either the modem's 5G radio is not fully off, or NeighborNet is a different device.
 - **New BE3 SSIDs appeared:** `HomeNet_5G` (02:5e:00:9a:40:24, ch157), `HomeNet_Wi-Fi5` (…:40:31, ch11), `HomeNet_5G_Wi-Fi5` (…:40:32, ch157) ⇒ the user has split the bands and/or enabled the Wi‑Fi 5 compatibility network on the BE3 (needs confirmation). The PC is currently on `HomeNet_5G`.
 - **Signal worse after moving:** **−78 … −80 dBm (39–45%)**, compared with −76 before moving and −66 this morning. Rx still 6 Mbps in 8/10 minutes (13:40–13:50).
 - **Incidents:** router_down 154s (13:49), 152s (13:51), and 3 times 5s (13:52–13:54); the PC roamed via 2.4G ch11 and then back to 5G.
@@ -280,13 +280,13 @@ The user reports dropping **more often than before replacing the router**. Histo
 |---|---|---|---|
 | OldModemNet 5G | 53 | 09-08 | 10-02 13:58 |
 | OldModemNet (2.4G) | 7 | 09-21 | 10-02 13:59 |
-| CNBN | 4 | 10-02 13:47 | 10-02 13:54 |
+| OtherNet | 4 | 10-02 13:47 | 10-02 13:54 |
 | NeighborNet | 8 | 10-02 13:57 | 10-02 15:35 |
 | **HomeNet (BE3)** | 10 | **10-02 15:26** | now |
 
 Disconnects (8003) per day: 09-08: 1 · 09-10: 8 · 09-11: 1 · 09-21: 5 · 09-26: 3 · 09-27: 3 · 09-28: 1 · 10-01: 6 · **10-02: 36** (mostly from switching back and forth between 4 networks while installing the new router) · 10-03: 2.
 
-⇒ **The BE3 was put into use on the afternoon of 2026-10-02.** Before that the PC used "OldModemNet 5G". The OldModemNet / CNBN / NeighborNet networks share the MAC family `c4/c6:2c:7b:…` (same device/vendor) and **NeighborNet + a hidden SSID are on channel 36** — exactly the channel the BE3 picked automatically.
+⇒ **The BE3 was put into use on the afternoon of 2026-10-02.** Before that the PC used "OldModemNet 5G". The OldModemNet / OtherNet / NeighborNet networks share the MAC family `c4/c6:2c:7b:…` (same device/vendor) and **NeighborNet + a hidden SSID are on channel 36** — exactly the channel the BE3 picked automatically.
 
 Hypotheses for why it is worse than the old router (ordered by likelihood):
 1. **Wi‑Fi 7 (BE3) ↔ MediaTek MT7922 card (Wi‑Fi 6E) compatibility**: Rx collapsing to 6 Mbps while the signal is still good is a typical sign of a rate-control / new-feature bug (11be, OFDMA, TWT…) between router and driver. ⇒ try disabling `be` on the BE3's 5G (EXP-003b).

@@ -11,7 +11,7 @@ from app.tweaks import (AdapterPropertyTweak, BindingTweak, NoDefaultRestore, Po
                         TweakManager)
 from app.winsys import SystemReadError, SystemWriteError, WifiBands
 
-WIFI_GUID = "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}"
+WIFI_GUID = "{00000000-0000-4000-8000-0000000000AA}"
 CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\0011"
 
 

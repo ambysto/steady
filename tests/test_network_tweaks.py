@@ -353,7 +353,7 @@ class DnsFastestTests(unittest.TestCase):
         self.assertEqual(s.writes(), [])
 
 
-ETHERNET_GUID = "{A407D7A1-D1F3-4322-88DC-940E2CE6E38F}"
+ETHERNET_GUID = "{00000000-0000-4000-8000-0000000000BB}"
 
 
 def ethernet(**kw):

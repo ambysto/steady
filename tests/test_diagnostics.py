@@ -45,7 +45,7 @@ class HelperTests(unittest.TestCase):
     def test_mac_keys(self):
         self.assertEqual(d.device_key("02:5E:00:9A:40:24"), d.device_key("02:5e:00:9a:40:31"))
         self.assertNotEqual(d.device_key("02:5e:00:9a:40:24"), d.device_key("02:5e:00:9b:40:24"))
-        self.assertEqual(d.family_key("c4:2c:7b:d4:ea:9a"), d.family_key("c6:2c:7b:d8:ea:99"))  # locally-administered bit
+        self.assertEqual(d.family_key("c4:2c:7b:00:40:9a"), d.family_key("c6:2c:7b:00:40:99"))  # locally-administered bit
         self.assertNotEqual(d.family_key("c4:2c:7b:00:00:00"), d.family_key("c4:2c:7c:00:00:00"))
         self.assertEqual(d.device_key("garbage"), "")
 
@@ -465,8 +465,8 @@ class MloTests(unittest.TestCase):
 
 class ModemWifiTests(unittest.TestCase):
     def test_strong_family_group_warns_even_with_hidden_ssid_and_la_bit(self):
-        scan = [entry("OldModemNet", "c4:2c:7b:d4:ea:9a", signal=80, channel=36),
-                entry("", "c6:2c:7b:d8:ea:99", signal=75, band="2.4 GHz", channel=4)]
+        scan = [entry("OldModemNet", "c4:2c:7b:00:40:9a", signal=80, channel=36),
+                entry("", "c6:2c:7b:00:40:99", signal=75, band="2.4 GHz", channel=4)]
         r = d.evaluate_modem_wifi(wifi(), scan)
         self.assertEqual(r.status, d.WARN)
         self.assertIn("c4:2c:7b", r.details[0])
@@ -476,7 +476,7 @@ class ModemWifiTests(unittest.TestCase):
         self.assertEqual(d.evaluate_modem_wifi(wifi(), scan).status, d.INFO)
 
     def test_single_loud_network_is_info(self):
-        scan = [entry("NeighborNet", "c4:2c:7b:d4:ea:9a", signal=72)]
+        scan = [entry("NeighborNet", "c4:2c:7b:00:40:9a", signal=72)]
         self.assertEqual(d.evaluate_modem_wifi(wifi(), scan).status, d.INFO)
 
     def test_own_router_ssids_never_count(self):
