@@ -20,6 +20,25 @@
       <option value="router_down" data-t="ui.state.router_down"></option>
     </select>
   </label>
+  <label><span data-t="ui.mockup.check"></span>
+    <select class="select" id="mock-scenario">
+      <option value="problems" data-t="ui.mockup.check.problems"></option>
+      <option value="clear" data-t="ui.mockup.check.clear"></option>
+    </select>
+  </label>
+  <label><span data-t="ui.mockup.result"></span>
+    <select class="select" id="mock-result">
+      <option value="pending" data-t="ui.check.result.pending"></option>
+      <option value="improved" data-t="ui.check.result.improved"></option>
+      <option value="no_gain" data-t="ui.check.result.no_gain"></option>
+    </select>
+  </label>
+  <label><span data-t="ui.mockup.value"></span>
+    <select class="select" id="mock-value">
+      <option value="data" data-t="ui.mockup.value.data"></option>
+      <option value="empty" data-t="ui.mockup.value.empty"></option>
+    </select>
+  </label>
   <label><input type="checkbox" id="tray-toggle" checked> <span data-t="ui.mockup.tray"></span></label>
 </div>
 
@@ -48,8 +67,11 @@
         <div class="ssid"><strong>HomeNet_5G</strong>802.11ax · 5 GHz · ch 40</div>
       </div>
 
-      <div class="section-title" data-t="ui.suggest.title"></div>
-      <div class="group" id="suggestions"></div>
+      <!-- ADR-0020: Check → Fix → Result, then what the app did over the last 7 days -->
+      <div class="group check-card" id="check-card"></div>
+
+      <div class="section-title section-title-row"><span data-t="ui.value.title"></span><span class="time" data-t="ui.value.window"></span></div>
+      <div class="group" id="value-card"></div>
 
       <div class="section-title" data-t="ui.overview.latency"></div>
       <div class="group chart-card">
@@ -157,6 +179,18 @@
       <p id="sheet-body"></p>
       <div class="buttons"><button class="button" id="sheet-cancel" data-t="ui.sheet.cancel"></button>
         <button class="button primary" id="sheet-confirm" data-t="ui.sheet.confirm"></button></div>
+    </div>
+  </div>
+
+  <div class="scrim" id="fix-scrim">
+    <div class="sheet fix-sheet" role="dialog" aria-modal="true">
+      <div class="icon-tile accent"><svg class="icon"><use href="#i-sliders"/></svg></div>
+      <h3 id="fix-title"></h3>
+      <div id="fix-list"></div>
+      <p class="note" id="fix-disrupts"><svg class="icon"><use href="#i-wifi-off"/></svg><span data-t="ui.check.sheet.disrupts"></span></p>
+      <p class="note"><svg class="icon"><use href="#i-lock"/></svg><span data-t="ui.check.sheet.admin"></span></p>
+      <div class="buttons"><button class="button" id="fix-cancel" data-t="ui.sheet.cancel"></button>
+        <button class="button primary" id="fix-confirm" data-t="ui.check.sheet.confirm"></button></div>
     </div>
   </div>
 </div>
