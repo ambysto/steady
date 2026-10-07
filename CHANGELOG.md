@@ -12,7 +12,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - An earlier per-user install is stopped, its entry, Start menu shortcut and folder removed; measurements, settings and backups carry over.
   - Uninstall: one elevated step restores every tweak and failover metric, then removes the HKLM entry, the all-users shortcut and the program folder (after the uninstaller exits); this user's task and shortcut go too. A failed restore still keeps the app installed.
   - A packaged copy outside `Program Files` never runs elevated: it asks for UAC only to install itself, the helper refuses everything else from there, and the monitor task gets highest privileges only for an exe under `Program Files`. `Program Files` and the all-users Start menu come from `SHGetKnownFolderPath`, not from environment variables.
-  - `install --target` is gone. 7 new keys and 1 changed in all 9 catalogs; 4 keys that nothing used any more removed.
+  - A per-user install's monitor task (which may have highest privileges and point at the old, user-writable folder) is ended and removed by the elevated step, then registered again for the new exe, without highest privileges, before the old folder is deleted.
+  - **PowerShell run by the app loads Windows' own modules only.** `-NoProfile` does not stop module autoloading, and the module path starts with the user's `Documents\WindowsPowerShell\Modules`, which a process without Admin rights can fill: a module there exporting a cmdlet the app uses would have run with the elevated helper's rights. Every script now sets the module path to Windows' folders first, and `powershell.exe` is started by its full path.
+  - `install --target` is gone. 8 new keys and 2 changed in all 9 catalogs; 4 keys that nothing used any more removed.
 
 ## [0.5.0] - 2026-10-07
 

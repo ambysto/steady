@@ -67,9 +67,6 @@ def startup_link() -> Path:
 class Ops:
     """The real machine. Tests use a fake with the same methods."""
 
-    def copy_tree(self, src: Path, dst: Path) -> None:
-        shutil.copytree(src, dst, dirs_exist_ok=True)
-
     def shortcut(self, link: Path, target: Path, args: str = "") -> None:
         from .winsys import ps_literal
         from .winutil import run_powershell
@@ -106,11 +103,14 @@ class Ops:
             pass
 
     def registered_location(self) -> str | None:
-        return _install_location(machine=True)
+        return _install_value("InstallLocation", machine=True)
+
+    def registered_version(self) -> str | None:
+        return _install_value("DisplayVersion", machine=True)
 
     def legacy_location(self) -> str | None:
         """Where this user's per-user install of 0.5.0 or earlier is, if any (its HKCU entry)."""
-        return _install_location(machine=False)
+        return _install_value("InstallLocation", machine=False)
 
     def unregister_legacy(self) -> None:
         import winreg
@@ -122,7 +122,7 @@ class Ops:
     def install_machine(self) -> Any:
         """The elevated half of install (one UAC prompt); returns the ElevationResult."""
         from .elevation import run_elevated
-        return run_elevated("install-machine", "-", timeout_s=600)
+        return run_elevated("install-machine", str(os.getpid()), timeout_s=600)
 
     def uninstall_machine(self) -> Any:
         """The elevated half of uninstall; it deletes the program folder once this process has exited."""
@@ -162,34 +162,42 @@ class Ops:
         subprocess.Popen([str(exe), *args], cwd=str(exe.parent), creationflags=DETACHED | CREATE_NO_WINDOW,
                          close_fds=True)
 
-    def stop_other_instances(self, folder: Path) -> None:
-        """Windows of this install (desktop/tray) - never this uninstaller itself."""
+    def stop_other_instances(self, folder: Path, keep: int | None = None) -> None:
+        """Processes running from `folder` (monitor, window, tray) - never this one, nor `keep` (the
+        installer or uninstaller that asked the elevated helper)."""
         from .winsys import ps_literal
         from .winutil import run_powershell
         prefix = str(folder).rstrip("\\/") + "\\"      # not "...\Ambysto Steady Beta\"
+        spared = ",".join(str(p) for p in (os.getpid(), keep) if p)
         run_powershell(
             "Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and "
-            f"$_.ExecutablePath.StartsWith({ps_literal(prefix)}, 'OrdinalIgnoreCase') -and $_.ProcessId -ne {os.getpid()} }} | "
+            f"$_.ExecutablePath.StartsWith({ps_literal(prefix)}, 'OrdinalIgnoreCase') -and $_.ProcessId -notin @({spared}) }} | "
             "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }")
+
+    def retire_unprotected_task(self, target: Path) -> None:
+        """The monitor task (one per PC, by name) is ended and removed when it runs anything but the exe in
+        `target`: a task from a per-user install may have highest privileges and point at a folder any
+        process can write. Elevated, so it can end an elevated monitor too; the user's half registers it again."""
+        from . import autostart
+        st = autostart.status()
+        if not st.installed or not st.command:
+            return
+        try:
+            same = Path(st.command.strip('"')).resolve() == (Path(target) / runtime.EXE_NAME).resolve()
+        except OSError:
+            same = False
+        if same:
+            return
+        autostart.end_now()
+        res = autostart.uninstall()
+        if not res.ok:
+            raise RuntimeError(res.message)
 
     def backups_left(self) -> bool:
         try:
             return bool(config.load_backup())
         except Exception:
             return True       # unreadable: assume there is something to protect
-
-    def store_left(self) -> bool:
-        """The backup store (HKLM, ADR-0018) holds backups or quarantined entries: only the elevated restore-all can remove them."""
-        from . import backupstore
-        try:
-            return backupstore.has_data()
-        except Exception:
-            return True
-
-    def restore_everything(self) -> tuple[bool, Any]:
-        from .elevation import run_elevated
-        res = run_elevated("restore-all", "-")
-        return res.ok, res.message
 
     def delete_tree(self, path: Path) -> None:
         check_deletable(path, marker=None)
@@ -214,23 +222,24 @@ class Ops:
         from .winsys import ps_literal
         check_deletable(folder, marker=runtime.EXE_NAME)
         pids = ",".join(str(p) for p in (os.getpid(), also_wait) if p)
-        script = (f"Wait-Process -Id {pids} -Timeout 3600 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; "
+        from .winutil import SAFE_MODULE_PATH, powershell_exe
+        script = (SAFE_MODULE_PATH + f"Wait-Process -Id {pids} -Timeout 3600 -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; "
                   f"Remove-Item -LiteralPath {ps_literal(str(Path(folder).resolve()))} -Recurse -Force")
         encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
         # Not DETACHED: powershell.exe without any console exits at once and does nothing (seen on
         # Windows 11). A hidden console of its own outlives this process just as well.
-        subprocess.Popen(["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+        subprocess.Popen([powershell_exe(), "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
                          cwd=os.environ.get("TEMP") or None,       # never inside the folder it deletes
                          creationflags=NEW_GROUP | CREATE_NO_WINDOW, close_fds=True)
 
 
-def _install_location(machine: bool) -> str | None:
+def _install_value(name: str, machine: bool) -> str | None:
     import winreg
     root, access = ((winreg.HKEY_LOCAL_MACHINE, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) if machine
                     else (winreg.HKEY_CURRENT_USER, winreg.KEY_READ))
     try:
         with winreg.OpenKeyEx(root, UNINSTALL_KEY, 0, access) as k:
-            return winreg.QueryValueEx(k, "InstallLocation")[0]
+            return winreg.QueryValueEx(k, name)[0]
     except OSError:
         return None
 
@@ -256,7 +265,7 @@ class Step:
 
 def check_target(source: Path, target: Path) -> None:
     """Install only into an empty folder or over an earlier copy: uninstalling deletes the whole
-    folder, so it must never be one that holds anything else (e.g. --target Downloads)."""
+    folder, so it must never be one that holds anything else."""
     target = Path(target)
     if target.resolve() == Path(source).resolve() or not target.exists():
         return
@@ -264,12 +273,14 @@ def check_target(source: Path, target: Path) -> None:
         raise ValueError(i18n.t("installer.target_not_empty", target=str(target)))
 
 
-def machine_steps(source: Path, target: Path, ops: Ops) -> list[Step]:
+def machine_steps(source: Path, target: Path, ops: Ops, caller: int | None = None) -> list[Step]:
     """The elevated half of install, for all users (ADR-0019). `source` is the folder of the exe that runs
-    it: the helper copies its own folder, never a path its caller names."""
+    it: the helper copies its own folder, never a path its caller names. `caller` (the installer that
+    asked) is spared when copies running from the target are stopped."""
     exe = target / runtime.EXE_NAME
     # An earlier copy may be running (upgrade): its exe is locked against the copy.
-    steps = [Step(msg("installer.step.stop"), lambda: ops.stop_other_instances(target), required=False)]
+    steps = [Step(msg("installer.step.stop"), lambda: ops.stop_other_instances(target, keep=caller), required=False),
+             Step(msg("installer.step.retire_task"), lambda: ops.retire_unprotected_task(target))]
     if source.resolve() != target.resolve():
         steps.append(Step(msg("installer.step.copy", target=str(target)), lambda: ops.replace_tree(source, target)))
     steps += [
@@ -295,13 +306,14 @@ def remove_legacy(folder: Path, ops: Ops) -> None:
 def user_steps(target: Path, ops: Ops) -> list[Step]:
     """The half of install that belongs to the user who runs it, not elevated (ADR-0019)."""
     exe = target / runtime.EXE_NAME
-    steps = []
+    # The task is registered for the new copy before an earlier copy's folder goes (its task must never
+    # point at a folder that no longer exists, and so could be re-created by anyone).
+    steps = [Step(msg("installer.step.task"), lambda: ops.task_install(exe))]
     legacy = ops.legacy_location()
     if legacy and Path(legacy).resolve() != target.resolve():
         steps.append(Step(msg("installer.step.legacy", folder=legacy), lambda: remove_legacy(Path(legacy), ops),
                           required=False))
     steps += [
-        Step(msg("installer.step.task"), lambda: ops.task_install(exe)),
         Step(msg("installer.step.startup"), lambda: ops.shortcut(startup_link(), exe, "desktop --minimized")),
         Step(msg("installer.step.start"), lambda: (ops.task_start(), ops.launch(exe, ["desktop"])), required=False),
     ]
@@ -316,14 +328,18 @@ def install(target: Path, ops: Ops) -> list[tuple[str, bool, str]]:
     res = ops.install_machine()
     if getattr(res, "cancelled", False):
         return [(text, False, i18n.render(res.message))]
-    done = res.ok or (ops.registered_location() == str(target) and ops.is_file(exe))
+    no_result = getattr(res, "result", None) is None and i18n.is_message(res.message) \
+        and res.message.get("key") == "elevation.no_result"
+    done = res.ok or (no_result and ops.registered_location() == str(target)
+                      and ops.registered_version() == __version__ and ops.is_file(exe))
     if not done:
         return [(text, False, i18n.render(res.message))]
     return [(text, True, "")] + run_steps(user_steps(target, ops))
 
 
-def install_machine(ops: Ops | None = None) -> dict[str, Any]:
-    """Run by the elevated helper (`install-machine`): this exe's folder becomes the all-users install."""
+def install_machine(caller: int | None = None, *, ops: Ops | None = None) -> dict[str, Any]:
+    """Run by the elevated helper (`install-machine`): this exe's folder becomes the all-users install.
+    `caller`: the installer that asked, spared when copies running from the target are stopped."""
     ops = ops or Ops()
     if not runtime.FROZEN:
         return {"ok": False, "message": msg("installer.packaged_only")}
@@ -332,7 +348,7 @@ def install_machine(ops: Ops | None = None) -> dict[str, Any]:
         check_target(source, target)
     except ValueError as exc:
         return {"ok": False, "message": str(exc)}
-    results = run_steps(machine_steps(source, target, ops))
+    results = run_steps(machine_steps(source, target, ops, caller))
     failed = [f"{text}: {err}" for text, ok, err in results if not ok]
     return {"ok": not failed, "message": "; ".join(failed) if failed else msg("installer.installed"),
             "target": str(target)}
@@ -368,7 +384,7 @@ def uninstall_steps(target: Path, ops: Ops, delete_data: bool) -> list[Step]:
     ]
 
 
-def uninstall_machine(wait_pid: int, ops: Ops | None = None) -> dict[str, Any]:
+def uninstall_machine(wait_pid: int, *, ops: Ops | None = None) -> dict[str, Any]:
     """Run by the elevated helper (`uninstall-machine`): put everything back; only then remove the
     all-users entry and shortcut, and delete the program folder once the helper and the uninstaller
     (`wait_pid`) have exited. If anything cannot be restored, the app stays installed."""
@@ -377,6 +393,10 @@ def uninstall_machine(wait_pid: int, ops: Ops | None = None) -> dict[str, Any]:
     target = runtime.install_dir()
     if not (runtime.FROZEN and is_installed(ops)):
         return {"ok": False, "message": msg("installer.not_installed", folder=str(target))}
+    try:     # other users' copies too (the uninstaller could only stop its own user's)
+        ops.stop_other_instances(target, keep=wait_pid)
+    except Exception as exc:
+        log.warning("stopping running copies failed: %r", exc)
     restored = restore_everything()
     if not restored.get("ok"):
         return restored

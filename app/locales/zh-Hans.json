@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "未找到 Wi‑Fi 网卡",
 
   "elevation.not_admin": "进程没有管理员权限",
-
   "elevation.not_installed": "要更改 Windows 设置，需要为所有用户安装 Ambysto Steady（位于 Program Files）。请打开一次下载的应用进行安装。",
   "elevation.unknown_tweak": "目录中没有优化项“{tweak}”",
   "elevation.cancelled": "已取消：未获得管理员权限",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "其他",
 
   "installer.confirm_install": "要为这台电脑的所有用户安装 Ambysto Steady 吗？\n\n文件夹：{target}\nWindows 会请求一次管理员批准。网络监控程序将随你登录 Windows 时启动，应用会出现在开始菜单和通知区域。",
-  "installer.confirm_uninstall": "要卸载 Ambysto Steady 吗？\n\n应用启用的所有优化项会先恢复为原始值（Windows 可能会请求一次管理员批准）。",
+  "installer.confirm_uninstall": "要卸载 Ambysto Steady 吗？\n\n应用启用的所有优化项会先恢复为原始值。Windows 会请求一次管理员批准。",
   "installer.step.machine_uninstall": "恢复所有优化并为所有用户移除程序（需要管理员批准）",
   "installer.step.startup": "登录时显示通知区域图标",
   "installer.step.shortcut_all": "为所有用户添加开始菜单快捷方式",
@@ -772,6 +771,7 @@
   "installer.step.register": "添加到“应用和功能”",
   "installer.step.start": "启动监控程序并打开窗口",
   "installer.step.stop": "停止应用和监控程序",
+  "installer.step.retire_task": "停止并移除运行此应用其他副本的监控任务",
   "installer.step.unshortcut": "删除快捷方式",
   "installer.step.data": "删除测量数据、设置和日志",
   "installer.step.keep_data": "保留测量数据、设置和日志",

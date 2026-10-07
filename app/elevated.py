@@ -12,7 +12,7 @@ its caller: every argument is re-validated here, and the result may only be writ
     python -m app.elevated path-prefer <ifIndex>    --result-file <path>
     python -m app.elevated path-restore <ifIndex|all> --result-file <path>
     python -m app.elevated restore-all -              --result-file <path>   (uninstall)
-    "<exe>" elevated install-machine -                --result-file <path>   (ADR-0019: copy this exe's folder
+    "<exe>" elevated install-machine <caller pid>     --result-file <path>   (ADR-0019: copy this exe's folder
                                                       under Program Files, register it for all users)
     "<exe>" elevated uninstall-machine <caller pid>   --result-file <path>   (restore everything, then remove
                                                       the all-users parts and the program folder)
@@ -64,10 +64,10 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
         return {"ok": False, "message": msg("elevation.not_admin")}
     from . import runtime
     if op == "install-machine":
-        if value != "-":
-            return {"ok": False, "message": f"{op} takes no argument"}   # the source is always this exe's folder
+        if not (value.isascii() and value.isdigit()):          # the source is always this exe's own folder
+            return {"ok": False, "message": f"{op} takes the caller's process id"}
         from . import installer
-        return installer.install_machine()
+        return installer.install_machine(int(value))
     if not runtime.elevation_allowed():
         return {"ok": False, "message": msg("elevation.not_installed")}
     _close_backup_import()
@@ -183,15 +183,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--measurement")
     args = ap.parse_args(argv)
     try:
-        path = check_result_path(args.result_file)
+        path: Path | None = check_result_path(args.result_file)
     except ValueError as exc:
-        print(exc, file=sys.stderr)
-        return 2
+        # Over-the-shoulder UAC: this process runs as another account, so the caller's results folder is not
+        # this one's. Installing and uninstalling must still happen (the caller checks their effect, ADR-0019);
+        # the result is never written into another profile. Every other operation stops here, as before.
+        if args.op not in ("install-machine", "uninstall-machine"):
+            print(exc, file=sys.stderr)
+            return 2
+        log.warning("%s: the result cannot be written (%s); running it anyway", args.op, exc)
+        path = None
     try:
         result = run_op(args.op, args.value, args.measurement)
     except Exception as exc:  # report, never leave the caller without an answer
         result = {"ok": False, "message": f"{type(exc).__name__}: {exc}"}
-    _write(path, result)
+    if path is not None:
+        _write(path, result)
     return 0 if result.get("ok") else 1
 
 

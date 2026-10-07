@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "No se encontró ninguna tarjeta Wi‑Fi",
 
   "elevation.not_admin": "El proceso no tiene permisos de administrador",
-
   "elevation.not_installed": "Para cambiar la configuración de Windows, Ambysto Steady debe estar instalado para todos los usuarios (en Archivos de programa). Abre una vez la aplicación descargada para instalarla.",
   "elevation.unknown_tweak": "No existe la optimización '{tweak}' en el catálogo",
   "elevation.cancelled": "Cancelado: no se concedieron permisos de administrador",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "Otra",
 
   "installer.confirm_install": "¿Instalar Ambysto Steady para todos los usuarios de este PC?\n\nCarpeta: {target}\nWindows pedirá una vez la aprobación de un administrador. El monitor de red se iniciará con Windows para ti, y la aplicación aparecerá en el menú Inicio y en el área de notificación.",
-  "installer.confirm_uninstall": "¿Desinstalar Ambysto Steady?\n\nAntes, todas las optimizaciones que la aplicación activó se restauran a su valor original (Windows puede pedir una vez la aprobación del administrador).",
+  "installer.confirm_uninstall": "¿Desinstalar Ambysto Steady?\n\nAntes, todas las optimizaciones que la aplicación activó se restauran a su valor original. Windows pedirá una vez la aprobación del administrador.",
   "installer.step.machine_uninstall": "Restaurar todas las optimizaciones y quitar el programa para todos los usuarios (aprobación de administrador)",
   "installer.step.startup": "Mostrar el icono en el área de notificación al iniciar sesión",
   "installer.step.shortcut_all": "Añadir el acceso directo del menú Inicio para todos los usuarios",
@@ -772,6 +771,7 @@
   "installer.step.register": "Añadir a Aplicaciones y características",
   "installer.step.start": "Iniciar el monitor y abrir la ventana",
   "installer.step.stop": "Detener la aplicación y el monitor",
+  "installer.step.retire_task": "Detener y quitar una tarea del monitor que ejecuta otra copia de la aplicación",
   "installer.step.unshortcut": "Quitar los accesos directos",
   "installer.step.data": "Eliminar mediciones, ajustes y registros",
   "installer.step.keep_data": "Conservar mediciones, ajustes y registros",

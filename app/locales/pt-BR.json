@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "Nenhuma placa Wi‑Fi encontrada",
 
   "elevation.not_admin": "O processo não tem direitos de Administrador",
-
   "elevation.not_installed": "Para alterar configurações do Windows, o Ambysto Steady precisa estar instalado para todos os usuários (em Arquivos de Programas). Abra uma vez o app baixado para instalá-lo.",
   "elevation.unknown_tweak": "Não existe o tweak '{tweak}' no catálogo",
   "elevation.cancelled": "Cancelado: os direitos de Administrador não foram concedidos",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "Outra",
 
   "installer.confirm_install": "Instalar o Ambysto Steady para todos os usuários deste PC?\n\nPasta: {target}\nO Windows pedirá a aprovação de um administrador uma vez. O monitor de rede será iniciado com o Windows para você, e o app aparecerá no menu Iniciar e na área de notificação.",
-  "installer.confirm_uninstall": "Desinstalar o Ambysto Steady?\n\nTodas as otimizações que o app ativou voltam primeiro ao valor original (o Windows pode pedir a aprovação de um administrador uma vez).",
+  "installer.confirm_uninstall": "Desinstalar o Ambysto Steady?\n\nTodas as otimizações que o app ativou voltam primeiro ao valor original. O Windows pede a aprovação de um administrador uma vez.",
   "installer.step.machine_uninstall": "Restaurar todas as otimizações e remover o programa para todos os usuários (aprovação de administrador)",
   "installer.step.startup": "Mostrar o ícone da área de notificação ao entrar",
   "installer.step.shortcut_all": "Adicionar o atalho do menu Iniciar para todos os usuários",
@@ -772,6 +771,7 @@
   "installer.step.register": "Adicionar a Aplicativos e recursos",
   "installer.step.start": "Iniciar o monitor e abrir a janela",
   "installer.step.stop": "Encerrar o app e o monitor",
+  "installer.step.retire_task": "Parar e remover uma tarefa do monitor que executa outra cópia do app",
   "installer.step.unshortcut": "Remover os atalhos",
   "installer.step.data": "Excluir medições, configurações e logs",
   "installer.step.keep_data": "Manter medições, configurações e logs",

@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "Wi‑Fi 카드를 찾을 수 없습니다",
 
   "elevation.not_admin": "프로세스에 관리자 권한이 없습니다",
-
   "elevation.not_installed": "Windows 설정을 변경하려면 Ambysto Steady을 모든 사용자용으로(Program Files에) 설치해야 합니다. 다운로드한 앱을 한 번 열어 설치하십시오.",
   "elevation.unknown_tweak": "카탈로그에 '{tweak}' 최적화 항목이 없습니다",
   "elevation.cancelled": "취소됨: 관리자 권한이 허용되지 않았습니다",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "기타",
 
   "installer.confirm_install": "이 PC의 모든 사용자에게 Ambysto Steady을 설치하시겠습니까?\n\n폴더: {target}\nWindows가 관리자 승인을 한 번 요청합니다. 네트워크 모니터는 로그인할 때 Windows와 함께 시작되며, 앱이 시작 메뉴와 알림 영역에 표시됩니다.",
-  "installer.confirm_uninstall": "Ambysto Steady을 제거하시겠습니까?\n\n앱이 켠 모든 최적화는 먼저 원래 값으로 되돌려집니다 (Windows가 관리자 승인을 한 번 요청할 수 있습니다).",
+  "installer.confirm_uninstall": "Ambysto Steady을 제거하시겠습니까?\n\n앱이 켠 모든 최적화는 먼저 원래 값으로 되돌려집니다. Windows가 관리자 승인을 한 번 요청합니다.",
   "installer.step.machine_uninstall": "모든 최적화를 원래대로 되돌리고 모든 사용자에서 프로그램 제거 (관리자 승인)",
   "installer.step.startup": "로그인할 때 알림 영역 아이콘 표시",
   "installer.step.shortcut_all": "모든 사용자용 시작 메뉴 바로 가기 추가",
@@ -772,6 +771,7 @@
   "installer.step.register": "앱 및 기능에 추가",
   "installer.step.start": "모니터를 시작하고 창 열기",
   "installer.step.stop": "앱과 모니터 중지",
+  "installer.step.retire_task": "앱의 다른 사본을 실행하는 모니터 작업을 중지하고 제거",
   "installer.step.unshortcut": "바로 가기 제거",
   "installer.step.data": "측정 데이터, 설정, 로그 삭제",
   "installer.step.keep_data": "측정 데이터, 설정, 로그 유지",

@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from app import i18n, installer, runtime
+from app import __version__, i18n, installer, runtime
 
 
 class FakeOps:
@@ -14,6 +14,8 @@ class FakeOps:
         self.calls, self.backups, self.restore_ok, self.fail, self.location = [], backups, restore_ok, fail, location
         self.store = backups if store is None else store
         self.legacy, self.machine_ok, self.machine_cancelled, self.files = legacy, machine_ok, machine_cancelled, set(files)
+        self.version = __version__
+        self.machine_failure = None   # a real failure result of the elevated half (not "no result")
 
     def _do(self, name, *args):
         self.calls.append((name, *args))
@@ -28,6 +30,8 @@ class FakeOps:
     def register(self, values): self._do("register", values)
     def unregister(self): self._do("unregister")
     def registered_location(self): return self.location
+    def registered_version(self): return self.version if self.location else None
+    def retire_unprotected_task(self, target): self._do("retire_task", target)
     def legacy_location(self): return self.legacy
     def unregister_legacy(self): self._do("unregister_legacy")
     def task_install(self, exe): self._do("task_install", exe)
@@ -35,7 +39,7 @@ class FakeOps:
     def task_stop(self): self._do("task_end")
     def task_stop_and_delete(self): self._do("task_stop")
     def launch(self, exe, args): self._do("launch", args)
-    def stop_other_instances(self, folder): self._do("stop_instances", folder)
+    def stop_other_instances(self, folder, keep=None): self._do("stop_instances", folder, keep)
     def backups_left(self): return self.backups
     def store_left(self): return self.store
     def delete_tree(self, path): self._do("delete_tree", path)
@@ -52,7 +56,11 @@ class FakeOps:
         self._do("install_machine")
         if self.machine_cancelled:
             return SimpleNamespace(ok=False, cancelled=True, message=i18n.msg("elevation.cancelled"))
-        return SimpleNamespace(ok=self.machine_ok, cancelled=False, message=i18n.msg("elevation.no_result", exit_code=0))
+        if self.machine_failure is not None:
+            return SimpleNamespace(ok=False, cancelled=False, message=self.machine_failure,
+                                   result={"ok": False, "message": self.machine_failure})
+        return SimpleNamespace(ok=self.machine_ok, cancelled=False, result=None if not self.machine_ok else {"ok": True},
+                               message=i18n.msg("elevation.no_result", exit_code=0))
 
     def uninstall_machine(self):
         self._do("uninstall_machine")
@@ -78,8 +86,8 @@ class MachineInstallTests(unittest.TestCase):
         ops = FakeOps()
         results = installer.run_steps(installer.machine_steps(SRC, DST, ops))
         self.assertTrue(all(ok for _, ok, _ in results))
-        self.assertEqual(ops.names(), ["stop_instances", "replace", "register", "shortcut"])
-        self.assertEqual(ops.calls[1][1:], (SRC, DST))
+        self.assertEqual(ops.names(), ["stop_instances", "retire_task", "replace", "register", "shortcut"])
+        self.assertEqual(ops.calls[2][1:], (SRC, DST))
         reg = next(c[1] for c in ops.calls if c[0] == "register")
         self.assertEqual(reg["UninstallString"], f'"{DST / runtime.EXE_NAME}" uninstall')
         self.assertEqual((reg["DisplayName"], reg["InstallLocation"]), ("Ambysto Steady", str(DST)))
@@ -96,13 +104,14 @@ class MachineInstallTests(unittest.TestCase):
         with mock.patch.object(runtime, "FROZEN", True), mock.patch.object(runtime, "install_dir", return_value=SRC), \
                 mock.patch.object(installer, "default_target", return_value=DST), \
                 mock.patch.object(installer, "check_target"):
-            out = installer.install_machine(ops)
+            out = installer.install_machine(77, ops=ops)
         self.assertTrue(out["ok"], out)
-        self.assertEqual(ops.calls[1][1:], (SRC, DST))
+        self.assertEqual(ops.calls[0][1:], (DST, 77))                   # the installer that asked is spared
+        self.assertEqual(ops.calls[2][1:], (SRC, DST))
 
     def test_install_machine_refuses_from_source(self):
         ops = FakeOps()
-        self.assertFalse(installer.install_machine(ops)["ok"])
+        self.assertFalse(installer.install_machine(ops=ops)["ok"])
         self.assertEqual(ops.calls, [])
 
     def test_a_failed_copy_is_reported(self):
@@ -110,7 +119,7 @@ class MachineInstallTests(unittest.TestCase):
         with mock.patch.object(runtime, "FROZEN", True), mock.patch.object(runtime, "install_dir", return_value=SRC), \
                 mock.patch.object(installer, "default_target", return_value=DST), \
                 mock.patch.object(installer, "check_target"):
-            out = installer.install_machine(ops)
+            out = installer.install_machine(ops=ops)
         self.assertFalse(out["ok"])
         self.assertNotIn("register", ops.names())
 
@@ -125,6 +134,24 @@ class InstallTests(unittest.TestCase):
         self.assertEqual(ops.names(), ["install_machine", "task_install", "shortcut", "task_start", "launch"])
         self.assertEqual(ops.calls[1][1], DST / runtime.EXE_NAME)       # the task runs the Program Files copy
         self.assertEqual(ops.calls[2][1:], (f"{runtime.APP_NAME}.lnk", "desktop --minimized"))
+
+    def test_a_real_failure_is_not_taken_for_success(self):
+        # e.g. an upgrade whose register step failed: the old entry still names the folder and the exe is there
+        ops = FakeOps(location=str(DST), files=[DST / runtime.EXE_NAME])
+        ops.machine_failure = "Add to Apps & features: access denied"
+        results = installer.install(DST, ops)
+        self.assertEqual(ops.names(), ["install_machine"])
+        self.assertFalse(results[-1][1])
+
+    def test_an_older_version_left_in_place_is_not_taken_for_success(self):
+        ops = FakeOps(machine_ok=False, location=str(DST), files=[DST / runtime.EXE_NAME])
+        ops.version = "0.4.0"
+        self.assertFalse(installer.install(DST, ops)[-1][1])
+
+    def test_installing_from_the_installed_folder_spares_the_caller(self):
+        ops = FakeOps()
+        installer.run_steps(installer.machine_steps(DST, DST, ops, caller=4242))
+        self.assertEqual(ops.calls[0][1:], (DST, 4242))
 
     def test_declined_uac_changes_nothing_for_the_user(self):
         ops = FakeOps(machine_cancelled=True)
@@ -149,10 +176,16 @@ class InstallTests(unittest.TestCase):
         ops = FakeOps(legacy=str(OLD))
         installer.install(DST, ops)
         names = ops.names()
-        self.assertEqual(names[1:5], ["stop_instances", "remove_file", "unregister_legacy", "delete_program_folder"])
-        self.assertEqual(ops.calls[4][1], OLD)
-        self.assertLess(names.index("delete_program_folder"), names.index("task_install"))   # its task is replaced after
+        self.assertEqual(names[1:6], ["task_install", "stop_instances", "remove_file", "unregister_legacy",
+                                      "delete_program_folder"])
+        self.assertEqual(ops.calls[5][1], OLD)
         self.assertNotIn("delete_tree", names)                                               # the data folder stays
+
+    def test_the_new_task_is_registered_before_the_old_folder_goes(self):
+        # If registering fails, the old folder (which a highest-privileges task may still run) is not deleted.
+        ops = FakeOps(legacy=str(OLD), fail="task_install")
+        installer.install(DST, ops)
+        self.assertNotIn("delete_program_folder", ops.names())
 
     def test_a_failed_legacy_cleanup_does_not_stop_the_install(self):
         ops = FakeOps(legacy=str(OLD), fail="delete_program_folder")
@@ -234,18 +267,19 @@ class MachineUninstallTests(unittest.TestCase):
         ops = FakeOps(location=location)
         with mock.patch.object(runtime, "FROZEN", True), mock.patch.object(runtime, "install_dir", return_value=DST), \
                 mock.patch("app.elevated.restore_everything", return_value=restored):
-            return installer.uninstall_machine(4242, ops), ops
+            return installer.uninstall_machine(4242, ops=ops), ops
 
     def test_restores_then_removes_and_waits_for_the_uninstaller(self):
         out, ops = self.run_it({"ok": True, "message": i18n.msg("installer.restored_all")})
         self.assertTrue(out["ok"])
-        self.assertEqual(ops.names(), ["unregister", "remove_file", "delete_after_exit"])
+        self.assertEqual(ops.names(), ["stop_instances", "unregister", "remove_file", "delete_after_exit"])
+        self.assertEqual(ops.calls[0][1:], (DST, 4242))                # other users' copies too, not the uninstaller
         self.assertEqual(ops.calls[-1][1:], (DST, 4242))
 
     def test_a_failed_restore_keeps_the_app_installed(self):
         out, ops = self.run_it({"ok": False, "message": "WMI is busy"})
         self.assertFalse(out["ok"])
-        self.assertEqual(ops.calls, [])
+        self.assertEqual(ops.names(), ["stop_instances"])
 
     def test_refuses_for_a_copy_that_is_not_the_registered_one(self):
         out, ops = self.run_it({"ok": True, "message": ""}, location=str(OLD))
@@ -296,9 +330,11 @@ class GuardTests(unittest.TestCase):
         self.assertTrue(runtime.is_protected(installer.default_target()))
         self.assertTrue(installer.common_start_menu_link().is_absolute())
 
-    def test_only_program_files_is_protected(self):
+    def test_only_the_apps_folder_under_program_files_is_protected(self):
         self.assertTrue(runtime.is_protected(runtime.program_files() / "Ambysto Steady"))
-        for folder in (OLD, SRC, Path("C:/"), runtime.program_files().parent / "Program Files Evil"):
+        self.assertTrue(runtime.is_protected(runtime.program_files() / "Ambysto Steady" / "_internal"))
+        for folder in (OLD, SRC, Path("C:/"), runtime.program_files().parent / "Program Files Evil",
+                       runtime.program_files() / "Some Other App", runtime.program_files()):
             self.assertFalse(runtime.is_protected(folder), folder)
 
 
@@ -360,6 +396,78 @@ class RuntimeCommandTests(unittest.TestCase):
         xml = autostart.build_task_xml(user="PC\\me", exe=DST / runtime.EXE_NAME)
         self.assertIn(f"<Command>{DST / runtime.EXE_NAME}</Command>", xml)
         self.assertIn("<Arguments>monitor</Arguments>", xml)
+
+
+class RetireTaskTests(unittest.TestCase):
+    """The elevated step removes a monitor task that runs anything but the installed exe (ADR-0019)."""
+
+    def run_it(self, status):
+        from app import autostart
+        calls = []
+        with mock.patch.object(autostart, "status", return_value=status), \
+                mock.patch.object(autostart, "end_now", side_effect=lambda: calls.append("end")), \
+                mock.patch.object(autostart, "uninstall", side_effect=lambda: calls.append("delete") or SimpleNamespace(ok=True)):
+            installer.Ops.__mro__  # the guarded class: use the real method on a bare instance
+            real = _real_ops()
+            real.retire_unprotected_task(DST)
+        return calls
+
+    def test_a_task_from_a_per_user_install_is_ended_and_removed(self):
+        from app import autostart
+        st = autostart.TaskStatus(True, run_level="HighestAvailable", command=str(OLD / runtime.EXE_NAME))
+        self.assertEqual(self.run_it(st), ["end", "delete"])
+
+    def test_the_task_of_this_install_and_no_task_are_left_alone(self):
+        from app import autostart
+        self.assertEqual(self.run_it(autostart.TaskStatus(True, command=f'"{DST / runtime.EXE_NAME}"')), [])
+        self.assertEqual(self.run_it(autostart.TaskStatus(False)), [])
+
+
+def _real_ops():
+    """The real Ops class (tests/__init__.py replaces installer.Ops with a guard): only for methods whose
+    side effects a test has patched out."""
+    import importlib
+    from app import installer as module
+    source = importlib.util.find_spec("app.installer")
+    fresh = importlib.util.module_from_spec(source)
+    source.loader.exec_module(fresh)
+    return fresh.Ops()
+
+
+class HelperResultTests(unittest.TestCase):
+    """Over-the-shoulder UAC: the helper's results folder is not the caller's (ADR-0019, finding 1)."""
+
+    def test_install_and_uninstall_run_even_when_the_result_cannot_be_written(self):
+        from app import elevated
+        foreign = "C:/Users/someone-else/AppData/Local/StableInternet/results/" + "a" * 32 + ".json"
+        for op in ("install-machine", "uninstall-machine"):
+            with mock.patch.object(elevated, "run_op", return_value={"ok": True}) as run_op, \
+                    mock.patch.object(elevated, "_write") as write:
+                self.assertEqual(elevated.main([op, "1234", "--result-file", foreign]), 0)
+            run_op.assert_called_once()
+            write.assert_not_called()                     # never into another profile
+
+    def test_other_operations_still_stop_there(self):
+        from app import elevated
+        foreign = "C:/Users/someone-else/AppData/Local/StableInternet/results/" + "a" * 32 + ".json"
+        with mock.patch.object(elevated, "run_op") as run_op:
+            self.assertEqual(elevated.main(["restore-all", "-", "--result-file", foreign]), 2)
+        run_op.assert_not_called()
+
+
+class PowerShellModulePathTests(unittest.TestCase):
+    """Scripts load Windows' modules only, never the user's Documents\\WindowsPowerShell\\Modules."""
+
+    def test_every_script_starts_by_resetting_the_module_path(self):
+        from app import winutil
+        self.assertTrue(winutil._UTF8_PREAMBLE.startswith(winutil.SAFE_MODULE_PATH))
+        self.assertTrue(winutil.powershell_exe().lower().endswith(r"\windowspowershell\v1.0\powershell.exe"))
+
+    def test_the_module_path_seen_by_a_script(self):
+        from app import winutil
+        paths = [p for p in winutil.run_powershell("$env:PSModulePath").strip().split(";") if p]
+        self.assertEqual(len(paths), 2, paths)
+        self.assertTrue(all("Documents" not in p and "Users" not in p for p in paths), paths)
 
 
 if __name__ == "__main__":

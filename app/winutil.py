@@ -13,10 +13,27 @@ import socket
 import subprocess
 from ctypes import wintypes
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 CREATE_NO_WINDOW = 0x08000000
-_UTF8_PREAMBLE = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $ProgressPreference = 'SilentlyContinue'; "
+# Modules load only from Windows' own folders. -NoProfile does not stop module autoloading, and PSModulePath
+# starts with the user's Documents\WindowsPowerShell\Modules, which a process without Admin rights can fill:
+# a module there exporting e.g. Get-CimInstance would run with the rights of an elevated caller (ADR-0019).
+# Set as the script's first statement: PowerShell 5.1 rebuilds the variable at startup.
+SAFE_MODULE_PATH = ("$env:PSModulePath = (Join-Path $PSHOME 'Modules') + ';' + "
+                    "(Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'WindowsPowerShell\\Modules'); ")
+_UTF8_PREAMBLE = SAFE_MODULE_PATH + ("[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+                                     "$ProgressPreference = 'SilentlyContinue'; ")
+FOLDERID_SYSTEM = "1ac14e77-02e7-4e5d-b744-2eb1ae5198b7"
+
+
+def powershell_exe() -> str:
+    """Windows PowerShell 5.1 by full path: a bare name is looked up in the caller's folder first."""
+    try:
+        return str(Path(known_folder(FOLDERID_SYSTEM)) / "WindowsPowerShell" / "v1.0" / "powershell.exe")
+    except (OSError, AttributeError):
+        return "powershell.exe"
 
 
 class PowerShellError(RuntimeError):
@@ -38,7 +55,7 @@ def run_powershell(script: str, timeout: float = 30.0) -> str:
     missing. Scripts are passed with -EncodedCommand, never string-spliced.
     """
     cmd = [
-        "powershell.exe", "-NoProfile", "-NonInteractive",
+        powershell_exe(), "-NoProfile", "-NonInteractive",
         "-ExecutionPolicy", "Bypass",
         "-EncodedCommand", encode_command(_UTF8_PREAMBLE + script),
     ]

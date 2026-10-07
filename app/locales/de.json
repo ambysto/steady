@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "Keine Wi‑Fi-Karte gefunden",
 
   "elevation.not_admin": "Der Prozess hat keine Administratorrechte",
-
   "elevation.not_installed": "Zum Ändern von Windows-Einstellungen muss Ambysto Steady für alle Benutzer installiert sein (unter Programme). Öffnen Sie die heruntergeladene App einmal, um sie zu installieren.",
   "elevation.unknown_tweak": "Im Katalog gibt es keine Optimierung „{tweak}“",
   "elevation.cancelled": "Abgebrochen: Administratorrechte wurden nicht gewährt",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "Andere",
 
   "installer.confirm_install": "Ambysto Steady für alle Benutzer dieses PCs installieren?\n\nOrdner: {target}\nWindows fragt einmal nach Administratorzustimmung. Der Netzwerkmonitor startet für Sie mit Windows, und die App erscheint im Startmenü und im Infobereich.",
-  "installer.confirm_uninstall": "Ambysto Steady deinstallieren?\n\nJede von der App eingeschaltete Optimierung wird zuvor auf ihren ursprünglichen Wert zurückgesetzt (Windows fragt eventuell einmal nach Administratorbestätigung).",
+  "installer.confirm_uninstall": "Ambysto Steady deinstallieren?\n\nJede von der App eingeschaltete Optimierung wird zuvor auf ihren ursprünglichen Wert zurückgesetzt. Windows fragt einmal nach Administratorbestätigung.",
   "installer.step.machine_uninstall": "Alle Optimierungen zurücksetzen und das Programm für alle Benutzer entfernen (Administratorzustimmung)",
   "installer.step.startup": "Infobereich-Symbol bei der Anmeldung anzeigen",
   "installer.step.shortcut_all": "Startmenü-Verknüpfung für alle Benutzer hinzufügen",
@@ -772,6 +771,7 @@
   "installer.step.register": "Zu Apps & Features hinzufügen",
   "installer.step.start": "Monitor starten und das Fenster öffnen",
   "installer.step.stop": "App und Monitor beenden",
+  "installer.step.retire_task": "Eine Monitor-Aufgabe beenden und entfernen, die eine andere Kopie der App ausführt",
   "installer.step.unshortcut": "Verknüpfungen entfernen",
   "installer.step.data": "Messwerte, Einstellungen und Protokolle löschen",
   "installer.step.keep_data": "Messwerte, Einstellungen und Protokolle behalten",

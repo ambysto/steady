@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "Wi‑Fi カードが見つかりません",
 
   "elevation.not_admin": "このプロセスには管理者権限がありません",
-
   "elevation.not_installed": "Windows の設定を変更するには、Ambysto Steady をすべてのユーザー用に（Program Files に）インストールする必要があります。ダウンロードしたアプリを一度開いてインストールしてください。",
   "elevation.unknown_tweak": "カタログに調整項目「{tweak}」はありません",
   "elevation.cancelled": "キャンセルしました: 管理者権限が付与されませんでした",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "その他",
 
   "installer.confirm_install": "この PC のすべてのユーザー用に Ambysto Steady をインストールしますか？\n\nフォルダー: {target}\nWindows が管理者の承認を 1 回求めます。ネットワークモニターはあなたのサインインと同時に起動し、アプリはスタートメニューと通知領域に表示されます。",
-  "installer.confirm_uninstall": "Ambysto Steady をアンインストールしますか？\n\nアプリがオンにした最適化は、先にすべて元の値に戻されます（Windows が管理者の許可を 1 回求める場合があります）。",
+  "installer.confirm_uninstall": "Ambysto Steady をアンインストールしますか？\n\nアプリがオンにした最適化は、先にすべて元の値に戻されます。Windows が管理者の許可を 1 回求めます。",
   "installer.step.machine_uninstall": "すべての最適化を元に戻し、すべてのユーザーからプログラムを削除（管理者の承認）",
   "installer.step.startup": "サインイン時に通知領域アイコンを表示",
   "installer.step.shortcut_all": "すべてのユーザー用にスタートメニューのショートカットを追加",
@@ -772,6 +771,7 @@
   "installer.step.register": "アプリと機能に追加",
   "installer.step.start": "モニターを起動してウィンドウを開く",
   "installer.step.stop": "アプリとモニターを停止",
+  "installer.step.retire_task": "アプリの別のコピーを実行しているモニタータスクを停止して削除",
   "installer.step.unshortcut": "ショートカットを削除",
   "installer.step.data": "測定データ、設定、ログを削除",
   "installer.step.keep_data": "測定データ、設定、ログを残す",

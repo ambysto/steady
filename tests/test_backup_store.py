@@ -584,14 +584,19 @@ class UninstallTests(StoreCase):
         self.assertIn(("write", "dns_servers_set", (6, ["192.0.2.53"])), self.system.writes())
         self.assertFalse(backupstore.has_data())
 
-    def test_the_uninstaller_asks_for_the_store_even_without_backups(self):
+    def test_the_uninstaller_elevates_even_without_backups(self):
+        # Only quarantined entries left: no backup to restore, but the store must still go, and only the
+        # elevated step can remove it. Since ADR-0019 that step always runs (it also removes the program).
         from app import installer
+        from tests.test_installer import DST, FakeOps
         self.store({})
         backupstore.REGISTRY.write_quarantine({"tcp_ecn": ECN_OFF})
         self.reg.admin = False
-        ops = installer.Ops()
-        self.assertFalse(ops.backups_left())
-        self.assertTrue(ops.store_left())
+        self.assertEqual(config.load_backup(), {})
+        self.assertTrue(backupstore.has_data())
+        ops = FakeOps(backups=False, location=str(DST))
+        installer.run_steps(installer.uninstall_steps(DST, ops, delete_data=False))
+        self.assertIn("uninstall_machine", ops.names())
 
 
 if __name__ == "__main__":

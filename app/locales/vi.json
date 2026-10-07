@@ -265,7 +265,6 @@
   "server.action.no_wifi_card": "không tìm thấy card Wi‑Fi",
 
   "elevation.not_admin": "tiến trình không có quyền Administrator",
-
   "elevation.not_installed": "Muốn thay đổi cài đặt Windows, Ambysto Steady phải được cài cho mọi người dùng (trong Program Files). Mở app đã tải về một lần để cài.",
   "elevation.unknown_tweak": "không có tweak '{tweak}' trong danh mục",
   "elevation.cancelled": "Đã hủy: không cấp quyền Administrator",
@@ -751,7 +750,7 @@
   "ui.failover.kind.other": "Khác",
 
   "installer.confirm_install": "Cài Ambysto Steady cho mọi người dùng của máy này?\n\nThư mục: {target}\nWindows sẽ hỏi quyền Administrator một lần. Monitor mạng sẽ chạy cùng Windows cho bạn, app có trong Start menu và khay hệ thống.",
-  "installer.confirm_uninstall": "Gỡ Ambysto Steady?\n\nMọi tối ưu app đã bật sẽ được khôi phục về giá trị gốc trước (Windows có thể hỏi quyền Administrator một lần).",
+  "installer.confirm_uninstall": "Gỡ Ambysto Steady?\n\nMọi tối ưu app đã bật sẽ được khôi phục về giá trị gốc trước. Windows sẽ hỏi quyền Administrator một lần.",
   "installer.step.machine_uninstall": "Đưa mọi tối ưu về như cũ và gỡ chương trình cho mọi người dùng (cần quyền Administrator)",
   "installer.step.startup": "Hiện biểu tượng ở khay hệ thống khi đăng nhập",
   "installer.step.shortcut_all": "Tạo lối tắt Start menu cho mọi người dùng",
@@ -772,6 +771,7 @@
   "installer.step.register": "Thêm vào Apps & features",
   "installer.step.start": "Chạy monitor và mở cửa sổ",
   "installer.step.stop": "Dừng app và monitor",
+  "installer.step.retire_task": "Dừng và gỡ task monitor đang chạy một bản khác của app",
   "installer.step.unshortcut": "Xóa lối tắt",
   "installer.step.data": "Xóa số liệu đo, cài đặt và log",
   "installer.step.keep_data": "Giữ số liệu đo, cài đặt và log",

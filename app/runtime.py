@@ -35,11 +35,17 @@ def program_files() -> Path:
     return Path(winutil.known_folder(winutil.FOLDERID_PROGRAM_FILES))
 
 
+def protected_dir() -> Path:
+    """Where the app is installed for all users: <Program Files>\\Ambysto Steady (ADR-0019)."""
+    return program_files() / APP_NAME
+
+
 def is_protected(folder: Path) -> bool:
-    """True for a folder under Program Files, which a process without Admin rights cannot write
-    (ADR-0019): the only place the packaged exe may run elevated from."""
+    """True for the app's own folder under Program Files (or inside it), which a process without Admin rights
+    cannot write (ADR-0019): the only place the packaged exe may run elevated from. Not any folder under
+    Program Files: other software sometimes makes its own folder there writable."""
     try:
-        Path(folder).resolve().relative_to(program_files().resolve())
+        Path(folder).resolve().relative_to(protected_dir().resolve())
         return True
     except (ValueError, OSError):
         return False
