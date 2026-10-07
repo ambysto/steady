@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "실험적 최적화를 켜시겠습니까?",
   "ui.sheet.experimental.body": "“{name}”은(는) 속도를 낮추거나 부작용을 일으킬 수 있습니다. 원래 값은 백업되므로 언제든지 끌 수 있습니다.",
   "ui.sheet.measured.title": "먼저 연결을 측정할까요?",
-  "ui.sheet.measured.body": "'{name}'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 최대 100MB), 고칠 것이 없으면 적용하지 않습니다.",
+  "ui.sheet.measured.body": "'{name}'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 업로드 100 Mbps당 약 125MB), 고칠 것이 없으면 적용하지 않습니다.",
   "ui.sheet.cancel": "취소",
   "ui.sheet.confirm": "켜기",
 

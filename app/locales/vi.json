@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "Bật tối ưu thử nghiệm?",
   "ui.sheet.experimental.body": "“{name}” có thể làm giảm tốc độ hoặc có tác dụng phụ. Giá trị gốc được sao lưu, bạn có thể tắt lại bất cứ lúc nào.",
   "ui.sheet.measured.title": "Đo đường truyền trước?",
-  "ui.sheet.measured.body": "“{name}” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần tối đa 100 MB), và không áp dụng nếu không có gì cần sửa.",
+  "ui.sheet.measured.body": "“{name}” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần khoảng 125 MB cho mỗi 100 Mbps upload), và không áp dụng nếu không có gì cần sửa.",
   "ui.sheet.cancel": "Hủy",
   "ui.sheet.confirm": "Bật",
 

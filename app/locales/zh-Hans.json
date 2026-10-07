@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "启用实验性优化项？",
   "ui.sheet.experimental.body": "“{name}”可能降低速度或产生副作用。原始值已备份，你可以随时关闭它。",
   "ui.sheet.measured.title": "先测量你的连接？",
-  "ui.sheet.measured.body": "“{name}”会在更改前测量约 15 秒上传，更改后再测量一次（每次最多 100 MB），没有需要修复的问题时不会应用。",
+  "ui.sheet.measured.body": "“{name}”会在更改前测量约 15 秒上传，更改后再测量一次（每次每 100 Mbps 上传约 125 MB），没有需要修复的问题时不会应用。",
   "ui.sheet.cancel": "取消",
   "ui.sheet.confirm": "启用",
 

@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "Experimentelle Optimierung einschalten?",
   "ui.sheet.experimental.body": "„{name}“ kann die Geschwindigkeit verringern oder Nebenwirkungen haben. Der ursprüngliche Wert wird gesichert, daher lässt sich die Optimierung jederzeit ausschalten.",
   "ui.sheet.measured.title": "Zuerst die Verbindung messen?",
-  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils bis zu 100 MB) und wird nicht angewendet, wenn nichts zu beheben ist.",
+  "ui.sheet.measured.body": "„{name}“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils etwa 125 MB pro 100 Mbit/s Upload) und wird nicht angewendet, wenn nichts zu beheben ist.",
   "ui.sheet.cancel": "Abbrechen",
   "ui.sheet.confirm": "Einschalten",
 

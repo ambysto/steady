@@ -26847,55 +26847,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils bis zu 100 MB) und wird nicht angewendet, wenn nichts zu beheben ist."
+            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils etwa 125 MB pro 100 Mbit/s Upload) und wird nicht angewendet, wenn nichts zu beheben ist."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” measures your upload for about 15 seconds before the change and again after it (up to 100 MB each time), and is not applied if there is nothing to fix."
+            "value" : "“%1$@” measures your upload for about 15 seconds before the change and again after it (each time about 125 MB per 100 Mbps of upload), and is not applied if there is nothing to fix."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«%1$@» mide tu subida durante unos 15 segundos antes del cambio y otra vez después (hasta 100 MB cada vez), y no se aplica si no hay nada que corregir."
+            "value" : "«%1$@» mide tu subida durante unos 15 segundos antes del cambio y otra vez después (cada vez unos 125 MB por cada 100 Mbps de subida), y no se aplica si no hay nada que corregir."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (jusqu’à 100 Mo à chaque fois), et n’est pas appliqué s’il n’y a rien à corriger."
+            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (à chaque fois environ 125 Mo par tranche de 100 Mbit/s d’envoi), et n’est pas appliqué s’il n’y a rien à corriger."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「%1$@」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回最大 100 MB）。直すことがなければ適用しません。"
+            "value" : "「%1$@」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回、アップロード 100 Mbps あたり約 125 MB）。直すことがなければ適用しません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "'%1$@'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 최대 100MB), 고칠 것이 없으면 적용하지 않습니다."
+            "value" : "'%1$@'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 업로드 100 Mbps당 약 125MB), 고칠 것이 없으면 적용하지 않습니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (até 100 MB a cada vez), e não é aplicado se não houver nada a corrigir."
+            "value" : "“%1$@” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (a cada vez cerca de 125 MB por 100 Mbps de upload), e não é aplicado se não houver nada a corrigir."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần tối đa 100 MB), và không áp dụng nếu không có gì cần sửa."
+            "value" : "“%1$@” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần khoảng 125 MB cho mỗi 100 Mbps upload), và không áp dụng nếu không có gì cần sửa."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@”会在更改前测量约 15 秒上传，更改后再测量一次（每次最多 100 MB），没有需要修复的问题时不会应用。"
+            "value" : "“%1$@”会在更改前测量约 15 秒上传，更改后再测量一次（每次每 100 Mbps 上传约 125 MB），没有需要修复的问题时不会应用。"
           }
         }
       }

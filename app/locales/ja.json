@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "実験的な調整をオンにしますか？",
   "ui.sheet.experimental.body": "「{name}」は速度の低下や副作用を引き起こす可能性があります。元の値はバックアップされるため、いつでもオフにできます。",
   "ui.sheet.measured.title": "先に接続を測定しますか？",
-  "ui.sheet.measured.body": "「{name}」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回最大 100 MB）。直すことがなければ適用しません。",
+  "ui.sheet.measured.body": "「{name}」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回、アップロード 100 Mbps あたり約 125 MB）。直すことがなければ適用しません。",
   "ui.sheet.cancel": "キャンセル",
   "ui.sheet.confirm": "オンにする",
 

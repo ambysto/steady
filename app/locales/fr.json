@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "Activer un tweak expérimental ?",
   "ui.sheet.experimental.body": "« {name} » peut réduire le débit ou avoir des effets secondaires. La valeur d'origine est sauvegardée, vous pouvez le désactiver à tout moment.",
   "ui.sheet.measured.title": "Mesurer d’abord votre connexion ?",
-  "ui.sheet.measured.body": "« {name} » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (jusqu’à 100 Mo à chaque fois), et n’est pas appliqué s’il n’y a rien à corriger.",
+  "ui.sheet.measured.body": "« {name} » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (à chaque fois environ 125 Mo par tranche de 100 Mbit/s d’envoi), et n’est pas appliqué s’il n’y a rien à corriger.",
   "ui.sheet.cancel": "Annuler",
   "ui.sheet.confirm": "Activer",
 

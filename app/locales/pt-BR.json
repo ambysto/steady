@@ -529,7 +529,7 @@
   "ui.sheet.experimental.title": "Ativar uma otimização experimental?",
   "ui.sheet.experimental.body": "“{name}” pode reduzir a velocidade ou ter efeitos colaterais. O valor original fica em backup, então você pode desativá-la a qualquer momento.",
   "ui.sheet.measured.title": "Medir sua conexão primeiro?",
-  "ui.sheet.measured.body": "“{name}” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (até 100 MB a cada vez), e não é aplicado se não houver nada a corrigir.",
+  "ui.sheet.measured.body": "“{name}” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (a cada vez cerca de 125 MB por 100 Mbps de upload), e não é aplicado se não houver nada a corrigir.",
   "ui.sheet.cancel": "Cancelar",
   "ui.sheet.confirm": "Ativar",
 
