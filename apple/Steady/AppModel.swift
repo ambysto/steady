@@ -63,22 +63,30 @@ final class AppModel {
 
     init() {
         #if DEBUG
-        // `-StoreScreenshots [-StoreTab diagnostics]`: the made-up network of apple/AppStore.
+        // `-StoreScreenshots [-StoreTab diagnostics] [-SampleProblems] [-RunCheck]`: the made-up
+        // network of apple/AppStore; with `-SampleProblems` it has a fair signal (Mac), failing DNS
+        // and loss past the router, and `-RunCheck` runs Check my connection on it at launch.
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-StoreScreenshots") {
             isStoreScreenshots = true
+            let problems = arguments.contains("-SampleProblems")
+            let now = Date().timeIntervalSince1970
             #if os(macOS)
-            monitor = SampleNetwork.monitor(now: Date().timeIntervalSince1970, wifi: SampleNetwork.wifi)
-            signal = WiFiSignal.evaluate(SampleNetwork.wifi)
+            let wifi = problems ? SampleNetwork.fairWiFi : SampleNetwork.wifi
+            monitor = SampleNetwork.monitor(now: now, wifi: wifi, internetLoss: problems)
+            signal = WiFiSignal.evaluate(wifi)
             interference = SampleNetwork.interference
             #else
-            monitor = SampleNetwork.monitor(now: Date().timeIntervalSince1970, wifi: nil)
+            monitor = SampleNetwork.monitor(now: now, wifi: nil, internetLoss: problems)
             #endif
             path = SampleNetwork.path
             vpn = VPNCheck.evaluate([])
-            dns = SampleNetwork.dns
+            dns = problems ? SampleNetwork.brokenDNS : SampleNetwork.dns
             if let index = arguments.firstIndex(of: "-StoreTab"), arguments.indices.contains(index + 1) {
                 selectedTab = AppTab(rawValue: arguments[index + 1]) ?? .overview
+            }
+            if arguments.contains("-RunCheck") {
+                runCheck()
             }
             return
         }
