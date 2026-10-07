@@ -6,6 +6,7 @@ process dies, so a PID reused after a reboot can never block a start.
 from __future__ import annotations
 
 import ctypes
+import time
 from ctypes import wintypes
 
 ERROR_ACCESS_DENIED = 5
@@ -32,8 +33,20 @@ class SingleInstance:
         self.name = name if name.startswith(("Local\\", "Global\\")) else f"Local\\{name}"
         self._handle = None
 
-    def acquire(self) -> bool:
-        """True if this process is now the only instance. Calling it again is a no-op."""
+    def acquire(self, wait: float = 0.0, poll: float = 0.25) -> bool:
+        """True if this process is now the only instance. Calling it again is a no-op.
+
+        With `wait`, keeps trying for up to that many seconds: a previous instance that is
+        still shutting down (task restarted back-to-back, an upgrade) releases it shortly."""
+        deadline = time.monotonic() + max(0.0, wait)
+        while not self._try_acquire():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            time.sleep(min(poll, remaining))
+        return True
+
+    def _try_acquire(self) -> bool:
         if self._handle is not None:
             return True
         k = _k32()
