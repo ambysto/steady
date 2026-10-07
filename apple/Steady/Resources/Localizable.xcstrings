@@ -1360,6 +1360,124 @@
         }
       }
     },
+    "diag.bufferbloat.advice_incomplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur ein Lauf, in dem beide Richtungen die Leitung auslasten, kann zeigen, dass alles in Ordnung ist; später erneut ausführen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a run in which both directions fill the line can show that it is fine; run it again later."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo una ejecución en la que ambos sentidos llenen la línea puede mostrar que todo está bien; vuelve a ejecutarla más tarde."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seule une mesure où les deux sens saturent la ligne peut montrer que tout va bien ; relancez plus tard."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "両方向とも回線を満たした測定でなければ問題ないとは言えません。しばらくしてからもう一度実行してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 방향 모두 회선을 가득 채운 측정만이 문제가 없음을 보여 줄 수 있습니다. 나중에 다시 실행하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Só uma execução em que os dois sentidos encham a linha pode mostrar que está tudo bem; execute novamente mais tarde."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ một lần đo mà cả hai chiều đều làm đầy đường truyền mới cho biết mọi thứ ổn; chạy lại sau."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有两个方向都占满线路的测量才能说明一切正常；请稍后重新运行。"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.advice_later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warten, bis der Testserver die Last wieder annimmt, dann erneut ausführen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wait until the test server accepts the load again, then run again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espera a que el servidor de prueba vuelva a aceptar la carga y vuelve a ejecutar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attendez que le serveur de test accepte à nouveau la charge, puis relancez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストサーバーが再び負荷を受け付けるまで待ってから、もう一度実行してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 서버가 다시 부하를 받아들일 때까지 기다린 후 다시 실행하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguarde até o servidor de teste aceitar a carga de novo e execute novamente."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chờ máy chủ đo nhận tải trở lại rồi chạy lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请等待测试服务器重新接受负载后再运行。"
+          }
+        }
+      }
+    },
     "diag.bufferbloat.advice_retry" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1533,6 +1651,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@：%2$@期间所有 ping 均丢失"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.at_ceiling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die %1$@-Last stoppte an der eigenen Grenze des Tests (%2$@ Mbps): Die Leitung ist womöglich schneller, ihre Warteschlange hat sich dann nicht gefüllt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The %1$@ load stopped at the test's own limit (%2$@ Mbps): the line may be faster, so its queue may not have filled"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La carga de %1$@ se detuvo en el límite propio de la prueba (%2$@ Mbps): la línea puede ser más rápida, así que su cola quizá no se llenó"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La charge (%1$@) s'est arrêtée à la limite propre du test (%2$@ Mbps) : la ligne est peut-être plus rapide, sa file d'attente ne s'est donc peut-être pas remplie"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@の負荷はテスト自体の上限（%2$@ Mbps）で止まりました。回線はさらに速い可能性があり、キューが満たされていないかもしれません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 부하가 테스트 자체 한도(%2$@ Mbps)에서 멈췄습니다. 회선이 더 빠를 수 있어 대기열이 채워지지 않았을 수 있습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A carga de %1$@ parou no limite do próprio teste (%2$@ Mbps): a linha pode ser mais rápida, então a fila dela pode não ter enchido"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tải chiều %1$@ dừng ở giới hạn của chính phép đo (%2$@ Mbps): đường truyền có thể nhanh hơn, nên hàng đợi có thể chưa đầy"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@负载停在了测试自身的上限（%2$@ Mbps）：线路可能更快，因此其队列可能未被填满"
           }
         }
       }
@@ -2064,6 +2241,183 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "线路繁忙时延迟几乎不上升（最多 +%1$@ ms）"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.ok_incomplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Anstieg, soweit messbar (höchstens +%1$@ ms), aber die Messung ist unvollständig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No rise where it could be measured (at most +%1$@ ms), but the measurement is incomplete"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin aumento donde se pudo medir (como máximo +%1$@ ms), pero la medición está incompleta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune hausse là où la mesure a été possible (+%1$@ ms au maximum), mais la mesure est incomplète"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測定できた範囲では上昇はありません（最大 +%1$@ ms）が、測定は不完全です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정할 수 있었던 범위에서는 증가가 없지만 (최대 +%1$@ ms), 측정이 불완전합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum aumento onde foi possível medir (no máximo +%1$@ ms), mas a medição está incompleta"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thấy độ trễ tăng ở phần đo được (tối đa +%1$@ ms), nhưng phép đo chưa đầy đủ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在能测到的范围内延迟没有上升（最多 +%1$@ ms），但测量不完整"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.refused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Testserver hat die %1$@-Last abgelehnt (HTTP %2$@: er begrenzt Testverkehr pro Adresse); in etwa %3$@ Min. erneut versuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The test server refused the %1$@ load (HTTP %2$@: it limits test traffic per address); try again in about %3$@ min"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor de prueba rechazó la carga de %1$@ (HTTP %2$@: limita el tráfico de prueba por dirección); vuelve a intentarlo en unos %3$@ min"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur de test a refusé la charge (%1$@) (HTTP %2$@ : il limite le trafic de test par adresse) ; réessayez dans environ %3$@ min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストサーバーが%1$@の負荷を拒否しました（HTTP %2$@: アドレスごとにテスト通信を制限しています）。約 %3$@ 分後にもう一度試してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 서버가 %1$@ 부하를 거부했습니다 (HTTP %2$@: 주소별로 테스트 트래픽을 제한합니다). 약 %3$@분 후 다시 시도하십시오"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor de teste recusou a carga de %1$@ (HTTP %2$@: ele limita o tráfego de teste por endereço); tente novamente em cerca de %3$@ min"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ đo đã từ chối tải chiều %1$@ (HTTP %2$@: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau khoảng %3$@ phút"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试服务器拒绝了%1$@负载（HTTP %2$@：它按地址限制测试流量）；请约 %3$@ 分钟后重试"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.refused_later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Testserver hat die %1$@-Last abgelehnt (HTTP %2$@: er begrenzt Testverkehr pro Adresse); später erneut versuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The test server refused the %1$@ load (HTTP %2$@: it limits test traffic per address); try again later"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor de prueba rechazó la carga de %1$@ (HTTP %2$@: limita el tráfico de prueba por dirección); vuelve a intentarlo más tarde"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur de test a refusé la charge (%1$@) (HTTP %2$@ : il limite le trafic de test par adresse) ; réessayez plus tard"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストサーバーが%1$@の負荷を拒否しました（HTTP %2$@: アドレスごとにテスト通信を制限しています）。しばらくしてからもう一度試してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 서버가 %1$@ 부하를 거부했습니다 (HTTP %2$@: 주소별로 테스트 트래픽을 제한합니다). 나중에 다시 시도하십시오"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor de teste recusou a carga de %1$@ (HTTP %2$@: ele limita o tráfego de teste por endereço); tente novamente mais tarde"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ đo đã từ chối tải chiều %1$@ (HTTP %2$@: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试服务器拒绝了%1$@负载（HTTP %2$@：它按地址限制测试流量）；请稍后重试"
           }
         }
       }
@@ -16596,55 +16950,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dabei werden etwa 30 Sekunden lang bis zu rund 200 MB von speed.cloudflare.com heruntergeladen und hochgeladen."
+            "value" : "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This downloads and uploads up to about 200 MB from speed.cloudflare.com for about 30 seconds."
+            "value" : "This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esto descarga y sube hasta unos 200 MB desde speed.cloudflare.com durante unos 30 segundos."
+            "value" : "Esto descarga y sube desde speed.cloudflare.com a toda velocidad durante unos 30 segundos: unos 250 MB por cada 100 Mbps de velocidad de la línea, como máximo 2 GB."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cela télécharge et envoie jusqu'à environ 200 Mo depuis speed.cloudflare.com pendant environ 30 secondes."
+            "value" : "Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes : environ 250 Mo par tranche de 100 Mbps de débit, 2 Go au maximum."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "speed.cloudflare.com から最大約 200 MB のダウンロードとアップロードを約 30 秒間行います。"
+            "value" : "speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行います。回線速度 100 Mbps あたり約 250 MB、最大 2 GB です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "speed.cloudflare.com에서 약 30초 동안 최대 200 MB를 다운로드하고 업로드합니다."
+            "value" : "speed.cloudflare.com에서 약 30초 동안 최대 속도로 다운로드하고 업로드합니다. 회선 속도 100 Mbps당 약 250 MB, 최대 2 GB입니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Isto faz download e upload de até cerca de 200 MB de speed.cloudflare.com por cerca de 30 segundos."
+            "value" : "Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos: cerca de 250 MB a cada 100 Mbps de velocidade da linha, no máximo 2 GB."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thao tác này tải xuống và tải lên tối đa khoảng 200 MB từ speed.cloudflare.com trong khoảng 30 giây."
+            "value" : "Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这将在约 30 秒内从 speed.cloudflare.com 下载和上传最多约 200 MB 的数据。"
+            "value" : "这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。"
           }
         }
       }
@@ -16655,55 +17009,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Messen (ca. 30 s, bis zu 200 MB Datenverbrauch)"
+            "value" : "Messen (ca. 30 s, bei schneller Leitung bis zu 2 GB Datenverbrauch)"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Measure (about 30 s, uses up to 200 MB)"
+            "value" : "Measure (about 30 s, uses up to 2 GB on a fast line)"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medir (unos 30 s, usa hasta 200 MB)"
+            "value" : "Medir (unos 30 s, usa hasta 2 GB en una línea rápida)"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mesurer (environ 30 s, jusqu'à 200 Mo)"
+            "value" : "Mesurer (environ 30 s, jusqu'à 2 Go sur une ligne rapide)"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "測定（約 30 秒、最大 200 MB を使用）"
+            "value" : "測定（約 30 秒、高速回線では最大 2 GB を使用）"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "측정 (약 30초, 최대 200 MB 사용)"
+            "value" : "측정 (약 30초, 빠른 회선에서는 최대 2 GB 사용)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medir (cerca de 30 s, usa até 200 MB)"
+            "value" : "Medir (cerca de 30 s, usa até 2 GB numa linha rápida)"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đo (khoảng 30 giây, dùng tối đa 200 MB)"
+            "value" : "Đo (khoảng 30 giây, dùng tối đa 2 GB nếu mạng nhanh)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测量（约 30 秒，最多使用 200 MB）"
+            "value" : "测量（约 30 秒，线路快时最多使用 2 GB）"
           }
         }
       }

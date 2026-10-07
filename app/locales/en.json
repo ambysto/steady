@@ -214,6 +214,12 @@
   "diag.bufferbloat.upload": "upload",
   "diag.bufferbloat.no_load": "Could not generate {phase} load: {error}",
   "diag.bufferbloat.weak_load": "The {phase} load reached only {mbps:.1f} Mbps, not enough to fill the line",
+  "diag.bufferbloat.refused": "The test server refused the {phase} load (HTTP {status}: it limits test traffic per address); try again in about {minutes} min",
+  "diag.bufferbloat.refused_later": "The test server refused the {phase} load (HTTP {status}: it limits test traffic per address); try again later",
+  "diag.bufferbloat.at_ceiling": "The {phase} load stopped at the test's own limit ({mbps:.0f} Mbps): the line may be faster, so its queue may not have filled",
+  "diag.bufferbloat.ok_incomplete": "No rise where it could be measured (at most +{delta:.0f} ms), but the measurement is incomplete",
+  "diag.bufferbloat.advice_incomplete": "Only a run in which both directions fill the line can show that it is fine; run it again later.",
+  "diag.bufferbloat.advice_later": "Wait until the test server accepts the load again, then run again.",
   "diag.bufferbloat.all_lost": "{label}: all pings lost during {phase}",
   "diag.bufferbloat.line": "{label} during {phase} ({mbps:.0f} Mbps): median {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms added, {loss:.0f}% lost",
   "diag.bufferbloat.no_result": "Could not measure latency under load",
@@ -563,7 +569,7 @@
   "ui.diag.advice": "What to do",
   "ui.diag.open_tweak": "Open in Optimize",
   "ui.diag.on_demand": "On demand",
-  "ui.diag.bufferbloat_run": "Measure (about 30 s, uses up to 200 MB)",
+  "ui.diag.bufferbloat_run": "Measure (about 30 s, uses up to 2 GB on a fast line)",
 
   "ui.status.ok": "OK",
   "ui.status.warn": "Warning",
@@ -681,7 +687,7 @@
   "ui.optimize.loading": "Reading the current settings…",
 
   "ui.diag.never": "No diagnostics have run yet",
-  "ui.diag.bufferbloat_confirm": "This downloads and uploads up to about 200 MB from speed.cloudflare.com for about 30 seconds.",
+  "ui.diag.bufferbloat_confirm": "This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB.",
   "ui.diag.measure": "Measure",
 
   "ui.common.on": "On",

@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "업로드",
   "diag.bufferbloat.no_load": "{phase} 부하를 생성할 수 없습니다: {error}",
   "diag.bufferbloat.weak_load": "{phase} 부하가 {mbps:.1f} Mbps에 그쳐 회선을 가득 채우기에는 부족합니다",
+  "diag.bufferbloat.refused": "테스트 서버가 {phase} 부하를 거부했습니다 (HTTP {status}: 주소별로 테스트 트래픽을 제한합니다). 약 {minutes}분 후 다시 시도하십시오",
+  "diag.bufferbloat.refused_later": "테스트 서버가 {phase} 부하를 거부했습니다 (HTTP {status}: 주소별로 테스트 트래픽을 제한합니다). 나중에 다시 시도하십시오",
+  "diag.bufferbloat.at_ceiling": "{phase} 부하가 테스트 자체 한도({mbps:.0f} Mbps)에서 멈췄습니다. 회선이 더 빠를 수 있어 대기열이 채워지지 않았을 수 있습니다",
+  "diag.bufferbloat.ok_incomplete": "측정할 수 있었던 범위에서는 증가가 없지만 (최대 +{delta:.0f} ms), 측정이 불완전합니다",
+  "diag.bufferbloat.advice_incomplete": "두 방향 모두 회선을 가득 채운 측정만이 문제가 없음을 보여 줄 수 있습니다. 나중에 다시 실행하십시오.",
+  "diag.bufferbloat.advice_later": "테스트 서버가 다시 부하를 받아들일 때까지 기다린 후 다시 실행하십시오.",
   "diag.bufferbloat.all_lost": "{label}: {phase} 중 모든 ping 손실",
   "diag.bufferbloat.line": "{phase} 중 {label} ({mbps:.0f} Mbps): 중앙값 {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms 증가, {loss:.0f}% 손실",
   "diag.bufferbloat.no_result": "부하 시 지연 시간을 측정할 수 없습니다",
@@ -561,7 +567,7 @@
   "ui.diag.advice": "해결 방법",
   "ui.diag.open_tweak": "최적화에서 열기",
   "ui.diag.on_demand": "필요 시 실행",
-  "ui.diag.bufferbloat_run": "측정 (약 30초, 최대 200 MB 사용)",
+  "ui.diag.bufferbloat_run": "측정 (약 30초, 빠른 회선에서는 최대 2 GB 사용)",
 
   "ui.status.ok": "정상",
   "ui.status.warn": "경고",
@@ -679,7 +685,7 @@
   "ui.optimize.loading": "현재 설정을 읽는 중…",
 
   "ui.diag.never": "아직 진단을 실행하지 않았습니다",
-  "ui.diag.bufferbloat_confirm": "speed.cloudflare.com에서 약 30초 동안 최대 200 MB를 다운로드하고 업로드합니다.",
+  "ui.diag.bufferbloat_confirm": "speed.cloudflare.com에서 약 30초 동안 최대 속도로 다운로드하고 업로드합니다. 회선 속도 100 Mbps당 약 250 MB, 최대 2 GB입니다.",
   "ui.diag.measure": "측정",
 
   "ui.common.on": "켜짐",
