@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "まずアップロードを測定し、その 85% に制限して、キューがモデムではなく PC 側にたまるようにします。アップロードのみ：ダウンロード方向はルーター（SQM）でしか制限できません",
   "tweak.upload_shaping.value": "{limit:.1f} Mbps に制限（測定したアップロード {upload:.1f} Mbps の 85%）",
   "tweak.upload_shaping.refused.weak": "測定で回線に十分な負荷がかかりませんでした（{mbps:.1f} Mbps、サンプル {samples} 個）。もう一度お試しください",
+  "tweak.upload_shaping.refused.ceiling": "測定が自身の上限に達しました（{ceiling:.0f} Mbps 中 {mbps:.1f}）。回線は測定できる速度より速い可能性があります。何も変更していません",
   "tweak.upload_shaping.refused.not_needed": "アップロード中の遅延の増加は {rise:.0f} ms だけです。直すことがないため、何も変更していません",
   "tweak.upload_shaping.refused.bounds": "{cap:.1f} Mbps の制限は安全な範囲（{low:.0f}–{high:.0f} Mbps）外です。何も変更していません",
 

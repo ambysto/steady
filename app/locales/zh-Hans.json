@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "先测量上传速度，再限制在其 85%，让队列留在电脑上而不是调制解调器里。仅限上传：下载方向只能在路由器上限制（SQM）",
   "tweak.upload_shaping.value": "限制为 {limit:.1f} Mbps（测得上传 {upload:.1f} Mbps 的 85%）",
   "tweak.upload_shaping.refused.weak": "测量没有让线路达到足够负载（{mbps:.1f} Mbps，{samples} 个样本）；请重试",
+  "tweak.upload_shaping.refused.ceiling": "测量达到了自身上限（{mbps:.1f} / {ceiling:.0f} Mbps），线路可能比它能测出的更快；未做任何更改",
   "tweak.upload_shaping.refused.not_needed": "上传时延迟只增加 {rise:.0f} ms；没有需要修复的问题，因此未做任何更改",
   "tweak.upload_shaping.refused.bounds": "{cap:.1f} Mbps 的限制超出安全范围（{low:.0f}–{high:.0f} Mbps）；未做任何更改",
 

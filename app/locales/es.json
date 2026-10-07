@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "Primero mide tu subida y luego la limita al 85 % para que la cola se forme en el PC y no en el módem. Solo subida: la bajada solo se puede limitar en el router (SQM)",
   "tweak.upload_shaping.value": "limitada a {limit:.1f} Mbps (85 % de los {upload:.1f} Mbps de subida medidos)",
   "tweak.upload_shaping.refused.weak": "La medición no cargó lo suficiente la línea ({mbps:.1f} Mbps, {samples} muestras); inténtalo de nuevo",
+  "tweak.upload_shaping.refused.ceiling": "La medición llegó a su propio límite ({mbps:.1f} de {ceiling:.0f} Mbps), así que la línea puede ser más rápida de lo que puede medir; no se cambió nada",
   "tweak.upload_shaping.refused.not_needed": "La latencia solo sube {rise:.0f} ms al subir datos; no hay nada que corregir, así que no se cambió nada",
   "tweak.upload_shaping.refused.bounds": "Un límite de {cap:.1f} Mbps está fuera del rango seguro ({low:.0f}–{high:.0f} Mbps); no se cambió nada",
 

@@ -23,6 +23,9 @@ DOWN_URL = "https://speed.cloudflare.com/__down?bytes=25000000"
 UP_URL = "https://speed.cloudflare.com/__up"
 RAMP_S = 2.0          # samples taken while the line is still picking up speed are dropped
 MAX_BYTES = 100_000_000
+LOAD_S = 10.0
+# The most a load phase can report: it stops at MAX_BYTES, so a faster line reads as this.
+LOAD_CEILING_MBPS = MAX_BYTES * 8 / LOAD_S / 1e6
 CHUNK = 64 * 1024
 
 Ping = Callable[[str], "float | None"]          # address -> RTT in ms, None if lost
@@ -171,7 +174,7 @@ def _sample(ping: Ping, targets: dict[str, str], seconds: float, interval: float
 
 
 def measure(ping: Ping, targets: dict[str, str], download: Load | None, upload: Load, *, idle_s: float = 4,
-            load_s: float = 10, interval: float = 0.2, ramp_s: float = RAMP_S,
+            load_s: float = LOAD_S, interval: float = 0.2, ramp_s: float = RAMP_S,
             sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic) -> Measurement:
     """download=None skips the download phase (a measured tweak only needs the upload, ADR-0016)."""
     idle = Phase("idle", _sample(ping, targets, idle_s, interval, sleep, clock))

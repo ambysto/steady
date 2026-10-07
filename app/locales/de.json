@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "Misst zuerst Ihren Upload und begrenzt ihn dann auf 85 %, damit sich die Warteschlange auf dem PC statt im Modem bildet. Nur Upload: Die Download-Richtung lässt sich nur am Router begrenzen (SQM)",
   "tweak.upload_shaping.value": "begrenzt auf {limit:.1f} Mbit/s (85 % der gemessenen {upload:.1f} Mbit/s Upload)",
   "tweak.upload_shaping.refused.weak": "Die Messung hat die Leitung nicht genug ausgelastet ({mbps:.1f} Mbit/s, {samples} Messwerte); bitte erneut versuchen",
+  "tweak.upload_shaping.refused.ceiling": "Die Messung hat ihr eigenes Limit erreicht ({mbps:.1f} von {ceiling:.0f} Mbit/s), die Leitung ist womöglich schneller als messbar; nichts wurde geändert",
   "tweak.upload_shaping.refused.not_needed": "Die Latenz steigt beim Upload nur um {rise:.0f} ms; nichts zu beheben, daher wurde nichts geändert",
   "tweak.upload_shaping.refused.bounds": "Eine Grenze von {cap:.1f} Mbit/s liegt außerhalb des sicheren Bereichs ({low:.0f}–{high:.0f} Mbit/s); nichts wurde geändert",
 

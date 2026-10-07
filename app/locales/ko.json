@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "먼저 업로드를 측정한 뒤 85%로 제한해 대기열이 모뎀이 아닌 PC에 쌓이게 합니다. 업로드 전용: 다운로드 방향은 공유기(SQM)에서만 제한할 수 있습니다",
   "tweak.upload_shaping.value": "{limit:.1f} Mbps로 제한(측정한 업로드 {upload:.1f} Mbps의 85%)",
   "tweak.upload_shaping.refused.weak": "측정 중 회선에 충분한 부하가 걸리지 않았습니다({mbps:.1f} Mbps, 샘플 {samples}개). 다시 시도하세요",
+  "tweak.upload_shaping.refused.ceiling": "측정이 자체 한도에 도달했습니다({ceiling:.0f} Mbps 중 {mbps:.1f}). 회선이 측정 가능한 속도보다 빠를 수 있습니다. 아무것도 바꾸지 않았습니다",
   "tweak.upload_shaping.refused.not_needed": "업로드 중 지연 시간이 {rise:.0f} ms만 늘어납니다. 고칠 것이 없어 아무것도 바꾸지 않았습니다",
   "tweak.upload_shaping.refused.bounds": "{cap:.1f} Mbps 제한은 안전 범위({low:.0f}–{high:.0f} Mbps)를 벗어납니다. 아무것도 바꾸지 않았습니다",
 

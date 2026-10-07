@@ -343,6 +343,7 @@
   "tweak.upload_shaping.note": "Primeiro mede seu upload e depois o limita a 85% para que a fila fique no PC e não no modem. Só upload: o sentido de download só pode ser limitado no roteador (SQM)",
   "tweak.upload_shaping.value": "limitado a {limit:.1f} Mbps (85% dos {upload:.1f} Mbps de upload medidos)",
   "tweak.upload_shaping.refused.weak": "A medição não carregou a linha o suficiente ({mbps:.1f} Mbps, {samples} amostras); tente de novo",
+  "tweak.upload_shaping.refused.ceiling": "A medição chegou ao próprio limite ({mbps:.1f} de {ceiling:.0f} Mbps), então a linha pode ser mais rápida do que ela consegue medir; nada foi alterado",
   "tweak.upload_shaping.refused.not_needed": "A latência sobe só {rise:.0f} ms durante o upload; nada a corrigir, então nada foi alterado",
   "tweak.upload_shaping.refused.bounds": "Um limite de {cap:.1f} Mbps está fora da faixa segura ({low:.0f}–{high:.0f} Mbps); nada foi alterado",
 
