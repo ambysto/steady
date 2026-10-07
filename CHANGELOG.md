@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Two Wi‑Fi tweaks: prefer the 5 GHz band and highest transmit power** (SIC-83, `docs/TWEAKS.md` section 1).
+  - `wifi_prefer_5g` sets the driver's `Preferred Band` / `Band Preference` to "Prefer 5GHz", never "5G only" (some drivers ignore it, and it would leave the card with nothing where 5 GHz does not reach). On 31 Aug this was the change that helped most: a card clinging to 2.4 GHz (802.11n, 65 Mbps, 5% router loss) moved to 5 GHz 802.11ac (175 Mbps, 0% loss). It is offered only while the connected network has a 5 GHz access point in Windows' last scan (read-only, no new scan); otherwise it is shown as not supported with the reason (not connected, network missing from the scan, or no 5 GHz access point). A tweak already on stays switchable off whatever the network looks like.
+  - `wifi_tx_power_max` sets `Transmit Power` / `Transmit Power Level` / `Tx Power` to "Highest".
+  - Both match the property by name and the value by name, tolerate the numeric prefixes drivers add, are restored from `backup.json` or reset to the driver default, and show "not supported" on a card without the property. Tested with the property names of Intel, Realtek and MediaTek cards.
+  - New read `System.wifi_ssid_bands()` (the connected SSID and the bands of its access points), and a `precondition` on adapter-property tweaks. 7 new keys in all 9 catalogs.
+
 ## [0.2.0] - 2026-10-06
 
 This is the first section of this file: it lists the project's work from the start, including what 0.1.0 shipped. New since 0.1.0 on Windows: the desktop window uses the native frame (Snap Layouts, resizing), a new app icon, a watchdog that stays out of the way when another connection carries the traffic, safer failover, and a code signing and privacy policy. The Apple app lives in `apple/` and is not part of this download.

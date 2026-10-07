@@ -15,8 +15,8 @@ import subprocess
 import winreg
 from typing import Any, Callable, Protocol
 
-from .winutil import (CREATE_NO_WINDOW, PowerShellError, _oem_codepage, is_wifi_adapter,
-                      run_powershell, run_powershell_json)
+from .winutil import (CREATE_NO_WINDOW, PowerShellError, _oem_codepage, get_scan, get_wifi_state,
+                      is_wifi_adapter, run_powershell, run_powershell_json)
 
 NET_CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
 _GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
@@ -59,6 +59,7 @@ class System(Protocol):
     def registry_get(self, path: str, name: str) -> int | None: ...
     def power_get(self, subgroup: str, setting: str) -> tuple[int, int]: ...
     def binding_get(self, adapter: str, component: str) -> bool | None: ...
+    def wifi_ssid_bands(self) -> tuple[str, frozenset[str]] | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -81,8 +82,10 @@ def _as_list(value: Any) -> list[str]:
 
 class WindowsSystem:
     def __init__(self, *, ps: Callable[..., str] = run_powershell, ps_json: Callable[..., Any] = run_powershell_json,
-                 run: Callable[..., subprocess.CompletedProcess] = subprocess.run) -> None:
+                 run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
+                 wifi_state: Callable[[], Any] = get_wifi_state, scan: Callable[[], Any] = get_scan) -> None:
         self._ps, self._ps_json, self._run = ps, ps_json, run
+        self._wifi_state, self._scan = wifi_state, scan
 
     # -- reads --------------------------------------------------------------------------
 
@@ -175,6 +178,14 @@ class WindowsSystem:
         rows = self._ps_json(f"Get-NetAdapterBinding -Name {ps_literal(adapter)} -ComponentID {component} "
                              "-ErrorAction SilentlyContinue | Select-Object Enabled")
         return bool(rows[0]["Enabled"]) if rows else None
+
+    def wifi_ssid_bands(self) -> tuple[str, frozenset[str]] | None:
+        """(SSID, bands of its access points in Windows' last scan) for the connected network, or
+        None when not connected. The set is empty when the scan does not list the SSID. Never scans."""
+        state = self._wifi_state()
+        if state is None or not state.connected or not state.ssid:
+            return None
+        return state.ssid, frozenset(e.band for e in self._scan() if e.ssid == state.ssid and e.band)
 
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""

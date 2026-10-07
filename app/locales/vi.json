@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Ép chuẩn Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Thử khi nghi lỗi tương thích Wi‑Fi 6 giữa card và router",
 
+  "tweak.wifi_prefer_5g.name": "Ưu tiên băng tần 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Chuyển card đang bám băng 2.4 GHz sang 5 GHz khi sóng 5 GHz tới được, và vẫn quay lại 2.4 GHz ở nơi khác. Chỉ đề xuất khi mạng của bạn có access point 5 GHz",
+
+  "tweak.wifi_tx_power_max.name": "Công suất phát cao nhất",
+  "tweak.wifi_tx_power_max.note": "Giữ card ở mức phát cao nhất thay vì để driver tự hạ xuống. Laptop sẽ nóng hơn và hao pin hơn một chút",
+
   "tweak.device_power_off.name": "Không cho Windows tắt card",
   "tweak.device_power_off.note": "Có hiệu lực sau khi khởi động lại card hoặc máy",
 
@@ -312,6 +318,9 @@
   "tweak.reason.no_wifi_card": "không tìm thấy card Wi‑Fi",
   "tweak.reason.no_matching_value": "'{property}' không có giá trị phù hợp (có: {values})",
   "tweak.reason.no_property": "card không có thuộc tính này",
+  "tweak.reason.not_connected": "chưa kết nối mạng Wi‑Fi nào",
+  "tweak.reason.bands_unknown": "lần quét gần nhất của Windows không cho biết '{ssid}' dùng băng tần nào",
+  "tweak.reason.no_5ghz": "'{ssid}' không có access point 5 GHz trong tầm sóng",
   "tweak.reason.multi_value": "'{property}' có giá trị nhiều phần, không hỗ trợ",
   "tweak.reason.no_registry_key": "không tìm thấy khóa registry",
   "tweak.reason.no_binding": "card không có binding {component}",

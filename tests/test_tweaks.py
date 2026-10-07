@@ -43,6 +43,7 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
+        self.ssid_bands = ("HomeNet", frozenset({"2.4 GHz", "5 GHz"}))   # None: not on Wi-Fi
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -75,6 +76,10 @@ class FakeSystem:
     def binding_get(self, adapter, component):
         self._r("binding_get", adapter, component)
         return self.bindings.get((adapter, component))
+
+    def wifi_ssid_bands(self):
+        self._r("wifi_ssid_bands")
+        return self.ssid_bands
 
     # writes
     def _w(self, name, *args):
