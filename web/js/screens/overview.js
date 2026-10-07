@@ -171,28 +171,41 @@ async function loadSuggestions(ctx) {
 // --- connection check (ADR-0020): one big round button, the real progress, what was found ---------
 
 const STATUS_ICON = { ok: "check", warn: "alert", bad: "x", info: "info" };
-const RING_R = 70;
+const RING_R = 84;
 const RING = 2 * Math.PI * RING_R;
 const check = { running: false, progress: null };   // progress: the diagnostics job's, see app/server.py
 const STALE_AFTER_S = 3 * 3600;                     // older than this, "Check again" is the big button
 
-function bigButton(label, iconName, onClick) {
-  return el("button", { class: "big-button", onclick: onClick }, icon(iconName), el("span", {}, label));
+/** Six arcs around the disc (the button and the status share it). */
+function segments() {
+  const r = 84, gap = 7, arc = 2 * Math.PI * r / 6 - gap;
+  const svg = svgEl("svg", { viewBox: "0 0 180 180", class: "segments", "aria-hidden": "true" });
+  svg.append(svgEl("circle", { cx: 90, cy: 90, r, "stroke-dasharray": `${arc.toFixed(1)} ${gap}`, transform: "rotate(-75 90 90)" }));
+  return svg;
 }
 
-const statusCircle = (tile, iconName) => el("div", { class: `status-circle ${tile}` }, icon(iconName));
+/** The label, which turns into a magnifier while the pointer is on it and the ring turns. */
+function bigButton(label, onClick) {
+  return el("button", { class: "big-button", onclick: onClick, "aria-label": label }, segments(),
+    el("span", { class: "disc" }, el("span", { class: "label" }, label), icon("search", "icon glyph")));
+}
 
+const statusCircle = (tile, iconName) => el("div", { class: `status-circle ${tile}` }, segments(),
+  el("span", { class: "disc" }, icon(iconName)));
+
+/** A thin ring and the share of checks finished, in percent of the real count. */
 function progressRing(done, total) {
-  const svg = svgEl("svg", { viewBox: "0 0 156 156", class: "ring" });
-  svg.append(svgEl("circle", { class: "track", cx: 78, cy: 78, r: RING_R }),
-             svgEl("circle", { class: "arc", cx: 78, cy: 78, r: RING_R, "stroke-dasharray": RING.toFixed(1),
+  const svg = svgEl("svg", { viewBox: "0 0 180 180", class: "ring" });
+  svg.append(svgEl("circle", { class: "track", cx: 90, cy: 90, r: RING_R }),
+             svgEl("circle", { class: "arc", cx: 90, cy: 90, r: RING_R, "stroke-dasharray": RING.toFixed(1),
                                "stroke-dashoffset": (RING * (1 - (total ? done / total : 0))).toFixed(1),
-                               transform: "rotate(-90 78 78)" }));
-  return el("div", { class: "ring-wrap" }, svg, el("div", { class: "ring-label" }, total ? `${done}/${total}` : "…"));
+                               transform: "rotate(-90 90 90)" }));
+  const label = total ? [String(Math.round(100 * done / total)), el("small", {}, "%")] : "…";
+  return el("div", { class: "ring-wrap" }, svg, el("div", { class: "ring-label" }, label));
 }
 
-function checkHero({ circle, title, body, below }) {
-  return el("div", { class: "check-hero" }, circle, el("h2", {}, title), body ? el("p", {}, body) : null,
+function checkHero({ circle, title, body, below, running = false }) {
+  return el("div", { class: `check-hero${running ? " running" : ""}` }, circle, el("h2", {}, title), body ? el("p", {}, body) : null,
     below ? el("div", { class: "below" }, below) : null);
 }
 
@@ -230,8 +243,10 @@ function checkCard(ctx) {
   const card = (...children) => el("div", { class: "group check-card" }, children);
   if (check.running) {
     const p = check.progress || { done: 0, total: suggestions?.checks_total || 0, finished: [] };
-    return card(checkHero({ circle: progressRing(p.done, p.total), title: t("ui.check.running", { done: p.done, total: p.total }),
-                            body: p.title }),
+    const counted = t("ui.check.running", { done: p.done, total: p.total });
+    // Under the ring: what is being checked now, then how far along (the count the percent comes from).
+    return card(checkHero({ circle: progressRing(p.done, p.total), title: p.title || counted, body: p.title ? counted : null,
+                            running: true }),
       el("div", { class: "check-list" }, (p.finished || []).map(f => el("div", { class: `item ${f.status}` },
         icon(STATUS_ICON[f.status] || "info", `icon s ${f.status}`), el("span", {}, f.title))),
         p.key ? el("div", { class: "item current" }, icon("refresh", "icon spin"), el("span", {}, p.title)) : null));
@@ -240,7 +255,7 @@ function checkCard(ctx) {
   const start = () => runCheck(ctx);
   const summary = suggestions.check;
   if (!suggestions.run || !summary) {
-    return card(checkHero({ circle: bigButton(t("ui.check.start"), "gauge", start), title: t("ui.check.idle_title"),
+    return card(checkHero({ circle: bigButton(t("ui.check.start"), start), title: t("ui.check.idle_title"),
                             body: t("ui.check.idle_body", { count: suggestions.checks_total }) }));
   }
   const time = timeOf(suggestions.run.ts, { withDate: true });
@@ -248,7 +263,7 @@ function checkCard(ctx) {
   const age = nowOf(ctx) - suggestions.run.ts;
   const stale = age > STALE_AFTER_S;
   const again = stale ? null : el("button", { class: "button", onclick: start }, t("ui.check.again"));
-  const centre = fallback => (stale ? bigButton(t("ui.check.again"), "refresh", start) : fallback);
+  const centre = fallback => (stale ? bigButton(t("ui.check.again"), start) : fallback);
   const staleNote = stale ? el("p", { class: "stale" }, t("ui.check.stale", { duration: duration(age) })) : null;
   if (!summary.count) {
     return card(checkHero({ circle: centre(statusCircle("ok", "check")), title: t("ui.check.clear_title"),

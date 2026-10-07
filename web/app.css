@@ -174,30 +174,45 @@ a.group.row:hover { background: var(--surface-hover); }
 .check-hero h2 { margin: var(--space-2) 0 0; font-size: var(--text-title); font-weight: var(--weight-bold); }
 .check-hero p { margin: 0; max-width: 46ch; color: var(--text-secondary); }
 .check-hero .below { margin-top: var(--space-2); }
+.check-hero.running h2 { font-size: var(--text-headline); font-weight: var(--weight-medium); }
 .check-hero .stale { font-size: var(--text-footnote); color: var(--text-tertiary); }
-/* A macOS push button at a larger size: flat system accent and the control shadow, no glow. */
-.big-button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2);
-  width: 156px; height: 156px; padding: var(--space-4); border: 0; border-radius: 50%; cursor: default;
-  background: var(--accent); color: var(--accent-text); box-shadow: var(--shadow-control);
+/* The centre: a solid disc inside a segmented ring (button and status), or a thin progress ring.
+   Flat colours only, like a macOS control: no gradient, no glow. */
+.check-hero { --dial: 180px; }
+.big-button, .status-circle, .ring-wrap { position: relative; width: var(--dial); height: var(--dial); flex: none; }
+.big-button { padding: 0; border: 0; border-radius: 50%; background: none; color: var(--accent-text); cursor: default; }
+.segments { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--accent); }
+.segments circle { fill: none; stroke: currentColor; stroke-opacity: .35; stroke-width: 12; }
+.disc { position: absolute; inset: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-2); border-radius: 50%; background: var(--accent); box-shadow: var(--shadow-control);
   font-size: var(--text-headline); font-weight: var(--weight-semibold); line-height: 1.2;
   transition: background var(--duration) var(--ease-out); }
-.big-button svg.icon { width: 30px; height: 30px; }
-.big-button:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
-.big-button:active { background: color-mix(in srgb, var(--accent) 78%, black); }
-.big-button:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
-.ring-wrap { position: relative; width: 156px; height: 156px; }
+.disc svg.icon { width: 30px; height: 30px; }
+.big-button .disc { padding: 0 var(--space-4); }
+.big-button .label, .big-button .glyph { transition: opacity var(--duration) var(--ease-out), transform var(--duration) var(--ease-out); }
+.big-button .glyph { position: absolute; width: 44px; height: 44px; stroke-width: 2; opacity: 0; transform: scale(.8); }
+/* Pointer on it (or keyboard focus): the ring turns and the label gives way to a magnifier. */
+.big-button:hover .label, .big-button:focus-visible .label { opacity: 0; transform: scale(.9); }
+.big-button:hover .glyph, .big-button:focus-visible .glyph { opacity: 1; transform: none; }
+.big-button:hover .disc { background: color-mix(in srgb, var(--accent) 88%, black); }
+.big-button:active .disc { background: color-mix(in srgb, var(--accent) 78%, black); }
+.big-button:hover .segments, .big-button:focus-visible .segments { animation: spin 8s linear infinite; }
+.big-button:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.status-circle.ok .segments { color: var(--ok); } .status-circle.warn .segments { color: var(--warn); }
+.status-circle.bad .segments { color: var(--bad); }
+.status-circle .disc { box-shadow: none; }
+.status-circle.ok .disc { background: var(--ok-soft); color: var(--ok); }
+.status-circle.warn .disc { background: var(--warn-soft); color: var(--warn); }
+.status-circle.bad .disc { background: var(--bad-soft); color: var(--bad); }
+.status-circle .disc svg.icon { width: 52px; height: 52px; stroke-width: 2; }
+@media (prefers-reduced-motion: reduce) { .big-button:hover .segments, .big-button:focus-visible .segments { animation: none; } }
 .ring { width: 100%; height: 100%; display: block; }
-.ring circle { fill: none; stroke-width: 10; }
+.ring circle { fill: none; stroke-width: 4; }
 .ring .track { stroke: var(--surface-pressed); }
 .ring .arc { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset var(--duration-slow) var(--ease-out); }
-.ring-label { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--text-display);
-  font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
-.status-circle { display: grid; place-items: center; width: 156px; height: 156px; border-radius: 50%;
-  background: var(--accent-soft); color: var(--accent); }
-.status-circle svg.icon { width: 56px; height: 56px; stroke-width: 2; }
-.status-circle.ok { background: var(--ok-soft); color: var(--ok); }
-.status-circle.warn { background: var(--warn-soft); color: var(--warn); }
-.status-circle.bad { background: var(--bad-soft); color: var(--bad); }
+.ring-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 2px;
+  font-size: 48px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.ring-label small { align-self: flex-end; margin-bottom: 62px; font-size: var(--text-title); color: var(--text-secondary); }
 .check-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px var(--space-3);
   padding: 0 var(--space-4) var(--space-4); font-size: var(--text-footnote); }
 .check-list .item { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-secondary); }
