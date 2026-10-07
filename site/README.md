@@ -7,7 +7,7 @@ A static, English-only page for **Ambysto Steady**. It has no build step and nee
 | `index.html` | The page: hero, connection path, problem, features, evidence, safety, FAQ, download |
 | `assets/css/steady.css` | All styles, light and dark, and the motion |
 | `assets/js/steady.js` | Mobile menu, scrolled nav style, scroll reveals and number count-ups |
-| `assets/img/logo.svg`, `apple-touch-icon.png` | Ambysto logo and touch icon |
+| `assets/img/logo.svg`, `apple-touch-icon.png` | The app icon (Wi‑Fi arcs, dot, "A"/"S" from `apple/Steady/AppIcon.icon`) on its graphite tile; the touch icon is the same mark, full-bleed, 180 px |
 
 The page is self-contained: it needs no stylesheet from another site. The only third-party request is Google Fonts (DM Sans, JetBrains Mono); without it the system fonts are used.
 
