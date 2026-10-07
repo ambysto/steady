@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Ép chuẩn Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Thử khi nghi lỗi tương thích Wi‑Fi 6 giữa card và router",
 
+  "tweak.wifi_prefer_5g.name": "Ưu tiên băng tần 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Chuyển card sang 5 GHz khi router có phát: nhanh hơn và ít nhiễu hơn, nhưng xuyên tường kém hơn",
+
+  "tweak.wifi_tx_power_max.name": "Đặt công suất phát của card ở mức cao nhất",
+  "tweak.wifi_tx_power_max.note": "Chỉ có ích khi driver hoặc BIOS đã hạ công suất; hầu hết card mặc định đã ở mức cao nhất",
+
   "tweak.device_power_off.name": "Không cho Windows tắt card",
   "tweak.device_power_off.note": "Có hiệu lực sau khi khởi động lại card hoặc máy",
 

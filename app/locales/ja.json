@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Wi‑Fi 5（802.11ac）に固定する",
   "tweak.wifi_mode_ac.note": "カードとルーターの間で Wi‑Fi 6 の互換性の問題が疑われる場合にお試しください",
 
+  "tweak.wifi_prefer_5g.name": "5 GHz 帯を優先する",
+  "tweak.wifi_prefer_5g.note": "ルーターが 5 GHz を提供している場合、カードを 5 GHz に切り替えます。高速で混雑が少ない反面、壁越しの到達距離は短くなります",
+
+  "tweak.wifi_tx_power_max.name": "カードの送信電力を最大にする",
+  "tweak.wifi_tx_power_max.note": "ドライバーまたは BIOS が下げていた場合にのみ効果があります。ほとんどのカードは最初から最大に設定されています",
+
   "tweak.device_power_off.name": "Windows によるカードの電源オフを許可しない",
   "tweak.device_power_off.note": "カードまたは PC の再起動後に有効になります",
 

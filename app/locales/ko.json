@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Wi‑Fi 5(802.11ac) 강제",
   "tweak.wifi_mode_ac.note": "카드와 라우터 간 Wi‑Fi 6 호환성 문제가 의심될 때 시도하십시오",
 
+  "tweak.wifi_prefer_5g.name": "5 GHz 대역 우선 사용",
+  "tweak.wifi_prefer_5g.note": "라우터가 5 GHz를 제공하면 카드를 5 GHz로 전환합니다. 더 빠르고 덜 혼잡하지만 벽을 통과하는 도달 거리는 짧아집니다",
+
+  "tweak.wifi_tx_power_max.name": "카드의 송신 전력을 최대로 설정",
+  "tweak.wifi_tx_power_max.note": "드라이버나 BIOS가 낮춰 놓은 경우에만 도움이 됩니다. 대부분의 카드는 기본값이 이미 최대입니다",
+
   "tweak.device_power_off.name": "Windows가 카드를 끄지 않도록 설정",
   "tweak.device_power_off.note": "카드 또는 PC를 다시 시작한 후 적용됩니다",
 

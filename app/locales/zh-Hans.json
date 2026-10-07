@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "强制使用 Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "怀疑网卡与路由器之间存在 Wi‑Fi 6 兼容性问题时可尝试",
 
+  "tweak.wifi_prefer_5g.name": "优先使用 5 GHz 频段",
+  "tweak.wifi_prefer_5g.note": "路由器提供 5 GHz 时让网卡切换到 5 GHz:更快、干扰更少,但穿墙距离更短",
+
+  "tweak.wifi_tx_power_max.name": "将网卡发射功率设为最高",
+  "tweak.wifi_tx_power_max.note": "仅在驱动或 BIOS 调低过功率时有效;大多数网卡默认已是最高",
+
   "tweak.device_power_off.name": "禁止 Windows 关闭网卡",
   "tweak.device_power_off.note": "重启网卡或电脑后生效",
 

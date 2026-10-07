@@ -18,6 +18,8 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 | `wifi_roaming` | Reduce roaming | `Roaming Aggressiveness` = Lowest (Intel) | low | 🔌🛡 Limits AP hopping when using mesh |
 | `wifi_bw20_5g` | 5GHz bandwidth 20MHz only | `5GHz channel bandwidth` = 20MHz only | experimental | 🔌🛡 Lowers maximum speed in exchange for stability in noisy environments |
 | `wifi_mode_ac` | Force Wi‑Fi 5 (802.11ac) | `802.11ax/ac/n/abg` = 802.11ac | experimental | 🔌🛡 Try when a Wi‑Fi 6 compatibility bug between card and router is suspected |
+| `wifi_prefer_5g` | Prefer the 5 GHz band | `Preferred Band` = Prefer 5GHz band (MediaTek/Intel) · `Band Preference` = Prefer 5G (Realtek) | low | 🔌🛡 A preference, not "5 GHz only" (several drivers ignore band-only settings, and forcing a band can strand the PC on a 2.4 GHz-only network). Only helps when the router broadcasts the same network on 5 GHz; 5 GHz reaches less far through walls. On the development PC, moving from 2.4 GHz 802.11n (65 Mbps link) to 5 GHz 802.11ac (175 Mbps) took router packet loss from 5% to 0% |
+| `wifi_tx_power_max` | Highest transmit power | `Transmit Power Level` = Highest (MediaTek) · `Transmit Power` = Highest (Intel/Realtek) | low | 🔌🛡 Helps only if the driver or BIOS had lowered it; most cards already default to the highest (then the tweak shows as already on) |
 
 ## 2. Windows power
 

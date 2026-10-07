@@ -581,6 +581,9 @@ SUB_PCIE, SET_ASPM = "501a4d13-42af-4429-9fd1-a8218c268e20", "ee12f906-d277-404b
 TCPIP_PARAMS = r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
 PNP_NO_POWER_OFF = 0x18        # PnPCapabilities bits that stop Windows powering the card down
 _N = r"(?:\d+\.\s*)?"          # optional "1. " prefix
+# "Prefer 5GHz band", "Prefer 5G", "Prefer 5.2GHz": a preference for 5 GHz only. Full-matched, so it never
+# accepts "5GHz only"/"Only 5G" choices, nor any 2.4 or 6 GHz option.
+_PREFER_5G = _N + r"Prefer 5(?:\.\d)?\s?G(?:Hz)?(?:\s+band)?"
 
 
 def _wifi_class_key(sys_: System) -> str | None:
@@ -622,6 +625,12 @@ def build_catalog() -> list[Tweak]:
         AdapterPropertyTweak("wifi_mode_ac", _name("wifi_mode_ac"), "experimental",
                              [(re.escape("802.11ax/ac/n/abg"), _N + re.escape("802.11ac"))], group=GROUP_WIFI,
                              note=_note("wifi_mode_ac")),
+        AdapterPropertyTweak("wifi_prefer_5g", _name("wifi_prefer_5g"), "low",
+                             [(r"Preferred Band|Band Preference", _PREFER_5G)], group=GROUP_WIFI,
+                             note=_note("wifi_prefer_5g")),
+        AdapterPropertyTweak("wifi_tx_power_max", _name("wifi_tx_power_max"), "low",
+                             [(r"Transmit Power(?: Level)?", _N + r"Highest")], group=GROUP_WIFI,
+                             note=_note("wifi_tx_power_max")),
         # 2. Windows power management
         RegistryDwordTweak("device_power_off", _name("device_power_off"), "low", path=_wifi_class_key,
                            value_name="PnPCapabilities", target=lambda cur: (cur or 0) | PNP_NO_POWER_OFF,

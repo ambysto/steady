@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Forçar Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Experimente quando suspeitar de problema de compatibilidade Wi‑Fi 6 entre a placa e o roteador",
 
+  "tweak.wifi_prefer_5g.name": "Preferir a banda de 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Muda a placa para 5 GHz quando o roteador a oferece: mais rápida e menos congestionada, mas com menor alcance através de paredes",
+
+  "tweak.wifi_tx_power_max.name": "Definir a potência de transmissão da placa no máximo",
+  "tweak.wifi_tx_power_max.note": "Só ajuda se o driver ou a BIOS a tinham reduzido; a maioria das placas já vem no máximo por padrão",
+
   "tweak.device_power_off.name": "Não permitir que o Windows desligue a placa",
   "tweak.device_power_off.note": "Tem efeito após reiniciar a placa ou o PC",
 

@@ -294,6 +294,12 @@
   "tweak.wifi_mode_ac.name": "Forzar Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Pruébalo si sospechas de un problema de compatibilidad Wi‑Fi 6 entre la tarjeta y el router",
 
+  "tweak.wifi_prefer_5g.name": "Preferir la banda de 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Pasa la tarjeta a 5 GHz cuando el router la ofrece: más rápida y menos saturada, pero con menos alcance a través de paredes",
+
+  "tweak.wifi_tx_power_max.name": "Poner la potencia de transmisión de la tarjeta al máximo",
+  "tweak.wifi_tx_power_max.note": "Solo ayuda si el controlador o la BIOS la habían reducido; la mayoría de las tarjetas ya vienen al máximo",
+
   "tweak.device_power_off.name": "Impedir que Windows apague la tarjeta",
   "tweak.device_power_off.note": "Surte efecto tras reiniciar la tarjeta o el PC",
 

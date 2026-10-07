@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Two Wi‑Fi driver tweaks** (SIC-83, low risk, restart the card): `wifi_prefer_5g` sets the band preference to "prefer 5 GHz" (never "5 GHz only", which several drivers ignore and which can strand the PC on a 2.4 GHz-only network) and `wifi_tx_power_max` sets the transmit power to the highest. Both are matched by property name for MediaTek, Intel and Realtek drivers and show as not supported when the card has no such property. On the development PC, preferring 5 GHz moved the link from 2.4 GHz 802.11n at 65 Mbps to 5 GHz 802.11ac at 175 Mbps and router packet loss from 5% to 0%.
+
 ## [0.2.0] - 2026-10-06
 
 This is the first section of this file: it lists the project's work from the start, including what 0.1.0 shipped. New since 0.1.0 on Windows: the desktop window uses the native frame (Snap Layouts, resizing), a new app icon, a watchdog that stays out of the way when another connection carries the traffic, safer failover, and a code signing and privacy policy. The Apple app lives in `apple/` and is not part of this download.
