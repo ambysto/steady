@@ -28,29 +28,32 @@ export function suggestionRow(item, { compact = false, onChange, isAdmin }) {
     !compact && item.body ? el("div", { class: "secondary" }, item.body) : null,
     item.reason ? el("div", { class: "reason" }, t("ui.suggest.because", { reason: item.reason.summary })) : null,
     item.done_at && !compact ? effectBox(item.impact) : null);
-  let action;
-  if (item.done_at) {
-    action = el("span", { class: "time" }, t("ui.suggest.done_at", { time: timeOf(item.done_at) }));
-  } else if (item.kind === "tweak") {
-    action = el("button", { class: "button primary" }, t("ui.suggest.turn_on"));
+  return el("div", { class: "row" }, tile, main, el("div", { class: "actions-col" }, suggestionAction(item, { onChange, isAdmin })));
+}
+
+/** What a suggestion offers: "Turn on" for a tweak, "I did this" for a manual step, or when it was done. */
+export function suggestionAction(item, { onChange, isAdmin }) {
+  if (item.done_at) return el("span", { class: "time" }, t("ui.suggest.done_at", { time: timeOf(item.done_at) }));
+  if (item.kind === "tweak") {
+    const action = el("button", { class: "button primary" }, t("ui.suggest.turn_on"));
     action.addEventListener("click", async () => {
       if (await setTweak({ id: item.id, name: item.title, risk: item.risk, measured: item.measured }, true,
                          { button: action, isAdmin })) onChange?.();
     });
-  } else {
-    action = el("button", { class: "button" }, t("ui.suggest.done_button"));
-    action.addEventListener("click", async () => {
-      action.disabled = true;
-      try {
-        await post(`/api/manual/${item.id}/done`);
-        onChange?.();
-      } catch (err) {
-        action.disabled = false;
-        toast(t("ui.error.failed", { message: err.message }), { bad: true });
-      }
-    });
+    return action;
   }
-  return el("div", { class: "row" }, tile, main, el("div", { class: "actions-col" }, action));
+  const action = el("button", { class: "button" }, t("ui.suggest.done_button"));
+  action.addEventListener("click", async () => {
+    action.disabled = true;
+    try {
+      await post(`/api/manual/${item.id}/done`);
+      onChange?.();
+    } catch (err) {
+      action.disabled = false;
+      toast(t("ui.error.failed", { message: err.message }), { bad: true });
+    }
+  });
+  return action;
 }
 
 /**

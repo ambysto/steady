@@ -16,7 +16,7 @@ The pieces already exist: `diagnostics.run_all`, `suggestions.suggest` (tweaks a
 
 ## Decision
 
-1. **One primary action on the Overview: "Check my connection".** It runs the regular checks (`diagnostics.CHECKS`, the same run the Diagnostics page starts and stores). On-demand checks that load the line (bufferbloat #14) are not part of it. They stay on the Diagnostics page, where their cost is explained.
+1. **One primary action on the Overview: "Check my connection".** It runs the regular checks (`diagnostics.CHECKS`, the same run the Diagnostics page starts and stores). On-demand checks that load the line (bufferbloat #14) are not part of it. They stay on the Diagnostics page, where their cost is explained. Once the latest result is older than 3 hours it may no longer hold, so "Check again" takes the centre as the big button and the old result stays below it, marked with its age.
 2. **Progress is real.** The server reports each check as it starts and finishes, and the UI lists them as they run ("Wi‑Fi signal… DNS… drops in the last 24 hours…"). There is no minimum duration and no animation that runs ahead of the work.
 3. **What counts as a problem.** The headline counts the stored results whose status is `warn` or `bad`. `info` and `ok` are never counted. Each counted problem gets one plain sentence and what can be done about it, in one of three forms:
    - *The app can fix it*: a tweak suggested by `suggestions.suggest`.

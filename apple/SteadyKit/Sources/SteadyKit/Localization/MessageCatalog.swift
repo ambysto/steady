@@ -108,6 +108,7 @@ public enum MessageCatalog {
         "ui.check.running": [MessageArgument("done", nil), MessageArgument("total", nil)],
         "ui.check.sheet.for": [MessageArgument("reason", nil)],
         "ui.check.sheet.title": [MessageArgument("count", nil)],
+        "ui.check.stale": [MessageArgument("duration", nil)],
         "ui.diag.count.bad": [MessageArgument("count", nil)],
         "ui.diag.count.info": [MessageArgument("count", nil)],
         "ui.diag.count.ok": [MessageArgument("count", nil)],

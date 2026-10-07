@@ -60,11 +60,13 @@ export const get = path => request("GET", path);
 export const post = (path, body = {}) => request("POST", path, body);
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-/** POST something that starts a background job and wait for it (UAC prompts can take a while). */
-export async function runJob(path, body = {}, { interval = 700, timeout = 300000 } = {}) {
+/** POST something that starts a background job and wait for it (UAC prompts can take a while).
+ *  `onProgress` gets the job's "progress" field (or null) at every poll while it runs. */
+export async function runJob(path, body = {}, { interval = 700, timeout = 300000, onProgress } = {}) {
   let job = await post(path, body);
   const started = Date.now();
   while (job.status === "running") {
+    onProgress?.(job.progress ?? null);
     if (Date.now() - started > timeout) throw new ApiError(0, "timed out");
     await sleep(interval);
     job = await get(`/api/jobs/${job.id}`);
