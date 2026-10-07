@@ -189,6 +189,17 @@ class CheckSummaryTests(unittest.TestCase):
                            states={"power_pcie_aspm_off": {"enabled": True, "supported": True}})
         self.assertEqual((out["problems"][0]["kind"], out["fixable"]), ("none", 0))
 
+    def test_other_low_risk_tweaks_are_offered_apart_and_never_counted(self):
+        results = [result("drops", "bad", id=4, tweak="power_pcie_aspm_off"),
+                   result("tweaks", "info", id=10, details=["wifi_power_saving", "wifi_mode_ac"])]
+        out = self.summary(results)
+        self.assertEqual((out["count"], out["fixable"], out["also"]), (1, 1, ["wifi_power_saving"]))  # no experimental
+
+    def test_problems_that_judge_the_past_are_marked(self):
+        results = [result("drops", "bad", id=4), result("signal", "warn", id=2)]
+        self.assertEqual({p["key"]: p["history"] for p in self.summary(results)["problems"]},
+                         {"drops": True, "signal": False})
+
     def test_nothing_to_fix(self):
         out = self.summary([result("signal", "ok"), result("ping", "info")])
         self.assertEqual((out["problems"], out["count"], out["fixable"], out["ok"], out["total"]), ([], 0, 0, 1, 2))

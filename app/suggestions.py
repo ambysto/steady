@@ -100,18 +100,22 @@ def suggest(results: list[dict], tweak_states: dict[str, dict] | None, done: dic
         if tid and result.get("status") in ("warn", "bad") and tweak_open(tid):
             meta = tweak_meta[tid]
             add("tweak", tid, result, title=meta["name"], body=meta.get("note") or "", risk=meta.get("risk"),
-                measured=bool(meta.get("measured")))
+                measured=bool(meta.get("measured")), disrupts=bool(meta.get("disrupts")))
     tweaks_check = by_key.get("tweaks")
     if tweaks_check and tweaks_check.get("status") == "info":
         for tid in tweaks_check.get("details") or []:
             if isinstance(tid, str) and tweak_open(tid) and tweak_meta[tid].get("risk") == "low":
                 meta = tweak_meta[tid]
-                add("tweak", tid, tweaks_check, title=meta["name"], body=meta.get("note") or "", risk="low")
+                add("tweak", tid, tweaks_check, title=meta["name"], body=meta.get("note") or "", risk="low",
+                    measured=bool(meta.get("measured")), disrupts=bool(meta.get("disrupts")))
 
     return sorted(items.values(), key=order)
 
 
 PROBLEM_STATUSES = ("bad", "warn")
+# Checks that judge the past (hours or days of events and measurements): checking again right after a
+# change cannot show its effect, so the result says "measuring" for them, never "no change" (ADR-0020 point 7).
+HISTORY_CHECKS = frozenset({"driver", "drops", "ping", "tcp_ports", "physical_link"})
 
 
 def check_summary(results: list[dict], items: list[dict]) -> dict[str, Any]:
@@ -120,7 +124,8 @@ def check_summary(results: list[dict], items: list[dict]) -> dict[str, Any]:
     Only warn/bad results are problems; info and ok never count. Each problem lists the suggestions
     that came from its check and says who can fix it: "app" (a tweak), "you" (a manual step) or
     "none". `batch` names the tweaks the Fix button may turn on together: low risk, not measured
-    (a measured tweak takes its own ~15 s measurement and may refuse). Pure."""
+    (a measured tweak takes its own ~15 s measurement and may refuse); `also` the other low-risk
+    tweaks the run suggests, offered in the same sheet. Pure."""
     problems = []
     ranked = sorted((r for r in results if r.get("status") in PROBLEM_STATUSES),
                     key=lambda r: (-SEVERITY[r["status"]], r.get("id") or 0))
@@ -130,10 +135,16 @@ def check_summary(results: list[dict], items: list[dict]) -> dict[str, Any]:
         kind = "app" if tweaks else "you" if actions else "none"
         problems.append({"key": r.get("key"), "title": r.get("title"), "status": r["status"],
                          "summary": r.get("summary"), "advice": r.get("advice") or "", "kind": kind,
+                         "history": r.get("key") in HISTORY_CHECKS,
                          "actions": actions,
                          "batch": [i["id"] for i in tweaks if i.get("risk") == "low" and not i.get("measured")]})
+    # Low-risk tweaks the run suggests for no counted problem (check #10 lists what is not on yet): the Fix
+    # sheet offers them too, separately, and they never count as problems.
+    counted = {p["key"] for p in problems}
+    also = [i["id"] for i in items if i["kind"] == "tweak" and not i.get("done_at") and i.get("risk") == "low"
+            and not i.get("measured") and (i.get("reason") or {}).get("check") not in counted]
     return {"problems": problems, "count": len(problems), "fixable": sum(1 for p in problems if p["batch"]),
-            "ok": sum(1 for r in results if r.get("status") == "ok"), "total": len(results)}
+            "also": also, "ok": sum(1 for r in results if r.get("status") == "ok"), "total": len(results)}
 
 
 def order(item: dict) -> tuple:
