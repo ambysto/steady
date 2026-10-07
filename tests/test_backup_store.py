@@ -340,6 +340,80 @@ class ImportTests(StoreCase):
         self.assertIsNone(self.reg.value(backupstore.IMPORTED_VALUE))
 
 
+class RealBackupImportTests(StoreCase):
+    """Backups an older version really wrote are imported, kind by kind (the ADR-0017 checks of #31 decide)."""
+
+    VALUES = {"upload_shaping": 20_000_000, "mtu_pmtu": 1400}
+
+    def turn_on(self, t, s):
+        """The machine as the older version left it: original captured, then the tweak applied."""
+        original = t.capture(s)
+        if t.id in self.VALUES:
+            t.apply_value(s, self.VALUES[t.id])
+        else:
+            t.apply(s)
+        return original
+
+    def imported(self, t, s, entry):
+        self.plant({t.id: entry})
+        self.new_process()
+        return backupstore.load(check=backupstore.entry_check(s, [t]))
+
+    def test_every_catalog_tweak_that_is_on_is_imported(self):
+        for t in catalog():
+            if t.id == "dns_fastest":
+                continue   # needs a benchmark; covered by its own tests
+            with self.subTest(t.id):
+                self.reg.keys.clear()
+                s = FakeSystem()
+                try:
+                    if not t.read(s).supported:
+                        continue
+                    original = self.turn_on(t, s)
+                except (KeyError, tweaks.Unsupported):
+                    continue     # FakeSystem lacks this setting
+                entry = {"original": original, "captured_at": 1}
+                self.assertEqual(self.imported(t, s, entry), {t.id: entry}, self.reg.quarantine())
+
+    def test_an_upload_limit_with_its_lan_exemptions_is_imported(self):
+        t = next(t for t in catalog() if t.id == "upload_shaping")
+        s = FakeSystem()
+        original = self.turn_on(t, s)
+        for exempt in ([], sorted(t.exemptions)[:1], sorted(t.exemptions)):
+            with self.subTest(exempt=exempt):
+                self.reg.keys.clear()
+                entry = {"original": {**original, "exempt": exempt}, "measurement": {"value": 20_000_000}}
+                self.assertEqual(self.imported(t, s, entry), {"upload_shaping": entry})
+        self.reg.keys.clear()
+        legacy = {k: v for k, v in original.items() if k != "exempt"}       # before the LAN exemptions
+        self.assertEqual(self.imported(t, s, {"original": legacy}), {"upload_shaping": {"original": legacy}})
+
+    def test_an_mtu_backup_is_imported_although_read_says_off(self):
+        t = next(t for t in catalog() if t.id == "mtu_pmtu")
+        s = FakeSystem()
+        original = self.turn_on(t, s)
+        self.assertFalse(t.read(s).enabled)
+        self.assertEqual(self.imported(t, s, {"original": original}), {"mtu_pmtu": {"original": original}})
+
+    def test_an_mtu_backup_whose_mtu_is_back_waits(self):
+        t = next(t for t in catalog() if t.id == "mtu_pmtu")
+        s = FakeSystem()
+        original = t.capture(s)                         # never applied: nothing to restore
+        self.assertEqual(self.imported(t, s, {"original": original}), {})
+        self.assertEqual(set(self.reg.quarantine()), {"mtu_pmtu"})
+
+    def test_a_wifi_property_keyword_must_be_the_resolved_one_exactly(self):
+        t = next(t for t in catalog() if t.id == "wifi_power_saving")
+        s = FakeSystem()
+        original = self.turn_on(t, s)
+        self.assertEqual(self.imported(t, s, {"original": original}), {"wifi_power_saving": {"original": original}})
+        for keyword in (original["keyword"].lower(), "*" + original["keyword"], "*WakeOnMagicPacket"):
+            with self.subTest(keyword=keyword):
+                self.reg.keys.clear()
+                self.assertEqual(self.imported(t, s, {"original": {**original, "keyword": keyword}}), {})
+                self.assertEqual(set(self.reg.quarantine()), {"wifi_power_saving"})
+
+
 class TamperedBackupJsonTests(StoreCase):
     """The task of ADR-0018: whatever a process without Admin writes to backup.json, the elevated helper
     restores the original it captured itself."""
