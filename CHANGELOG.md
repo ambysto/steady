@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Removed
+- **Japanese and Korean.** The app and the Apple app now ship 7 languages: English, Vietnamese, Simplified Chinese, Spanish, Brazilian Portuguese, German and French. Fewer catalogs to translate and have reviewed for every new text. A Windows setting that still names `ja` or `ko` falls back to English, and so does the Apple app on a device set to either language. `app/locales/ja.json` and `ko.json` deleted; the Apple String Catalogs regenerated without them and the two regions removed from the Xcode project.
+
 ## [0.6.0] - 2026-10-07
 
 The app installs for all users under `Program Files`, so nothing a process without Administrator rights can change runs elevated. Installing and uninstalling each ask once for Administrator approval; an earlier per-user install is replaced and its data kept.

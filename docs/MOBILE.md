@@ -49,7 +49,7 @@ A "local VPN" (`VpnService` on Android, `NetworkExtension` on iOS) makes per-app
 | Component | How it is reused |
 |---|---|
 | UI (`web/`, already scales down to phone size), `tokens.css` | Wrapped with **Capacitor** (WebView + native plugins) — keep HTML/CSS/JS as is, add bottom-tab navigation for mobile |
-| Translations `app/locales/*.json` (9 languages) | Used as is |
+| Translations `app/locales/*.json` (7 languages) | Used as is |
 | Diagnostic rules (`app/diagnostics.py`), suggestions, effectiveness measurement (ADR-0007) | Rewritten in TypeScript running on the device (mobile has no Python server). Keep a **shared set of test cases** as JSON (input → expected result) so the two versions do not drift apart |
 | Monitor, Windows tweaks, watchdog | Not usable (different operating system) |
 
@@ -71,7 +71,7 @@ Other options considered: Flutter or pure native (Kotlin + Swift) feel more nati
 
 **Design**
 - Mobile UI variant: bottom tabs, touch targets ≥ 44 pt, safe area; 2-column tablet layout (the current mockup is already close).
-- App icon, store screenshots for each size, store descriptions in 9 languages (catalog already exists).
+- App icon, store screenshots for each size, store descriptions in 7 languages (catalog already exists).
 - Explain permissions before requesting them (why location is needed, why "usage data access" is needed).
 
 ## 6. Proposed roadmap

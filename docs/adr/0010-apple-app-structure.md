@@ -57,6 +57,6 @@ ADR-0009 settled on one SwiftUI multiplatform app for iPhone, iPad and macOS tha
 - ✅ Rules and localization logic are tested on the command line (`swift test`, `python -m unittest`) on any Mac.
 - ✅ Texts and verdicts stay identical across Windows and Apple; a forgotten regeneration or a rule drift fails a test.
 - ✅ Personal-team builds cannot claim the production bundle ID.
-- ⚠️ New Apple-only texts are still added to `app/locales/*.json` (all 9 languages) and then regenerated, never added in Xcode's catalog editor.
+- ⚠️ New Apple-only texts are still added to `app/locales/*.json` (every language there) and then regenerated, never added in Xcode's catalog editor.
 - ⚠️ Only rules whose inputs exist on Apple platforms are ported; vectors are written per rule as each one is ported.
 - ⚠️ Raising the minimum OS later is easy; lowering it may require replacing newer APIs.

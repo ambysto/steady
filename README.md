@@ -71,7 +71,7 @@ python -m app.monitor
 
 **App window + tray icon:** `pip install -r requirements.txt` (pywebview, pystray, Pillow) then double-click `scripts\desktop\run_desktop.pyw` (or `pythonw -m app.desktop`, add `--minimized` to show it only in the tray). Closing the window only hides it to the tray; the monitor runs separately and is not stopped.
 
-Data is written to `data/metrics.db`. The monitor also serves the **UI** at `http://127.0.0.1:47613/` (accessible only from this machine; see `docs/SECURITY.md`): Overview, Optimize, Diagnostics, Log, Settings — 9 languages, light/dark, responsive down to phone size. There is no protection yet against running two instances at once (see SIC-12), so do not run it in parallel with `scripts/monitor/ping-logger.ps1` for long, as that would double the pings.
+Data is written to `data/metrics.db`. The monitor also serves the **UI** at `http://127.0.0.1:47613/` (accessible only from this machine; see `docs/SECURITY.md`): Overview, Optimize, Diagnostics, Log, Settings — 7 languages, light/dark, responsive down to phone size. There is no protection yet against running two instances at once (see SIC-12), so do not run it in parallel with `scripts/monitor/ping-logger.ps1` for long, as that would double the pings.
 
 Run tests: `python -m unittest discover -s tests -t .`
 
