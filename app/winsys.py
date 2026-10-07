@@ -2,7 +2,8 @@
 
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
 active plan, adapter protocol bindings, the app's own QoS upload policy, an interface's IPv4
-MTU (ADR-0015), the global TCP ECN capability, an adapter's RSC and the global packet coalescing filter. Every write raises SystemWriteError on failure;
+MTU (ADR-0015), the global TCP ECN capability, an adapter's RSC, the global packet coalescing filter, an
+interface's IPv4 DNS servers and the DNS-over-HTTPS flags of a resolver. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -11,6 +12,7 @@ the typographic quotes U+2018..U+201B as single quotes, so doubling ' is not eno
 from __future__ import annotations
 
 import base64
+import ipaddress
 import re
 import subprocess
 import winreg
@@ -29,6 +31,7 @@ UPLOAD_LIMIT_MIN, UPLOAD_LIMIT_MAX = 2_000_000, 1_000_000_000   # bits per secon
 ECN_VALUES = ("enabled", "disabled", "default")                 # netsh int tcp ... ecncapability=
 PACKET_COALESCING_VALUES = ("Enabled", "Disabled", "Default")   # Set-NetOffloadGlobalSetting -PacketCoalescingFilter
 _ECN_RE = re.compile(r"^\s*ECN Capability\s*:\s*(\S+)", re.I | re.M)
+TCPIP_INTERFACES_KEY = r"SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces"
 
 
 class SystemReadError(RuntimeError):
@@ -72,6 +75,9 @@ class System(Protocol):
     def tcp_ecn_get(self) -> str: ...
     def rsc_get(self, adapter: str) -> dict[str, bool] | None: ...
     def packet_coalescing_get(self) -> str: ...
+    def dns_get(self, interface_index: int) -> dict[str, Any]: ...
+    def dns_suffix_get(self, interface_index: int) -> str: ...
+    def doh_get(self, server: str) -> dict[str, bool] | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -86,6 +92,9 @@ class System(Protocol):
     def tcp_ecn_set(self, value: str) -> None: ...
     def rsc_set(self, adapter: str, ipv4: bool | None, ipv6: bool | None) -> None: ...
     def packet_coalescing_set(self, value: str) -> None: ...
+    def dns_servers_set(self, interface_index: int, servers: list[str]) -> None: ...
+    def dns_servers_reset(self, interface_index: int) -> None: ...
+    def doh_set(self, server: str, auto_upgrade: bool, fallback: bool) -> None: ...
 
 
 def _check_qos_name(name: str) -> str:
@@ -104,6 +113,27 @@ def _check_choice(value: str, allowed: tuple[str, ...], what: str) -> str:
     if value not in allowed:
         raise ValueError(f"bad {what}: {value!r}")
     return value
+
+
+def _check_ipv4(value: str) -> str:
+    """A canonical IPv4 address, or ValueError: the only form of DNS server that reaches PowerShell."""
+    return str(ipaddress.IPv4Address(str(value).strip()))
+
+
+def _ipv4_list(values: Any) -> list[str]:
+    out = []
+    for v in values:
+        try:
+            out.append(_check_ipv4(v))
+        except ValueError:
+            continue    # IPv6 and anything else: only IPv4 DNS is handled here
+    return out
+
+
+def _ps_bool(value: bool) -> str:
+    if not isinstance(value, bool):
+        raise ValueError(f"not a bool: {value!r}")
+    return "$true" if value else "$false"
 
 
 def _as_list(value: Any) -> list[str]:
@@ -276,6 +306,58 @@ class WindowsSystem:
             raise SystemReadError("cannot read the packet coalescing filter")
         return str(rows[0]["Value"])
 
+    def _static_nameservers(self, interface_guid: str) -> str:
+        """`NameServer` (REG_SZ, comma-separated) of the interface's TCP/IP key; "" when absent or empty
+        (then the servers come from DHCP)."""
+        path = TCPIP_INTERFACES_KEY + "\\{" + _check_guid(interface_guid) + "}"
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as k:
+                value, kind = winreg.QueryValueEx(k, "NameServer")
+        except FileNotFoundError:
+            return ""
+        except OSError as exc:
+            raise SystemReadError(f"cannot read HKLM\\{path}\\NameServer: {exc}") from exc
+        if kind != winreg.REG_SZ:
+            raise SystemReadError(f"HKLM\\{path}\\NameServer is not a string (type {kind})")
+        return str(value)
+
+    def dns_get(self, interface_index: int) -> dict[str, Any]:
+        """IPv4 DNS of an interface: {"effective": servers in use (static or from DHCP), "static": the
+        servers set by hand, [] when they come from DHCP}."""
+        idx = int(interface_index)
+        try:
+            rows = self._ps_json(
+                f"Get-DnsClientServerAddress -InterfaceIndex {idx} -AddressFamily IPv4 -ErrorAction Stop | "
+                "Select-Object @{n='Servers';e={@($_.ServerAddresses)}}")
+            guid = self._ps(f"(Get-NetAdapter -InterfaceIndex {idx} -ErrorAction Stop).InterfaceGuid").strip()
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the DNS servers of interface {idx}: {exc}") from exc
+        effective = _ipv4_list(_as_list(rows[0].get("Servers"))) if rows else []
+        raw = self._static_nameservers(guid.strip("{}")) if guid else ""
+        return {"effective": effective, "static": _ipv4_list(re.split(r"[,;\s]+", raw.strip()))}
+
+    def dns_suffix_get(self, interface_index: int) -> str:
+        """The connection-specific DNS suffix of an interface ("" when it has none)."""
+        idx = int(interface_index)
+        try:
+            return self._ps(f"(Get-DnsClient -InterfaceIndex {idx} -ErrorAction Stop).ConnectionSpecificSuffix").strip()
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the DNS suffix of interface {idx}: {exc}") from exc
+
+    def doh_get(self, server: str) -> dict[str, bool] | None:
+        """DNS-over-HTTPS flags of a registered resolver ({"auto_upgrade", "fallback"}); None when Windows
+        has no DoH template for it. Windows 10 has no such cmdlet: that is a SystemReadError."""
+        address = _check_ipv4(server)
+        try:
+            rows = self._ps_json(
+                f"Get-DnsClientDohServerAddress -ServerAddress {address} -ErrorAction SilentlyContinue | Select-Object "
+                "@{n='AutoUpgrade';e={[bool]$_.AutoUpgrade}}, @{n='Fallback';e={[bool]$_.AllowFallbackToUdp}}")
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the DoH settings of {address}: {exc}") from exc
+        if not rows:
+            return None
+        return {"auto_upgrade": bool(rows[0]["AutoUpgrade"]), "fallback": bool(rows[0]["Fallback"])}
+
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
         idx = int(interface_index)
@@ -394,3 +476,25 @@ class WindowsSystem:
         self._ps_write("Set-NetOffloadGlobalSetting -PacketCoalescingFilter "
                        f"{_check_choice(value, PACKET_COALESCING_VALUES, 'packet coalescing value')} -ErrorAction Stop",
                        f"setting the packet coalescing filter to {value}")
+
+    def dns_servers_set(self, interface_index: int, servers: list[str]) -> None:
+        """Static IPv4 DNS servers for an interface (at least one)."""
+        idx = int(interface_index)
+        addresses = [_check_ipv4(x) for x in servers]
+        if not addresses or len(addresses) > 8:
+            raise ValueError(f"need 1-8 DNS servers, got {len(addresses)}")
+        listing = ", ".join(f"'{a}'" for a in addresses)
+        self._ps_write(f"Set-DnsClientServerAddress -InterfaceIndex {idx} -ServerAddresses ({listing}) "
+                       "-ErrorAction Stop", f"setting the DNS servers of interface {idx}")
+
+    def dns_servers_reset(self, interface_index: int) -> None:
+        """Back to the servers the network hands out (DHCP)."""
+        idx = int(interface_index)
+        self._ps_write(f"Set-DnsClientServerAddress -InterfaceIndex {idx} -ResetServerAddresses -ErrorAction Stop",
+                       f"resetting the DNS servers of interface {idx}")
+
+    def doh_set(self, server: str, auto_upgrade: bool, fallback: bool) -> None:
+        address = _check_ipv4(server)
+        self._ps_write(f"Set-DnsClientDohServerAddress -ServerAddress {address} -AutoUpgrade {_ps_bool(auto_upgrade)} "
+                       f"-AllowFallbackToUdp {_ps_bool(fallback)} -ErrorAction Stop",
+                       f"setting DNS over HTTPS for {address}")

@@ -39,6 +39,8 @@ GAP_MIN_S = 30              # a pause between ticks longer than this is a monito
 RAW_WINDOW_S = 15 * 60      # raw ping samples kept in RAM
 PURGE_EVERY_S = 3600
 ROUTER = "router"
+DNS_TWEAK_ID = "dns_fastest"   # a DNS change right after this tweak ran is the app's own doing, not an attack
+DNS_TWEAK_GRACE_S = 10 * 60
 
 
 @dataclass(frozen=True)
@@ -521,6 +523,17 @@ class Monitor:
             return
         self._dns_watch.seed(reversed(stored))   # newest first -> oldest first
 
+    def _changed_by_app(self, now: int) -> bool:
+        """Did the DNS tweak change the machine in the last DNS_TWEAK_GRACE_S seconds?"""
+        try:
+            events = self.storage.query_events(now - DNS_TWEAK_GRACE_S, now + 1,
+                                               kinds=["tweak_enabled", "tweak_disabled"], limit=50)
+        except Exception as exc:
+            self._log_once(f"dns-tweak:{exc}", "cannot read tweak events: %r", exc)
+            return False
+        return any(e["message"].get("params", {}).get("tweak_id") == DNS_TWEAK_ID
+                   for e in events if isinstance(e.get("message"), dict))
+
     def check_dns(self) -> None:
         """Compare the DNS servers of the network in use with what it used before (app/dnswatch.py)."""
         try:
@@ -536,6 +549,10 @@ class Monitor:
         network = network_key(route["interface_index"], route.get("gateway"), ssid)
         now = int(self._clock())
         for kind, message, level in self._dns_watch.observe(network, table.get(route["interface_index"], [])):
+            if kind == "dns_changed" and self._changed_by_app(now):
+                # The user turned on or off the DNS tweak a moment ago: not an attack, only worth a note.
+                kind, level = "dns_observed", "info"
+                message = msg("event.dns_observed", servers=message["params"]["new"], network=network)
             self._guarded(lambda: self.storage.add_event(now, kind, message, level=level), f"event {kind}")
             if kind == "dns_changed" and self._notify is not None:
                 self._notify(t("notify.dns_changed.title"), render(message))

@@ -918,9 +918,30 @@ def check_ping(ctx: Context) -> CheckResult:
     return evaluate_ping(ctx.get("ping_rows_1h"), ctx.get("ping_rows_5m"), changes=ctx.get("network_changes"))
 
 
+def dns_ranking(bench: list[dnsprobe.ServerBenchmark], in_use: list[str]) -> tuple[float, dict[str, Any]] | None:
+    """The calibration for the `dns_fastest` tweak: (median ms of the fastest, {"servers", "in_use_ms"}), or None
+    unless two allow-listed resolvers of different providers answered without errors."""
+    from .tweaks import DNS_PROVIDERS
+    good = sorted((b for b in bench if b.server in DNS_PROVIDERS and b.median_ms is not None and not b.failures),
+                  key=lambda b: b.median_ms)
+    if len({DNS_PROVIDERS[b.server] for b in good}) < 2:
+        return None
+    primary = next((b for b in bench if in_use and b.server == in_use[0]), None)
+    return good[0].median_ms, {"servers": [b.server for b in good],
+                               "in_use_ms": primary.median_ms if primary is not None else None}
+
+
 def check_dns(ctx: Context) -> CheckResult:
     bench, in_use, labels = ctx.get("dns_bench")
-    return evaluate_dns(bench, in_use, labels)
+    result = evaluate_dns(bench, in_use, labels)
+    ranking = dns_ranking(bench, in_use)
+    if ranking is not None:
+        fastest, detail = ranking
+        _record(ctx, "dns_ranking", fastest, detail, lambda: False)     # the benchmark ignores the DNS configured
+        if result.status in (INFO, WARN) and (result.status == WARN or detail["in_use_ms"] is None
+                                              or fastest < detail["in_use_ms"]):
+            result = replace(result, tweak="dns_fastest")
+    return result
 
 
 def check_tcp(ctx: Context) -> CheckResult:

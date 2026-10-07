@@ -18,6 +18,7 @@ from a calibration of the network in use (ADR-0015). The catalog itself lives in
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import re
 import sys
@@ -28,7 +29,7 @@ from typing import Any, Callable
 
 from . import calibration, config, i18n, winutil
 from .i18n import msg
-from .winsys import System
+from .winsys import System, SystemReadError
 
 RISKS = ("low", "medium", "experimental")
 Message = Any   # an i18n.msg() dict, or plain text (ADR-0006)
@@ -508,11 +509,152 @@ class PathMtuTweak(MeasuredTweak):
         return (int(original["interface_index"]), int(original["mtu"]))
 
 
+# DNS servers a calibration may name: IPv4 resolvers that Windows 11 ships DNS-over-HTTPS templates for,
+# with their provider. Re-validated here because the elevated helper reads the user-writable calibration file.
+DNS_PROVIDERS: dict[str, str] = {
+    "1.1.1.1": "cloudflare", "1.0.0.1": "cloudflare",
+    "8.8.8.8": "google", "8.8.4.4": "google",
+    "9.9.9.9": "quad9", "149.112.112.112": "quad9",
+}
+
+
+class DnsTweak(MeasuredTweak):
+    """The interface's DNS servers set to the fastest public resolvers of the check #6 benchmark (two
+    providers), with DNS over HTTPS (falling back to plain UDP) switched on for both. Refused on networks
+    with their own naming (a connection-specific suffix, a private DNS server that is not the router).
+    Without a backup the original is unknown (the user may have had static DNS): no default restore."""
+
+    kind = "dns_ranking"
+    has_default_restore = False
+
+    @staticmethod
+    def _ranking(entry: dict[str, Any]) -> list[str]:
+        """Allow-listed servers of the calibration, fastest first; anything else in the file is ignored."""
+        detail = entry.get("detail")
+        servers = detail.get("servers") if isinstance(detail, dict) else None
+        out: list[str] = []
+        for server in servers if isinstance(servers, list) else []:
+            if isinstance(server, str) and server in DNS_PROVIDERS and server not in out:
+                out.append(server)
+        return out
+
+    def _target(self, entry: dict[str, Any]) -> list[str]:
+        """The fastest server and the fastest one of another provider."""
+        ranking = self._ranking(entry)
+        for second in ranking[1:]:
+            if DNS_PROVIDERS[second] != DNS_PROVIDERS[ranking[0]]:
+                return [ranking[0], second]
+        raise Unsupported(msg("tweak.reason.measure_first.dns_ranking"))
+
+    @staticmethod
+    def _is_pair(static: list[str]) -> bool:
+        """What this tweak writes: allow-listed servers only, the first two of different providers."""
+        return (len(static) >= 2 and all(x in DNS_PROVIDERS for x in static)
+                and DNS_PROVIDERS[static[0]] != DNS_PROVIDERS[static[1]])
+
+    @staticmethod
+    def _gateway(net: dict[str, Any]) -> str:
+        parts = str(net["key"]).split("|")     # dnswatch.network_key: interface|gateway|ssid
+        return parts[1] if len(parts) > 1 else ""
+
+    def _check_network_is_plain(self, sys_: System, net: dict[str, Any], dns: dict[str, Any]) -> None:
+        if sys_.dns_suffix_get(net["interface_index"]):
+            raise Unsupported(msg("tweak.reason.dns_suffix"))
+        gateway = self._gateway(net)
+        for server in dict.fromkeys([*dns["effective"], *dns["static"]]):
+            if server != gateway and not ipaddress.ip_address(server).is_global:
+                raise Unsupported(msg("tweak.reason.dns_private", server=server))
+
+    @staticmethod
+    def _need_doh(sys_: System, servers: list[str]) -> None:
+        """Windows 10 has no DoH cmdlets, and a resolver without a registered template cannot be upgraded."""
+        try:
+            missing = [x for x in servers if sys_.doh_get(x) is None]
+        except SystemReadError:
+            missing = servers
+        if missing:
+            raise Unsupported(msg("tweak.reason.no_doh"))
+
+    @staticmethod
+    def _doh_state(sys_: System) -> dict[str, dict[str, bool]]:
+        state = {}
+        for server in DNS_PROVIDERS:
+            try:
+                flags = sys_.doh_get(server)
+            except SystemReadError:
+                flags = None
+            if flags is not None:
+                state[server] = {"auto_upgrade": bool(flags["auto_upgrade"]), "fallback": bool(flags["fallback"])}
+        return state
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            net = self._network(sys_)
+            dns = sys_.dns_get(net["interface_index"])
+            static, effective = list(dns["static"]), list(dns["effective"])
+            target, entry, problem = None, None, None
+            try:
+                _, entry = self._calibration(sys_, fresh=False)
+                target = self._target(entry)
+            except Unsupported as exc:
+                problem = exc
+            usable = entry is not None and target is not None and calibration.usable(entry, net["key"], self._clock())
+            if not usable and problem is None:
+                problem = Unsupported(msg("tweak.reason.measure_again.dns_ranking"))
+            source = (msg("tweak.dns_fastest.source", date=self._when(entry), primary=target[0], secondary=target[1],
+                          ms=float(entry["value"])) if entry is not None and target is not None else "")
+            if target is not None and static[:2] == target:
+                return Reading(True, True, effective, source)
+            if usable and self._is_pair(static):
+                return Reading(True, True, effective, msg("tweak.reason.drift", source=source))    # a newer ranking
+            if not usable and static and all(x in DNS_PROVIDERS for x in static):
+                return Reading(True, True, effective, problem.message)       # on, but nothing to compare with
+            self._check_network_is_plain(sys_, net, dns)
+            if problem is not None:
+                raise problem
+            self._need_doh(sys_, target)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        return Reading(True, False, effective, source)
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        idx = self._network(sys_)["interface_index"]
+        return {"interface_index": idx, "static": list(sys_.dns_get(idx)["static"]), "doh": self._doh_state(sys_)}
+
+    def apply(self, sys_: System) -> None:
+        net, entry = self._calibration(sys_, fresh=True)
+        target = self._target(entry)
+        idx = net["interface_index"]
+        self._check_network_is_plain(sys_, net, sys_.dns_get(idx))
+        self._need_doh(sys_, target)
+        sys_.dns_servers_set(idx, target)
+        for server in target:
+            sys_.doh_set(server, True, True)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.reason.no_default_dns"))
+        idx, static = int(original["interface_index"]), [str(x) for x in original["static"]]
+        if static:
+            sys_.dns_servers_set(idx, static)
+        else:
+            sys_.dns_servers_reset(idx)
+        for server, flags in original["doh"].items():
+            wanted = {"auto_upgrade": bool(flags["auto_upgrade"]), "fallback": bool(flags["fallback"])}
+            if sys_.doh_get(server) != wanted:
+                sys_.doh_set(server, wanted["auto_upgrade"], wanted["fallback"])
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        doh = tuple(sorted((str(ipaddress.IPv4Address(server)), bool(f["auto_upgrade"]), bool(f["fallback"]))
+                           for server, f in original["doh"].items()))
+        return (int(original["interface_index"]), tuple(str(ipaddress.IPv4Address(x)) for x in original["static"]), doh)
+
+
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
                  "binding_get", "current_network", "qos_throttle_get", "interface_mtu_get", "tcp_ecn_get",
-                 "rsc_get", "packet_coalescing_get")
+                 "rsc_get", "packet_coalescing_get", "dns_get", "dns_suffix_get", "doh_get")
 
 
 class _CachedReads:
@@ -886,6 +1028,8 @@ def build_catalog(load_calibration: Callable[[], dict] = config.load_calibration
                          note=_note("upload_shaping"), load_calibration=load_calibration),
         PathMtuTweak("mtu_path", _name("mtu_path"), "medium", group=GROUP_STACK, note=_note("mtu_path"),
                      load_calibration=load_calibration),
+        DnsTweak("dns_fastest", _name("dns_fastest"), "medium", group=GROUP_STACK, note=_note("dns_fastest"),
+                 load_calibration=load_calibration),
     ]
 
 

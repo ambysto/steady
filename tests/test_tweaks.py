@@ -49,6 +49,10 @@ class FakeSystem:
         self.ecn = "disabled"
         self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
         self.coalescing = "Enabled"
+        self.dns = {6: {"static": [], "effective": ["192.0.2.1"]}}   # DHCP: the router answers
+        self.dns_suffix = {6: ""}
+        self.doh = {ip: {"auto_upgrade": False, "fallback": False}
+                    for ip in ("1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9", "149.112.112.112")}
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -105,6 +109,18 @@ class FakeSystem:
     def packet_coalescing_get(self):
         self._r("packet_coalescing_get")
         return self.coalescing
+
+    def dns_get(self, index):
+        self._r("dns_get", index)
+        return copy.deepcopy(self.dns[index])
+
+    def dns_suffix_get(self, index):
+        self._r("dns_suffix_get", index)
+        return self.dns_suffix[index]
+
+    def doh_get(self, server):
+        self._r("doh_get", server)
+        return copy.deepcopy(self.doh.get(server))
 
     # writes
     def _w(self, name, *args):
@@ -170,13 +186,25 @@ class FakeSystem:
         if self._w("packet_coalescing_set", value):
             self.coalescing = value
 
+    def dns_servers_set(self, index, servers):
+        if self._w("dns_servers_set", index, list(servers)):
+            self.dns[index] = {"static": list(servers), "effective": list(servers)}
+
+    def dns_servers_reset(self, index):
+        if self._w("dns_servers_reset", index):
+            self.dns[index] = {"static": [], "effective": ["192.0.2.1"]}
+
+    def doh_set(self, server, auto_upgrade, fallback):
+        if self._w("doh_set", server, auto_upgrade, fallback):
+            self.doh[server] = {"auto_upgrade": auto_upgrade, "fallback": fallback}
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
         return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.qos, self.mtu, self.ecn, self.rsc,
-                               self.coalescing))
+                               self.coalescing, self.dns, self.doh))
 
 
 def power_saving():

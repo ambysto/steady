@@ -15,7 +15,7 @@ from typing import Any, Callable
 
 from . import config
 
-KINDS = ("upload_mbps", "path_mtu")
+KINDS = ("upload_mbps", "path_mtu", "dns_ranking")
 MAX_AGE_S = 30 * 86400
 
 
