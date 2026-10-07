@@ -372,6 +372,7 @@
   "tweak.reason.dns_no_fast_servers": "Phép đo không tìm được hai nhà cung cấp DNS công khai trả lời ổn định; chưa đổi gì",
   "tweak.reason.no_default_dns": "Không có bản sao lưu; không biết thiết lập DNS ban đầu",
   "tweak.reason.dns_other_interface": "bản sao lưu DNS ban đầu thuộc kết nối mạng khác. Hãy tắt tùy chọn này trước, khi kết nối đó đang được dùng",
+  "tweak.reason.dns_backup_elsewhere": "Đang bật cho kết nối mạng khác ({name}), không phải kết nối đang dùng. Hãy tắt để trả DNS của kết nối đó về như cũ",
   "tweak.reason.dns_interface_gone": "Kết nối mạng đã bị đổi DNS hiện không có (đã rút hoặc gỡ)",
   "tweak.reason.no_doh": "Windows này không hỗ trợ DNS qua HTTPS (cần Windows 11 hoặc Windows 10 bản mới)",
 

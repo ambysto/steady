@@ -372,6 +372,7 @@
   "tweak.reason.dns_no_fast_servers": "Der Benchmark hat keine zwei öffentlichen DNS-Anbieter gefunden, die zuverlässig antworten; es wurde nichts geändert",
   "tweak.reason.no_default_dns": "Kein Backup; die ursprünglichen DNS-Einstellungen sind unbekannt",
   "tweak.reason.dns_other_interface": "die gespeicherten ursprünglichen DNS-Einstellungen gehören zu einer anderen Netzwerkverbindung. Zuerst ausschalten, solange diese Verbindung verwendet wird",
+  "tweak.reason.dns_backup_elsewhere": "Für eine andere Netzwerkverbindung ({name}) eingeschaltet, nicht für die aktuell verwendete. Ausschalten, um den DNS dieser Verbindung wiederherzustellen",
   "tweak.reason.dns_interface_gone": "Die Netzwerkverbindung, deren DNS geändert wurde, ist gerade nicht verfügbar (getrennt oder entfernt)",
   "tweak.reason.no_doh": "Dieses Windows unterstützt kein DNS over HTTPS (ab Windows 11 oder einem aktuellen Windows 10)",
 
