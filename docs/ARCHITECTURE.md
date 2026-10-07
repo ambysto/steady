@@ -32,13 +32,14 @@
 | `monitor.py` | Ping thread per target, reads Wi‑Fi state, detects incidents, aggregates per-minute statistics |
 | `watchdog.py` | Automatic recovery when an incident persists — see [WATCHDOG.md](WATCHDOG.md) |
 | `tweaks.py` | Toggle catalog and the `read / capture / apply / restore` framework — see [TWEAKS.md](TWEAKS.md) |
+| `calibration.py` | The measurement behind a measured tweak's value: validation, network id, staleness, the before/after verdict ([ADR-0015](adr/0015-measured-tweaks.md)) |
 | `diagnostics.py` | Diagnostic checks — see [DIAGNOSTICS.md](DIAGNOSTICS.md) |
 | `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
 | `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
 | `notify.py` | Windows toasts on connection loss (after 30s) / when the watchdog intervenes, disables itself, or hits an error; rate-limited; runs in the background |
 | `singleton.py` | Prevents two monitors running on the same data directory (named mutex) |
 | `autostart.py` | Task Scheduler task that starts the monitor at logon (created from XML) |
-| `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding) |
+| `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding, the tool's QoS policy) |
 | `elevated.py`, `elevation.py` | Child process running as Admin via UAC for write operations — ADR-0005 |
 | `server.py` | HTTP server, API routing, serves `web/` |
 | `desktop.py` | Desktop shell (ADR-0002): a pywebview window using the native Windows frame (Snap Layouts, resizing, title bar painted the same color as the page background) around the UI + tray icon (pystray). It is only a viewer: closing the window = hiding to the tray, "Quit" only closes the shell, the monitor keeps running. Only this module needs `requirements.txt` |

@@ -1,7 +1,7 @@
 """System access for tweaks - the only module that writes to the machine.
 
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
-active plan, adapter protocol bindings. Every write raises SystemWriteError on failure;
+active plan, adapter protocol bindings, the tool's own QoS throttle policy. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -22,6 +22,8 @@ NET_CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc
 _GUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 _COMPONENT_RE = re.compile(r"^[A-Za-z0-9_]+$")
 _POWER_RE = re.compile(r"Current (AC|DC) Power Setting Index:\s*0x([0-9a-fA-F]+)")
+_QOS_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+QOS_MIN_BPS, QOS_MAX_BPS = 1_000_000, 1_000_000_000
 
 
 class SystemReadError(RuntimeError):
@@ -44,6 +46,12 @@ def _check_guid(value: str) -> str:
     return value
 
 
+def _check_qos_name(name: str) -> str:
+    if not _QOS_NAME_RE.match(name):
+        raise ValueError(f"bad QoS policy name: {name!r}")
+    return name
+
+
 def _check_hklm_path(path: str) -> str:
     if not path or path.startswith("\\") or ".." in path.split("\\"):
         raise ValueError(f"bad HKLM sub-path: {path!r}")
@@ -59,6 +67,7 @@ class System(Protocol):
     def registry_get(self, path: str, name: str) -> int | None: ...
     def power_get(self, subgroup: str, setting: str) -> tuple[int, int]: ...
     def binding_get(self, adapter: str, component: str) -> bool | None: ...
+    def qos_policy_get(self, name: str) -> int | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -67,6 +76,8 @@ class System(Protocol):
     def power_set(self, subgroup: str, setting: str, ac: int, dc: int) -> None: ...
     def interface_metric_set(self, interface_index: int, metric: int | None) -> None: ...
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None: ...
+    def qos_policy_set(self, name: str, bits_per_second: int) -> None: ...
+    def qos_policy_remove(self, name: str) -> None: ...
 
 
 def _as_list(value: Any) -> list[str]:
@@ -176,6 +187,15 @@ class WindowsSystem:
                              "-ErrorAction SilentlyContinue | Select-Object Enabled")
         return bool(rows[0]["Enabled"]) if rows else None
 
+    def qos_policy_get(self, name: str) -> int | None:
+        """Throttle rate (bit/s) of the QoS policy `name` in the default (persistent) store; None if
+        there is none. Lists the store rather than asking by name, so "absent" never hides an error."""
+        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq "
+                             f"{ps_literal(_check_qos_name(name))} }}) | Select-Object Name, ThrottleRateAction")
+        if not rows:
+            return None
+        return int(rows[0].get("ThrottleRateAction") or 0)
+
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
         idx = int(interface_index)
@@ -243,6 +263,29 @@ class WindowsSystem:
             proc = self._powercfg(*args)
             if proc.returncode != 0:
                 raise SystemWriteError(f"powercfg {' '.join(args)} exited {proc.returncode}")
+
+    def qos_policy_set(self, name: str, bits_per_second: int) -> None:
+        """Create (or re-rate) a policy throttling all outbound traffic, in the persistent store."""
+        rate = int(bits_per_second)
+        if not QOS_MIN_BPS <= rate <= QOS_MAX_BPS:
+            raise ValueError(f"throttle rate out of range: {rate}")
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       f"Set-NetQosPolicy -Name $name -ThrottleRateActionBitsPerSecond {rate} -Confirm:$false -ErrorAction Stop }} "
+                       f"else {{ New-NetQosPolicy -Name $name -Default -ThrottleRateActionBitsPerSecond {rate} "
+                       "-ErrorAction Stop | Out-Null }", f"setting QoS policy {name} to {rate} bit/s")
+
+    def qos_policy_remove(self, name: str) -> None:
+        """Remove exactly the policy `name`: persistent store first, then the active store if it lingers."""
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       "Remove-NetQosPolicy -Name $name -Confirm:$false -ErrorAction Stop }; "
+                       "if (@(Get-NetQosPolicy -PolicyStore ActiveStore -ErrorAction Stop | "
+                       "Where-Object { $_.Name -eq $name }).Count) { "
+                       "Remove-NetQosPolicy -Name $name -PolicyStore ActiveStore -Confirm:$false -ErrorAction Stop }",
+                       f"removing QoS policy {name}")
 
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None:
         if not _COMPONENT_RE.match(component):

@@ -83,19 +83,22 @@ class ElevationResult:
 Launcher = Callable[[str, str, str, str, float], Launch]
 
 
-def run_elevated(op: str, value: str, *, verb: str = "runas", timeout_s: float = 180,
-                 launcher: Launcher = shell_execute_wait, module: str = "app.elevated") -> ElevationResult:
+def run_elevated(op: str, value: str, *, measurement: dict[str, Any] | None = None, verb: str = "runas",
+                 timeout_s: float = 180, launcher: Launcher = shell_execute_wait,
+                 module: str = "app.elevated") -> ElevationResult:
     """Prompts UAC, runs `python -m app.elevated <op> <value>` (packaged: `<exe> elevated <op> <value>`),
-    returns its JSON outcome."""
+    returns its JSON outcome. `measurement` goes along for a measured tweak (ADR-0015)."""
     if op not in OPS:
         raise ValueError(f"unknown elevated operation {op!r}")
-    from . import runtime
+    from . import calibration, runtime
     path = config.results_dir() / f"{uuid.uuid4().hex}.json"
+    extra = ["--measurement", calibration.encode(measurement)] if measurement is not None else []
     if runtime.FROZEN:
-        program, args, cwd = runtime.command("elevated", op, value, "--result-file", str(path))
+        program, args, cwd = runtime.command("elevated", op, value, *extra, "--result-file", str(path))
     else:
         from .autostart import pythonw_path
-        program, args, cwd = pythonw_path(), ["-m", module, op, value, "--result-file", str(path)], config.ROOT
+        program, args, cwd = (pythonw_path(), ["-m", module, op, value, *extra, "--result-file", str(path)],
+                              config.ROOT)
     launch = launcher(str(program), subprocess.list2cmdline(args), str(cwd), verb, timeout_s)
     try:
         if not launch.started:

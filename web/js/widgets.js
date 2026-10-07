@@ -34,7 +34,8 @@ export function suggestionRow(item, { compact = false, onChange, isAdmin }) {
   } else if (item.kind === "tweak") {
     action = el("button", { class: "button primary" }, t("ui.suggest.turn_on"));
     action.addEventListener("click", async () => {
-      if (await setTweak({ id: item.id, name: item.title, risk: item.risk }, true, { button: action, isAdmin })) onChange?.();
+      if (await setTweak({ id: item.id, name: item.title, risk: item.risk, measured: item.measured }, true,
+                         { button: action, isAdmin })) onChange?.();
     });
   } else {
     action = el("button", { class: "button" }, t("ui.suggest.done_button"));
@@ -54,9 +55,16 @@ export function suggestionRow(item, { compact = false, onChange, isAdmin }) {
 
 /**
  * Turn a tweak on or off through the API (a job; without Admin rights Windows shows a UAC
- * prompt). Experimental tweaks ask first. Resolves true when something changed.
+ * prompt). Experimental tweaks ask first, and so do measured ones (they generate traffic, ADR-0015).
+ * Resolves true when something changed.
  */
 export async function setTweak(tweak, enable, { button, isAdmin } = {}) {
+  if (enable && tweak.measured) {
+    const ok = await confirmSheet({ title: t("ui.sheet.measured.title"),
+                                    body: t("ui.sheet.measured.body", { name: tweak.name }),
+                                    confirm: t("ui.sheet.confirm"), cancel: t("ui.sheet.cancel") });
+    if (!ok) return false;
+  }
   if (enable && tweak.risk === "experimental") {
     const ok = await confirmSheet({ title: t("ui.sheet.experimental.title"),
                                     body: t("ui.sheet.experimental.body", { name: tweak.name }),
@@ -67,9 +75,12 @@ export async function setTweak(tweak, enable, { button, isAdmin } = {}) {
   if (button) {
     button.disabled = true;
     button.classList.add("busy");
-    if (button.classList.contains("button")) button.textContent = t("ui.optimize.applying");
+    if (button.classList.contains("button")) {
+      button.textContent = t(enable && tweak.measured ? "ui.optimize.measuring" : "ui.optimize.applying");
+    }
   }
-  if (!isAdmin) toast(t("ui.optimize.waiting_uac"), { ms: 15000 });
+  if (enable && tweak.measured) toast(t("ui.optimize.measuring"), { ms: 15000 });
+  else if (!isAdmin) toast(t("ui.optimize.waiting_uac"), { ms: 15000 });
   try {
     const result = await runJob(`/api/tweaks/${encodeURIComponent(tweak.id)}`, { enable });
     toast(result.message || "", { bad: !result.ok });

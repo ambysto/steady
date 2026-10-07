@@ -19767,6 +19767,40 @@
         }
       }
     },
+    "ui.optimize.measured.upload_shaping" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limited to %1$@ Mbps — 85%% of the %2$@ Mbps upload measured on %3$@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giới hạn %1$@ Mbps — 85%% của %2$@ Mbps upload đo ngày %3$@"
+          }
+        }
+      }
+    },
+    "ui.optimize.measuring" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measuring…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang đo…"
+          }
+        }
+      }
+    },
     "ui.optimize.needs_admin" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19940,6 +19974,57 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此电脑不可用"
+          }
+        }
+      }
+    },
+    "ui.optimize.stale.hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn it off and on again to measure this network"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tắt rồi bật lại để đo mạng này"
+          }
+        }
+      }
+    },
+    "ui.optimize.stale.old" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measurement is old"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phép đo đã cũ"
+          }
+        }
+      }
+    },
+    "ui.optimize.stale.other_network" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measured on another network"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đo trên mạng khác"
           }
         }
       }
@@ -24949,6 +25034,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启用实验性优化项？"
+          }
+        }
+      }
+    },
+    "ui.sheet.measured.body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” measures your upload for about 15 seconds (up to 100 MB), before and after the change, and is not applied if there is nothing to fix."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” sẽ đo upload khoảng 15 giây (tối đa 100 MB), trước và sau khi thay đổi, và không áp dụng nếu không có gì cần sửa."
+          }
+        }
+      }
+    },
+    "ui.sheet.measured.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measure your connection first?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đo đường truyền trước?"
           }
         }
       }

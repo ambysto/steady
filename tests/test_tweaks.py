@@ -43,6 +43,8 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
+        self.qos = {"Backup-Agent": 5_000_000}   # policy name -> throttle bit/s; someone else's policy
+        self.qos_rounding = 0          # Windows may store a slightly different rate
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -75,6 +77,10 @@ class FakeSystem:
     def binding_get(self, adapter, component):
         self._r("binding_get", adapter, component)
         return self.bindings.get((adapter, component))
+
+    def qos_policy_get(self, name):
+        self._r("qos_policy_get", name)
+        return self.qos.get(name)
 
     # writes
     def _w(self, name, *args):
@@ -114,12 +120,20 @@ class FakeSystem:
         if self._w("binding_set", adapter, component, enabled):
             self.bindings[(adapter, component)] = enabled
 
+    def qos_policy_set(self, name, bits_per_second):
+        if self._w("qos_policy_set", name, bits_per_second):
+            self.qos[name] = bits_per_second + self.qos_rounding
+
+    def qos_policy_remove(self, name):
+        if self._w("qos_policy_remove", name):
+            self.qos.pop(name, None)
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
-        return copy.deepcopy((self.props, self.registry, self.power, self.bindings))
+        return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.qos))
 
 
 def power_saving():

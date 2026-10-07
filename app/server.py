@@ -20,6 +20,7 @@ import uuid
 from dataclasses import asdict, is_dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlsplit
 
@@ -144,6 +145,8 @@ class Api:
                  load_backup: Callable[[], dict] = config.load_backup,
                  autostart_status: Callable[[], Any] | None = None,
                  route: Callable[[], dict | None] = winutil.default_route_native,
+                 measure_tweak: Callable[[str], dict | None] | None = None,
+                 network_id: Callable[[], str | None] | None = None,
                  sync_jobs: bool = False) -> None:
         self.monitor, self.storage, self.failover = monitor, storage, failover
         self._load, self._save, self._is_admin, self._clock = load_settings, save_settings, is_admin, clock
@@ -154,6 +157,8 @@ class Api:
         self._actions = actions
         self._run_diagnostics = run_diagnostics or self._default_diagnostics
         self._run_bufferbloat = run_bufferbloat or self._default_bufferbloat
+        self._measure_tweak = measure_tweak or self._default_measure_tweak
+        self._network_id = network_id or self._default_network_id
         self.jobs = Jobs(clock)
         self._sync = sync_jobs
         self._settings_lock = threading.Lock()
@@ -225,9 +230,19 @@ class Api:
         return autostart.status()
 
     @staticmethod
-    def _default_elevate(op: str, value: str) -> Any:
+    def _default_elevate(op: str, value: str, **extra: Any) -> Any:
         from .elevation import run_elevated
-        return run_elevated(op, value)
+        return run_elevated(op, value, **extra)
+
+    @staticmethod
+    def _default_measure_tweak(tweak_id: str) -> dict | None:
+        from . import tweaks
+        return tweaks.measure_for(next(t for t in tweaks.CATALOG if t.id == tweak_id))()
+
+    @staticmethod
+    def _default_network_id() -> str | None:
+        from . import calibration
+        return calibration.current_network_id()
 
     def _default_diagnostics(self) -> dict:
         from . import diagnostics
@@ -321,7 +336,8 @@ class Api:
         from . import suggestions, tweaks
         states = self._tweak_cache["states"]
         tweak_states = {s["id"]: s for s in states} if states else None
-        meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk} for t in tweaks.CATALOG}
+        meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk, "measured": isinstance(t, tweaks.MeasuredTweak)}
+                for t in tweaks.CATALOG}
         out = suggestions.build(self.storage, self._clock(), tweak_states, meta)
         if self._last_bufferbloat:
             extra = suggestions.suggest(self._last_bufferbloat, tweak_states, suggestions.done_steps(self.storage, self._clock()), meta)
@@ -388,7 +404,15 @@ class Api:
 
     def _refresh_tweaks(self) -> dict:
         def work() -> list:
+            from . import calibration
             states = [asdict(s) for s in self._tweak_manager().states()]
+            if any(s.get("measurement") for s in states):
+                try:
+                    network = self._network_id()
+                except Exception:
+                    network = None
+                for s in states:
+                    s["stale"] = calibration.staleness(s.get("measurement"), network, self._clock())
             self._tweak_cache.update(states=states, refreshed_at=self._clock())
             return states
         return self.jobs.submit("tweak_states", work, single="tweak_states", sync=self._sync)
@@ -426,7 +450,9 @@ class Api:
         enable = body["enable"]
 
         def work() -> dict:
-            if self._is_admin():
+            if enable and self._is_measured(tweak_id):
+                result = self._enable_measured(tweak_id)
+            elif self._is_admin():
                 mgr = self._tweak_manager()
                 mgr.get(tweak_id)  # KeyError -> job error for an unknown id
                 out = mgr.enable(tweak_id) if enable else mgr.disable(tweak_id)
@@ -438,6 +464,30 @@ class Api:
             return result
         # One write at a time: two UAC prompts or two writers racing on backup.json would be confusing at best.
         return self.jobs.submit(f"tweak:{tweak_id}", work, single="tweak_write", sync=self._sync)
+
+    @staticmethod
+    def _is_measured(tweak_id: str) -> bool:
+        from . import tweaks
+        return any(t.id == tweak_id and isinstance(t, tweaks.MeasuredTweak) for t in tweaks.CATALOG)
+
+    def _enable_measured(self, tweak_id: str) -> dict:
+        """Measure, refuse before UAC when there is nothing to fix, enable, measure again (ADR-0015)."""
+        from . import tweaks
+        admin = self._is_admin()
+        mgr = self._tweak_manager()
+
+        def enable(measurement: dict) -> Any:
+            if admin:
+                return mgr.enable(tweak_id, measurement)
+            res = self._elevate("tweak-enable", tweak_id, measurement=measurement)
+            return SimpleNamespace(ok=res.ok, message=res.message, cancelled=res.cancelled,
+                                   changed=bool((res.result or {}).get("changed", res.ok)))
+
+        def record(kind: str, message: Any, level: str) -> None:
+            self.storage.add_event(int(self._clock()), kind, message, level=level)
+
+        result = tweaks.enable_measured(mgr, tweak_id, lambda: self._measure_tweak(tweak_id), enable, record)
+        return {**result, "elevated": not admin}
 
     def action(self, name: str, **_: Any) -> dict:
         if name not in ACTIONS:
