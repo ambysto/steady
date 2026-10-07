@@ -56,7 +56,8 @@ struct LocalizationTests {
                                  "ui.live.measuring", "ui.live.no_reply", "ui.live.rtt", "ui.live.loss",
                                  "ui.live.jitter", "ui.diag.run", "ui.diag.running", "ui.diag.on_demand", "ui.diag.count.info",
                                  "ui.diag.bufferbloat_run", "ui.diag.bufferbloat_confirm", "ui.sheet.cancel",
-                                 "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload"]
+                                 "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload",
+                                 "ui.language.label", "ui.language.auto", "apple.ui.language.auto", "ui.language.hint"]
         used.formUnion([CheckStatus.ok, .info, .warn, .bad].map { "ui.status." + $0.rawValue })
         for check in [PingQuality.evaluate(hour: [], recent: []), DNSBenchmark.evaluate([], inUse: [], roles: [:]),
                       WiFiSignal.evaluate(nil), VPNCheck.evaluate([]),

@@ -826,6 +826,7 @@
   "apple.diag.physical_link.ok": "Senderate und Paketverlust zum Router sind stabil",
   "apple.diag.physical_link.advice": "Diese Prüfung kann die Ursache nicht bestimmen. Zuerst ausschließen: Kanalstörungen und die Wi‑Fi-Einstellungen des Routers (MLO/Wi‑Fi 7, das Wi‑Fi eines alten Modems). Wenn diese in Ordnung sind, auf die Umgebung des Mac tippen: Metall, ein geschlossener Deckel, ein Dock oder ein Bildschirm können seine Antennen verdecken; den Mac frei oder näher am Router aufstellen und nach einigen Stunden erneut vergleichen.",
   "apple.diag.physical_link.advice_improved": "Wenn gerade der Mac oder der Router umgestellt oder eine Einstellung geändert wurde, noch einige Stunden beobachten, um es zu bestätigen.",
+  "apple.ui.language.auto": "Wie das System",
 
   "ui.nav.history": "Verlauf",
   "ui.overview.all_ok": "Alle Prüfungen sind OK",

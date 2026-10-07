@@ -826,6 +826,7 @@
   "apple.diag.physical_link.ok": "Le débit d'émission et la perte de paquets vers le routeur sont stables",
   "apple.diag.physical_link.advice": "Cette vérification ne peut pas déterminer la cause. Écartez d'abord : les interférences de canal et les réglages Wi‑Fi du routeur (MLO/Wi‑Fi 7, le Wi‑Fi d'un ancien modem). Si tout est en ordre, soupçonnez l'environnement du Mac : du métal, un écran rabattu, un dock ou un moniteur peuvent masquer ses antennes ; placez-le à découvert ou plus près du routeur, puis comparez de nouveau après quelques heures.",
   "apple.diag.physical_link.advice_improved": "Si vous venez de déplacer le Mac ou le routeur, ou de changer un réglage, observez encore quelques heures pour confirmer.",
+  "apple.ui.language.auto": "Identique au système",
 
   "ui.nav.history": "Historique",
   "ui.overview.all_ok": "Toutes les vérifications sont OK",

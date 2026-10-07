@@ -826,6 +826,7 @@
   "apple.diag.physical_link.ok": "Tốc độ gửi và mất gói tới router ổn định",
   "apple.diag.physical_link.advice": "Kiểm tra không nói được nguyên nhân. Loại trừ trước: nhiễu kênh và cấu hình Wi‑Fi của router (MLO/Wi‑Fi 7, Wi‑Fi modem cũ). Nếu sạch thì nghi thứ xung quanh Mac: kim loại, gập nắp, dock hay màn hình có thể che ăng-ten; đặt Mac ở chỗ thoáng hoặc gần router hơn rồi so lại sau vài giờ.",
   "apple.diag.physical_link.advice_improved": "Nếu bạn vừa dời Mac/router hoặc đổi cấu hình, theo dõi thêm vài giờ để xác nhận.",
+  "apple.ui.language.auto": "Theo hệ thống",
 
   "ui.nav.history": "Lịch sử",
   "ui.overview.all_ok": "Mọi kiểm tra đều ổn",

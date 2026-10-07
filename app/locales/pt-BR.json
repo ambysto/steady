@@ -826,6 +826,7 @@
   "apple.diag.physical_link.ok": "A taxa de transmissão e a perda de pacotes até o roteador estão estáveis",
   "apple.diag.physical_link.advice": "Esta verificação não identifica a causa. Descarte antes: interferência de canal e as configurações de Wi‑Fi do roteador (MLO/Wi‑Fi 7, Wi‑Fi de um modem antigo). Se tudo isso estiver limpo, suspeite do que está ao redor do Mac: metal, a tampa fechada, um dock ou uma tela podem bloquear as antenas; coloque-o em um lugar aberto ou mais perto do roteador e compare de novo depois de algumas horas.",
   "apple.diag.physical_link.advice_improved": "Se você acabou de mover o Mac ou o roteador, ou mudou alguma configuração, observe mais algumas horas para confirmar.",
+  "apple.ui.language.auto": "Igual ao sistema",
 
   "ui.nav.history": "Histórico",
   "ui.overview.all_ok": "Todas as verificações estão OK",

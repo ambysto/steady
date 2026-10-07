@@ -6,7 +6,7 @@ struct DiagnosticsView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmingBufferbloat = false
     @Environment(\.dynamicTypeSize) private var typeSize
-    private let text = Localizer()
+    @Environment(\.localizer) private var text
 
     var body: some View {
         Form {
