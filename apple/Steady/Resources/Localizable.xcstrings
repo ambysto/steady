@@ -25862,13 +25862,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Überwacht Ihre Verbindung seit %arg Tag. Es musste nichts behoben werden."
+                      "value" : "Überwacht Ihre Verbindung seit %arg Tag. Noch nichts zu berichten."
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Überwacht Ihre Verbindung seit %arg Tagen. Es musste nichts behoben werden."
+                      "value" : "Überwacht Ihre Verbindung seit %arg Tagen. Noch nichts zu berichten."
                     }
                   }
                 }
@@ -25890,13 +25890,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Watching your connection for %arg day. Nothing needed fixing."
+                      "value" : "Watching your connection for %arg day. Nothing to report yet."
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Watching your connection for %arg days. Nothing needed fixing."
+                      "value" : "Watching your connection for %arg days. Nothing to report yet."
                     }
                   }
                 }
@@ -25918,13 +25918,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Vigilando tu conexión desde hace %arg día. No hizo falta arreglar nada."
+                      "value" : "Vigilando tu conexión desde hace %arg día. Nada que contar por ahora."
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Vigilando tu conexión desde hace %arg días. No hizo falta arreglar nada."
+                      "value" : "Vigilando tu conexión desde hace %arg días. Nada que contar por ahora."
                     }
                   }
                 }
@@ -25946,13 +25946,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Surveille votre connexion depuis %arg jour. Rien n'a eu besoin d'être corrigé."
+                      "value" : "Surveille votre connexion depuis %arg jour. Rien à signaler pour l'instant."
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Surveille votre connexion depuis %arg jours. Rien n'a eu besoin d'être corrigé."
+                      "value" : "Surveille votre connexion depuis %arg jours. Rien à signaler pour l'instant."
                     }
                   }
                 }
@@ -25974,13 +25974,13 @@
                   "one" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Monitorando sua conexão há %arg dia. Nada precisou ser corrigido."
+                      "value" : "Monitorando sua conexão há %arg dia. Nada a relatar ainda."
                     }
                   },
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Monitorando sua conexão há %arg dias. Nada precisou ser corrigido."
+                      "value" : "Monitorando sua conexão há %arg dias. Nada a relatar ainda."
                     }
                   }
                 }
@@ -26002,7 +26002,7 @@
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "Đã theo dõi kết nối %arg ngày. Không có gì cần sửa."
+                      "value" : "Đã theo dõi kết nối %arg ngày. Chưa có gì để báo."
                     }
                   }
                 }
@@ -26024,12 +26024,59 @@
                   "other" : {
                     "stringUnit" : {
                       "state" : "translated",
-                      "value" : "已监控您的连接 %arg 天。没有需要修复的问题。"
+                      "value" : "已监控您的连接 %arg 天。暂时没有可报告的内容。"
                     }
                   }
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "ui.value.empty_new" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady hat gerade erst begonnen, Ihre Verbindung zu überwachen. Noch nichts zu berichten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady has just started watching your connection. Nothing to report yet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady acaba de empezar a vigilar tu conexión. Nada que contar por ahora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady vient de commencer à surveiller votre connexion. Rien à signaler pour l'instant."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Steady acabou de começar a monitorar sua conexão. Nada a relatar ainda."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady vừa bắt đầu theo dõi kết nối của bạn. Chưa có gì để báo."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Steady 刚开始监控您的连接。暂时没有可报告的内容。"
           }
         }
       }

@@ -191,6 +191,10 @@ class Storage:
         with self._lock:
             return [dict(r) for r in self._db.execute(sql, tuple(params)).fetchall()]
 
+    def first_minute_ts(self) -> int | None:
+        """When the monitor's oldest kept minute starts (None: nothing measured yet)."""
+        return self._rows("SELECT MIN(ts) AS ts FROM minute_stats", [])[0]["ts"]
+
     def query_minute_stats(self, start: int, end: int, target: str | None = None) -> list[dict[str, Any]]:
         """Rows with start <= ts < end, oldest first."""
         sql = "SELECT * FROM minute_stats WHERE ts >= ? AND ts < ?"

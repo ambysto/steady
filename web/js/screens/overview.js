@@ -8,6 +8,7 @@ import { duration, number, t, timeOf } from "../i18n.js";
 import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
 import { failoverKey, failoverRows, suggestionAction } from "../widgets.js";
 import { loadBadge } from "./diagnostics.js";
+import { showGroup } from "./log.js";
 
 const RANGES = { live: { label: "ui.range.live" }, day: { label: "ui.range.day", hours: 24, bucket: 5 },
                  week: { label: "ui.range.week", hours: 168, bucket: 30 } };
@@ -163,9 +164,51 @@ function quickActions(ctx) {
 }
 
 let suggestions = null;
+let value = null;
 
 async function loadSuggestions(ctx) {
-  suggestions = await get("/api/suggestions");
+  [suggestions, value] = await Promise.all([get("/api/suggestions"), get("/api/value").catch(() => null)]);
+}
+
+// --- what the app did (ADR-0020 point 8): counted from the log, a line only for what happened ---------
+
+function valueRow(tile, iconName, label, secondary, group) {
+  return el("div", { class: "row" }, el("div", { class: `icon-tile ${tile}` }, icon(iconName)),
+    el("div", { class: "main" }, el("div", { class: "label" }, label),
+      secondary.map(line => el("div", { class: "secondary" }, line))),
+    el("button", { class: "button", onclick: () => showGroup(group) }, t("ui.value.open_log")));
+}
+
+/** One line per measured improvement: what it was, and the first number behind it. */
+const helpedLines = list => list.map(x => (x.impact?.details?.length ? `${x.title} · ${x.impact.details[0]}` : x.title));
+
+function valueCard(ctx) {
+  if (!value) return null;
+  const rows = [];
+  if (value.recovered.count) {
+    rows.push(valueRow("accent", "shield", t("ui.value.recovered", { count: value.recovered.count }),
+      [t("ui.value.recovered_detail", { duration: duration(value.recovered.avg_s) })], "watchdog"));
+  }
+  if (value.tweaks_helped.length) {
+    rows.push(valueRow("ok", "sliders", t("ui.value.tweak_helped", { count: value.tweaks_helped.length }),
+      helpedLines(value.tweaks_helped), "changes"));
+  }
+  if (value.steps_helped.length) {
+    rows.push(valueRow("ok", "check", t("ui.value.step_helped", { count: value.steps_helped.length }),
+      helpedLines(value.steps_helped), "changes"));
+  }
+  if (value.failover_switches) {
+    rows.push(valueRow("accent", "network", t("ui.value.failover", { count: value.failover_switches }), [], "watchdog"));
+  }
+  if (!rows.length) {
+    const days = value.watching_since ? Math.floor((nowOf(ctx) - value.watching_since) / 86400) : 0;
+    rows.push(el("div", { class: "row" }, el("div", { class: "icon-tile" }, icon("shield")),
+      el("div", { class: "main" }, el("div", { class: "label" },
+        days >= 1 ? t("ui.value.empty", { count: days }) : t("ui.value.empty_new")))));
+  }
+  return [el("div", { class: "section-title section-title-row" }, el("span", {}, t("ui.value.title")),
+            el("span", { class: "time" }, t("ui.value.window"))),
+          el("div", { class: "group" }, rows)];
 }
 
 // --- connection check (ADR-0020): one big round button, the real progress, what was found ---------
@@ -421,6 +464,7 @@ function resultCard(ctx, card) {
 
 function drawCheck(ctx) {
   slots.check && fill(slots.check, checkCard(ctx));
+  slots.value && fill(slots.value, valueCard(ctx));
 }
 
 /** Resolves true when a new run was saved and loaded. */
@@ -478,12 +522,12 @@ async function loadFailover() {
 }
 
 function draw(ctx) {
-  for (const name of ["hero", "check", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
+  for (const name of ["hero", "check", "value", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
   slots.stats.style.marginTop = "var(--space-3)";
   fill(root(), 
     el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview"))),
     slots.hero,
-    slots.check,
+    slots.check, slots.value,
     el("div", { class: "section-title" }, t("ui.overview.latency")), slots.chart, slots.stats,
     el("div", { class: "two-col" },
       el("div", {}, el("div", { class: "section-title" }, t("ui.overview.recent")), slots.recent),

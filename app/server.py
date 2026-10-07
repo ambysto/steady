@@ -186,6 +186,7 @@ class Api:
             ("GET", re.compile(r"^/api/tweaks$"), self.tweaks),
             ("GET", re.compile(r"^/api/impact$"), self.impact),
             ("GET", re.compile(r"^/api/suggestions$"), self.suggestions),
+            ("GET", re.compile(r"^/api/value$"), self.value),
             ("GET", re.compile(r"^/api/failover$"), self.failover_state),
             ("POST", re.compile(r"^/api/failover/prefer/(?P<index>\d{1,6})$"), self.failover_prefer),
             ("POST", re.compile(r"^/api/failover/restore$"), self.failover_restore),
@@ -370,6 +371,11 @@ class Api:
             out["items"] = sorted(out["items"] + [i for i in extra if (i["kind"], i["id"]) not in known],
                                   key=suggestions.order)
         return out
+
+    def value(self, **_: Any) -> dict:
+        """What the app did over the last 7 days, counted from the log (ADR-0020 point 8)."""
+        from . import value
+        return value.summarize(self.storage, self._clock(), self._changes())
 
     def failover_state(self, **_: Any) -> dict:
         """Paths, which one carries the traffic, whether we switched (ADR-0008)."""
