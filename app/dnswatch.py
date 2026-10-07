@@ -23,7 +23,7 @@ CONFIRM = 2
 # Tweaks that change the DNS servers, and how long after their tweak_enabled / tweak_disabled event
 # a DNS change still counts as theirs (longer than two looks of the monitor, dns_watch.interval_s).
 DNS_TWEAK_IDS = ("dns_fastest",)
-TWEAK_EVENT_KINDS = ("tweak_enabled", "tweak_disabled")
+TWEAK_EVENT_KINDS = ("tweak_enabled", "tweak_disabled", "tweak_failed")   # a failed change may still have moved DNS
 APP_CHANGE_WINDOW_S = 300
 
 

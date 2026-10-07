@@ -651,6 +651,14 @@ class RunAllTests(unittest.TestCase):
         self.assertEqual(len({r.key for r in report.results}), 14)
         self.assertFalse([r for r in report.results if r.error])
 
+    def test_check_numbers_and_keys_are_unique(self):
+        # Two branches each took the next free number once; a clash would make a saved run ambiguous.
+        every = diagnostics.CHECKS + diagnostics.ON_DEMAND_CHECKS
+        ids = [cid for cid, _, _ in every]
+        keys = [key for _, key, _ in every]
+        self.assertEqual(len(ids), len(set(ids)), ids)
+        self.assertEqual(len(keys), len(set(keys)), keys)
+
     def test_a_broken_check_does_not_hide_the_others(self):
         def boom():
             raise OSError("netsh died")
