@@ -389,6 +389,7 @@
   "tweak.reason.dns_no_fast_servers": "A medição não encontrou dois provedores de DNS público que respondam de forma confiável; nada foi alterado",
   "tweak.reason.no_default_dns": "Sem backup; as configurações originais de DNS são desconhecidas",
   "tweak.reason.dns_other_interface": "o backup salvo pertence a outra conexão de rede. Desative primeiro, enquanto essa conexão estiver em uso",
+  "tweak.reason.dns_backup_elsewhere": "Ativado para outra conexão de rede ({name}), não a que está em uso agora. Desative para devolver o DNS dessa conexão",
   "tweak.reason.dns_interface_gone": "A conexão de rede cujo DNS foi alterado não está disponível agora (desconectada ou removida)",
   "tweak.reason.no_doh": "Este Windows não oferece suporte a DNS sobre HTTPS (requer Windows 11 ou um Windows 10 recente)",
 

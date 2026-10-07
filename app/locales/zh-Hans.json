@@ -389,6 +389,7 @@
   "tweak.reason.dns_no_fast_servers": "测量没有找到两家响应稳定的公共 DNS 服务商；未做任何更改",
   "tweak.reason.no_default_dns": "没有备份；不知道原来的 DNS 设置",
   "tweak.reason.dns_other_interface": "已保存的备份属于另一个网络连接。请在使用该连接时先将其关闭",
+  "tweak.reason.dns_backup_elsewhere": "已为另一个网络连接（{name}）开启，而不是当前使用的连接。将其关闭即可恢复该连接的 DNS",
   "tweak.reason.dns_interface_gone": "被更改 DNS 的网络连接当前不可用（已拔出或移除）",
   "tweak.reason.no_doh": "此 Windows 不支持 DNS over HTTPS（需要 Windows 11 或较新的 Windows 10）",
 
