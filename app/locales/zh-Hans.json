@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "上传",
   "diag.bufferbloat.no_load": "无法产生{phase}负载：{error}",
   "diag.bufferbloat.weak_load": "{phase}负载仅达到 {mbps:.1f} Mbps，不足以占满线路",
+  "diag.bufferbloat.refused": "测试服务器拒绝了{phase}负载（HTTP {status}：它按地址限制测试流量）；请约 {minutes} 分钟后重试",
+  "diag.bufferbloat.refused_later": "测试服务器拒绝了{phase}负载（HTTP {status}：它按地址限制测试流量）；请稍后重试",
+  "diag.bufferbloat.at_ceiling": "{phase}负载停在了测试自身的上限（{mbps:.0f} Mbps）：线路可能更快，因此其队列可能未被填满",
+  "diag.bufferbloat.ok_incomplete": "在能测到的范围内延迟没有上升（最多 +{delta:.0f} ms），但测量不完整",
+  "diag.bufferbloat.advice_incomplete": "只有两个方向都占满线路的测量才能说明一切正常；请稍后重新运行。",
+  "diag.bufferbloat.advice_later": "请等待测试服务器重新接受负载后再运行。",
   "diag.bufferbloat.all_lost": "{label}：{phase}期间所有 ping 均丢失",
   "diag.bufferbloat.line": "{phase}期间的{label}（{mbps:.0f} Mbps）：中位数 {median:.0f} ms，p95 {p95:.0f} ms，增加 {delta:+.0f} ms，丢包 {loss:.0f}%",
   "diag.bufferbloat.no_result": "无法测量负载下的延迟",
@@ -564,7 +570,7 @@
   "ui.diag.advice": "建议操作",
   "ui.diag.open_tweak": "在“优化”中打开",
   "ui.diag.on_demand": "按需运行",
-  "ui.diag.bufferbloat_run": "测量（约 30 秒，最多使用 200 MB）",
+  "ui.diag.bufferbloat_run": "测量（约 30 秒，线路快时最多使用 2 GB）",
 
   "ui.status.ok": "正常",
   "ui.status.warn": "警告",
@@ -682,7 +688,7 @@
   "ui.optimize.loading": "正在读取当前设置…",
 
   "ui.diag.never": "尚未运行过诊断",
-  "ui.diag.bufferbloat_confirm": "这将在约 30 秒内从 speed.cloudflare.com 下载和上传最多约 200 MB 的数据。",
+  "ui.diag.bufferbloat_confirm": "这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。",
   "ui.diag.measure": "测量",
 
   "ui.common.on": "开",

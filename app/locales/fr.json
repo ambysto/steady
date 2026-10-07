@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "envoi",
   "diag.bufferbloat.no_load": "Impossible de générer la charge ({phase}) : {error}",
   "diag.bufferbloat.weak_load": "La charge ({phase}) n'a atteint que {mbps:.1f} Mbps, insuffisant pour saturer la ligne",
+  "diag.bufferbloat.refused": "Le serveur de test a refusé la charge ({phase}) (HTTP {status} : il limite le trafic de test par adresse) ; réessayez dans environ {minutes} min",
+  "diag.bufferbloat.refused_later": "Le serveur de test a refusé la charge ({phase}) (HTTP {status} : il limite le trafic de test par adresse) ; réessayez plus tard",
+  "diag.bufferbloat.at_ceiling": "La charge ({phase}) s'est arrêtée à la limite propre du test ({mbps:.0f} Mbps) : la ligne est peut-être plus rapide, sa file d'attente ne s'est donc peut-être pas remplie",
+  "diag.bufferbloat.ok_incomplete": "Aucune hausse là où la mesure a été possible (+{delta:.0f} ms au maximum), mais la mesure est incomplète",
+  "diag.bufferbloat.advice_incomplete": "Seule une mesure où les deux sens saturent la ligne peut montrer que tout va bien ; relancez plus tard.",
+  "diag.bufferbloat.advice_later": "Attendez que le serveur de test accepte à nouveau la charge, puis relancez.",
   "diag.bufferbloat.all_lost": "{label} : tous les pings perdus en charge ({phase})",
   "diag.bufferbloat.line": "{label} en charge ({phase}, {mbps:.0f} Mbps) : médiane {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms ajoutés, {loss:.0f}% perdus",
   "diag.bufferbloat.no_result": "Impossible de mesurer la latence en charge",
@@ -564,7 +570,7 @@
   "ui.diag.advice": "Que faire",
   "ui.diag.open_tweak": "Ouvrir dans Optimiser",
   "ui.diag.on_demand": "À la demande",
-  "ui.diag.bufferbloat_run": "Mesurer (environ 30 s, jusqu'à 200 Mo)",
+  "ui.diag.bufferbloat_run": "Mesurer (environ 30 s, jusqu'à 2 Go sur une ligne rapide)",
 
   "ui.status.ok": "OK",
   "ui.status.warn": "Avertissement",
@@ -682,7 +688,7 @@
   "ui.optimize.loading": "Lecture des paramètres actuels…",
 
   "ui.diag.never": "Aucun diagnostic n'a encore été exécuté",
-  "ui.diag.bufferbloat_confirm": "Cela télécharge et envoie jusqu'à environ 200 Mo depuis speed.cloudflare.com pendant environ 30 secondes.",
+  "ui.diag.bufferbloat_confirm": "Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes : environ 250 Mo par tranche de 100 Mbps de débit, 2 Go au maximum.",
   "ui.diag.measure": "Mesurer",
 
   "ui.common.on": "Activé",

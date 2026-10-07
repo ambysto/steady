@@ -3,11 +3,16 @@ import time
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from app import bufferbloat as bb, i18n
+from app import bufferbloat as bb
+from app import i18n
 from tests.localized import DiagnosticsIn
 from app.bufferbloat import Measurement, Phase
 
 d = DiagnosticsIn("vi")   # evaluate_* return Vietnamese text; see tests/localized.py
+
+
+def vi(message):
+    return i18n.render(message, "vi")
 
 
 def phase(name, rtts, mbps=50.0, error=""):
@@ -104,6 +109,44 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(r.status, d.BAD)
         self.assertTrue(any("Không tạo được tải chiều tải lên" in x for x in r.details))
 
+    def test_ok_from_one_direction_only_is_incomplete_not_ok(self):
+        m = meas()
+        m.download = Phase("download", {}, None, "ServerRefused: HTTP 429", refused=429, retry_after_s=1780)
+        r = d.evaluate_bufferbloat(m)
+        self.assertEqual(r.status, d.INFO)
+        self.assertEqual(r.summary, vi(d.msg("diag.bufferbloat.ok_incomplete", delta=5.0)))
+        self.assertIn(vi(d.msg("diag.bufferbloat.refused", phase=d.msg("diag.bufferbloat.download"), status=429,
+                               minutes=30)), r.details)
+
+    def test_refusal_without_retry_after_says_later(self):
+        m = meas()
+        m.upload = Phase("upload", {}, None, "ServerRefused: HTTP 403", refused=403)
+        self.assertIn(vi(d.msg("diag.bufferbloat.refused_later", phase=d.msg("diag.bufferbloat.upload"), status=403)),
+                      d.evaluate_bufferbloat(m).details)
+
+    def test_both_directions_refused_advises_waiting(self):
+        m = meas()
+        m.download = Phase("download", {}, None, "x", refused=429, retry_after_s=30)
+        m.upload = Phase("upload", {}, None, "x", refused=429, retry_after_s=30)
+        r = d.evaluate_bufferbloat(m)
+        self.assertEqual((r.status, r.advice), (d.INFO, vi(d.msg("diag.bufferbloat.advice_later"))))
+
+    def test_a_load_at_its_byte_limit_cannot_vouch_for_ok(self):
+        m = meas(mbps=800.0)
+        m.upload.capped = True
+        r = d.evaluate_bufferbloat(m)
+        self.assertEqual(r.status, d.INFO)
+        self.assertIn(vi(d.msg("diag.bufferbloat.at_ceiling", phase=d.msg("diag.bufferbloat.upload"), mbps=800.0)),
+                      r.details)
+
+    def test_a_rise_seen_at_the_byte_limit_is_still_reported(self):
+        m = meas(up_inet=200, mbps=800.0)
+        m.upload.capped = True
+        self.assertEqual(d.evaluate_bufferbloat(m).status, d.BAD)
+
+    def test_complete_run_is_still_ok(self):
+        self.assertEqual(d.evaluate_bufferbloat(meas()).status, d.OK)
+
     def test_missing_router_target_is_fine(self):
         m = meas()
         for p in (m.idle, m.download, m.upload):
@@ -177,7 +220,23 @@ class _LoadHandler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    served = 0
+
     def do_GET(self):
+        if self.path.startswith("/busy") or (self.path.startswith("/flaky") and _LoadHandler.served):
+            self.send_response(403 if "forbidden" in self.path else 429)
+            if "wait" in self.path:
+                self.send_header("Retry-After", "120")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if self.path.startswith("/flaky"):
+            _LoadHandler.served += 1
+            self.send_response(200)
+            self.send_header("Content-Length", "1000000")
+            self.end_headers()
+            self.wfile.write(bytes(1_000_000))
+            return
         if self.path.startswith("/bad"):
             self.send_response(503)
             self.send_header("Content-Length", "0")
@@ -251,6 +310,21 @@ class LoadGeneratorTests(unittest.TestCase):
         self.assertLess(time.monotonic() - started, 6)
         self.assertGreater(sent, 500_000)
 
+    def test_server_refusal_carries_status_and_retry_after(self):
+        with self.assertRaises(bb.ServerRefused) as cm:
+            bb.http_download(self.base + "/busy-wait", 1.0, threading.Event(), connections=2)
+        self.assertEqual((cm.exception.status, cm.exception.retry_after_s), (429, 120.0))
+
+    def test_server_refusal_without_retry_after(self):
+        with self.assertRaises(bb.ServerRefused) as cm:
+            bb.http_download(self.base + "/busy-forbidden", 1.0, threading.Event(), connections=1)
+        self.assertEqual((cm.exception.status, cm.exception.retry_after_s), (403, None))
+
+    def test_refusal_after_some_data_still_fails_the_phase(self):
+        _LoadHandler.served = 0
+        with self.assertRaises(bb.ServerRefused):
+            bb.http_download(self.base + "/flaky", 2.0, threading.Event(), connections=1)
+
     def test_connection_refused_raises(self):
         with self.assertRaises(OSError):
             bb.http_download("http://127.0.0.1:1/x", 1.0, threading.Event(), connections=1)
@@ -295,6 +369,25 @@ class MeasureTests(unittest.TestCase):
                        sleep=lambda s: t.__setitem__(0, t[0] + s), clock=lambda: t[0])
         self.assertIn("blocked", m.download.error)
         self.assertEqual(d.evaluate_bufferbloat(m).status, d.INFO)
+
+    def test_server_refusal_is_recorded_on_the_phase(self):
+        t = [0.0]
+
+        def busy(seconds, stop):
+            raise bb.ServerRefused(429, 1780.0)
+        m = bb.measure(lambda a: 5.0, {"internet": "1.1.1.1"}, busy, lambda s, e: 1_000_000, idle_s=1, load_s=3,
+                       interval=0.5, sleep=lambda s: t.__setitem__(0, t[0] + s), clock=lambda: t[0])
+        self.assertEqual((m.download.refused, m.download.retry_after_s, m.upload.refused), (429, 1780.0, None))
+
+    def test_a_load_that_reaches_the_byte_limit_is_capped(self):
+        t = [0.0]
+        m = bb.measure(lambda a: 5.0, {"internet": "1.1.1.1"}, lambda s, e: 5_000, lambda s, e: 4_999,
+                       idle_s=1, load_s=3, interval=0.5, max_bytes=5_000,
+                       sleep=lambda s: t.__setitem__(0, t[0] + s), clock=lambda: t[0])
+        self.assertEqual((m.download.capped, m.upload.capped), (True, False))
+
+    def test_the_byte_limit_is_far_above_the_old_80_mbps(self):
+        self.assertGreaterEqual(bb.LOAD_CEILING_MBPS, 500)
 
     def test_ramp_samples_are_dropped(self):
         t = [0.0]

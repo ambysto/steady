@@ -212,6 +212,12 @@
   "diag.bufferbloat.upload": "subida",
   "diag.bufferbloat.no_load": "No se pudo generar carga de {phase}: {error}",
   "diag.bufferbloat.weak_load": "La carga de {phase} solo alcanzó {mbps:.1f} Mbps, insuficiente para llenar la línea",
+  "diag.bufferbloat.refused": "El servidor de prueba rechazó la carga de {phase} (HTTP {status}: limita el tráfico de prueba por dirección); vuelve a intentarlo en unos {minutes} min",
+  "diag.bufferbloat.refused_later": "El servidor de prueba rechazó la carga de {phase} (HTTP {status}: limita el tráfico de prueba por dirección); vuelve a intentarlo más tarde",
+  "diag.bufferbloat.at_ceiling": "La carga de {phase} se detuvo en el límite propio de la prueba ({mbps:.0f} Mbps): la línea puede ser más rápida, así que su cola quizá no se llenó",
+  "diag.bufferbloat.ok_incomplete": "Sin aumento donde se pudo medir (como máximo +{delta:.0f} ms), pero la medición está incompleta",
+  "diag.bufferbloat.advice_incomplete": "Solo una ejecución en la que ambos sentidos llenen la línea puede mostrar que todo está bien; vuelve a ejecutarla más tarde.",
+  "diag.bufferbloat.advice_later": "Espera a que el servidor de prueba vuelva a aceptar la carga y vuelve a ejecutar.",
   "diag.bufferbloat.all_lost": "{label}: se perdieron todos los pings durante la {phase}",
   "diag.bufferbloat.line": "{label} durante la {phase} ({mbps:.0f} Mbps): mediana {median:.0f} ms, p95 {p95:.0f} ms, {delta:+.0f} ms añadidos, {loss:.0f}% perdido",
   "diag.bufferbloat.no_result": "No se pudo medir la latencia bajo carga",
@@ -564,7 +570,7 @@
   "ui.diag.advice": "Qué hacer",
   "ui.diag.open_tweak": "Abrir en Optimizar",
   "ui.diag.on_demand": "Bajo demanda",
-  "ui.diag.bufferbloat_run": "Medir (unos 30 s, usa hasta 200 MB)",
+  "ui.diag.bufferbloat_run": "Medir (unos 30 s, usa hasta 2 GB en una línea rápida)",
 
   "ui.status.ok": "Correcto",
   "ui.status.warn": "Advertencia",
@@ -682,7 +688,7 @@
   "ui.optimize.loading": "Leyendo los ajustes actuales…",
 
   "ui.diag.never": "Aún no se ha ejecutado ningún diagnóstico",
-  "ui.diag.bufferbloat_confirm": "Esto descarga y sube hasta unos 200 MB desde speed.cloudflare.com durante unos 30 segundos.",
+  "ui.diag.bufferbloat_confirm": "Esto descarga y sube desde speed.cloudflare.com a toda velocidad durante unos 30 segundos: unos 250 MB por cada 100 Mbps de velocidad de la línea, como máximo 2 GB.",
   "ui.diag.measure": "Medir",
 
   "ui.common.on": "Activado",
