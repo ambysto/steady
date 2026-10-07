@@ -669,6 +669,7 @@
   "installer.uninstall_failed": "アンインストールは問題が発生した状態で終了しました。",
   "installer.keep_backup": "一部の元の値を復元できなかったため、バックアップを保持しています",
   "installer.restored_all": "すべての最適化が元の値に戻りました",
+  "installer.store_kept": "すべての最適化が元の値に戻りましたが、レジストリのバックアップ記録を削除できませんでした: {error}",
 
   "installer.step.copy": "プログラムを {target} にコピー",
   "installer.step.task": "Windows と同時にネットワークモニターを起動",

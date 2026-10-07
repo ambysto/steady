@@ -12,6 +12,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   - `dns_fastest` accepts DoH entries only for its six candidate addresses with each provider's own template, and always restores the built-in template.
   - Turning a tweak off with a refused entry restores nothing, keeps the backup and logs `tweak.result.backup_rejected` (level `bad`). `adopt_backup` uses the same check. Failover's metric restore refuses an entry that is not `{"automatic": true}` or a metric in 1–9999 (`failover.result.backup_rejected`). 2 new keys in all 9 catalogs.
   - Residual risk: a forged `dns_fastest` entry can still choose which unicast IPv4 DNS servers come back; closing it needs backups the user cannot write.
+- **Backups moved to `HKLM\SOFTWARE\Ambysto\Steady`, where only Administrators can write** ([ADR-0018](docs/adr/0018-backups-in-hklm.md), amends ADR-0016). This closes the residual risk above: a process without Admin can no longer choose the DNS servers (or anything else) that the elevated helper restores.
+  - The whole backup is one JSON value (`Backup`, REG_SZ, 64-bit view). Unelevated processes still read it (whether a tweak has a backup, the preferred failover path, whether uninstalling needs UAC); writing it without Admin fails.
+  - The first elevated process that reads backups imports `data/backup.json` once: only entries that pass the tweak's `check_original` for a tweak that is on now, or a valid failover metric, never over an entry the store has. The file is renamed `backup.json.imported`, and its path is recorded in `ImportedFrom` so it is never imported again. Until then an unelevated reader shows both.
+  - The uninstaller's elevated `restore-all` removes the key (and an empty `HKLM\SOFTWARE\Ambysto`) once everything is restored; uninstalling asks for UAC when there are backups or the key exists. New key `installer.store_kept` in all 9 catalogs.
+  - `backup_lock` is re-entrant within a thread. Tests keep the file backend with `STABLEINTERNET_BACKUP=file` (set in `tests/__init__.py`); the packaged build ignores it.
 
 ## [0.3.0] - 2026-10-07
 

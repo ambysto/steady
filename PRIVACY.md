@@ -9,7 +9,9 @@ personal data anywhere.**
 **Windows.** Measurements (latency, packet loss, Wi‑Fi signal, outages), diagnostics results,
 settings and logs are stored only in `%LOCALAPPDATA%\StableInternet`. The app's window talks to its
 own local server at `127.0.0.1`, which is not reachable from other computers and requires a
-per-session token. Uninstalling offers to delete this data.
+per-session token. Uninstalling offers to delete this data. The original values of the settings an
+optimization changed are kept in the registry, under `HKLM\SOFTWARE\Ambysto\Steady`, so that only an
+Administrator can change them; uninstalling restores those settings and removes the key.
 
 **iPhone, iPad and Mac.** Per-minute measurements (latency, packet loss and jitter to each target
 below) are stored only in the app's own storage on the device, kept for 30 days and excluded from

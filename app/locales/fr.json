@@ -669,6 +669,7 @@
   "installer.uninstall_failed": "La désinstallation s'est terminée avec des problèmes.",
   "installer.keep_backup": "Certaines valeurs d'origine n'ont pas pu être restaurées, leur sauvegarde est donc conservée",
   "installer.restored_all": "Toutes les optimisations sont revenues à leur valeur d'origine",
+  "installer.store_kept": "Toutes les optimisations sont revenues à leur valeur d'origine, mais l'entrée de sauvegarde dans le Registre n'a pas pu être supprimée : {error}",
 
   "installer.step.copy": "Copier le programme dans {target}",
   "installer.step.task": "Démarrer le moniteur réseau avec Windows",

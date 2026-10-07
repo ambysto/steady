@@ -1,8 +1,9 @@
-"""Paths and persistent configuration (settings.json, backup.json).
+"""Paths and persistent configuration (settings.json; backups through app.backupstore).
 
 All writes are atomic (temp file + replace) so a crash or power loss can never
-leave a half-written backup.json - that file holds the only copy of the original
-values a tweak overwrote.
+leave a half-written file. The backups (the only copy of the original values a
+tweak overwrote) live in HKLM since ADR-0018; backup.json is the old place and
+the file backend of the tests.
 """
 from __future__ import annotations
 
@@ -142,32 +143,57 @@ def save_settings(settings: dict[str, Any]) -> None:
     _write_json_atomic(settings_path(), settings)
 
 
-def load_backup() -> dict[str, Any]:
-    """Original tweak values keyed by tweak id. Raises on a corrupt file.
+def read_backup_file(path: Path) -> dict[str, Any]:
+    """A backup.json file as a dict ({} when missing). Raises on a corrupt file.
 
     Unlike settings, a corrupt backup must not silently become "no backup":
     the caller would then capture the *tweaked* values as the originals.
     """
-    stored = _read_json(backup_path())
+    stored = _read_json(path)
     if stored is None:
         return {}
     if not isinstance(stored, dict):
-        raise ValueError(f"{backup_path()} is not a JSON object")
+        raise ValueError(f"{path} is not a JSON object")
     return stored
 
 
-def save_backup(backup: dict[str, Any]) -> None:
+def load_backup_file() -> dict[str, Any]:
+    return read_backup_file(backup_path())
+
+
+def save_backup_file(backup: dict[str, Any]) -> None:
     _write_json_atomic(backup_path(), backup)
 
 
+def load_backup() -> dict[str, Any]:
+    """Original tweak values keyed by tweak id (and failover:<ifIndex>), from the store only the
+    elevated side can write (ADR-0018). Raises when the store cannot be read."""
+    from . import backupstore
+    return backupstore.load()
+
+
+def save_backup(backup: dict[str, Any]) -> None:
+    from . import backupstore
+    backupstore.save(backup)
+
+
 _backup_threads = threading.Lock()
+_backup_held = threading.local()
 
 
 @contextlib.contextmanager
 def backup_lock(timeout: float = 15.0) -> Iterator[None]:
-    """Serialises read-modify-write of backup.json between threads and processes (the monitor,
+    """Serialises read-modify-write of the backups between threads and processes (the monitor,
     the elevated helper, the uninstaller). Without it one process can save a stale copy and
-    drop an entry another process just added - the only record of an original value."""
+    drop an entry another process just added - the only record of an original value.
+    Re-entrant within a thread: loading inside the lock may import the old backup.json (ADR-0018)."""
+    if getattr(_backup_held, "depth", 0):
+        _backup_held.depth += 1
+        try:
+            yield
+        finally:
+            _backup_held.depth -= 1
+        return
     import msvcrt
     with _backup_threads:
         fd = os.open(data_dir() / "backup.json.lock", os.O_RDWR | os.O_CREAT)
@@ -181,9 +207,11 @@ def backup_lock(timeout: float = 15.0) -> Iterator[None]:
                     if time.monotonic() > deadline:
                         raise TimeoutError("backup.json is locked by another process") from None
                     time.sleep(0.05)
+            _backup_held.depth = 1
             try:
                 yield
             finally:
+                _backup_held.depth = 0
                 os.lseek(fd, 0, os.SEEK_SET)
                 msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
         finally:

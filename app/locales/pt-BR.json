@@ -669,6 +669,7 @@
   "installer.uninstall_failed": "A desinstalação foi concluída com problemas.",
   "installer.keep_backup": "Alguns valores originais não puderam ser restaurados, então o backup deles foi mantido",
   "installer.restored_all": "Todas as otimizações voltaram ao valor original",
+  "installer.store_kept": "Todas as otimizações voltaram ao valor original, mas o registro do backup no Registro não pôde ser removido: {error}",
 
   "installer.step.copy": "Copiar o programa para {target}",
   "installer.step.task": "Iniciar o monitor de rede com o Windows",

@@ -671,6 +671,7 @@
   "installer.uninstall_failed": "Uninstalling finished with problems.",
   "installer.keep_backup": "Some original values could not be restored, so their backup is kept",
   "installer.restored_all": "Every optimization is back to its original value",
+  "installer.store_kept": "Every optimization is back to its original value, but the backup record in the registry could not be removed: {error}",
 
   "installer.step.copy": "Copy the program to {target}",
   "installer.step.task": "Start the network monitor with Windows",

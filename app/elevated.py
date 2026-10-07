@@ -71,8 +71,9 @@ def run_op(op: str, value: str) -> dict[str, Any]:
 
 def restore_everything() -> dict[str, Any]:
     """Uninstall: every tweak that has a backup goes back to its original value, and so do
-    failover's interface metrics. Whatever cannot be restored keeps its backup."""
-    from . import failover, tweaks
+    failover's interface metrics. Whatever cannot be restored keeps its backup; once nothing is
+    left, the backup store itself is removed (HKLM, ADR-0018)."""
+    from . import backupstore, failover, tweaks
     from .storage import Storage
     from .winsys import WindowsSystem
     failed: list[Any] = []
@@ -88,6 +89,10 @@ def restore_everything() -> dict[str, Any]:
             failed.append(res.message)
     if failed:
         return {"ok": False, "message": failed[0], "failed": len(failed)}
+    try:
+        backupstore.remove()
+    except Exception as exc:
+        return {"ok": False, "message": msg("installer.store_kept", error=f"{type(exc).__name__}: {exc}")}
     return {"ok": True, "message": msg("installer.restored_all")}
 
 

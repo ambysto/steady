@@ -669,6 +669,7 @@
   "installer.uninstall_failed": "Die Deinstallation wurde mit Problemen beendet.",
   "installer.keep_backup": "Einige ursprüngliche Werte konnten nicht wiederhergestellt werden, daher bleibt ihre Sicherung erhalten",
   "installer.restored_all": "Jede Optimierung ist wieder auf ihrem ursprünglichen Wert",
+  "installer.store_kept": "Jede Optimierung ist wieder auf ihrem ursprünglichen Wert, aber der Sicherungseintrag in der Registrierung konnte nicht entfernt werden: {error}",
 
   "installer.step.copy": "Programm nach {target} kopieren",
   "installer.step.task": "Netzwerkmonitor mit Windows starten",

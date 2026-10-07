@@ -8,8 +8,9 @@ from app import i18n, installer, runtime
 
 
 class FakeOps:
-    def __init__(self, backups=False, restore_ok=True, fail=None, location=None):
+    def __init__(self, backups=False, restore_ok=True, fail=None, location=None, store=None):
         self.calls, self.backups, self.restore_ok, self.fail, self.location = [], backups, restore_ok, fail, location
+        self.store = backups if store is None else store
 
     def _do(self, name, *args):
         self.calls.append((name, *args))
@@ -29,11 +30,12 @@ class FakeOps:
     def launch(self, exe, args): self._do("launch", args)
     def stop_other_instances(self, folder): self._do("stop_instances", folder)
     def backups_left(self): return self.backups
+    def store_left(self): return self.store
 
     def restore_everything(self):
         self._do("restore_all")
         if self.restore_ok:
-            self.backups = False
+            self.backups = self.store = False
         return self.restore_ok, i18n.msg("installer.restored_all")
 
     def delete_tree(self, path): self._do("delete_tree", path)
