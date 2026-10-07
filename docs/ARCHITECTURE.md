@@ -39,7 +39,7 @@
 | `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
 | `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
 | `notify.py` | Windows toasts on connection loss (after 30s) / when the watchdog intervenes, disables itself, or hits an error; rate-limited; runs in the background |
-| `singleton.py` | Prevents two monitors running on the same data directory (named mutex) |
+| `singleton.py` | Prevents two monitors running on the same data directory (named mutex); a new monitor waits up to 10 s for a previous one that is still exiting |
 | `autostart.py` | Task Scheduler task that starts the monitor at logon (created from XML) |
 | `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding, the tool's QoS policy) |
 | `elevated.py`, `elevation.py` | Child process running as Admin via UAC for write operations — ADR-0005 |

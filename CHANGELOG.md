@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Restarting the monitor no longer leaves none running** (SIC-112). When the monitor started while the previous one was still exiting (the task stopped and started back-to-back, an upgrade), it found the previous one's mutex, logged "another monitor instance is already running" and quit; the previous one then exited too and the window showed "offline". A new monitor now keeps trying for up to 10 seconds before it concludes another one is really running; two monitors still never run at once.
+
 ## [0.7.1] - 2026-10-07
 
 After a check, what it found opens in its own view: the problems to fix ticked on the left, each finding on the right, Back and Fix below. "Nothing to fix" shows a screen with a tick and what is left on Optimize. The sidebar no longer repeats the app name.

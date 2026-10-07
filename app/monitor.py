@@ -667,6 +667,9 @@ class Monitor:
 
 
 MUTEX_NAME = "StableInternet.Monitor"
+# A monitor restarted back-to-back (Stop then Start of the task, an upgrade) starts while the
+# previous one still holds the mutex; waiting this long lets it exit instead of both quitting.
+MUTEX_WAIT_SECONDS = 10.0
 
 
 def mutex_name() -> str:
@@ -722,13 +725,18 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Run the StableInternet monitor in the foreground.")
     ap.add_argument("--seconds", type=float, default=0, help="stop after N seconds (default: run until Ctrl+C)")
     ap.add_argument("--log-file", help="also log to this file (rotating); needed when started without a console")
+    ap.add_argument("--instance-wait", type=float, default=MUTEX_WAIT_SECONDS, metavar="SECONDS",
+                    help="how long to wait for a previous monitor that is still exiting (default: %(default)s)")
     args = ap.parse_args(argv)
     _setup_logging(args.log_file)
 
     guard = SingleInstance(mutex_name())
-    if not guard.acquire():
+    started = time.monotonic()
+    if not guard.acquire(wait=args.instance_wait):
         log.info("another monitor instance is already running; exiting")
         return 0
+    if time.monotonic() - started >= 0.5:
+        log.info("previous monitor instance exited after %.1f s; starting", time.monotonic() - started)
     from .failover import Failover  # idle unless enabled (ADR-0008, off by default)
     from .watchdog import Watchdog  # stays idle unless enabled in settings.json (off by default)
 
