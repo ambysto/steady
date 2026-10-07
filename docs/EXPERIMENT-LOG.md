@@ -226,6 +226,23 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
   - Side note: the TCP handshake time to 1.1.1.1:443 (median 105 ms) is twice the ping (47 ms), whereas for 8.8.8.8 they are nearly equal (66 vs. 54 ms). Cloudflare's Anycast may route TCP differently. Therefore probes are only used to know "is the Internet still up or not", not as a latency measurement.
 - **Conclusion:** the main cause of the dropouts was **the card's antennas being blocked by the metal desk frame/PC case** + the configuration factors already dealt with (modem broadcasting Wi‑Fi, MLO). **No need to buy the AX3 yet.** EXP-011/012 become fallbacks.
 
+## EXP-015 — `upload_shaping` on the dev PC, through the tool (2026-10-07)
+
+- **What:** the first run of the upload limit (ADR-0016) on a real machine, from an Administrator PowerShell, with the owner's agreement: plan, `enable --apply`, `disable --apply`, then the three QoS commands of `app/winsys.py` on a throwaway policy `StableInternet-Test` at 900 and 800 Mbps (above the line's speed, so traffic was not limited).
+- **Before:** no QoS policy in the default store or in the `ActiveStore`.
+- **Enable:** measured the upload (~15 s), then **refused**: "Latency rises only 25 ms under upload; nothing to fix, so nothing was changed" (threshold 30 ms). No backup written, no policy created; `disable` answered "Already off". This is the intended behavior on a line without upload bufferbloat, so the limit itself, and the measurement taken again after it, could not be exercised on this line today.
+- **QoS commands, checked on the real machine:**
+
+  | Step | Read back (`Get-NetQosPolicy`) |
+  |---|---|
+  | `qos_policy_set` (no policy yet ⇒ `New-NetQosPolicy -Default`) | 900000000 bit/s |
+  | `qos_policy_set` again (exists ⇒ `Set-NetQosPolicy`) | 800000000 bit/s, exactly |
+  | Both stores | default store: `StableInternet-Test`, 800000000; `ActiveStore`: `stableinternet-test` (lower case), 800000000 — active at once |
+  | `qos_policy_remove` | gone from both stores; a second remove is a no-op |
+
+- **After:** no QoS policy in either store; the machine is as before.
+- **Takeaways:** the rate Windows stores is exactly the rate asked for (no rounding at these values); a policy created in the default store shows up in the `ActiveStore` immediately, under a lower-case name (`-eq` in PowerShell ignores case, so the removal still finds it). Whether the limit lowers latency under upload remains to be measured on a line that has upload bufferbloat — the tweak records that itself (`tweak_verified`).
+
 ## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 
 - **Context:** the PC is **upstairs**, the BE3 router is **downstairs**, a LAN cable cannot be run ⇒ explains the signal of only −66…−80 dBm.

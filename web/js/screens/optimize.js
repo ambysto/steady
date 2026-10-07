@@ -23,14 +23,16 @@ function tweakRow(ctx, st) {
   if (st.disrupts_network) pills.push(el("span", { class: "pill" }, t("ui.optimize.disrupts")));
   if (st.needs_reboot) pills.push(el("span", { class: "pill warn" }, t("ui.optimize.needs_reboot")));
   const warning = st.supported && st.warning ? `${t("ui.optimize.warning")} — ${st.warning}` : "";
-  const note = !st.supported ? `${t("ui.optimize.not_supported")}${st.reason ? ` — ${st.reason}` : ""}` : warning || st.error || st.note;
+  // On only because the driver ships that way: the tool wrote nothing, so there is nothing to switch off.
+  const note = !st.supported ? `${t("ui.optimize.not_supported")}${st.reason ? ` — ${st.reason}` : ""}`
+    : st.on_by_default ? st.reason : warning || st.error || st.note;
   // A measured tweak (ADR-0016): the measurement behind the value, and whether it still fits this network.
   const m = st.enabled ? st.measurement : null;
   const measuredFrom = m && m.value ? t(`ui.optimize.measured.${st.id}`, {
     limit: m.value / 1e6, upload: m.upload_mbps, date: timeOf(m.measured_at, { withDate: true }) }) : null;
   for (const why of (m && st.stale) || []) pills.push(el("span", { class: "pill warn" }, t(`ui.optimize.stale.${why}`)));
   const sw = switchEl(st.enabled, {
-    disabled: !st.supported || busy, label: st.name,
+    disabled: !st.supported || st.on_by_default || busy, label: st.name,
     onToggle: async node => {
       busy = true;
       root().querySelectorAll(".switch").forEach(s => { s.disabled = true; });
