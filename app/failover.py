@@ -271,6 +271,22 @@ def user_source(load_settings: Callable[[], dict] = config.load_settings) -> str
         return "manual"
 
 
+def check_metric_original(index: Any, entry: Any) -> dict[str, Any]:
+    """The original metric of a backup.json entry, refused (ValueError) unless it is one prefer() could have
+    recorded: backup.json is writable without Admin, the helper that restores it is not (ADR-0016)."""
+    if type(index) is not int or index < 1:
+        raise ValueError(f"interface {index!r} is not an index")
+    if not isinstance(entry, dict):
+        raise ValueError("the backup entry is not an object")
+    original = entry.get("original") or {"automatic": True}
+    if not isinstance(original, dict) or not isinstance(original.get("automatic"), bool):
+        raise ValueError(f"{original!r} is not an interface metric")
+    metric = original.get("metric")
+    if not original["automatic"] and not (type(metric) is int and 1 <= metric <= 9999):
+        raise ValueError(f"metric {metric!r} is outside 1..9999")
+    return original
+
+
 @dataclass(frozen=True)
 class SwitchResult:
     ok: bool
@@ -327,7 +343,10 @@ class MetricSwitch:
         entry = store.get(key)
         if not entry:
             return SwitchResult(True, msg("failover.result.nothing"))
-        original = entry.get("original") or {"automatic": True}
+        try:
+            original = check_metric_original(index, entry)
+        except ValueError as exc:
+            return SwitchResult(False, msg("failover.result.backup_rejected", error=str(exc)))
         try:
             self.system.interface_metric_set(index, None if original.get("automatic") else int(original["metric"]))
             now = self.system.interface_metric_get(index)

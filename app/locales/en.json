@@ -385,6 +385,7 @@
   "tweak.result.restore_mismatch": "Restored, but the value does not match the backup; the backup is kept",
   "tweak.result.restored": "Original value restored",
   "tweak.result.bad_backup": "The backup is malformed: {error}",
+  "tweak.result.backup_rejected": "The backup points outside what this tweak changes, so nothing was restored and the backup is kept: {error}",
   "tweak.result.adopt_off": "The tweak is off: the current value already is the original; not adopted",
   "tweak.result.backup_exists": "A backup already exists; keeping the old one",
   "tweak.result.adopted": "Adopted the backup from {source}",
@@ -637,6 +638,7 @@
   "failover.result.restore_failed": "Switching back failed: {error}",
   "failover.result.restored": "Back on the main connection (settings of {path} restored)",
   "failover.result.unknown_path": "Unknown network connection {path}",
+  "failover.result.backup_rejected": "The backup of this connection is not a valid interface metric, so nothing was switched back: {error}",
 
   "notify.failover.switched.title": "Switched to the backup connection",
   "notify.failover.available.title": "A backup connection is available",

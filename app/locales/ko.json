@@ -383,6 +383,7 @@
   "tweak.result.restore_mismatch": "복원했지만 값이 백업과 일치하지 않습니다. 백업은 유지됩니다",
   "tweak.result.restored": "원래 값 복원됨",
   "tweak.result.bad_backup": "백업 형식이 올바르지 않습니다: {error}",
+  "tweak.result.backup_rejected": "백업이 이 조정이 바꾸는 범위 밖을 가리키므로 아무것도 복원하지 않고 백업을 유지했습니다: {error}",
   "tweak.result.adopt_off": "이 최적화는 꺼져 있습니다: 현재 값이 이미 원래 값이므로 채택하지 않았습니다",
   "tweak.result.backup_exists": "백업이 이미 있어 기존 백업을 유지합니다",
   "tweak.result.adopted": "{source}의 백업을 채택했습니다",
@@ -635,6 +636,7 @@
   "failover.result.restore_failed": "원래대로 전환 실패: {error}",
   "failover.result.restored": "주 연결로 복귀함 ({path}의 설정 복원됨)",
   "failover.result.unknown_path": "알 수 없는 네트워크 연결 {path}",
+  "failover.result.backup_rejected": "이 연결의 백업이 올바른 인터페이스 메트릭이 아니므로 다시 전환하지 않았습니다: {error}",
 
   "notify.failover.switched.title": "백업 연결로 전환했습니다",
   "notify.failover.available.title": "백업 연결을 사용할 수 있습니다",

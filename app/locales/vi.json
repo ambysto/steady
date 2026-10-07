@@ -383,6 +383,7 @@
   "tweak.result.restore_mismatch": "khôi phục xong nhưng giá trị không khớp bản sao lưu; bản sao lưu được giữ lại",
   "tweak.result.restored": "Đã khôi phục giá trị gốc",
   "tweak.result.bad_backup": "bản sao lưu không đúng dạng: {error}",
+  "tweak.result.backup_rejected": "Bản sao lưu trỏ ra ngoài phạm vi tinh chỉnh này thay đổi, nên không khôi phục gì và giữ nguyên bản sao lưu: {error}",
   "tweak.result.adopt_off": "tweak đang tắt: giá trị hiện tại đã là gốc, không nhận",
   "tweak.result.backup_exists": "đã có bản sao lưu, giữ bản cũ",
   "tweak.result.adopted": "đã nhận bản sao lưu từ {source}",
@@ -635,6 +636,7 @@
   "failover.result.restore_failed": "Chuyển về thất bại: {error}",
   "failover.result.restored": "Đã về kết nối chính (khôi phục cấu hình của {path})",
   "failover.result.unknown_path": "Không biết kết nối mạng {path}",
+  "failover.result.backup_rejected": "Bản sao lưu của kết nối này không phải metric giao diện hợp lệ, nên không chuyển lại: {error}",
 
   "notify.failover.switched.title": "Đã chuyển sang kết nối dự phòng",
   "notify.failover.available.title": "Có kết nối dự phòng đang thông",

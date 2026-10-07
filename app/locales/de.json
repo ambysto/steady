@@ -383,6 +383,7 @@
   "tweak.result.restore_mismatch": "Wiederhergestellt, aber der Wert stimmt nicht mit der Sicherung überein; die Sicherung bleibt erhalten",
   "tweak.result.restored": "Ursprünglicher Wert wiederhergestellt",
   "tweak.result.bad_backup": "Die Sicherung ist fehlerhaft: {error}",
+  "tweak.result.backup_rejected": "Die Sicherung zeigt auf etwas, das diese Optimierung nicht ändert; nichts wurde wiederhergestellt und die Sicherung bleibt erhalten: {error}",
   "tweak.result.adopt_off": "Die Optimierung ist aus: Der aktuelle Wert ist bereits der ursprüngliche; nicht übernommen",
   "tweak.result.backup_exists": "Es existiert bereits eine Sicherung; die alte wird beibehalten",
   "tweak.result.adopted": "Sicherung aus {source} übernommen",
@@ -635,6 +636,7 @@
   "failover.result.restore_failed": "Zurückwechseln fehlgeschlagen: {error}",
   "failover.result.restored": "Wieder auf der Hauptverbindung (Einstellungen von {path} wiederhergestellt)",
   "failover.result.unknown_path": "Unbekannte Netzwerkverbindung {path}",
+  "failover.result.backup_rejected": "Die Sicherung dieser Verbindung ist keine gültige Schnittstellenmetrik; es wurde nicht zurückgeschaltet: {error}",
 
   "notify.failover.switched.title": "Auf die Ersatzverbindung gewechselt",
   "notify.failover.available.title": "Eine Ersatzverbindung ist verfügbar",

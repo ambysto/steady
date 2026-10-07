@@ -19,6 +19,7 @@ in CATALOG.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import re
 import sys
@@ -30,7 +31,7 @@ from typing import Any, Callable
 
 from . import config, dnsprobe, i18n, winutil
 from .i18n import msg
-from .winsys import System
+from .winsys import OFFLOAD_VALUES, TCP_GLOBAL_VALUES, System
 
 RISKS = ("low", "medium", "experimental")
 Message = Any   # an i18n.msg() dict, or plain text (ADR-0006)
@@ -91,9 +92,46 @@ class Tweak:
         """The part of an `original` that a successful restore must reproduce."""
         return original
 
-    def validate_original(self, original: dict[str, Any]) -> None:
-        """Raise ValueError if `original` is not shaped like this tweak's capture()."""
-        self.restore_key(original)
+    def check_original(self, sys_: System, original: Any) -> None:
+        """Raise ValueError unless `original` is shaped like this tweak's capture() AND every field lies in
+        this tweak's own domain, judged from its declaration and the machine now, never from the file
+        (ADR-0016: backup.json is writable without Admin, the helper that restores it is not). Fails closed."""
+        raise ValueError(f"{type(self).__name__} cannot check a backup")
+
+
+# --- backup checks (ADR-0016) ------------------------------------------------------------
+
+DWORD_MAX = 0xFFFFFFFF
+
+
+def _require(condition: bool, problem: str) -> None:
+    if not condition:
+        raise ValueError(problem)
+
+
+def _fields(original: Any, required: set[str], optional: frozenset[str] = frozenset()) -> dict[str, Any]:
+    _require(isinstance(original, dict), "the backup entry is not an object")
+    keys = set(original)
+    _require(required <= keys <= required | optional,
+             f"fields {sorted(keys)}, expected {sorted(required)}" + (f" (+ {sorted(optional)})" if optional else ""))
+    return original
+
+
+def _is_int(value: Any, low: int = 0, high: int = DWORD_MAX) -> bool:
+    return type(value) is int and low <= value <= high
+
+
+def _same(stored: Any, expected: Any, what: str) -> None:
+    _require(stored == expected, f"{what} {stored!r} is not this tweak's ({expected!r})")
+
+
+def _check_wifi_adapter(sys_: System, stored: Any) -> str:
+    try:
+        adapter = _wifi_adapter(sys_)
+    except Unsupported:
+        raise ValueError("there is no Wi-Fi card to restore to") from None
+    _same(stored, adapter, "adapter")
+    return adapter
 
 
 def _wifi_adapter(sys_: System) -> str:
@@ -172,6 +210,15 @@ class AdapterPropertyTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["adapter"], original["keyword"], str(original["value"]))
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"adapter", "keyword", "value"}, frozenset({"display"}))
+        adapter = _check_wifi_adapter(sys_, original["adapter"])
+        prop = next((p for p in sys_.adapter_properties(adapter) if p["RegistryKeyword"] == original["keyword"]
+                     and any(dn_re.fullmatch(p["DisplayName"]) for dn_re, _ in self.candidates)), None)
+        _require(prop is not None, f"property {original['keyword']!r} is not one this tweak changes")
+        _require(isinstance(original["value"], str) and original["value"] in prop["ValidRegistryValues"],
+                 f"{original['value']!r} is not a valid value of {prop['DisplayName']!r}")
+
     def original_from_display(self, sys_: System, display_value: str) -> dict[str, Any]:
         """Build an `original` from a DisplayValue (e.g. "Auto" in the EXP-001 manual backup)."""
         adapter, prop, _ = self._resolve(sys_)
@@ -228,6 +275,16 @@ class RegistryDwordTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["path"], original["name"], original["value"])
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"path", "name", "value"})
+        try:
+            path = self._path_of(sys_)
+        except Unsupported:
+            raise ValueError("the registry key of this tweak is not on this PC") from None
+        _same(original["path"], path, "registry path")
+        _same(original["name"], self.value_name, "registry value")
+        _require(original["value"] is None or _is_int(original["value"]), f"{original['value']!r} is not a DWORD")
+
 
 class PowerCfgTweak(Tweak):
     """An AC/DC index of the active power plan. No known per-setting default exists, so
@@ -236,9 +293,9 @@ class PowerCfgTweak(Tweak):
     has_default_restore = False
 
     def __init__(self, id: str, name: str, risk: str, *, subgroup: str, setting: str, ac: int, dc: int,
-                 **kw: Any) -> None:
+                 valid: range = range(DWORD_MAX + 1), **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
-        self.subgroup, self.setting, self.ac, self.dc = subgroup, setting, ac, dc
+        self.subgroup, self.setting, self.ac, self.dc, self.valid = subgroup, setting, ac, dc, valid
 
     def read(self, sys_: System) -> Reading:
         ac, dc = sys_.power_get(self.subgroup, self.setting)
@@ -258,6 +315,14 @@ class PowerCfgTweak(Tweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["subgroup"], original["setting"], int(original["ac"]), int(original["dc"]))
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"subgroup", "setting", "ac", "dc"})
+        _same(original["subgroup"], self.subgroup, "power subgroup")
+        _same(original["setting"], self.setting, "power setting")
+        for side in ("ac", "dc"):
+            _require(type(original[side]) is int and original[side] in self.valid,
+                     f"{side} index {original[side]!r} is outside {self.valid.start}..{self.valid.stop - 1}")
 
 
 class BindingTweak(Tweak):
@@ -293,10 +358,18 @@ class BindingTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["adapter"], original["component"], bool(original["enabled"]))
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"adapter", "component", "enabled"})
+        _check_wifi_adapter(sys_, original["adapter"])
+        _same(original["component"], self.component, "binding")
+        _require(isinstance(original["enabled"], bool), f"{original['enabled']!r} is not true or false")
+
 
 class TcpGlobalTweak(Tweak):
     """A `netsh int tcp set global` parameter. `default` is Windows' own value, used to restore when
     there is no backup (None: refuse instead)."""
+
+    VALUES = TCP_GLOBAL_VALUES
 
     def __init__(self, id: str, name: str, risk: str, *, setting: str, target: str, default: str | None,
                  **kw: Any) -> None:
@@ -333,6 +406,11 @@ class TcpGlobalTweak(Tweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["setting"], str(original["value"]))
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"setting", "value"})
+        _same(original["setting"], self.setting, "setting")
+        _require(original["value"] in self.VALUES, f"{original['value']!r} is not one of {self.VALUES}")
 
 
 class RscTweak(Tweak):
@@ -376,11 +454,19 @@ class RscTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["adapter"], original["ipv4"], original["ipv6"])
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"adapter", "ipv4", "ipv6"})
+        _check_wifi_adapter(sys_, original["adapter"])
+        for family in ("ipv4", "ipv6"):
+            _require(original[family] is None or isinstance(original[family], bool),
+                     f"{family} {original[family]!r} is not true, false or null")
+
 
 class OffloadGlobalTweak(Tweak):
     """A Set-NetOffloadGlobalSetting parameter. No known default: restoring needs the backup."""
 
     has_default_restore = False
+    VALUES = OFFLOAD_VALUES
 
     def __init__(self, id: str, name: str, risk: str, *, setting: str, target: str, **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
@@ -412,6 +498,11 @@ class OffloadGlobalTweak(Tweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["setting"], str(original["value"]))
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"setting", "value"})
+        _same(original["setting"], self.setting, "setting")
+        _require(original["value"] in self.VALUES, f"{original['value']!r} is not one of {self.VALUES}")
 
 
 # --- DNS: the fastest public servers, over HTTPS (ADR-0015) ---------------------------------------
@@ -538,8 +629,8 @@ class DnsFastestTweak(Tweak):
         sys_.dns_servers_set(original["interface_index"], list(original["servers"]) if original["static"] else None)
         for address, was in original["doh"].items():
             if was["present"]:
-                sys_.doh_set(address, was["template"] or DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
-                             bool(was["fallback_to_udp"]))
+                # Always the provider's own template: a URL from the file could send DNS anywhere (ADR-0016).
+                sys_.doh_set(address, DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]), bool(was["fallback_to_udp"]))
             else:
                 sys_.doh_remove(address)
 
@@ -550,6 +641,35 @@ class DnsFastestTweak(Tweak):
                 tuple(sorted((a, bool(d["present"]), bool(d["auto_upgrade"]) if d["present"] else None,
                               bool(d["fallback_to_udp"]) if d["present"] else None)
                              for a, d in original["doh"].items())))
+
+    MAX_SERVERS = 8
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"interface_index", "static", "servers", "doh"})
+        _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
+        _require(isinstance(original["static"], bool), "static is not true or false")
+        servers = original["servers"]
+        _require(isinstance(servers, list) and all(isinstance(s, str) for s in servers), "servers is not a list")
+        if original["static"]:
+            _require(1 <= len(servers) <= self.MAX_SERVERS, f"{len(servers)} static servers")
+            for server in servers:
+                _require(_unicast_ipv4(server), f"{server!r} is not a unicast IPv4 address")
+        doh = original["doh"]
+        _require(isinstance(doh, dict) and set(doh) <= set(DOH_ADDRESSES), "DoH entries for other addresses")
+        for address, was in doh.items():
+            _fields(was, {"present", "template", "auto_upgrade", "fallback_to_udp"})
+            _require(all(isinstance(was[f], bool) for f in ("present", "auto_upgrade", "fallback_to_udp")),
+                     f"DoH flags of {address} are not true or false")
+            _require(was["template"] in ("", DOH_ADDRESSES[address][1]),
+                     f"DoH template {was['template']!r} is not {DOH_ADDRESSES[address][0]}'s")
+
+
+def _unicast_ipv4(text: str) -> bool:
+    try:
+        address = ipaddress.IPv4Address(text)
+    except ValueError:
+        return False
+    return not (address.is_unspecified or address.is_multicast or address.is_reserved)
 
 
 # --- read cache ------------------------------------------------------------------------
@@ -770,7 +890,13 @@ class TweakManager:
                 self._event("tweak_disabled", msg("tweak.event.disabled_default", name=t.name, tweak_id=t.id), "info")
                 return Outcome(True, True, msg("tweak.result.restored_default"), self.state(t.id))
 
-            original = entry["original"]
+            try:
+                original = entry["original"]
+                t.check_original(self.system, original)
+            except (KeyError, TypeError, ValueError) as exc:
+                return self._fail(t, msg("tweak.result.backup_rejected", error=str(exc)), level="bad")
+            except Exception as exc:   # the machine could not be read to judge it: still nothing restored
+                return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
             try:
                 t.restore(self.system, original)
                 matches = t.restore_key(t.capture(self.system)) == t.restore_key(original)
@@ -795,9 +921,11 @@ class TweakManager:
         t = self.get(tweak_id)
         with self._lock:
             try:
-                t.validate_original(original)
+                t.check_original(self.system, original)
             except (KeyError, TypeError, ValueError) as exc:
                 return Outcome(False, False, msg("tweak.result.bad_backup", error=str(exc)), None)
+            except Exception as exc:
+                return Outcome(False, False, msg("tweak.result.read_failed", error=str(exc)), None)
             # An outside backup only makes sense for a tweak that is on right now. If it is
             # off, the current value IS the original; adopting a stale one could later
             # "restore" something wrong (seen on the dev PC: most of EXP-001 had been undone).
@@ -921,10 +1049,11 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
                            default_absent=False,  # the driver INF sets a value (16 here); deleting it is a guess
                            group=GROUP_POWER, disrupts_network=True, note=_note("device_power_off")),
         PowerCfgTweak("power_wireless_max", _name("power_wireless_max"), "low",
-                      subgroup=SUB_WIRELESS, setting=SET_WIRELESS, ac=0, dc=0, group=GROUP_POWER,
+                      subgroup=SUB_WIRELESS, setting=SET_WIRELESS, ac=0, dc=0, valid=range(4), group=GROUP_POWER,
                       note=_note("power_wireless_max")),
         PowerCfgTweak("power_pcie_aspm_off", _name("power_pcie_aspm_off"), "low", subgroup=SUB_PCIE,
-                      setting=SET_ASPM, ac=0, dc=0, group=GROUP_POWER, note=_note("power_pcie_aspm_off")),
+                      setting=SET_ASPM, ac=0, dc=0, valid=range(3), group=GROUP_POWER,
+                      note=_note("power_pcie_aspm_off")),
         # 3. Network stack
         RegistryDwordTweak("tcp_timedwait", _name("tcp_timedwait"), "medium", path=TCPIP_PARAMS,
                            value_name="TcpTimedWaitDelay", target=lambda cur: 30, default_absent=True,

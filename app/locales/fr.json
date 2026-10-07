@@ -383,6 +383,7 @@
   "tweak.result.restore_mismatch": "Restauré, mais la valeur ne correspond pas à la sauvegarde ; la sauvegarde est conservée",
   "tweak.result.restored": "Valeur d'origine restaurée",
   "tweak.result.bad_backup": "La sauvegarde est mal formée : {error}",
+  "tweak.result.backup_rejected": "La sauvegarde pointe hors de ce que modifie cet ajustement ; rien n'a été restauré et la sauvegarde est conservée : {error}",
   "tweak.result.adopt_off": "Le tweak est désactivé : la valeur actuelle est déjà l'originale ; non adopté",
   "tweak.result.backup_exists": "Une sauvegarde existe déjà ; l'ancienne est conservée",
   "tweak.result.adopted": "Sauvegarde de {source} adoptée",
@@ -635,6 +636,7 @@
   "failover.result.restore_failed": "Échec du retour à la connexion principale : {error}",
   "failover.result.restored": "Retour à la connexion principale (paramètres de {path} restaurés)",
   "failover.result.unknown_path": "Connexion réseau {path} inconnue",
+  "failover.result.backup_rejected": "La sauvegarde de cette connexion n'est pas une métrique d'interface valide ; aucun retour n'a été fait : {error}",
 
   "notify.failover.switched.title": "Bascule sur la connexion de secours",
   "notify.failover.available.title": "Une connexion de secours est disponible",

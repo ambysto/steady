@@ -383,6 +383,7 @@
   "tweak.result.restore_mismatch": "復元しましたが、値がバックアップと一致しません。バックアップは保持されています",
   "tweak.result.restored": "元の値を復元しました",
   "tweak.result.bad_backup": "バックアップの形式が正しくありません: {error}",
+  "tweak.result.backup_rejected": "バックアップがこの調整の対象外を指しているため、何も復元せずバックアップを保持しました: {error}",
   "tweak.result.adopt_off": "この調整はオフです。現在の値がすでに元の値のため、取り込みませんでした",
   "tweak.result.backup_exists": "バックアップがすでに存在するため、既存のものを保持します",
   "tweak.result.adopted": "{source} からバックアップを取り込みました",
@@ -635,6 +636,7 @@
   "failover.result.restore_failed": "元の接続への切り替えに失敗しました: {error}",
   "failover.result.restored": "メイン接続に戻りました（{path} の設定を復元しました）",
   "failover.result.unknown_path": "不明なネットワーク接続 {path}",
+  "failover.result.backup_rejected": "この接続のバックアップは有効なインターフェイス メトリックではないため、切り替えを戻しませんでした: {error}",
 
   "notify.failover.switched.title": "バックアップ接続に切り替えました",
   "notify.failover.available.title": "バックアップ接続を利用できます",
