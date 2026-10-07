@@ -29,9 +29,6 @@ jobs:
       - name: Build and smoke-test the packaged app
         run: python scripts/build.py --smoke
 
-      # Releases are not code-signed (SIC-50): SignPath Foundation declined the first application.
-      # If signing is added later, sign the zip's contents here and release the signed artifact.
-
       - uses: actions/upload-artifact@v4
         with:
           name: AmbystoSteady-win64
@@ -46,7 +43,7 @@ jobs:
           cat > release-header.md <<'NOTES'
           This release is not code-signed, so Windows SmartScreen may warn on first launch: choose **More info**, then **Run anyway**.
 
-          [Code signing](https://steady.ambysto.com/codesigningpolicy) | [Privacy policy](https://steady.ambysto.com/privacy)
+          [Privacy policy](https://steady.ambysto.com/privacy)
           NOTES
           gh release create "$GITHUB_REF_NAME" dist/AmbystoSteady-*-win64.zip --title "Ambysto Steady $GITHUB_REF_NAME" \
             --notes-file release-header.md --generate-notes

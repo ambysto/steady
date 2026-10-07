@@ -79,11 +79,10 @@ Run tests: `python -m unittest discover -s tests -t .`
 
 Start from [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). All architectural decisions are recorded in [docs/adr/](docs/adr/).
 
-## Code signing and privacy
+## Privacy
 
-Releases are **not code-signed** (this is a free project, and SignPath Foundation declined our first application for lack of public visibility), so Windows SmartScreen may warn on the first launch: choose **More info** → **Run anyway**.
+Releases are **not code-signed**, so Windows SmartScreen may warn on the first launch: choose **More info** → **Run anyway**.
 
-- [Code signing policy](https://steady.ambysto.com/codesigningpolicy) (source: [CODE_SIGNING.md](CODE_SIGNING.md))
 - [Privacy policy](https://steady.ambysto.com/privacy) (source: [PRIVACY.md](PRIVACY.md)) — no data collection; lists every connection the app makes.
 
 ## License
