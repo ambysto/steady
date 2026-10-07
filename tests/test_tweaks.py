@@ -9,7 +9,7 @@ import unittest
 from app import config, i18n, tweaks
 from app.tweaks import (AdapterPropertyTweak, BindingTweak, NoDefaultRestore, PowerCfgTweak, RegistryDwordTweak,
                         TweakManager)
-from app.winsys import SystemWriteError
+from app.winsys import SystemWriteError, WifiBands
 
 CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\0011"
 
@@ -43,7 +43,7 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
-        self.ssid_bands = ("HomeNet", frozenset({"2.4 GHz", "5 GHz"}))   # None: not on Wi-Fi
+        self.ssid_bands = WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz", "5 GHz"}))   # None: not on Wi-Fi
         self.tcp_global = {"ecncapability": "disabled"}
         self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
         self.offload = {"PacketCoalescingFilter": "Enabled"}
@@ -53,6 +53,8 @@ class FakeSystem:
         # What Windows 11 ships: a template for each public server, auto-upgrade for none of them.
         self.doh = {address: {"template": template, "auto_upgrade": False, "fallback_to_udp": False}
                     for address, (_, template) in tweaks.DOH_ADDRESSES.items()}
+        self.qos = {"Backup-Agent": 5_000_000}   # policy name -> throttle bit/s; someone else's policy
+        self.qos_rounding = 0          # Windows may store a slightly different rate
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -106,9 +108,13 @@ class FakeSystem:
         self._r("doh_get")
         return copy.deepcopy(self.doh)
 
-    def wifi_ssid_bands(self):
-        self._r("wifi_ssid_bands")
+    def wifi_ssid_bands(self, adapter):
+        self._r("wifi_ssid_bands", adapter)
         return self.ssid_bands
+
+    def qos_policy_get(self, name):
+        self._r("qos_policy_get", name)
+        return self.qos.get(name)
 
     # writes
     def _w(self, name, *args):
@@ -176,13 +182,21 @@ class FakeSystem:
         if self._w("doh_remove", address):
             self.doh.pop(address, None)
 
+    def qos_policy_set(self, name, bits_per_second):
+        if self._w("qos_policy_set", name, bits_per_second):
+            self.qos[name] = bits_per_second + self.qos_rounding
+
+    def qos_policy_remove(self, name):
+        if self._w("qos_policy_remove", name):
+            self.qos.pop(name, None)
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
         return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.tcp_global, self.rsc,
-                              self.offload, self.dns, self.doh))
+                              self.offload, self.dns, self.doh, self.qos))
 
 
 def power_saving():

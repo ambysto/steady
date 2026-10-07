@@ -474,6 +474,67 @@ class WriteApiTests(ServerTestCase):
         self.assertTrue(self.storage.query_events(kinds=["settings_changed"]))
 
 
+class MeasuredTweakApiTests(ServerTestCase):
+    """upload_shaping (ADR-0016): measure, refuse before UAC, enable with the measurement, measure again."""
+
+    def setUp(self):
+        super().setUp()
+        from tests.test_calibration import manager, upload
+        self.upload = upload
+        self.mgr, self.system, _, _ = manager()
+        self.api._tweak_manager = lambda: self.mgr
+        self.measurements = [upload(), upload(loaded=50.0)]
+        self.api._measure_tweak = lambda tid: self.measurements.pop(0) if self.measurements else None
+        self.calls = []
+
+        def elevate(op, value, **extra):     # does what the elevated helper would
+            self.calls.append((op, value, extra))
+            out = (self.mgr.enable(value, extra["measurement"]) if op == "tweak-enable"
+                   else self.mgr.disable(value))
+            return SimpleNamespace(ok=out.ok, message=out.message, cancelled=False, result={"changed": out.changed})
+        self.api._elevate = elevate
+
+    def test_without_admin_the_measurement_goes_through_uac(self):
+        job = self.req("POST", "/api/tweaks/upload_shaping?lang=en", {"enable": True})[1]
+        self.assertEqual(self.calls, [("tweak-enable", "upload_shaping", {"measurement": self.upload()})])
+        result = job["result"]
+        self.assertTrue(result["ok"] and result["elevated"])
+        self.assertTrue(result["verdict"]["helped"])
+        self.assertIn("34.0 Mbps", result["message"])
+        self.assertEqual(self.system.qos["StableInternet-Upload"], 34_000_000)
+        self.assertEqual(len(self.storage.query_events(kinds=["tweak_verified"])), 1)
+
+    def test_nothing_to_fix_is_refused_before_uac(self):
+        self.measurements = [self.upload(loaded=35.0)]
+        job = self.req("POST", "/api/tweaks/upload_shaping?lang=en", {"enable": True})[1]
+        self.assertFalse(job["result"]["ok"])
+        self.assertIn("nothing to fix", job["result"]["message"])
+        self.assertEqual(self.calls, [])
+
+    def test_with_admin_it_runs_directly(self):
+        self.admin = True
+        job = self.req("POST", "/api/tweaks/upload_shaping", {"enable": True})[1]
+        self.assertTrue(job["result"]["ok"])
+        self.assertFalse(job["result"]["elevated"])
+        self.assertEqual(self.calls, [])
+
+    def test_turning_off_needs_no_measurement(self):
+        self.mgr.enable("upload_shaping", self.upload())
+        self.measurements = []
+        self.req("POST", "/api/tweaks/upload_shaping", {"enable": False})
+        self.assertEqual(self.calls, [("tweak-disable", "upload_shaping", {})])
+        self.assertNotIn("StableInternet-Upload", self.system.qos)
+
+    def test_states_flag_a_measurement_from_another_network(self):
+        self.mgr.enable("upload_shaping", self.upload())
+        self.api._network_id = lambda: "fedcba9876543210"
+        states = {s["id"]: s for s in self.req("GET", "/api/tweaks")[1]["states"]}
+        st = states["upload_shaping"]
+        self.assertTrue(st["measured"])
+        self.assertEqual(st["measurement"]["value"], 34_000_000)
+        self.assertEqual(st["stale"], ["other_network", "old"])    # measured at t=1000, long ago
+
+
 class JobsTests(unittest.TestCase):
     def test_single_flight(self):
         import threading

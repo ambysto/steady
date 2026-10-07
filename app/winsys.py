@@ -3,7 +3,7 @@
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
 active plan, adapter protocol bindings, TCP global parameters (netsh), receive segment
 coalescing, global offload settings, the DNS servers of the uplink and the DoH entries
-Windows keeps for them. Every write raises SystemWriteError on failure;
+Windows keeps for them, the tool's own QoS throttle policy. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -16,10 +16,11 @@ import ipaddress
 import re
 import subprocess
 import winreg
+from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
 from .winutil import (CREATE_NO_WINDOW, VPN_RE, PowerShellError, _oem_codepage, default_route_native,
-                      get_adapters, get_scan, get_uplink, get_wifi_state, is_wifi_adapter, run_powershell,
+                      get_adapters, get_scan, get_uplink, get_wifi_states, is_wifi_adapter, run_powershell,
                       run_powershell_json)
 
 NET_CLASS_KEY = r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}"
@@ -35,6 +36,8 @@ TCP_GLOBAL_VALUES = ("enabled", "disabled", "default")
 # Set-NetOffloadGlobalSetting parameters a tweak may change.
 OFFLOAD_SETTINGS = ("PacketCoalescingFilter",)
 OFFLOAD_VALUES = ("Default", "Enabled", "Disabled")
+_QOS_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+QOS_MIN_BPS, QOS_MAX_BPS = 1_000_000, 1_000_000_000
 
 
 class SystemReadError(RuntimeError):
@@ -57,10 +60,24 @@ def _check_guid(value: str) -> str:
     return value
 
 
+def _check_qos_name(name: str) -> str:
+    if not _QOS_NAME_RE.match(name):
+        raise ValueError(f"bad QoS policy name: {name!r}")
+    return name
+
+
 def _check_hklm_path(path: str) -> str:
     if not path or path.startswith("\\") or ".." in path.split("\\"):
         raise ValueError(f"bad HKLM sub-path: {path!r}")
     return path
+
+
+@dataclass(frozen=True)
+class WifiBands:
+    """What an adapter's Wi-Fi connection looks like, for tweaks that depend on the band."""
+    ssid: str
+    current_band: str          # band of the access point the card is on now; "" when it cannot be told
+    bands: frozenset[str]      # bands of this network's access points in Windows' last scan
 
 
 class System(Protocol):
@@ -72,12 +89,14 @@ class System(Protocol):
     def registry_get(self, path: str, name: str) -> int | None: ...
     def power_get(self, subgroup: str, setting: str) -> tuple[int, int]: ...
     def binding_get(self, adapter: str, component: str) -> bool | None: ...
-    def wifi_ssid_bands(self) -> tuple[str, frozenset[str]] | None: ...
+    def wifi_ssid_bands(self, adapter: str) -> WifiBands | None: ...
     def tcp_global_get(self, setting: str) -> str | None: ...
     def rsc_get(self, adapter: str) -> dict[str, Any] | None: ...
     def offload_global_get(self, setting: str) -> str | None: ...
     def dns_interface(self) -> dict[str, Any] | None: ...
     def doh_get(self) -> dict[str, dict[str, Any]]: ...
+
+    def qos_policy_get(self, name: str) -> int | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -92,6 +111,9 @@ class System(Protocol):
     def dns_servers_set(self, interface_index: int, servers: list[str] | None) -> None: ...
     def doh_set(self, address: str, template: str, auto_upgrade: bool, fallback_to_udp: bool) -> None: ...
     def doh_remove(self, address: str) -> None: ...
+
+    def qos_policy_set(self, name: str, bits_per_second: int) -> None: ...
+    def qos_policy_remove(self, name: str) -> None: ...
 
 
 def _as_list(value: Any) -> list[str]:
@@ -134,9 +156,9 @@ class WindowsSystem:
     def __init__(self, *, ps: Callable[..., str] = run_powershell, ps_json: Callable[..., Any] = run_powershell_json,
                  run: Callable[..., subprocess.CompletedProcess] = subprocess.run,
                  route: Callable[[], dict[str, Any] | None] = _uplink_route,
-                 wifi_state: Callable[[], Any] = get_wifi_state, scan: Callable[[], Any] = get_scan) -> None:
+                 wifi_states: Callable[[], Any] = get_wifi_states, scan: Callable[[], Any] = get_scan) -> None:
         self._ps, self._ps_json, self._run, self._route = ps, ps_json, run, route
-        self._wifi_state, self._scan = wifi_state, scan
+        self._wifi_states, self._scan = wifi_states, scan
 
     # -- reads --------------------------------------------------------------------------
 
@@ -230,13 +252,31 @@ class WindowsSystem:
                              "-ErrorAction SilentlyContinue | Select-Object Enabled")
         return bool(rows[0]["Enabled"]) if rows else None
 
-    def wifi_ssid_bands(self) -> tuple[str, frozenset[str]] | None:
-        """(SSID, bands of its access points in Windows' last scan) for the connected network, or
-        None when not connected. The set is empty when the scan does not list the SSID. Never scans."""
-        state = self._wifi_state()
-        if state is None or not state.connected or not state.ssid:
+    def wifi_ssid_bands(self, adapter: str) -> WifiBands | None:
+        """The connection of `adapter` (the netsh interface with that name): SSID, the band it is on
+        now and the bands of the same network in Windows' last scan. None when that interface is
+        not connected. When netsh does not list the interface, or does not say which band, the
+        fields come back empty (unknown), never as "not connected". Never scans."""
+        state = next((st for st in self._wifi_states() if st.interface.lower() == adapter.lower()), None)
+        if state is None:
+            return WifiBands("", "", frozenset())
+        if not state.connected:
             return None
-        return state.ssid, frozenset(e.band for e in self._scan() if e.ssid == state.ssid and e.band)
+        bssid = state.bssid.lower()
+        # A hidden network is not listed under its name, so the connected BSSID counts too.
+        same = [e for e in self._scan()
+                if e.band and ((state.ssid and e.ssid == state.ssid) or (bssid and e.bssid.lower() == bssid))]
+        current = state.band or next((e.band for e in same if bssid and e.bssid.lower() == bssid), "")
+        return WifiBands(state.ssid, current, frozenset(e.band for e in same))
+
+    def qos_policy_get(self, name: str) -> int | None:
+        """Throttle rate (bit/s) of the QoS policy `name` in the default (persistent) store; None if
+        there is none. Lists the store rather than asking by name, so "absent" never hides an error."""
+        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq "
+                             f"{ps_literal(_check_qos_name(name))} }}) | Select-Object Name, ThrottleRateAction")
+        if not rows:
+            return None
+        return int(rows[0].get("ThrottleRateAction") or 0)
 
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
@@ -391,6 +431,29 @@ class WindowsSystem:
             proc = self._powercfg(*args)
             if proc.returncode != 0:
                 raise SystemWriteError(f"powercfg {' '.join(args)} exited {proc.returncode}")
+
+    def qos_policy_set(self, name: str, bits_per_second: int) -> None:
+        """Create (or re-rate) a policy throttling all outbound traffic, in the persistent store."""
+        rate = int(bits_per_second)
+        if not QOS_MIN_BPS <= rate <= QOS_MAX_BPS:
+            raise ValueError(f"throttle rate out of range: {rate}")
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       f"Set-NetQosPolicy -Name $name -ThrottleRateActionBitsPerSecond {rate} -Confirm:$false -ErrorAction Stop }} "
+                       f"else {{ New-NetQosPolicy -Name $name -Default -ThrottleRateActionBitsPerSecond {rate} "
+                       "-ErrorAction Stop | Out-Null }", f"setting QoS policy {name} to {rate} bit/s")
+
+    def qos_policy_remove(self, name: str) -> None:
+        """Remove exactly the policy `name`: persistent store first, then the active store if it lingers."""
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       "Remove-NetQosPolicy -Name $name -Confirm:$false -ErrorAction Stop }; "
+                       "if (@(Get-NetQosPolicy -PolicyStore ActiveStore -ErrorAction Stop | "
+                       "Where-Object { $_.Name -eq $name }).Count) { "
+                       "Remove-NetQosPolicy -Name $name -PolicyStore ActiveStore -Confirm:$false -ErrorAction Stop }",
+                       f"removing QoS policy {name}")
 
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None:
         if not _COMPONENT_RE.match(component):
