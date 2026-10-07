@@ -321,6 +321,33 @@ function checkHead(tile, iconName, title, body, buttons = [], spin = false) {
     buttons.length ? el("div", { class: "buttons" }, buttons) : null);
 }
 
+// The centre of the card: one big round button, or a ring that fills as checks really finish.
+const RING = 2 * Math.PI * 70;
+function checkHero({ circle, title, body, below = [] }) {
+  return el("div", { class: "check-hero" }, circle, el("h2", {}, title), body ? el("p", {}, body) : null,
+    below.length ? el("div", { class: "below" }, below) : null);
+}
+
+function bigButton(label, iconName, onClick) {
+  const b = el("button", { class: "big-button" }, icon(iconName), el("span", {}, label));
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+function progressRing(done, total) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 156 156");
+  svg.setAttribute("class", "ring");
+  svg.innerHTML = `<circle class="track" cx="78" cy="78" r="70"/>
+    <circle class="arc" cx="78" cy="78" r="70" stroke-dasharray="${RING.toFixed(1)}"
+      stroke-dashoffset="${(RING * (1 - done / total)).toFixed(1)}" transform="rotate(-90 78 78)"/>`;
+  return el("div", { class: "ring-wrap" }, svg, el("div", { class: "ring-label" }, `${done}/${total}`));
+}
+
+function statusCircle(tile, iconName) {
+  return el("div", { class: "status-circle " + tile }, icon(iconName));
+}
+
 function startCheck() {
   clearTimeout(flowTimer);
   Object.assign(FLOW, { phase: "running", done: 0 });
@@ -401,21 +428,24 @@ function renderCheck() {
   switch (FLOW.phase) {
     case "running": {
       const current = flowChecks()[Math.min(FLOW.done, total - 1)];
-      parts = [checkHead("accent", "refresh", t("ui.check.running", { done: FLOW.done, total }), t(`diag.${current.key}.title`), [], true),
-        el("div", { class: "progress" }, el("i", { style: `width:${(100 * FLOW.done / total).toFixed(1)}%` })), checkList()];
+      parts = [checkHero({ circle: progressRing(FLOW.done, total), title: t("ui.check.running", { done: FLOW.done, total }),
+        body: t(`diag.${current.key}.title`) }), checkList()];
       break;
     }
     case "found": {
       const ok = flowChecks().filter(c => c.status === "ok").length;
-      const fix = button(t("ui.check.fix_some", { fixable: fixable.length, count: p.length }), openFixSheet, "button primary");
-      if (!fixable.length) fix.disabled = true;
-      parts = [checkHead(p.some(c => c.status === "bad") ? "bad" : "warn", "alert", t("ui.check.found_title", { count: p.length }),
-        t("ui.check.found_body", { time, ok, total }), [again(), fix]),
+      const worst = p.some(c => c.status === "bad") ? "bad" : "warn";
+      const circle = fixable.length
+        ? bigButton(t("ui.check.fix_some", { fixable: fixable.length, count: p.length }), "sliders", openFixSheet)
+        : statusCircle(worst, "alert");
+      parts = [checkHero({ circle, title: t("ui.check.found_title", { count: p.length }),
+        body: t("ui.check.found_body", { time, ok, total }), below: [again()] }),
         el("div", { class: "rows" }, p.map(problemRow))];
       break;
     }
     case "clear":
-      parts = [checkHead("ok", "check", t("ui.check.clear_title"), t("ui.check.clear_body", { total, time }), [again()]), miniStats()];
+      parts = [checkHero({ circle: statusCircle("ok", "check"), title: t("ui.check.clear_title"),
+        body: t("ui.check.clear_body", { total, time }), below: [again()] }), miniStats()];
       break;
     case "fixing":
     case "rechecking": {
@@ -442,8 +472,8 @@ function renderCheck() {
       break;
     }
     default:
-      parts = [checkHead("accent", "gauge", t("ui.check.idle_title"), t("ui.check.idle_body", { count: total }),
-        [button(t("ui.check.start"), startCheck, "button primary")])];
+      parts = [checkHero({ circle: bigButton(t("ui.check.start"), "gauge", startCheck), title: t("ui.check.idle_title"),
+        body: t("ui.check.idle_body", { count: total }) })];
   }
   card.replaceChildren(...parts);
 }
