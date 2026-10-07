@@ -49,6 +49,32 @@ class ProtocolTests(unittest.TestCase):
             sys_.interface_metric_set("12; rm x", 5)
 
 
+class SsidBandsTests(unittest.TestCase):
+    """What the connected network offers, from `netsh wlan show interfaces` and `... networks mode=bssid`."""
+
+    @staticmethod
+    def system(ssid="HomeNet", state="connected", scan=()):
+        wifi = None if state is None else SimpleNamespace(connected=state == "connected", ssid=ssid)
+        entries = [SimpleNamespace(ssid=s, band=b) for s, b in scan]
+        return winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_state=lambda: wifi, scan=lambda: entries)
+
+    def test_bands_of_the_connected_ssid_only(self):
+        sys_ = self.system(scan=[("HomeNet", "2.4 GHz"), ("HomeNet", "5 GHz"), ("HomeNet", "5 GHz"),
+                                 ("Neighbour", "6 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands(), ("HomeNet", frozenset({"2.4 GHz", "5 GHz"})))
+
+    def test_ssid_missing_from_the_scan_gives_no_bands(self):
+        self.assertEqual(self.system(scan=[("Other", "5 GHz")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+
+    def test_entries_without_a_band_are_ignored(self):
+        self.assertEqual(self.system(scan=[("HomeNet", "")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+
+    def test_none_when_not_connected(self):
+        self.assertIsNone(self.system(state="disconnected").wifi_ssid_bands())
+        self.assertIsNone(self.system(state=None).wifi_ssid_bands())
+        self.assertIsNone(self.system(ssid="").wifi_ssid_bands())
+
+
 class ScriptConstructionTests(unittest.TestCase):
     """No caller-supplied string may appear raw in a PowerShell script."""
 

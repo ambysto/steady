@@ -302,6 +302,12 @@
   "tweak.wifi_mode_ac.name": "Wi‑Fi 5（802.11ac）に固定する",
   "tweak.wifi_mode_ac.note": "カードとルーターの間で Wi‑Fi 6 の互換性の問題が疑われる場合にお試しください",
 
+  "tweak.wifi_prefer_5g.name": "5 GHz 帯を優先する",
+  "tweak.wifi_prefer_5g.note": "2.4 GHz に張り付いているカードを、5 GHz が届く場所では 5 GHz に移します。届かない場所では引き続き 2.4 GHz に切り替わります。ネットワークに 5 GHz のアクセスポイントがある場合のみ利用できます",
+
+  "tweak.wifi_tx_power_max.name": "送信電力を最大にする",
+  "tweak.wifi_tx_power_max.note": "ドライバーによる送信電力の引き下げを防ぎ、カードを最大の送信レベルに保ちます。ノート PC では発熱とバッテリー消費がわずかに増えます",
+
   "tweak.device_power_off.name": "Windows によるカードの電源オフを許可しない",
   "tweak.device_power_off.note": "カードまたは PC の再起動後に有効になります",
 
@@ -332,6 +338,9 @@
   "tweak.reason.no_wifi_card": "Wi‑Fi カードが見つかりません",
   "tweak.reason.no_matching_value": "「{property}」に適した値がありません（選択可能: {values}）",
   "tweak.reason.no_property": "このカードにはこのプロパティがありません",
+  "tweak.reason.not_connected": "Wi‑Fi ネットワークに接続されていません",
+  "tweak.reason.bands_unknown": "Windows の直近のスキャンでは、「{ssid}」が使う帯域がわかりません",
+  "tweak.reason.no_5ghz": "「{ssid}」の 5 GHz アクセスポイントが圏内にありません",
   "tweak.reason.multi_value": "「{property}」は複数の要素を持つ値のため、サポートされていません",
   "tweak.reason.no_registry_key": "レジストリキーが見つかりません",
   "tweak.reason.no_binding": "このカードには {component} バインドがありません",

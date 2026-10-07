@@ -106,12 +106,19 @@ def _wifi_adapter(sys_: System) -> str:
 class AdapterPropertyTweak(Tweak):
     """An advanced property of the Wi-Fi driver. Property names differ per chip vendor, so
     `candidates` lists (DisplayName regex, target DisplayValue regex) pairs; the first
-    property present on this card wins. Values are written as RegistryValue."""
+    property present on this card wins. Values are written as RegistryValue.
 
-    def __init__(self, id: str, name: str, risk: str, candidates: list[tuple[str, str]], **kw: Any) -> None:
+    `precondition(sys_)` may return a message saying why the tweak does not suit the machine
+    right now (e.g. the connected network has no 5 GHz access point). It only gates turning the
+    tweak on: a tweak that already holds its target value is still read as on, so it can be
+    turned off."""
+
+    def __init__(self, id: str, name: str, risk: str, candidates: list[tuple[str, str]], *,
+                 precondition: Callable[[System], Message | None] | None = None, **kw: Any) -> None:
         kw.setdefault("disrupts_network", True)  # changing a driver property restarts the adapter
         super().__init__(id, name, risk, **kw)
         self.candidates = [(re.compile(dn, re.I), re.compile(tv, re.I)) for dn, tv in candidates]
+        self._precondition = precondition
 
     def _resolve(self, sys_: System) -> tuple[str, dict[str, Any], str]:
         adapter = _wifi_adapter(sys_)
@@ -138,6 +145,10 @@ class AdapterPropertyTweak(Tweak):
         try:
             _, prop, target = self._resolve(sys_)
             cur = self._current(prop)
+            if cur != target and self._precondition is not None:
+                why = self._precondition(sys_)
+                if why:
+                    raise Unsupported(why)
         except Unsupported as exc:
             return Reading(False, False, None, exc.message)
         return Reading(True, cur == target, prop["DisplayValue"])
@@ -544,7 +555,8 @@ class DnsFastestTweak(Tweak):
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
-                 "binding_get", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface", "doh_get")
+                 "binding_get", "wifi_ssid_bands", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface",
+                 "doh_get")
 
 
 class _CachedReads:
@@ -851,6 +863,19 @@ def _wifi_class_key(sys_: System) -> str | None:
     return sys_.adapter_class_key(name)
 
 
+def _has_5ghz_access_point(sys_: System) -> Message | None:
+    """Why "prefer 5 GHz" would do nothing here, or None when the connected network offers 5 GHz."""
+    seen = sys_.wifi_ssid_bands()
+    if seen is None:
+        return msg("tweak.reason.not_connected")
+    ssid, bands = seen
+    if not bands:
+        return msg("tweak.reason.bands_unknown", ssid=ssid)
+    if not any(re.sub(r"\s", "", band).lower() == "5ghz" for band in bands):
+        return msg("tweak.reason.no_5ghz", ssid=ssid)
+    return None
+
+
 def _name(tweak_id: str) -> Message:
     return msg(f"tweak.{tweak_id}.name")
 
@@ -884,6 +909,12 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
         AdapterPropertyTweak("wifi_mode_ac", _name("wifi_mode_ac"), "experimental",
                              [(re.escape("802.11ax/ac/n/abg"), _N + re.escape("802.11ac"))], group=GROUP_WIFI,
                              note=_note("wifi_mode_ac")),
+        AdapterPropertyTweak("wifi_prefer_5g", _name("wifi_prefer_5g"), "low",
+                             [(r"Preferred Band|Band Preference", _N + r"Prefer 5\s?GHz(?: band)?")],
+                             precondition=_has_5ghz_access_point, group=GROUP_WIFI, note=_note("wifi_prefer_5g")),
+        AdapterPropertyTweak("wifi_tx_power_max", _name("wifi_tx_power_max"), "low",
+                             [(r"Transmit Power(?: Level)?|Tx Power(?: Level)?", _N + r"Highest")],
+                             group=GROUP_WIFI, note=_note("wifi_tx_power_max")),
         # 2. Windows power management
         RegistryDwordTweak("device_power_off", _name("device_power_off"), "low", path=_wifi_class_key,
                            value_name="PnPCapabilities", target=lambda cur: (cur or 0) | PNP_NO_POWER_OFF,

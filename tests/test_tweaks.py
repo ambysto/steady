@@ -43,6 +43,7 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
+        self.ssid_bands = ("HomeNet", frozenset({"2.4 GHz", "5 GHz"}))   # None: not on Wi-Fi
         self.tcp_global = {"ecncapability": "disabled"}
         self.rsc = {"Wi-Fi": {"ipv4": True, "ipv6": True, "ipv4_supported": True, "ipv6_supported": True}}
         self.offload = {"PacketCoalescingFilter": "Enabled"}
@@ -104,6 +105,10 @@ class FakeSystem:
     def doh_get(self):
         self._r("doh_get")
         return copy.deepcopy(self.doh)
+
+    def wifi_ssid_bands(self):
+        self._r("wifi_ssid_bands")
+        return self.ssid_bands
 
     # writes
     def _w(self, name, *args):

@@ -302,6 +302,12 @@
   "tweak.wifi_mode_ac.name": "强制使用 Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "怀疑网卡与路由器之间存在 Wi‑Fi 6 兼容性问题时可尝试",
 
+  "tweak.wifi_prefer_5g.name": "优先使用 5 GHz 频段",
+  "tweak.wifi_prefer_5g.note": "让一直停留在 2.4 GHz 的网卡在 5 GHz 信号可达时切换到 5 GHz，信号不到的地方仍会回退到 2.4 GHz。仅当你的网络有 5 GHz 接入点时才可用",
+
+  "tweak.wifi_tx_power_max.name": "最高发射功率",
+  "tweak.wifi_tx_power_max.note": "让网卡保持在最高发射功率，而不是任由驱动程序调低。笔记本电脑会稍微更热、更耗电",
+
   "tweak.device_power_off.name": "禁止 Windows 关闭网卡",
   "tweak.device_power_off.note": "重启网卡或电脑后生效",
 
@@ -332,6 +338,9 @@
   "tweak.reason.no_wifi_card": "未找到 Wi‑Fi 网卡",
   "tweak.reason.no_matching_value": "“{property}”没有合适的值（可用值：{values}）",
   "tweak.reason.no_property": "网卡没有此属性",
+  "tweak.reason.not_connected": "未连接到 Wi‑Fi 网络",
+  "tweak.reason.bands_unknown": "Windows 最近一次扫描未显示“{ssid}”使用哪些频段",
+  "tweak.reason.no_5ghz": "“{ssid}”在范围内没有 5 GHz 接入点",
   "tweak.reason.multi_value": "“{property}”为多部分值，暂不支持",
   "tweak.reason.no_registry_key": "未找到注册表项",
   "tweak.reason.no_binding": "网卡没有 {component} 绑定",
