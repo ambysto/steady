@@ -101,6 +101,8 @@ const CHECKS = [
   { id: 12, key: "modem_wifi", status: "ok", summary: msg("diag.modem_wifi.ok"), details: [] },
   { id: 13, key: "physical_link", status: "ok", summary: msg("diag.physical_link.ok"),
     details: [msg("diag.physical_link.bad_minutes", { bad: 2, total: 573, fraction: 2 / 573 }), msg("diag.physical_link.rssi", { rssi: -65.0 })] },
+  { id: 15, key: "route", status: "ok", summary: msg("diag.route.ok", { near: 34 }), details: [] },
+  { id: 16, key: "path_mtu", status: "ok", summary: msg("diag.path_mtu.ok", { mtu: 1492 }), details: [msg("diag.path_mtu.pppoe")] },
 ];
 
 const EVENTS = [
@@ -270,9 +272,8 @@ function suggestionRow(s, compact) {
 }
 
 function renderOverview() {
-  const open = SUGGESTIONS.filter(s => !s.doneAt).slice(0, 3);
-  $("#suggestions").replaceChildren(...(open.length ? open.map(s => suggestionRow(s, true))
-    : [el("div", { class: "row" }, el("div", { class: "main secondary" }, t("ui.suggest.none")))]));
+  renderCheck();
+  renderValue();
   $("#recent").replaceChildren(...EVENTS.filter(e => e.group === "outages").slice(0, 3).map(eventRow));
   const actions = [["reconnect", "refresh"], ["flush_dns", "trash"], ["renew_dhcp", "network"], ["restart_adapter", "cpu"]];
   $("#quick-actions").replaceChildren(...actions.map(([a, i]) => {
@@ -281,6 +282,242 @@ function renderOverview() {
     b.addEventListener("click", () => fakeRun(b, a));
     return b;
   }));
+}
+
+// --- check → fix → result (ADR-0020) -------------------------------------------------------
+// A problem is a warn/bad result. What can be done comes from the suggestions: "batch" marks the
+// low-risk tweaks the Fix button covers; other tweaks keep their own action on the Optimize page.
+const PROBLEM_ACTIONS = {
+  driver: { kind: "you", step: "driver_update" },
+  drops: { kind: "app", tweak: "power_pcie_aspm_off", batch: true },
+  signal: { kind: "you", step: "move_closer" },
+  dns: { kind: "app", tweak: "dns_fastest" },
+};
+// Low-risk tweaks check #10 lists as not on yet: offered in the sheet, never counted as problems.
+const ALSO_RECOMMENDED = ["wifi_wake_magic", "wifi_wake_pattern", "device_power_off", "power_wireless_max"];
+const DROPS_BEFORE = 36;
+const FLOW = { phase: "idle", done: 0, ranAt: null, selected: new Set(), fixed: [], fixDone: 0, stepsDone: {},
+  scenario: "problems", result: "pending", value: "data" };
+let flowTimer = null;
+
+const RANK = { bad: 0, warn: 1 };
+const flowChecks = () => (FLOW.scenario === "clear" ? CHECKS.map(c => ({ ...c, status: "ok" })) : CHECKS);
+const problems = () => flowChecks().filter(c => c.status in RANK).sort((a, b) => RANK[a.status] - RANK[b.status] || a.id - b.id);
+const batchProblems = () => problems().filter(c => PROBLEM_ACTIONS[c.key]?.batch);
+const tweakOf = id => TWEAKS.find(x => x.id === id) || { id };
+
+function goTo(screen) { document.querySelector(`.nav-item[data-screen="${screen}"]`).click(); }
+
+function button(label, onClick, cls = "button") {
+  const b = el("button", { class: cls }, label);
+  if (onClick) b.addEventListener("click", onClick);
+  return b;
+}
+
+function checkHead(tile, iconName, title, body, buttons = [], spin = false) {
+  return el("div", { class: "check-head" },
+    el("div", { class: "big-tile " + tile }, icon(iconName, "icon" + (spin ? " spin" : ""))),
+    el("div", { class: "main" }, el("h2", {}, title), body ? el("p", {}, body) : null),
+    buttons.length ? el("div", { class: "buttons" }, buttons) : null);
+}
+
+function startCheck() {
+  clearTimeout(flowTimer);
+  Object.assign(FLOW, { phase: "running", done: 0 });
+  const delays = [260, 180, 420, 200, 380, 520, 160, 150, 170, 140, 240, 190, 300, 610, 340];
+  const step = () => {
+    FLOW.done += 1;
+    if (FLOW.done >= CHECKS.length) {
+      FLOW.ranAt = new Date();
+      FLOW.phase = problems().length ? "found" : "clear";
+    } else flowTimer = setTimeout(step, delays[FLOW.done % delays.length]);
+    renderCheck();
+  };
+  flowTimer = setTimeout(step, delays[0]);
+  renderCheck();
+}
+
+function checkList() {
+  const list = flowChecks();
+  return el("div", { class: "check-list" }, list.map((c, i) => {
+    const state = i < FLOW.done ? c.status : i === FLOW.done ? "current" : "pending";
+    const mark = state === "current" ? icon("refresh", "icon spin") : state === "pending" ? el("span", { class: "hollow" })
+      : icon(STATUS_ICON[state], "icon s " + state);
+    return el("div", { class: "item " + state }, mark, el("span", {}, t(`diag.${c.key}.title`)));
+  }));
+}
+
+function problemRow(c) {
+  const action = PROBLEM_ACTIONS[c.key] || { kind: "none" };
+  const pill = el("span", { class: "pill " + { app: "accent", you: "", none: "" }[action.kind] }, t("ui.check.kind." + action.kind));
+  const lines = [el("div", { class: "secondary" }, render(c.summary))];
+  if (action.step) lines.push(el("div", { class: "secondary" }, t(`manual.${action.step}.body`)));
+  if (action.kind === "none" && c.advice) lines.push(el("div", { class: "secondary" }, render(c.advice)));
+  let side = null;
+  if (action.step) {
+    const doneAt = FLOW.stepsDone[action.step];
+    side = doneAt ? el("span", { class: "time" }, t("ui.suggest.done_at", { time: timeOf(doneAt) }))
+      : button(t("ui.suggest.done_button"), () => { FLOW.stepsDone[action.step] = new Date(); renderCheck(); });
+  } else if (action.tweak && !action.batch) {
+    side = button(t("ui.diag.open_tweak"), () => goTo("optimize"));
+  }
+  return el("div", { class: "row problem" },
+    el("div", { class: "icon-tile " + c.status }, icon(STATUS_ICON[c.status])),
+    el("div", { class: "main" }, el("div", { class: "label" }, t(`diag.${c.key}.title`), " ", pill), lines),
+    side ? el("div", { class: "actions-col" }, side) : null);
+}
+
+function miniStats() {
+  const stats = [["ui.overview.router", "2", " ms"], ["ui.overview.internet", "38", " ms"],
+    ["ui.overview.loss", formatValue(0.6, ".1f"), "%"], ["ui.check.drops_24h", "0", ""]];
+  return el("div", { class: "mini-stats" }, stats.map(([k, v, unit]) => el("div", { class: "stat" },
+    el("div", { class: "k" }, t(k)), el("div", { class: "v" }, v, el("small", {}, unit)))));
+}
+
+function resultRow() {
+  const variant = FLOW.result;
+  const pillClass = { improved: "ok", pending: "accent", no_gain: "" }[variant];
+  const loss = { improved: [0.58, 0.05], no_gain: [0.58, 0.61] }[variant];
+  const body = [];
+  if (variant === "no_gain") body.push(el("div", { class: "secondary" }, t("ui.check.result.no_gain_body")));
+  if (loss) body.push(el("div", { class: "metric" }, t("impact.metric.router_loss", { before: loss[0], after: loss[1] })));
+  body.push(el("div", { class: "secondary" }, t("ui.check.result.pending_body", { before: DROPS_BEFORE })));
+  body.push(effectBox({ status: "collecting", summary: msg("impact.collecting", { hours: 0.0, needed: 2 }), details: [] }));
+  body.push(el("div", { class: "chips" }, FLOW.fixed.map(id => el("span", { class: "pill ok" }, icon("check"), t(`tweak.${id}.name`)))));
+  return el("div", { class: "row problem" },
+    el("div", { class: "icon-tile " + (variant === "improved" ? "ok" : "accent") }, icon(variant === "improved" ? "check" : "gauge")),
+    el("div", { class: "main" }, el("div", { class: "label" }, t("diag.drops.title"), " ",
+      el("span", { class: "pill " + pillClass }, t("ui.check.result." + variant))), body),
+    variant === "no_gain" ? el("div", { class: "actions-col" }, button(t("ui.check.undo"), undoFix)) : null);
+}
+
+function renderCheck() {
+  const card = $("#check-card");
+  const total = CHECKS.length;
+  const p = problems(), fixable = batchProblems();
+  const time = FLOW.ranAt ? timeOf(FLOW.ranAt) : "";
+  const again = () => button(t("ui.check.again"), startCheck);
+  let parts;
+  switch (FLOW.phase) {
+    case "running": {
+      const current = flowChecks()[Math.min(FLOW.done, total - 1)];
+      parts = [checkHead("accent", "refresh", t("ui.check.running", { done: FLOW.done, total }), t(`diag.${current.key}.title`), [], true),
+        el("div", { class: "progress" }, el("i", { style: `width:${(100 * FLOW.done / total).toFixed(1)}%` })), checkList()];
+      break;
+    }
+    case "found": {
+      const ok = flowChecks().filter(c => c.status === "ok").length;
+      const fix = button(t("ui.check.fix_some", { fixable: fixable.length, count: p.length }), openFixSheet, "button primary");
+      if (!fixable.length) fix.disabled = true;
+      parts = [checkHead(p.some(c => c.status === "bad") ? "bad" : "warn", "alert", t("ui.check.found_title", { count: p.length }),
+        t("ui.check.found_body", { time, ok, total }), [again(), fix]),
+        el("div", { class: "rows" }, p.map(problemRow))];
+      break;
+    }
+    case "clear":
+      parts = [checkHead("ok", "check", t("ui.check.clear_title"), t("ui.check.clear_body", { total, time }), [again()]), miniStats()];
+      break;
+    case "fixing":
+    case "rechecking": {
+      const fixing = FLOW.phase === "fixing";
+      parts = [checkHead("accent", fixing ? "sliders" : "refresh",
+        fixing ? t("ui.check.fixing", { done: Math.min(FLOW.fixDone + 1, FLOW.fixed.length), total: FLOW.fixed.length }) : t("ui.check.rechecking"),
+        fixing ? null : t("diag.drops.title"), [], true),
+        el("div", { class: "rows" }, FLOW.fixed.map((id, i) => {
+          const state = i < FLOW.fixDone ? "ok" : i === FLOW.fixDone && fixing ? "current" : "pending";
+          return el("div", { class: "row fix-row " + state },
+            state === "current" ? icon("refresh", "icon spin") : state === "ok" ? icon("check", "icon s ok") : el("span", { class: "hollow" }),
+            el("div", { class: "main" }, t(`tweak.${id}.name`)),
+            state === "ok" ? el("span", { class: "pill ok" }, t("ui.check.fix.on")) : null);
+        }))];
+      break;
+    }
+    case "result": {
+      const open = p.filter(c => !PROBLEM_ACTIONS[c.key]?.batch);
+      parts = [checkHead({ improved: "ok", pending: "accent", no_gain: "info" }[FLOW.result], FLOW.result === "improved" ? "check" : "sliders",
+        t("ui.check.result_title", { count: FLOW.fixed.length }), t("ui.diag.last_run", { time: timeOf(new Date()) }),
+        [again(), button(t("ui.check.done"), () => { FLOW.phase = "idle"; renderCheck(); }, "button primary")]),
+        el("div", { class: "rows" }, resultRow())];
+      if (open.length) parts.push(el("div", { class: "sub-title" }, t("ui.check.still_open")), el("div", { class: "rows" }, open.map(problemRow)));
+      break;
+    }
+    default:
+      parts = [checkHead("accent", "gauge", t("ui.check.idle_title"), t("ui.check.idle_body", { count: total }),
+        [button(t("ui.check.start"), startCheck, "button primary")])];
+  }
+  card.replaceChildren(...parts);
+}
+
+function renderFixSheet() {
+  const item = (id, reason) => {
+    const box = el("input", { type: "checkbox" });
+    box.checked = FLOW.selected.has(id);
+    box.addEventListener("change", () => { box.checked ? FLOW.selected.add(id) : FLOW.selected.delete(id); renderFixSheet(); });
+    return el("label", { class: "fix-item" }, box, el("div", {},
+      el("div", { class: "name" }, t(`tweak.${id}.name`)), el("div", { class: "for" }, t("ui.check.sheet.for", { reason: t(reason) }))),
+      tweakOf(id).disrupts ? el("span", { title: t("ui.optimize.disrupts") }, icon("wifi-off")) : null);
+  };
+  const fixes = batchProblems().map(c => item(PROBLEM_ACTIONS[c.key].tweak, `diag.${c.key}.title`));
+  const also = ALSO_RECOMMENDED.filter(id => !tweakOf(id).enabled).map(id => item(id, "diag.tweaks.title"));
+  $("#fix-title").textContent = t("ui.check.sheet.title", { count: FLOW.selected.size });
+  $("#fix-list").replaceChildren(el("div", { class: "fix-group-title" }, t("ui.check.sheet.fixes")), ...fixes,
+    also.length ? el("div", { class: "fix-group-title" }, t("ui.check.sheet.also")) : null, ...also);
+  $("#fix-disrupts").hidden = ![...FLOW.selected].some(id => tweakOf(id).disrupts);
+  $("#fix-confirm").disabled = FLOW.selected.size === 0;
+}
+
+function openFixSheet() {
+  FLOW.selected = new Set([...batchProblems().map(c => PROBLEM_ACTIONS[c.key].tweak),
+    ...ALSO_RECOMMENDED.filter(id => !tweakOf(id).enabled)]);
+  renderFixSheet();
+  $("#fix-scrim").classList.add("open");
+}
+
+function runFix() {
+  $("#fix-scrim").classList.remove("open");
+  // Tweaks that do not drop the network go first (ADR-0020 point 6).
+  FLOW.fixed = [...FLOW.selected].sort((a, b) => !!tweakOf(a).disrupts - !!tweakOf(b).disrupts);
+  Object.assign(FLOW, { phase: "fixing", fixDone: 0 });
+  const step = () => {
+    tweakOf(FLOW.fixed[FLOW.fixDone]).enabled = true;
+    FLOW.fixDone += 1;
+    if (FLOW.fixDone < FLOW.fixed.length) flowTimer = setTimeout(step, 650);
+    else {
+      FLOW.phase = "rechecking";
+      flowTimer = setTimeout(() => { FLOW.phase = "result"; renderCheck(); }, 1400);
+      renderOptimize();
+    }
+    renderCheck();
+  };
+  flowTimer = setTimeout(step, 650);
+  renderCheck();
+}
+
+function undoFix() {
+  FLOW.fixed.forEach(id => { tweakOf(id).enabled = false; });
+  FLOW.fixed = [];
+  FLOW.phase = "found";
+  renderOptimize(); renderCheck();
+}
+
+function renderValue() {
+  const card = $("#value-card");
+  if (FLOW.value === "empty") {
+    card.replaceChildren(el("div", { class: "row" }, el("div", { class: "icon-tile" }, icon("shield")),
+      el("div", { class: "main" }, el("div", { class: "label" }, t("ui.value.empty", { count: 3 })))));
+    return;
+  }
+  const toLog = filter => () => { goTo("log"); $(`#log-filter [data-filter="${filter}"]`).click(); };
+  const row = (tile, iconName, label, secondary, filter) => el("div", { class: "row" },
+    el("div", { class: "icon-tile " + tile }, icon(iconName)),
+    el("div", { class: "main" }, el("div", { class: "label" }, label), el("div", { class: "secondary" }, secondary)),
+    button(t("ui.value.open_log"), toLog(filter)));
+  card.replaceChildren(
+    row("accent", "shield", t("ui.value.recovered", { count: 4 }), t("ui.value.recovered_detail", { duration: duration(23) }), "watchdog"),
+    row("ok", "sliders", t("ui.value.tweak_helped", { count: 1 }),
+      `${t("tweak.wifi_power_saving.name")} · ${t("impact.metric.outages", { before: 12.0, after: 1.0 })}`, "changes"),
+    row("ok", "check", t("ui.value.step_helped", { count: 1 }),
+      `${t("manual.antenna.title")} · ${t("impact.metric.bad_link", { before: 0.23, after: 0.03 })}`, "changes"));
 }
 
 function fakeRun(button, action) {
@@ -418,8 +655,30 @@ $("#run-diag").addEventListener("click", () => {
   setTimeout(() => { b.disabled = false; label.textContent = t("ui.diag.run"); }, 1500);
 });
 
+$("#mock-scenario").addEventListener("change", e => {
+  FLOW.scenario = e.target.value;
+  if (FLOW.phase === "found" || FLOW.phase === "clear") FLOW.phase = problems().length ? "found" : "clear";
+  renderCheck();
+});
+$("#mock-result").addEventListener("change", e => { FLOW.result = e.target.value; renderCheck(); });
+$("#mock-value").addEventListener("change", e => { FLOW.value = e.target.value; renderValue(); });
+$("#fix-cancel").addEventListener("click", () => $("#fix-scrim").classList.remove("open"));
+$("#fix-confirm").addEventListener("click", runFix);
+
 const params = new URLSearchParams(location.search);
 if (params.get("lang") && LOCALES[params.get("lang")]) lang = params.get("lang");
 if (params.get("theme")) document.documentElement.setAttribute("data-theme", params.get("theme"));
+for (const [key, select] of [["scenario", "#mock-scenario"], ["result", "#mock-result"], ["value", "#mock-value"]]) {
+  if (params.get(key)) { FLOW[key] = params.get(key); $(select).value = params.get(key); }
+}
+// ?flow=found|clear|result opens the Overview card in that state, for review and screenshots.
+if (["found", "clear", "result"].includes(params.get("flow"))) {
+  FLOW.ranAt = ago(1);
+  FLOW.phase = params.get("flow");
+  if (FLOW.phase === "result") {
+    FLOW.fixed = [...batchProblems().map(c => PROBLEM_ACTIONS[c.key].tweak), ...ALSO_RECOMMENDED];
+    FLOW.fixed.forEach(id => { tweakOf(id).enabled = true; });
+  }
+}
 renderAll();
 if (params.get("screen")) document.querySelector(`.nav-item[data-screen="${params.get("screen")}"]`)?.click();
