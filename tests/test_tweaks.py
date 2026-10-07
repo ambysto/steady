@@ -59,6 +59,7 @@ class FakeSystem:
                     for address, (_, template) in tweaks.DOH_ADDRESSES.items()}
         self.qos = {"Backup-Agent": 5_000_000}   # policy name -> throttle bit/s; someone else's policy
         self.qos_rounding = 0          # Windows may store a slightly different rate
+        self.mtu = {}                  # interface GUID -> IPv4 MTU (1500 when not listed)
         self.log = []                 # ("read"|"write", method, args)
         self.fail = set()             # write methods that raise
         self.noop = set()             # write methods that silently do nothing
@@ -126,6 +127,19 @@ class FakeSystem:
     def qos_policy_get(self, name):
         self._r("qos_policy_get", name)
         return self.qos.get(name)
+
+    def ipv4_interface(self, guid=None):
+        self._r("ipv4_interface", guid)
+        if guid is not None:
+            found = next((i for i in self.interfaces() if i["guid"] == guid), None)
+        elif self.uplink_read_error:
+            raise SystemReadError("the uplink cannot be read")
+        else:
+            found = self.dns if self.uplink == "dns" else self.uplink
+        if found is None:
+            return None
+        return {"index": found["index"], "guid": found["guid"], "alias": found["alias"],
+                "mtu": self.mtu.get(found["guid"], 1500)}
 
     # writes
     def _w(self, name, *args):
@@ -205,13 +219,21 @@ class FakeSystem:
         if self._w("qos_policy_remove", name):
             self.qos.pop(name, None)
 
+    def ipv4_mtu_set(self, interface_index, mtu):
+        if self._w("ipv4_mtu_set", interface_index, mtu):
+            target = next(i for i in self.interfaces() if i["index"] == interface_index)
+            if mtu == 1500:
+                self.mtu.pop(target["guid"], None)
+            else:
+                self.mtu[target["guid"]] = mtu
+
     # helpers
     def writes(self):
         return [entry for entry in self.log if entry[0] == "write"]
 
     def snapshot(self):
         return copy.deepcopy((self.props, self.registry, self.power, self.bindings, self.tcp_global, self.rsc,
-                              self.offload, self.dns, self.extra_interfaces, self.doh, self.qos))
+                              self.offload, self.dns, self.extra_interfaces, self.doh, self.qos, self.mtu))
 
 
 def power_saving():

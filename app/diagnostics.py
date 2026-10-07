@@ -780,6 +780,7 @@ def _tunnel_up(adapters: list[dict]) -> bool:
 # --- 16. path MTU -------------------------------------------------------------------------------
 
 PPPOE_MTU = 1492
+IPV6_MIN_MTU = 1280
 
 
 def evaluate_path_mtu(interface: dict | None, paths: list[pmtu.PathResult], ipv4_route: bool = True) -> CheckResult:
@@ -812,7 +813,8 @@ def evaluate_path_mtu(interface: dict | None, paths: list[pmtu.PathResult], ipv4
     if path == PPPOE_MTU:
         details.append(msg("diag.path_mtu.pppoe"))
     summary = msg("diag.path_mtu.too_big", mtu=mtu, path=path)
-    advice = msg("diag.path_mtu.advice", path=path, name=name)
+    # IPv6 cannot go below 1280, so its command is left out for a smaller path.
+    advice = msg("diag.path_mtu.advice" if path >= IPV6_MIN_MTU else "diag.path_mtu.advice_v4", path=path, name=name)
     if any(p.too_big for p in answered):
         details.append(msg("diag.path_mtu.reported"))
         return CheckResult(**base, status=INFO, summary=summary, details=details, advice=advice)
@@ -820,7 +822,7 @@ def evaluate_path_mtu(interface: dict | None, paths: list[pmtu.PathResult], ipv4
         details.append(msg("diag.path_mtu.one_target"))
         return CheckResult(**base, status=INFO, summary=summary, details=details, advice=advice)
     details.append(msg("diag.path_mtu.silent"))
-    return CheckResult(**base, status=WARN, summary=summary, details=details, advice=advice)
+    return CheckResult(**base, status=WARN, summary=summary, details=details, advice=advice, tweak="mtu_pmtu")
 
 
 # --- context: lazy, cached data access ----------------------------------------------------------

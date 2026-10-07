@@ -29,7 +29,8 @@ function tweakRow(ctx, st) {
   // A measured tweak (ADR-0016): the measurement behind the value, and whether it still fits this network.
   const m = st.enabled ? st.measurement : null;
   const measuredFrom = m && m.value ? t(`ui.optimize.measured.${st.id}`, {
-    limit: m.value / 1e6, upload: m.upload_mbps, date: timeOf(m.measured_at, { withDate: true }) }) : null;
+    limit: m.value / 1e6, upload: m.upload_mbps, mtu: m.value, before: m.interface_mtu,
+    date: timeOf(m.measured_at, { withDate: true }) }) : null;
   for (const why of (m && st.stale) || []) pills.push(el("span", { class: "pill warn" }, t(`ui.optimize.stale.${why}`)));
   const sw = switchEl(st.enabled, {
     disabled: !st.supported || st.on_by_default || busy, label: st.name,

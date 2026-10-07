@@ -78,6 +78,7 @@ The value is computed from a measurement of the network in use, taken before the
 | ID | Name | Target value | Risk | Notes |
 |---|---|---|---|---|
 | `upload_shaping` | Limit the upload speed to keep latency low under load | `NetQosPolicy` named `StableInternet-Upload`, `-Default` (all outbound traffic), `ThrottleRateActionBitsPerSecond` = 85% of the measured upload, rounded down to 0.1 Mbps, between 1 and 1000 Mbps | medium | 🛡 Upload only; the download direction can only be shaped on the router (SQM). Refused when latency under upload rises < 30 ms (nothing to fix), when the upload load is < 1 Mbps, when the measurement reached its own ceiling (≥ 95% of the 80 Mbps a 100 MB, 10 s phase can show: the line may be faster), or with too few latency samples |
+| `mtu_pmtu` | Match the MTU to the largest packet the path carries | IPv4 MTU (`NlMtu`) of the uplink interface = the path MTU measured by check #16, between 1280 and the current MTU | medium | 🛡 Only lowers the MTU. Refused when large packets are not silently lost: the path already carries the interface MTU, or routers answer "packet too big" (PMTUD works); also refused with fewer than 2 answering targets, a VPN/tunnel carrying the traffic, a jumbo-frame interface (MTU above 1500), or a path below 1280 |
 
 `upload_shaping` details:
 
@@ -86,6 +87,15 @@ The value is computed from a measurement of the network in use, taken before the
 - **Restore**: remove the policy with exactly that name from the default store, then from the `ActiveStore` if it is still there. No other policy is touched. Without a backup the restore is the same (the name belongs to the tool), so it is safe.
 - **Prove**: after applying, the same measurement again; *helped* when the latency rise under upload dropped by ≥ 30% and ≥ 20 ms, otherwise the result suggests turning it off.
 - The 2026-08-31 hand-made policy (15 Mbps) lowered the worst latency under upload from 1880 to 403 ms; it has been removed and was measured before the hardware fault was found, so it is a hint, not evidence.
+
+`mtu_pmtu` details:
+
+- **Measure**: check #16 (`app/pmtu.py`): "do not fragment" ICMP echoes to 1.1.1.1, 8.8.8.8 and 9.9.9.9, a binary search between 576 bytes and the interface MTU (capped at 1500). About 1 s and a few dozen small packets, so unlike `upload_shaping` it loads nothing. Kept: the interface MTU, the largest path MTU any target reached, how many targets answered, whether any packet was refused with "packet too big", whether the route to 1.1.1.1 leaves by another interface than the default route (a tunnel), the network id.
+- **Derive**: the value is the measured path MTU itself (no margin: it is already the largest size that crossed the path). It is applied only in the one case where the mismatch hurts: large packets vanish silently (PMTUD blackhole) at two or more targets. Refused, with nothing written and no UAC prompt, when the path carries the interface MTU (nothing to fix), when a router answered "packet too big" (PMTUD works: connections adapt by themselves), when fewer than two targets answered (a single target that drops some pings could fake a small path), when a VPN or tunnel carries the traffic (the measurement would be the tunnel's), when the interface MTU is above 1500 (jumbo frames are a LAN choice), or when the path MTU is below 1280 (no plain PPPoE or tunnel is that small: something else is wrong).
+- **Apply**: `netsh interface ipv4 set subinterface <index> mtu=<value> store=persistent` on the interface of the default route, by index (no name to quote). Only IPv4: IPv6 has its own MTU and its own minimum of 1280. Writing refuses when the interface's MTU is already at or below the value. Verified when the interface's `NlMtu` reads back equal to the value. Changing the MTU does not restart the adapter.
+- **Restore**: the backup names the interface by its GUID (an ifIndex can be reused). Turning it off writes the saved MTU back to that interface, wherever it is now; turning it on while the backup is another interface's is refused. There is no safe default without a backup (1500 is not right for every interface), so without one the tweak is not turned off.
+- **Prove**: right after applying, the same measurement again; *helped* when the path now carries the full interface MTU, otherwise the result suggests turning it off.
+- **On / off**: Windows keeps no mark of who set an MTU, so the switch shows on only while this tweak's backup exists and its interface's MTU differs from the saved one. An MTU set by hand (the dev PC has had 1492 on Wi‑Fi since 2026-08-31) shows as off; turning the tweak on then finds nothing to fix.
 
 ## 5. Tool features
 
