@@ -244,7 +244,7 @@ class WindowsSystem:
         return bool(rows[0]["Enabled"]) if rows else None
 
     def current_network(self) -> dict[str, Any] | None:
-        """The network the default route uses: {"key", "interface_index"} (key as in dnswatch),
+        """The network the default route uses: {"key", "interface_index", "gateway"} (key as in dnswatch),
         or None when there is no default route."""
         from .dnswatch import network_key
         from .winutil import default_route_native, get_wifi_state
@@ -254,7 +254,7 @@ class WindowsSystem:
         wifi = get_wifi_state()
         ssid = wifi.ssid if wifi is not None and wifi.connected else None
         return {"key": network_key(route["interface_index"], route.get("gateway"), ssid),
-                "interface_index": int(route["interface_index"])}
+                "interface_index": int(route["interface_index"]), "gateway": route.get("gateway") or ""}
 
     def qos_throttle_get(self, name: str) -> int | None:
         """Throttle rate (bits/s) of the named QoS policy in the local store; None if absent."""

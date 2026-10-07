@@ -360,6 +360,7 @@
   "tweak.reason.measure_again.dns_ranking": "Der DNS-Benchmark ist älter als 30 Tage; führe die Diagnose erneut aus",
   "tweak.reason.dns_suffix": "Diese Verbindung hat ein eigenes DNS-Suffix (Firmen- oder lokale Namen); eine Änderung des DNS könnte sie unbrauchbar machen",
   "tweak.reason.dns_private": "Dieses Netzwerk nutzt einen eigenen DNS-Server ({server}); eine Änderung des DNS könnte lokale Namen oder Filter stören",
+  "tweak.reason.dns_foreign": "Die von dieser App gesetzten DNS-Server gelten auch in diesem Netzwerk, und es hat eigene Namen (ein DNS-Suffix). Wenn lokale oder Firmennamen nicht aufgelöst werden, schalte dies aus",
   "tweak.reason.no_doh": "Windows hat für diese Server keine Einstellungen für DNS über HTTPS (erfordert Windows 11)",
   "tweak.reason.no_default_dns": "Keine Sicherung, und die ursprünglichen DNS-Einstellungen der Schnittstelle sind unbekannt",
   "tweak.reason.drift": "{source}. Die Leitung scheint sich geändert zu haben: Dies ausschalten, neu messen und dann wieder einschalten",

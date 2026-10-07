@@ -37,6 +37,20 @@ def on(mgr):
     return mgr.state("dns_fastest")
 
 
+class ForeignNetworkTests(unittest.TestCase):
+    def test_app_dns_on_a_network_with_its_own_names_is_flagged_not_changed(self):
+        # Static DNS follows the card: at the office the state must say why company names may fail.
+        mgr, s, _ = setup({"dns_ranking": entry()})
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        writes = len(s.writes())
+        s.network = {"key": "6|198.51.100.1|Office", "interface_index": 6, "gateway": "198.51.100.1"}
+        s.dns_suffix = {6: "corp.example"}
+        st = on(mgr)
+        self.assertTrue(st.enabled)
+        self.assertIn("own names", i18n.render(st.reason, "en"))
+        self.assertEqual(len(s.writes()), writes)
+
+
 class TargetTests(unittest.TestCase):
     def test_two_providers_fastest_first(self):
         mgr, s, _ = setup({"dns_ranking": entry()})

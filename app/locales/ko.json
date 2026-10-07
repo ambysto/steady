@@ -360,6 +360,7 @@
   "tweak.reason.measure_again.dns_ranking": "DNS 벤치마크가 30일이 지났습니다. 진단을 다시 실행하십시오",
   "tweak.reason.dns_suffix": "이 연결에는 자체 DNS 접미사(회사 또는 로컬 이름)가 있습니다. DNS를 바꾸면 사용할 수 없게 될 수 있습니다",
   "tweak.reason.dns_private": "이 네트워크는 자체 DNS 서버({server})를 사용합니다. DNS를 바꾸면 로컬 이름이나 필터링이 깨질 수 있습니다",
+  "tweak.reason.dns_foreign": "이 앱이 설정한 DNS 서버는 이 네트워크에도 적용되며, 이 네트워크에는 자체 이름(DNS 접미사)이 있습니다. 로컬 또는 회사 이름이 작동하지 않으면 이 항목을 끄세요",
   "tweak.reason.no_doh": "Windows에 이 서버들에 대한 DNS over HTTPS 설정이 없습니다(Windows 11 필요)",
   "tweak.reason.no_default_dns": "백업이 없고 인터페이스의 원래 DNS 설정을 알 수 없습니다",
   "tweak.reason.drift": "{source}. 회선이 바뀐 것 같습니다. 이 최적화를 끄고 다시 측정한 다음 켜십시오",

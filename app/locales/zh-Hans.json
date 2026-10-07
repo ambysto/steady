@@ -360,6 +360,7 @@
   "tweak.reason.measure_again.dns_ranking": "DNS 测试已超过 30 天;请重新运行诊断",
   "tweak.reason.dns_suffix": "此连接有自己的 DNS 后缀(公司或本地名称);更改 DNS 可能会使其失效",
   "tweak.reason.dns_private": "此网络使用自己的 DNS 服务器({server});更改 DNS 可能会破坏本地名称或过滤",
+  "tweak.reason.dns_foreign": "此应用设置的 DNS 服务器在此网络上同样生效,而此网络有自己的名称(DNS 后缀)。如果本地或公司名称无法解析,请关闭此项",
   "tweak.reason.no_doh": "Windows 没有这些服务器的 DNS over HTTPS 设置(需要 Windows 11)",
   "tweak.reason.no_default_dns": "没有备份,且不知道该接口原来的 DNS 设置",
   "tweak.reason.drift": "{source}。线路似乎已变化：请关闭此项，重新测量后再开启",

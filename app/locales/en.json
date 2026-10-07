@@ -362,6 +362,7 @@
   "tweak.reason.measure_again.dns_ranking": "The DNS benchmark is older than 30 days; run the diagnostics again",
   "tweak.reason.dns_suffix": "This connection has its own DNS suffix (company or local names); changing the DNS could break them",
   "tweak.reason.dns_private": "This network uses its own DNS server ({server}); changing the DNS could break local names or filtering",
+  "tweak.reason.dns_foreign": "The DNS servers this app set apply on this network too, and it has its own names (a DNS suffix). If local or company names fail, turn this off",
   "tweak.reason.no_doh": "Windows has no DNS over HTTPS settings for these servers (needs Windows 11)",
   "tweak.reason.no_default_dns": "No backup, and the interface's original DNS settings are unknown",
   "tweak.reason.drift": "{source}. The line seems to have changed: turn this off, measure again, then turn it on",

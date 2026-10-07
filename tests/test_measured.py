@@ -29,6 +29,23 @@ def setup(cal, **sys_attrs):
     return mgr, s
 
 
+class CalibrationLockTests(unittest.TestCase):
+    def test_record_saves_inside_the_calibration_lock(self):
+        import contextlib
+        from unittest import mock
+        events = []
+
+        @contextlib.contextmanager
+        def lock(timeout=15.0):
+            events.append("lock")
+            yield
+            events.append("unlock")
+        with mock.patch("app.config.calibration_lock", lock):
+            calibration.record("path_mtu", 1492, NET, NOW, load=lambda: events.append("load") or {},
+                               save=lambda store: events.append("save"))
+        self.assertEqual(events, ["lock", "load", "save", "unlock"])
+
+
 class CalibrationStoreTests(unittest.TestCase):
     def store(self):
         data = {}
@@ -174,6 +191,15 @@ class PathMtuProbeTests(unittest.TestCase):
         def ping(target, payload):
             return payload + 28 <= (1300 if target == "1.1.1.1" else 1492)
         self.assertEqual(pathmtu.measure(ping).mtu, 1492)
+
+    def test_a_second_target_that_agrees_costs_one_size(self):
+        ping, calls = self.line(1460)
+        first = sum(1 for t, _ in calls)
+        result = pathmtu.measure(ping)
+        self.assertEqual(result.mtu, 1460)
+        second = [p for t, p in calls if t == "8.8.8.8"]
+        self.assertEqual(set(second), {1461 - 28})       # only "one byte more?", asked TRIES times
+        self.assertNotIn("8.8.8.8", result.per_target)
 
 
 class PathMtuCheckTests(unittest.TestCase):

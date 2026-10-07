@@ -855,7 +855,7 @@ class Context:
 
     def _load_path_mtu(self) -> Any:
         from . import pathmtu
-        return pathmtu.measure(pathmtu.icmp_ping())
+        return pathmtu.measure_icmp()
 
     def _load_interface_mtu(self) -> int | None:
         from .winsys import WindowsSystem

@@ -360,6 +360,7 @@
   "tweak.reason.measure_again.dns_ranking": "Phép đo DNS đã quá 30 ngày; hãy chạy lại chẩn đoán",
   "tweak.reason.dns_suffix": "Kết nối này có hậu tố DNS riêng (tên miền công ty hoặc nội bộ); đổi DNS có thể làm chúng hỏng",
   "tweak.reason.dns_private": "Mạng này dùng máy chủ DNS riêng ({server}); đổi DNS có thể làm hỏng tên nội bộ hoặc bộ lọc",
+  "tweak.reason.dns_foreign": "DNS do ứng dụng đặt cũng áp dụng trên mạng này, mà mạng này có tên riêng (DNS suffix). Nếu tên nội bộ hoặc tên công ty không truy cập được, hãy tắt mục này",
   "tweak.reason.no_doh": "Windows không có cài đặt DNS qua HTTPS cho các máy chủ này (cần Windows 11)",
   "tweak.reason.no_default_dns": "Không có bản sao lưu, và không biết cấu hình DNS gốc của giao diện mạng",
   "tweak.reason.drift": "{source}. Đường truyền có vẻ đã thay đổi: tắt mục này, đo lại rồi bật lại",

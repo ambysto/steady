@@ -62,22 +62,27 @@ def probe_target(ping: Ping, target: str, low: int = LOW, high: int = HIGH) -> t
 
 
 def measure(ping: Ping, targets: tuple[str, ...] = TARGETS) -> PathMtu:
-    """The path MTU is the largest size any target proved: one target that filters big echoes
-    must not drag the result down, and a size that reached one target crossed the shared first
-    hops (the PPPoE link) that set the limit."""
+    """The path MTU is the largest size a target proved: one target that filters big echoes must not
+    drag the result down. Every failing size costs a timeout, so a later target is first asked only
+    whether it gets one byte more than the best so far; only then is it searched in full."""
     per_target: dict[str, int | None] = {}
-    probes = 0
+    probes, best = 0, None
     for target in targets:
+        if best is not None:
+            if best >= HIGH:
+                break
+            probes += 1
+            if not _passes(ping, target, best + 1):
+                continue
         per_target[target], n = probe_target(ping, target)
         probes += n
-    proved = [v for v in per_target.values() if v is not None]
-    return PathMtu(max(proved) if proved else None, per_target, probes)
+        if per_target[target] is not None and (best is None or per_target[target] > best):
+            best = per_target[target]
+    return PathMtu(best, per_target, probes)
 
 
-def icmp_ping(timeout_ms: int = 1000) -> Ping:
+def measure_icmp(timeout_ms: int = 1000) -> PathMtu:
     from .icmp import Pinger
-    pinger = Pinger()
-
-    def ping(address: str, payload: int) -> bool:
-        return pinger.ping(address, timeout_ms, size=payload, dont_fragment=True).ok
-    return ping
+    with Pinger() as pinger:
+        return measure(lambda address, payload: pinger.ping(address, timeout_ms, size=payload,
+                                                            dont_fragment=True).ok)

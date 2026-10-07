@@ -360,6 +360,7 @@
   "tweak.reason.measure_again.dns_ranking": "O teste de DNS tem mais de 30 dias; execute o diagnóstico de novo",
   "tweak.reason.dns_suffix": "Esta conexão tem sufixo DNS próprio (nomes da empresa ou locais); mudar o DNS pode quebrá-los",
   "tweak.reason.dns_private": "Esta rede usa um servidor DNS próprio ({server}); mudar o DNS pode quebrar nomes locais ou filtros",
+  "tweak.reason.dns_foreign": "Os servidores DNS definidos por este app também valem nesta rede, que tem nomes próprios (um sufixo DNS). Se nomes locais ou da empresa falharem, desative isto",
   "tweak.reason.no_doh": "O Windows não tem configurações de DNS sobre HTTPS para estes servidores (requer Windows 11)",
   "tweak.reason.no_default_dns": "Sem backup, e as configurações originais de DNS da interface são desconhecidas",
   "tweak.reason.drift": "{source}. A linha parece ter mudado: desative isto, meça de novo e ative novamente",

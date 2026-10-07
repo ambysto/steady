@@ -360,6 +360,7 @@
   "tweak.reason.measure_again.dns_ranking": "DNS ベンチマークが 30 日以上前のものです。診断をもう一度実行してください",
   "tweak.reason.dns_suffix": "この接続には独自の DNS サフィックス(社内名やローカル名)があります。DNS を変更すると使えなくなる可能性があります",
   "tweak.reason.dns_private": "このネットワークは独自の DNS サーバー({server})を使っています。DNS を変更するとローカル名やフィルターが動かなくなる可能性があります",
+  "tweak.reason.dns_foreign": "このアプリが設定した DNS サーバーはこのネットワークにも適用されますが、このネットワークには独自の名前 (DNS サフィックス) があります。ローカル名や社内名が使えない場合はオフにしてください",
   "tweak.reason.no_doh": "Windows にこれらのサーバー用の DNS over HTTPS 設定がありません(Windows 11 が必要です)",
   "tweak.reason.no_default_dns": "バックアップがなく、インターフェイスの元の DNS 設定が不明です",
   "tweak.reason.drift": "{source}。回線が変わった可能性があります。この調整をオフにして測定し直し、再びオンにしてください",

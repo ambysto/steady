@@ -410,12 +410,27 @@ class Api:
 
     # -- write endpoints ---------------------------------------------------------------------
 
+    def _then_refresh_tweaks(self, run: Callable[[], dict]) -> Callable[[], dict]:
+        """A run may store a calibration (ADR-0015) that makes a measured tweak available: re-read the
+        tweak states before the result is shown, or the suggestion it links is hidden by stale states."""
+        def work() -> dict:
+            out = run()
+            try:
+                states = [asdict(s) for s in self._tweak_manager().states()]
+                self._tweak_cache.update(states=states, refreshed_at=self._clock())
+            except Exception:
+                self._tweak_cache["refreshed_at"] = None
+            return out
+        return work
+
     def start_diagnostics(self, **_: Any) -> dict:
-        return self.jobs.submit("diagnostics", self._run_diagnostics, single="diagnostics", sync=self._sync)
+        return self.jobs.submit("diagnostics", self._then_refresh_tweaks(self._run_diagnostics), single="diagnostics",
+                                sync=self._sync)
 
     def start_bufferbloat(self, **_: Any) -> dict:
         """Generates real traffic (~30 s), so only on explicit request; the result is not stored as a run."""
-        return self.jobs.submit("bufferbloat", self._run_bufferbloat, single="bufferbloat", sync=self._sync)
+        return self.jobs.submit("bufferbloat", self._then_refresh_tweaks(self._run_bufferbloat), single="bufferbloat",
+                                sync=self._sync)
 
     def set_tweak(self, tweak_id: str, body: Any, **_: Any) -> dict:
         tweak_id = unquote(tweak_id)

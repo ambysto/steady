@@ -179,17 +179,26 @@ def save_calibration(calibration: dict[str, Any]) -> None:
     _write_json_atomic(calibration_path(), calibration)
 
 
-_backup_threads = threading.Lock()
+_file_threads: dict[str, threading.Lock] = {"backup.json": threading.Lock(), "calibration.json": threading.Lock()}
 
 
-@contextlib.contextmanager
-def backup_lock(timeout: float = 15.0) -> Iterator[None]:
+def backup_lock(timeout: float = 15.0) -> contextlib.AbstractContextManager[None]:
     """Serialises read-modify-write of backup.json between threads and processes (the monitor,
     the elevated helper, the uninstaller). Without it one process can save a stale copy and
     drop an entry another process just added - the only record of an original value."""
+    return file_lock("backup.json", timeout)
+
+
+def calibration_lock(timeout: float = 15.0) -> contextlib.AbstractContextManager[None]:
+    """The same for calibration.json: a diagnostics run and a bufferbloat test may both record."""
+    return file_lock("calibration.json", timeout)
+
+
+@contextlib.contextmanager
+def file_lock(name: str, timeout: float = 15.0) -> Iterator[None]:
     import msvcrt
-    with _backup_threads:
-        fd = os.open(data_dir() / "backup.json.lock", os.O_RDWR | os.O_CREAT)
+    with _file_threads[name]:
+        fd = os.open(data_dir() / f"{name}.lock", os.O_RDWR | os.O_CREAT)
         try:
             deadline = time.monotonic() + timeout
             while True:
@@ -198,7 +207,7 @@ def backup_lock(timeout: float = 15.0) -> Iterator[None]:
                     break
                 except OSError:
                     if time.monotonic() > deadline:
-                        raise TimeoutError("backup.json is locked by another process") from None
+                        raise TimeoutError(f"{name} is locked by another process") from None
                     time.sleep(0.05)
             try:
                 yield

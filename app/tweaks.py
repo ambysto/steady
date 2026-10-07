@@ -552,15 +552,10 @@ class DnsTweak(MeasuredTweak):
         return (len(static) >= 2 and all(x in DNS_PROVIDERS for x in static)
                 and DNS_PROVIDERS[static[0]] != DNS_PROVIDERS[static[1]])
 
-    @staticmethod
-    def _gateway(net: dict[str, Any]) -> str:
-        parts = str(net["key"]).split("|")     # dnswatch.network_key: interface|gateway|ssid
-        return parts[1] if len(parts) > 1 else ""
-
     def _check_network_is_plain(self, sys_: System, net: dict[str, Any], dns: dict[str, Any]) -> None:
         if sys_.dns_suffix_get(net["interface_index"]):
             raise Unsupported(msg("tweak.reason.dns_suffix"))
-        gateway = self._gateway(net)
+        gateway = net.get("gateway") or ""
         for server in dict.fromkeys([*dns["effective"], *dns["static"]]):
             if server != gateway and not ipaddress.ip_address(server).is_global:
                 raise Unsupported(msg("tweak.reason.dns_private", server=server))
@@ -603,12 +598,18 @@ class DnsTweak(MeasuredTweak):
                 problem = Unsupported(msg("tweak.reason.measure_again.dns_ranking"))
             source = (msg("tweak.dns_fastest.source", date=self._when(entry), primary=target[0], secondary=target[1],
                           ms=float(entry["value"])) if entry is not None and target is not None else "")
+            on_note: Message | None = None
             if target is not None and static[:2] == target:
-                return Reading(True, True, effective, source)
-            if usable and self._is_pair(static):
-                return Reading(True, True, effective, msg("tweak.reason.drift", source=source))    # a newer ranking
-            if not usable and static and all(x in DNS_PROVIDERS for x in static):
-                return Reading(True, True, effective, problem.message)       # on, but nothing to compare with
+                on_note = source
+            elif usable and self._is_pair(static):
+                on_note = msg("tweak.reason.drift", source=source)            # a newer ranking
+            elif not usable and static and all(x in DNS_PROVIDERS for x in static):
+                on_note = problem.message                                      # on, but nothing to compare with
+            if on_note is not None:
+                # Static DNS follows the card to every network: say so where it can break local names.
+                if sys_.dns_suffix_get(net["interface_index"]):
+                    on_note = msg("tweak.reason.dns_foreign")
+                return Reading(True, True, effective, on_note)
             self._check_network_is_plain(sys_, net, dns)
             if problem is not None:
                 raise problem

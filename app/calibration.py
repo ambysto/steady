@@ -28,9 +28,10 @@ def record(kind: str, value: float, network: str | None, now: float, *, detail: 
         raise ValueError(f"unknown calibration kind {kind!r}")
     if not network or tweak_active:
         return False
-    store = load()
-    store[kind] = {"value": value, "measured_at": int(now), "network": network, "detail": detail or {}}
-    save(store)
+    with config.calibration_lock():
+        store = load()
+        store[kind] = {"value": value, "measured_at": int(now), "network": network, "detail": detail or {}}
+        save(store)
     return True
 
 

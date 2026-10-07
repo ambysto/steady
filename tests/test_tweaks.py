@@ -43,7 +43,7 @@ class FakeSystem:
         self.registry = {(CLASS_KEY, "PnPCapabilities"): 16}
         self.power = {(SUB_PCIE, SET_ASPM): (1, 2)}
         self.bindings = {("Wi-Fi", "ms_tcpip6"): True}
-        self.network = {"key": "6|192.0.2.1|HomeNet", "interface_index": 6}
+        self.network = {"key": "6|192.0.2.1|HomeNet", "interface_index": 6, "gateway": "192.0.2.1"}
         self.qos = {}                 # policy name -> bits per second
         self.mtu = {6: 1500}
         self.ecn = "disabled"
