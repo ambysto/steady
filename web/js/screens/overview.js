@@ -1,12 +1,13 @@
-// Overview: connection state, latency chart (live 15 min / 24 h / 7 days), numbers, suggestions,
-// recent incidents, quick actions, watchdog state.
+// Overview: connection state, the connection check (ADR-0020), latency chart (live 15 min / 24 h /
+// 7 days), numbers, recent incidents, quick actions, watchdog state.
 
 import { get, runJob } from "../api.js";
 import { latencyChart } from "../chart.js";
-import { $, el, fill, icon, toast } from "../dom.js";
+import { $, el, fill, icon, svgEl, toast } from "../dom.js";
 import { duration, number, t, timeOf } from "../i18n.js";
-import { bucketLoss, historySeries, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
-import { failoverKey, failoverRows, suggestionRow } from "../widgets.js";
+import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
+import { failoverKey, failoverRows, suggestionAction } from "../widgets.js";
+import { loadBadge } from "./diagnostics.js";
 
 const RANGES = { live: { label: "ui.range.live" }, day: { label: "ui.range.day", hours: 24, bucket: 5 },
                  week: { label: "ui.range.week", hours: 168, bucket: 30 } };
@@ -163,20 +164,116 @@ function quickActions(ctx) {
 
 let suggestions = null;
 
-function suggestionsBlock(ctx) {
-  if (!suggestions) return el("div", { class: "group loading" }, "…");
-  const open = suggestions.items.filter(i => !i.done_at).slice(0, 3);
-  if (!suggestions.run) {
-    return el("div", { class: "group" }, el("div", { class: "row" }, el("div", { class: "main secondary" }, suggestions.hint),
-      el("a", { class: "button", href: "#/diagnostics" }, t("ui.diag.run"))));
-  }
-  if (!open.length) return el("div", { class: "group" }, el("div", { class: "row" }, el("div", { class: "main secondary" }, t("ui.suggest.none"))));
-  return el("div", { class: "group" }, open.map(item => suggestionRow(item, {
-    compact: true, isAdmin: ctx.state?.is_admin, onChange: () => loadSuggestions(ctx).then(() => drawSlow(ctx)) })));
-}
-
 async function loadSuggestions(ctx) {
   suggestions = await get("/api/suggestions");
+}
+
+// --- connection check (ADR-0020): one big round button, the real progress, what was found ---------
+
+const STATUS_ICON = { ok: "check", warn: "alert", bad: "x", info: "info" };
+const RING_R = 70;
+const RING = 2 * Math.PI * RING_R;
+const check = { running: false, progress: null };   // progress: the diagnostics job's, see app/server.py
+
+function bigButton(label, iconName, onClick) {
+  return el("button", { class: "big-button", onclick: onClick }, icon(iconName), el("span", {}, label));
+}
+
+const statusCircle = (tile, iconName) => el("div", { class: `status-circle ${tile}` }, icon(iconName));
+
+function progressRing(done, total) {
+  const svg = svgEl("svg", { viewBox: "0 0 156 156", class: "ring" });
+  svg.append(svgEl("circle", { class: "track", cx: 78, cy: 78, r: RING_R }),
+             svgEl("circle", { class: "arc", cx: 78, cy: 78, r: RING_R, "stroke-dasharray": RING.toFixed(1),
+                               "stroke-dashoffset": (RING * (1 - (total ? done / total : 0))).toFixed(1),
+                               transform: "rotate(-90 78 78)" }));
+  return el("div", { class: "ring-wrap" }, svg, el("div", { class: "ring-label" }, total ? `${done}/${total}` : "…"));
+}
+
+function checkHero({ circle, title, body, below }) {
+  return el("div", { class: "check-hero" }, circle, el("h2", {}, title), body ? el("p", {}, body) : null,
+    below ? el("div", { class: "below" }, below) : null);
+}
+
+/** "Nothing to fix" shows the numbers behind it: the last 15 minutes and the drops of the last day. */
+function miniStats(ctx) {
+  const ticks = ticksOf(ctx);
+  const latency = liveLatency(ticks);
+  const { lossPct } = liveNumbers(ticks);
+  const since = nowOf(ctx) - 86400;
+  const drops = events.filter(e => OUTAGE_KINDS.includes(e.kind) && e.ts >= since).length;
+  const ms = v => (v === null ? "—" : number(v, 0));
+  const stats = [["ui.overview.router", ms(latency.router), " ms"], ["ui.overview.internet", ms(latency.internet), " ms"],
+                 ["ui.overview.loss", lossPct === null ? "—" : number(lossPct, 1), "%"], ["ui.check.drops_24h", drops, ""]];
+  return el("div", { class: "mini-stats" }, stats.map(([k, v, unit]) =>
+    el("div", { class: "stat" }, el("div", { class: "k" }, t(k)), el("div", { class: "v" }, v, el("small", {}, unit)))));
+}
+
+function problemRow(problem, ctx) {
+  const onChange = () => loadSuggestions(ctx).then(() => drawSlow(ctx));
+  const actions = problem.actions.map(a => el("div", { class: "problem-action" },
+    el("div", { class: "main" }, el("div", { class: "label" }, a.title),
+      a.kind === "manual" && a.body ? el("div", { class: "secondary" }, a.body) : null),
+    suggestionAction(a, { onChange, isAdmin: ctx.state?.is_admin })));
+  return el("div", { class: "row problem" },
+    el("div", { class: `icon-tile ${problem.status}` }, icon(STATUS_ICON[problem.status])),
+    el("div", { class: "main" },
+      el("div", { class: "label" }, problem.title, " ",
+        el("span", { class: `pill ${problem.kind === "app" ? "accent" : ""}` }, t(`ui.check.kind.${problem.kind}`))),
+      el("div", { class: "secondary" }, problem.summary),
+      problem.kind === "none" && problem.advice ? el("div", { class: "secondary" }, problem.advice) : null,
+      actions.length ? el("div", { class: "problem-actions" }, actions) : null));
+}
+
+function checkCard(ctx) {
+  const card = (...children) => el("div", { class: "group check-card" }, children);
+  if (check.running) {
+    const p = check.progress || { done: 0, total: suggestions?.checks_total || 0, finished: [] };
+    return card(checkHero({ circle: progressRing(p.done, p.total), title: t("ui.check.running", { done: p.done, total: p.total }),
+                            body: p.title }),
+      el("div", { class: "check-list" }, (p.finished || []).map(f => el("div", { class: `item ${f.status}` },
+        icon(STATUS_ICON[f.status] || "info", `icon s ${f.status}`), el("span", {}, f.title))),
+        p.key ? el("div", { class: "item current" }, icon("refresh", "icon spin"), el("span", {}, p.title)) : null));
+  }
+  if (!suggestions) return el("div", { class: "group loading" }, "…");
+  const start = () => runCheck(ctx);
+  const summary = suggestions.check;
+  if (!suggestions.run || !summary) {
+    return card(checkHero({ circle: bigButton(t("ui.check.start"), "gauge", start), title: t("ui.check.idle_title"),
+                            body: t("ui.check.idle_body", { count: suggestions.checks_total }) }));
+  }
+  const time = timeOf(suggestions.run.ts, { withDate: true });
+  const again = el("button", { class: "button", onclick: start }, t("ui.check.again"));
+  if (!summary.count) {
+    return card(checkHero({ circle: statusCircle("ok", "check"), title: t("ui.check.clear_title"),
+                            body: t("ui.check.clear_body", { total: summary.total, time }), below: again }),
+      miniStats(ctx));
+  }
+  const worst = summary.problems.some(p => p.status === "bad") ? "bad" : "warn";
+  return card(checkHero({ circle: statusCircle(worst, "alert"), title: t("ui.check.found_title", { count: summary.count }),
+                          body: t("ui.check.found_body", { time, ok: summary.ok, total: summary.total }), below: again }),
+    el("div", { class: "rows" }, summary.problems.map(p => problemRow(p, ctx))));
+}
+
+function drawCheck(ctx) {
+  slots.check && fill(slots.check, checkCard(ctx));
+}
+
+async function runCheck(ctx) {
+  if (check.running) return;
+  Object.assign(check, { running: true, progress: null });
+  drawCheck(ctx);
+  try {
+    await runJob("/api/diagnostics", {}, { interval: 300, timeout: 180000,
+      onProgress: progress => { if (progress) { check.progress = progress; drawCheck(ctx); } } });
+    await loadSuggestions(ctx);
+    loadBadge().catch(() => {});        // the sidebar count and the Diagnostics page follow the new run
+  } catch (err) {
+    toast(t("ui.error.failed", { message: err.message }), { bad: true });
+  } finally {
+    check.running = false;
+    drawCheck(ctx);
+  }
 }
 
 // Static parts are built once per render; the live parts (state, chart, numbers) are swapped in
@@ -191,7 +288,7 @@ function drawLive(ctx) {
 
 function drawSlow(ctx) {
   const recent = events.filter(e => OUTAGE_KINDS.includes(e.kind) || e.kind === "monitor_gap").slice(0, 3);
-  slots.suggestions && fill(slots.suggestions, suggestionsBlock(ctx));
+  drawCheck(ctx);
   slots.recent && fill(slots.recent, recent.length ? el("div", { class: "group" }, recent.map(eventRow))
                                               : el("div", { class: "group empty" }, t("ui.log.empty")));
   slots.watchdog && fill(slots.watchdog, watchdogPill(ctx));
@@ -213,12 +310,12 @@ async function loadFailover() {
 }
 
 function draw(ctx) {
-  for (const name of ["hero", "suggestions", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
+  for (const name of ["hero", "check", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
   slots.stats.style.marginTop = "var(--space-3)";
   fill(root(), 
     el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview"))),
     slots.hero,
-    el("div", { class: "section-title" }, t("ui.suggest.title")), slots.suggestions,
+    slots.check,
     el("div", { class: "section-title" }, t("ui.overview.latency")), slots.chart, slots.stats,
     el("div", { class: "two-col" },
       el("div", {}, el("div", { class: "section-title" }, t("ui.overview.recent")), slots.recent),

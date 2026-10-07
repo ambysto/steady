@@ -658,14 +658,12 @@
 
   "manual.no_run": "Lancez le diagnostic pour obtenir des suggestions pour ce réseau",
 
-  "ui.suggest.title": "Suggestions",
   "ui.suggest.manual_group": "Étapes manuelles",
   "ui.suggest.manual_hint": "Ce que vous seul pouvez faire. Marquez une étape comme faite et l'application compare la connexion avant et après.",
   "ui.suggest.done_button": "C'est fait",
   "ui.suggest.done_at": "Fait {time}",
   "ui.suggest.because": "Parce que : {reason}",
   "ui.suggest.turn_on": "Activer",
-  "ui.suggest.none": "Rien à faire : le dernier diagnostic n'a trouvé aucun problème",
 
   "ui.impact.title": "Effet",
 

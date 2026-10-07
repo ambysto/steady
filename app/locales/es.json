@@ -658,14 +658,12 @@
 
   "manual.no_run": "Ejecuta el diagnóstico para obtener sugerencias para esta red",
 
-  "ui.suggest.title": "Sugerencias",
   "ui.suggest.manual_group": "Pasos manuales",
   "ui.suggest.manual_hint": "Cosas que solo puedes hacer tú. Marca una como hecha y la aplicación compara la conexión antes y después.",
   "ui.suggest.done_button": "Ya lo hice",
   "ui.suggest.done_at": "Hecho {time}",
   "ui.suggest.because": "Motivo: {reason}",
   "ui.suggest.turn_on": "Activar",
-  "ui.suggest.none": "Nada que hacer: el último diagnóstico no encontró problemas",
 
   "ui.impact.title": "Efecto",
 

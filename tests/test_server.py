@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from app import config, elevated, elevation, i18n
+from app.i18n import msg
 from app.server import Api, Jobs, Server
 from app.storage import Storage
 
@@ -87,7 +88,7 @@ class ServerTestCase(unittest.TestCase):
         self.api = Api(monitor=FakeMonitor(), storage=self.storage, load_settings=lambda: json.loads(json.dumps(self.settings)),
                        save_settings=self._save, is_admin=lambda: self.admin, tweak_manager=lambda: self.manager,
                        elevate=elevate, actions=self.actions,
-                       run_diagnostics=lambda: {"worst": "ok", "results": []}, sync_jobs=True,
+                       run_diagnostics=lambda progress=None: {"worst": "ok", "results": []}, sync_jobs=True,
                        load_backup=lambda: self.backup, autostart_status=self._autostart,
                        route=lambda: self.route)
         self.server = Server(self.api, 0)
@@ -352,6 +353,41 @@ class ReadApiTests(ServerTestCase):
         self.assertEqual(self.req("GET", "/api/jobs/" + "0" * 32)[0], 404)
         self.assertEqual(self.req("GET", "/api/diagnostics/runs")[1], {"runs": []})
         self.assertEqual(self.req("GET", "/api/diagnostics/runs/5")[0], 404)
+
+    def test_diagnostics_job_reports_progress(self):
+        seen = []
+
+        def run(progress):
+            progress({"done": 0, "total": 2, "key": "signal", "title": msg("diag.signal.title"), "finished": []})
+            seen.append(self.req("GET", f"/api/jobs/{self.api.jobs._running_by_key['diagnostics']}")[1]["progress"])
+            progress({"done": 2, "total": 2, "key": None, "title": None, "finished": []})
+            return {"worst": "ok", "results": []}
+        self.api._run_diagnostics = run
+        job = self.req("POST", "/api/diagnostics", {})[1]
+        self.assertEqual(seen[0]["title"], "Wi‑Fi signal")              # localized like every API answer
+        self.assertEqual((seen[0]["done"], seen[0]["total"], seen[0]["key"]), (0, 2, "signal"))
+        self.assertEqual(self.req("GET", f"/api/jobs/{job['id']}")[1]["progress"]["done"], 2)
+
+    def test_real_diagnostics_progress_lists_every_finished_check(self):
+        from app import diagnostics
+        calls = []
+        fake = [(2, "signal", lambda ctx: diagnostics.CheckResult(2, "signal", msg("diag.signal.title"), "warn", "s")),
+                (8, "vpn", lambda ctx: diagnostics.CheckResult(8, "vpn", msg("diag.vpn.title"), "ok", "v"))]
+        with mock.patch.object(diagnostics, "CHECKS", fake), mock.patch.object(diagnostics, "save_report", lambda *a: 1):
+            self.api._default_diagnostics(calls.append)
+        self.assertEqual([(c["done"], c["key"]) for c in calls], [(0, "signal"), (1, "vpn"), (2, None)])
+        self.assertEqual([(f["key"], f["status"]) for f in calls[-1]["finished"]], [("signal", "warn"), ("vpn", "ok")])
+        self.assertEqual(calls[1]["finished"][0]["title"], msg("diag.signal.title"))
+
+    def test_suggestions_say_how_many_checks_a_run_has(self):
+        from app import diagnostics
+        out = self.req("GET", "/api/suggestions")[1]
+        self.assertEqual((out["checks_total"], out["check"]), (len(diagnostics.CHECKS), None))
+
+    def test_other_jobs_have_no_progress(self):
+        job = self.req("POST", "/api/actions/reconnect", {})[1]
+        self.assertEqual(job["status"], "done")
+        self.assertIsNone(job["progress"])
 
 
 class WriteApiTests(ServerTestCase):

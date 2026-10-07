@@ -111,6 +111,31 @@ def suggest(results: list[dict], tweak_states: dict[str, dict] | None, done: dic
     return sorted(items.values(), key=order)
 
 
+PROBLEM_STATUSES = ("bad", "warn")
+
+
+def check_summary(results: list[dict], items: list[dict]) -> dict[str, Any]:
+    """What a run found, as the Overview's check card shows it (ADR-0020).
+
+    Only warn/bad results are problems; info and ok never count. Each problem lists the suggestions
+    that came from its check and says who can fix it: "app" (a tweak), "you" (a manual step) or
+    "none". `batch` names the tweaks the Fix button may turn on together: low risk, not measured
+    (a measured tweak takes its own ~15 s measurement and may refuse). Pure."""
+    problems = []
+    ranked = sorted((r for r in results if r.get("status") in PROBLEM_STATUSES),
+                    key=lambda r: (-SEVERITY[r["status"]], r.get("id") or 0))
+    for r in ranked:
+        actions = [i for i in items if (i.get("reason") or {}).get("check") == r.get("key")]
+        tweaks = [i for i in actions if i["kind"] == "tweak"]
+        kind = "app" if tweaks else "you" if actions else "none"
+        problems.append({"key": r.get("key"), "title": r.get("title"), "status": r["status"],
+                         "summary": r.get("summary"), "advice": r.get("advice") or "", "kind": kind,
+                         "actions": actions,
+                         "batch": [i["id"] for i in tweaks if i.get("risk") == "low" and not i.get("measured")]})
+    return {"problems": problems, "count": len(problems), "fixable": sum(1 for p in problems if p["batch"]),
+            "ok": sum(1 for r in results if r.get("status") == "ok"), "total": len(results)}
+
+
 def order(item: dict) -> tuple:
     """Most serious first; within a level, things still to do before things done."""
     return -item["severity"], item.get("done_at") is not None, item["kind"], item["id"]
@@ -131,6 +156,7 @@ def build(storage: Any, now: float, tweak_states: dict[str, dict] | None, tweak_
         if item["kind"] == "manual" and item.get("done_at"):
             item["impact"] = impact.compare(storage, item["done_at"], now)
     return {"run": {"id": run["id"], "ts": run["ts"]} if run else None, "items": items,
+            "check": check_summary(run["results"], items) if run else None,
             "hint": None if run else msg("manual.no_run")}
 
 

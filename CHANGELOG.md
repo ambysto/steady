@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **"Check my connection" on the Overview** (SIC-101, [ADR-0020](docs/adr/0020-check-fix-result-flow.md)). The Overview's Suggestions list is replaced by a connection check card, centred on one big round button. While it runs, a ring fills as each check really finishes and the finished checks tick off below it with their status; the diagnostics job now reports its progress (`progress` on `GET /api/jobs/<id>`: done, total, the check running and every finished one). The result counts only warn/bad results as problems, most serious first, each with its one-line finding, who can fix it ("The app can fix this" / "You can fix this" / "Nothing on this PC fixes this") and the suggestion buttons that already existed. "Nothing to fix" is a green circle with the numbers behind it: latency to the router and the Internet and packet loss over the last 15 minutes, and drops in the last 24 hours. `GET /api/suggestions` carries the summary (`check`: problems, count, fixable, ok, total) and `checks_total`. The Fix button that turns the low-risk tweaks on together comes with SIC-102. The two keys the old list used are removed from every catalog.
+
 ### Changed
 - **Landing page redesign** (SIC-54): a light, Speedify-like layout (DM Sans, mono labels, dark live panels) with motion that shows what the app does: a live-scrolling latency chart, packets travelling along the connection path and dropping at the failing hop, count-ups to the measured numbers. The page no longer needs the company site's stylesheet; the logo is the app icon (Wi‑Fi arcs, dot and "A"/"S" on the graphite tile, from `apple/Steady/AppIcon.icon`), with a matching touch icon, in `site/assets/img`. Install text matches 0.6.0 (all users, one Administrator approval). All motion is off with `prefers-reduced-motion`.
 

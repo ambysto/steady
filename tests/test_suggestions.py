@@ -143,14 +143,71 @@ class DnsTweakSuggestionTests(unittest.TestCase):
             self.assertNotIn(("tweak", "dns_fastest"), ids(items), state)
 
 
+class CheckSummaryTests(unittest.TestCase):
+    """ADR-0020: what the Overview's check card counts and who can fix each problem."""
+
+    META = {**META, "dns_fastest": {"name": msg("tweak.dns_fastest.name"), "note": "", "risk": "experimental"},
+            "upload_shaping": {"name": msg("tweak.upload_shaping.name"), "note": "", "risk": "medium", "measured": True},
+            "low_but_measured": {"name": "x", "note": "", "risk": "low", "measured": True}}
+
+    def summary(self, results, states=None, done=None):
+        items = suggestions.suggest(results, states, done or {}, self.META)
+        return suggestions.check_summary(results, items)
+
+    def test_only_warn_and_bad_count_most_serious_first(self):
+        results = [result("signal", "warn", id=2), result("ping", "info", id=5), result("vpn", "ok", id=8),
+                   result("drops", "bad", id=4, tweak="power_pcie_aspm_off"), result("driver", "bad", id=1),
+                   result("tweaks", "info", id=10, details=["wifi_power_saving"])]
+        out = self.summary(results)
+        self.assertEqual([p["key"] for p in out["problems"]], ["driver", "drops", "signal"])
+        self.assertEqual((out["count"], out["ok"], out["total"]), (3, 1, 6))
+
+    def test_who_can_fix_each_problem(self):
+        results = [result("drops", "bad", id=4, tweak="power_pcie_aspm_off"), result("signal", "warn", id=2),
+                   result("vpn", "warn", id=8)]
+        by_key = {p["key"]: p for p in self.summary(results)["problems"]}
+        self.assertEqual(by_key["drops"]["kind"], "app")
+        self.assertEqual([a["id"] for a in by_key["drops"]["actions"]], ["power_pcie_aspm_off"])
+        self.assertEqual(by_key["signal"]["kind"], "you")
+        self.assertEqual([a["id"] for a in by_key["signal"]["actions"]], ["move_closer"])
+        self.assertEqual((by_key["vpn"]["kind"], by_key["vpn"]["actions"]), ("none", []))
+
+    def test_the_fix_button_takes_only_low_risk_unmeasured_tweaks(self):
+        results = [result("drops", "bad", id=4, tweak="power_pcie_aspm_off"),
+                   result("dns", "warn", id=6, tweak="dns_fastest"),
+                   result("bufferbloat", "warn", id=14, tweak="upload_shaping"),
+                   result("tcp_ports", "warn", id=7, tweak="low_but_measured")]
+        out = self.summary(results)
+        batch = {p["key"]: p["batch"] for p in out["problems"]}
+        self.assertEqual(batch, {"drops": ["power_pcie_aspm_off"], "dns": [], "bufferbloat": [], "tcp_ports": []})
+        self.assertEqual(out["fixable"], 1)
+        kinds = {p["key"]: p["kind"] for p in out["problems"]}
+        self.assertEqual(kinds["dns"], "app")          # the app can fix it, on the Optimize page, not in the batch
+
+    def test_a_tweak_already_on_leaves_the_problem_to_the_user_or_nobody(self):
+        out = self.summary([result("drops", "bad", id=4, tweak="power_pcie_aspm_off")],
+                           states={"power_pcie_aspm_off": {"enabled": True, "supported": True}})
+        self.assertEqual((out["problems"][0]["kind"], out["fixable"]), ("none", 0))
+
+    def test_nothing_to_fix(self):
+        out = self.summary([result("signal", "ok"), result("ping", "info")])
+        self.assertEqual((out["problems"], out["count"], out["fixable"], out["ok"], out["total"]), ([], 0, 0, 1, 2))
+
+
 class BuildTests(unittest.TestCase):
     def setUp(self):
         self.db = Storage()
         self.addCleanup(self.db.close)
 
+    def test_the_latest_run_is_summarised_for_the_check_card(self):
+        self.db.save_diagnostic_run(int(NOW) - H, "bad", [result("drops", "bad", id=4, tweak="power_pcie_aspm_off"),
+                                                          result("signal", "ok", id=2)])
+        check = suggestions.build(self.db, NOW, None, META)["check"]
+        self.assertEqual((check["count"], check["fixable"], check["ok"], check["total"]), (1, 1, 1, 2))
+
     def test_without_a_run_there_is_a_hint(self):
         out = suggestions.build(self.db, NOW, None, META)
-        self.assertEqual((out["run"], out["items"]), (None, []))
+        self.assertEqual((out["run"], out["items"], out["check"]), (None, [], None))
         self.assertEqual(i18n.render(out["hint"], "en"), "Run diagnostics to get suggestions for this network")
 
     def test_marking_done_records_an_event_and_starts_measuring(self):

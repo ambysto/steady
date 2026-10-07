@@ -658,14 +658,12 @@
 
   "manual.no_run": "Chạy chẩn đoán để có gợi ý cho mạng này",
 
-  "ui.suggest.title": "Gợi ý",
   "ui.suggest.manual_group": "Việc làm bằng tay",
   "ui.suggest.manual_hint": "Những việc chỉ bạn làm được. Đánh dấu đã làm, app sẽ so sánh kết nối trước và sau.",
   "ui.suggest.done_button": "Tôi đã làm",
   "ui.suggest.done_at": "Đã làm lúc {time}",
   "ui.suggest.because": "Vì: {reason}",
   "ui.suggest.turn_on": "Bật",
-  "ui.suggest.none": "Không có gì cần làm: lần chẩn đoán gần nhất không thấy vấn đề",
 
   "ui.impact.title": "Hiệu quả",
 

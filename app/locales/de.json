@@ -658,14 +658,12 @@
 
   "manual.no_run": "Diagnose starten, um Vorschläge für dieses Netzwerk zu erhalten",
 
-  "ui.suggest.title": "Vorschläge",
   "ui.suggest.manual_group": "Manuelle Schritte",
   "ui.suggest.manual_hint": "Schritte, die sich nur von Hand erledigen lassen. Als erledigt markieren, dann vergleicht die App die Verbindung vorher und nachher.",
   "ui.suggest.done_button": "Erledigt",
   "ui.suggest.done_at": "Erledigt {time}",
   "ui.suggest.because": "Grund: {reason}",
   "ui.suggest.turn_on": "Einschalten",
-  "ui.suggest.none": "Nichts zu tun: Die letzte Diagnose hat keine Probleme gefunden",
 
   "ui.impact.title": "Auswirkung",
 

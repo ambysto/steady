@@ -167,6 +167,57 @@ a.group.row:hover { background: var(--surface-hover); }
 .effect .caveat { margin-top: 4px; color: var(--text-tertiary); font-size: var(--text-caption); }
 .row .actions-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 
+/* --- connection check (ADR-0020): one big round button, a ring while checking ------------------- */
+.check-card { margin-top: var(--space-3); }
+.check-hero { display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  padding: var(--space-6) var(--space-4) var(--space-5); text-align: center; }
+.check-hero h2 { margin: var(--space-2) 0 0; font-size: var(--text-title); font-weight: var(--weight-bold); }
+.check-hero p { margin: 0; max-width: 46ch; color: var(--text-secondary); }
+.check-hero .below { margin-top: var(--space-2); }
+/* A macOS push button at a larger size: flat system accent and the control shadow, no glow. */
+.big-button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2);
+  width: 156px; height: 156px; padding: var(--space-4); border: 0; border-radius: 50%; cursor: default;
+  background: var(--accent); color: var(--accent-text); box-shadow: var(--shadow-control);
+  font-size: var(--text-headline); font-weight: var(--weight-semibold); line-height: 1.2;
+  transition: background var(--duration) var(--ease-out); }
+.big-button svg.icon { width: 30px; height: 30px; }
+.big-button:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
+.big-button:active { background: color-mix(in srgb, var(--accent) 78%, black); }
+.big-button:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
+.ring-wrap { position: relative; width: 156px; height: 156px; }
+.ring { width: 100%; height: 100%; display: block; }
+.ring circle { fill: none; stroke-width: 10; }
+.ring .track { stroke: var(--surface-pressed); }
+.ring .arc { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset var(--duration-slow) var(--ease-out); }
+.ring-label { position: absolute; inset: 0; display: grid; place-items: center; font-size: var(--text-display);
+  font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+.status-circle { display: grid; place-items: center; width: 156px; height: 156px; border-radius: 50%;
+  background: var(--accent-soft); color: var(--accent); }
+.status-circle svg.icon { width: 56px; height: 56px; stroke-width: 2; }
+.status-circle.ok { background: var(--ok-soft); color: var(--ok); }
+.status-circle.warn { background: var(--warn-soft); color: var(--warn); }
+.status-circle.bad { background: var(--bad-soft); color: var(--bad); }
+.check-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px var(--space-3);
+  padding: 0 var(--space-4) var(--space-4); font-size: var(--text-footnote); }
+.check-list .item { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--text-secondary); }
+.check-list .item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.check-list .item.current { color: var(--text); font-weight: var(--weight-medium); }
+.check-list svg.icon { width: 14px; height: 14px; }
+svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.icon.s.bad { color: var(--bad); } svg.icon.s.info { color: var(--info); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+.check-card .rows { border-top: .5px solid var(--separator); }
+.check-card .problem { align-items: flex-start; }
+.check-card .problem .icon-tile { margin-top: 2px; }
+.check-card .problem .label .pill { margin-left: 4px; vertical-align: 1px; }
+.check-card .problem .secondary + .secondary { margin-top: 2px; }
+.problem-actions { margin-top: var(--space-2); }
+.problem-action { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0 0; }
+.problem-action + .problem-action { margin-top: var(--space-1); border-top: .5px solid var(--separator); }
+.problem-action .main { flex: 1; min-width: 0; }
+.mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: .5px solid var(--separator); }
+
 /* --- diagnostics ------------------------------------------------------------------------------ */
 .diag-summary { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
 .check .details { display: none; margin: var(--space-2) 0 0; padding: 0; list-style: none;
@@ -209,4 +260,7 @@ a.group.row:hover { background: var(--surface-hover); }
   .stats { grid-template-columns: repeat(2, 1fr); }
   .two-col { grid-template-columns: 1fr; }
   .hero .ssid { display: none; }
+  .check-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mini-stats { grid-template-columns: repeat(2, 1fr); }
+  .problem-action { flex-wrap: wrap; }
 }

@@ -87,13 +87,16 @@ class Jobs:
         self._running_by_key: dict[str, str] = {}
         self._clock = clock
 
-    def submit(self, kind: str, fn: Callable[[], Any], single: str | None = None, sync: bool = False) -> dict:
+    def submit(self, kind: str, fn: Callable[..., Any], single: str | None = None, sync: bool = False,
+               progress: bool = False) -> dict:
+        """With `progress`, `fn` is called with one argument: a callable that replaces the job's
+        "progress" field (a dict), which GET /api/jobs/<id> returns while the job runs."""
         with self._lock:
             if single and single in self._running_by_key:
                 return dict(self._jobs[self._running_by_key[single]])
             job_id = uuid.uuid4().hex
             job = {"id": job_id, "kind": kind, "status": "running", "started": self._clock(), "result": None,
-                   "error": None}
+                   "error": None, "progress": None}
             self._jobs[job_id] = job
             if single:
                 self._running_by_key[single] = job_id
@@ -101,9 +104,13 @@ class Jobs:
                 if self._jobs[old]["status"] != "running":
                     del self._jobs[old]
 
+        def set_progress(value: dict) -> None:
+            with self._lock:
+                job["progress"] = dict(value)
+
         def run() -> None:
             try:
-                result, error, status = fn(), None, "done"
+                result, error, status = (fn(set_progress) if progress else fn()), None, "done"
             except Exception as exc:
                 log.exception("job %s failed", kind)
                 result, error, status = None, f"{type(exc).__name__}: {exc}", "error"
@@ -139,7 +146,7 @@ class Api:
                  tweak_manager: Callable[[], Any] | None = None,
                  elevate: Callable[[str, str], Any] | None = None,
                  actions: Any = None,
-                 run_diagnostics: Callable[[], dict] | None = None,
+                 run_diagnostics: Callable[..., dict] | None = None,
                  run_bufferbloat: Callable[[], dict] | None = None,
                  clock: Callable[[], float] = time.time,
                  load_backup: Callable[[], dict] = config.load_backup,
@@ -247,9 +254,21 @@ class Api:
         from . import calibration
         return calibration.current_network_id()
 
-    def _default_diagnostics(self) -> dict:
+    def _default_diagnostics(self, progress: Callable[[dict], None] | None = None) -> dict:
         from . import diagnostics
-        report = diagnostics.run_all(diagnostics.Context(self.storage))
+
+        # Every finished check is listed, not only the last: a poll can miss steps of fast checks.
+        finished: list[dict] = []
+        current: list[str] = []
+
+        def report_progress(done: int, total: int, key: str | None, status: str | None) -> None:
+            if current and status is not None:
+                finished.append({"key": current[0], "title": diagnostics.title_of(current[0]), "status": status})
+            current[:] = [key] if key else []
+            if progress is not None:
+                progress({"done": done, "total": total, "key": key,
+                          "title": diagnostics.title_of(key) if key else None, "finished": list(finished)})
+        report = diagnostics.run_all(diagnostics.Context(self.storage), progress=report_progress)
         run_id = diagnostics.save_report(self.storage, report)
         return {"run_id": run_id, "ts": report.ts, "worst": report.worst,
                 "results": [r.to_dict() for r in report.results]}
@@ -342,6 +361,8 @@ class Api:
         meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk, "measured": isinstance(t, tweaks.MeasuredTweak)}
                 for t in tweaks.CATALOG}
         out = suggestions.build(self.storage, self._clock(), tweak_states, meta)
+        from .diagnostics import CHECKS
+        out["checks_total"] = len(CHECKS)   # "Runs N checks", before the first run
         if self._last_bufferbloat:
             extra = suggestions.suggest(self._last_bufferbloat, tweak_states, suggestions.done_steps(self.storage, self._clock()), meta)
             known = {(i["kind"], i["id"]) for i in out["items"]}
@@ -441,7 +462,9 @@ class Api:
     # -- write endpoints ---------------------------------------------------------------------
 
     def start_diagnostics(self, **_: Any) -> dict:
-        return self.jobs.submit("diagnostics", self._run_diagnostics, single="diagnostics", sync=self._sync)
+        """The job's "progress" says which check runs now and how many are done (ADR-0020)."""
+        return self.jobs.submit("diagnostics", self._run_diagnostics, single="diagnostics", sync=self._sync,
+                                progress=True)
 
     def start_bufferbloat(self, **_: Any) -> dict:
         """Generates real traffic (~30 s), so only on explicit request; the result is not stored as a run."""

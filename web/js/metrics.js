@@ -43,6 +43,18 @@ export function liveNumbers(ticks) {
            routerLossPct: pct(withRouter.filter(tk => tk.router === null), withRouter), jitter };
 }
 
+/** Median router and best-Internet rtt (ms) over the ticks that answered; null when none did. */
+export function liveLatency(ticks) {
+  const median = values => {
+    if (!values.length) return null;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = sorted.length >> 1;
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+  return { router: median(ticks.map(tk => tk.router).filter(v => v !== null && v !== undefined)),
+           internet: median(ticks.map(tk => tk.internet).filter(v => v !== null)) };
+}
+
 /** Is the latest probe round recent and successful? (live.probe = {ts, ok}) */
 export function probesOk(live, now) {
   const probe = live?.probe;
