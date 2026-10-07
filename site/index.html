@@ -114,7 +114,7 @@
           <div class="track" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
           <ol class="path" aria-label="Example diagnosis along the connection path">
             <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><b>This PC</b><span class="hop-val">driver OK</span></li>
-            <li class="hop bad"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg></span><b>Wi‑Fi link</b><span class="hop-val">34.9% loss</span></li>
+            <li class="hop bad"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg></span><b>Wi‑Fi link</b><span class="hop-val">35% loss</span></li>
             <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 13V8M17 13V8M7 16.5h.01M11 16.5h.01"/></svg></span><b>Router</b><span class="hop-val">reachable</span></li>
             <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 18V9l6-4 6 4v9M10 18v-5h4v5"/></svg></span><b>Provider</b><span class="hop-val">38 ms</span></li>
             <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><b>Internet</b><span class="hop-val">DNS 12 ms</span></li>
@@ -203,7 +203,7 @@
           <p class="lead">One home network, one PC. The Wi‑Fi showed four bars the whole time.</p>
         </div>
         <div class="stats">
-          <div class="stat"><p class="stat-num"><s>34.9%</s> <span data-from="34.9" data-to="0.39" data-dec="2" data-unit="%">0.39%</span></p><p>Packet loss to the router</p></div>
+          <div class="stat"><p class="stat-num"><s>35%</s> <span data-from="35" data-to="0.4" data-dec="1" data-unit="%">0.4%</span></p><p>Packet loss to the router</p></div>
           <div class="stat"><p class="stat-num"><s>64</s> <span data-from="64" data-to="1" data-dec="0">1</span></p><p>Connection losses</p></div>
           <div class="stat"><p class="stat-num"><s>~42 min</s> <span data-from="42" data-to="3" data-dec="0" data-unit=" s">3 s</span></p><p>Time offline</p></div>
           <div class="stat"><p class="stat-num"><span data-from="0" data-to="1" data-dec="0">1</span></p><p>Disconnect Windows logged before</p></div>
@@ -211,13 +211,13 @@
         <div class="compare">
           <div class="compare-row">
             <span class="c-label">Before <small>107 min, one afternoon</small></span>
-            <span class="c-bar"><i class="b-bad" style="--w:34.9%"></i></span>
-            <span class="c-val">34.9%</span>
+            <span class="c-bar"><i class="b-bad" style="--w:35%"></i></span>
+            <span class="c-val">35%</span>
           </div>
           <div class="compare-row">
             <span class="c-label">After <small>9.6 hours, overnight</small></span>
             <span class="c-bar"><i class="b-ok" style="--w:0.6%"></i></span>
-            <span class="c-val">0.39%</span>
+            <span class="c-val">0.4%</span>
           </div>
         </div>
         <p class="note">What fixed it was not software: switching off the old modem&rsquo;s own Wi‑Fi, disabling a Wi‑Fi&nbsp;7 feature (MLO) the PC&rsquo;s card couldn&rsquo;t handle, and turning the PC so the card&rsquo;s antennas weren&rsquo;t hidden behind a metal desk frame. They were found by measuring &mdash; the kind of checks Ambysto Steady runs and the steps it suggests. This is a single case; your results will differ.</p>
