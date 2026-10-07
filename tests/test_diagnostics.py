@@ -639,17 +639,26 @@ def fake_context(**overrides):
         "dns_bench": lambda: ([bench("1.1.1.1", [40] * 5)], ["1.1.1.1"], {"1.1.1.1": "in_use"}),
         "tweak_states": lambda: None,
         "route_rtts": lambda: dict(zip(diagnostics.ROUTE_HOSTS, (31, 35, 38, 42, 47))),
+        "path_mtu": lambda: ({"alias": "Wi-Fi", "mtu": 1500}, [diagnostics.pmtu.PathResult("1.1.1.1", 1500, 2)]),
     }
     loaders.update(overrides)
     return d.Context(now=NOW, loaders=loaders)
 
 
 class RunAllTests(unittest.TestCase):
-    def test_runs_all_14_in_order(self):
+    def test_runs_all_default_checks_in_order(self):
         report = d.run_all(fake_context())
-        self.assertEqual([r.id for r in report.results], list(range(1, 14)) + [15])   # 14 is on demand
-        self.assertEqual(len({r.key for r in report.results}), 14)
+        self.assertEqual([r.id for r in report.results], [*range(1, 14), 15, 16])   # 14 runs only on demand
+        self.assertEqual(len({r.key for r in report.results}), 15)
         self.assertFalse([r for r in report.results if r.error])
+
+    def test_check_numbers_and_keys_are_unique(self):
+        # Two branches each took the next free number once; a clash would make a saved run ambiguous.
+        every = diagnostics.CHECKS + diagnostics.ON_DEMAND_CHECKS
+        ids = [cid for cid, _, _ in every]
+        keys = [key for _, key, _ in every]
+        self.assertEqual(len(ids), len(set(ids)), ids)
+        self.assertEqual(len(keys), len(set(keys)), keys)
 
     def test_a_broken_check_does_not_hide_the_others(self):
         def boom():
@@ -660,7 +669,7 @@ class RunAllTests(unittest.TestCase):
             self.assertEqual(by_key[key].status, d.INFO, key)
             self.assertIn("netsh died", by_key[key].error)
         self.assertIsNone(by_key["signal"].error)
-        self.assertEqual(len(report.results), 14)
+        self.assertEqual(len(report.results), 15)
 
     def test_only_filter(self):
         report = d.run_all(fake_context(), only={2, 13})

@@ -4,7 +4,7 @@ import unittest
 from app import dnsprobe, i18n, tweaks
 from app.dnswatch import app_changed
 from app.winsys import SystemWriteError
-from tests.test_tweaks import manager
+from tests.test_tweaks import WIFI_GUID, manager
 
 CANDIDATES = tuple(tweaks.DOH_ADDRESSES)
 
@@ -73,8 +73,8 @@ class TcpEcnTests(unittest.TestCase):
         out = mgr.enable("tcp_ecn")
         self.assertTrue(out.ok and not out.changed)
         self.assertEqual((s.writes(), backup.data), ([], {}))
-        self.assertTrue(mgr.disable("tcp_ecn").ok)                      # no backup: Windows' own value is known
-        self.assertEqual(s.tcp_global["ecncapability"], "disabled")
+        self.assertTrue(mgr.disable("tcp_ecn").ok)                      # no backup: back to Windows' own default,
+        self.assertEqual(s.tcp_global["ecncapability"], "default")      # not to a value of this tool's choosing
 
     def test_not_reported_by_windows_is_unsupported(self):
         mgr, s, _, _, _ = setup(["tcp_ecn"])
@@ -309,6 +309,7 @@ class DnsFastestTests(unittest.TestCase):
         self.assertFalse(out.ok)
         self.assertIn("two public DNS providers", text(out.message))
         self.assertEqual((s.snapshot(), backup.data), (before, {}))
+        self.assertEqual(s.writes(), [])                                # failed before the first write: nothing to undo
 
     def test_a_failure_halfway_rolls_everything_back(self):
         mgr, s, backup, events, _ = setup(["dns_fastest"])
@@ -350,6 +351,284 @@ class DnsFastestTests(unittest.TestCase):
         self.assertFalse(st.supported)
         self.assertIsNone(st.error)
         self.assertEqual(s.writes(), [])
+
+
+ETHERNET_GUID = "{A407D7A1-D1F3-4322-88DC-940E2CE6E38F}"
+
+
+def ethernet(**kw):
+    """A dock's Ethernet with DNS typed in by hand."""
+    return {"index": 9, "guid": ETHERNET_GUID, "alias": "Ethernet", "servers": ["10.0.0.53"], "static": True,
+            "static_v6": False, "suffix": "", "domain_joined": False, "vpn_up": False, **kw}
+
+
+class DnsFastestOtherInterfaceTests(unittest.TestCase):
+    """The backup belongs to one interface; the uplink may be another one by the time it is turned off."""
+
+    def enabled_on_wifi(self, **kw):
+        mgr, s, backup, events, net = setup(["dns_fastest"], **kw)
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        return mgr, s, backup, events, net
+
+    def dock(self, s):
+        """The PC is docked: the Ethernet becomes the uplink, the Wi-Fi keeps what the tweak gave it."""
+        s.extra_interfaces.append(ethernet())
+        s.uplink = s.extra_interfaces[0]
+
+    def test_the_backup_is_keyed_by_the_interface_guid(self):
+        _, _, backup, _, _ = self.enabled_on_wifi()
+        self.assertEqual(backup.data["dns_fastest"]["original"]["guid"], WIFI_GUID)
+
+    def test_turning_it_off_restores_the_interface_that_was_changed_not_the_uplink(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        self.dock(s)
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual((s.dns["static"], s.dns["servers"]), (False, ["192.168.1.1"]))     # the Wi-Fi is back to DHCP
+        self.assertEqual(s.extra_interfaces[0]["servers"], ["10.0.0.53"])                    # the Ethernet was not touched
+        self.assertEqual(backup.data, {})
+        self.assertTrue(all(not d["auto_upgrade"] for d in s.doh.values()))
+
+    def test_it_cannot_be_turned_on_for_another_interface_while_a_backup_exists(self):
+        mgr, s, backup, _, net = self.enabled_on_wifi()
+        self.dock(s)
+        before_backup, before = backup.data, s.snapshot()
+        out = mgr.enable("dns_fastest")
+        self.assertFalse(out.ok)
+        self.assertIn("another network connection", text(out.message))
+        self.assertEqual((s.snapshot(), backup.data), (before, before_backup))               # nothing written, backup kept
+        self.assertEqual(net.benchmarks, 1)                                                  # no new measurement either
+        self.assertTrue(mgr.disable("dns_fastest").ok)                                       # the way out stays open
+        out = mgr.enable("dns_fastest")                                                      # and now it can be turned on here
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual(backup.data["dns_fastest"]["original"]["guid"], ETHERNET_GUID)
+        self.assertEqual(backup.data["dns_fastest"]["original"]["servers"], ["10.0.0.53"])
+
+    def test_turning_it_off_works_while_offline(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        s.uplink = None                                   # no route at all
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual((s.dns["static"], backup.data), (False, {}))
+
+    def test_turning_it_off_works_when_the_uplink_cannot_be_read(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        s.uplink_read_error = True                        # e.g. the uplink is a RAS VPN
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual((s.dns["static"], backup.data), (False, {}))
+
+    def test_turning_it_off_works_when_doh_cannot_be_listed_for_the_state_but_can_for_the_restore(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        real, calls = s.doh_get, []
+
+        def flaky():                                      # the first read (the state) fails, the next ones work
+            calls.append(1)
+            if len(calls) == 1:
+                raise SystemReadError("WMI is busy")
+            return real()
+        s.doh_get = flaky
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual(backup.data, {})
+
+    def test_the_switch_shows_the_backup_of_another_interface_as_on_so_it_can_be_turned_off(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        self.dock(s)
+        st = mgr.state("dns_fastest")                       # the uplink is the Ethernet, which is not on
+        self.assertEqual((st.supported, st.enabled, st.has_backup), (True, True, True))
+        self.assertIn("another network connection (Wi-Fi)", text(st.warning))
+        self.assertIn("another network connection", i18n.render(st.warning, "en"))
+        self.assertTrue(i18n.render(st.warning, "vi") and i18n.render(st.warning, "vi") != text(st.warning))
+        self.assertTrue(mgr.disable("dns_fastest").ok)      # what the switch does when it is clicked
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, text(st.warning), backup.data), (False, "", {}))
+
+    def test_the_switch_also_offers_the_restore_while_offline(self):
+        mgr, s, _, _, _ = self.enabled_on_wifi()
+        s.uplink = None                                     # the Wi-Fi adapter exists, there is no route
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.supported, st.enabled), (True, True))
+        s.uplink_read_error = True                          # or the uplink cannot be read
+        self.assertEqual(mgr.state("dns_fastest").enabled, True)
+
+    def test_nothing_is_offered_when_the_adapter_of_the_backup_is_gone(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        s.dns, s.uplink = None, None
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, st.error), (False, None))
+        self.assertIn("dns_fastest", backup.data)
+
+    def test_a_backup_of_the_uplink_itself_adds_nothing(self):
+        mgr, s, _, _, _ = self.enabled_on_wifi()
+        s.dns.update(servers=["192.168.1.1"], static=False)   # somebody went back to DHCP by hand, same interface
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, text(st.warning)), (False, ""))
+
+    def test_a_backup_from_before_the_guid_still_restores(self):
+        mgr, s, backup, _, _ = self.enabled_on_wifi()
+        del backup.data["dns_fastest"]["original"]["guid"]    # written by a build that did not know the GUID
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual((s.dns["static"], backup.data), (False, {}))
+
+    def test_a_vanished_doh_entry_comes_back_only_if_apply_was_using_it(self):
+        mgr, s, _, _, _ = self.enabled_on_wifi()
+        s.doh.pop("1.1.1.1")                                # one apply chose
+        s.doh.pop("9.9.9.9")                                # one it never touched
+        before = len(s.writes())
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertIn("1.1.1.1", s.doh)
+        self.assertNotIn("9.9.9.9", s.doh)
+        touched = {args[0] for _, name, args in s.writes()[before:] if name.startswith("doh")}
+        self.assertNotIn("9.9.9.9", touched)
+
+    def test_a_vanished_entry_of_an_original_server_is_not_a_mismatch(self):
+        # The original static DNS was 9.9.9.9 (with its DoH entry); apply chose other servers; the entry of 9.9.9.9
+        # vanished meanwhile. Restore does not re-add it (apply never used it), and the check afterwards agrees.
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        s.dns.update(servers=["9.9.9.9"], static=True)
+        s.doh["9.9.9.9"].update(auto_upgrade=True, fallback_to_udp=True)
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        s.doh.pop("9.9.9.9")
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertNotIn("9.9.9.9", s.doh)
+        self.assertEqual((s.dns["servers"], backup.data), (["9.9.9.9"], {}))
+
+    def test_an_adapter_that_is_gone_keeps_the_backup_and_says_why(self):
+        mgr, s, backup, events, _ = self.enabled_on_wifi()
+        s.dns = None                                      # the Wi-Fi adapter is removed
+        s.uplink = None
+        out = mgr.disable("dns_fastest")
+        self.assertFalse(out.ok)
+        self.assertIn("dns_fastest", backup.data)
+        self.assertIn("not available now", text(out.message))
+        self.assertEqual(events[-1][0], "tweak_failed")
+
+    def test_a_disable_without_a_backup_still_needs_the_machine_to_be_readable(self):
+        mgr, s, _, _, _ = setup(["dns_fastest"])
+        s.uplink_read_error = True
+        out = mgr.disable("dns_fastest")
+        self.assertFalse(out.ok)
+        self.assertEqual(s.writes(), [])
+
+
+class DnsFastestWarningTests(unittest.TestCase):
+    """Static DNS belongs to the interface, not to the network: a tweak that is on must notice the network changing."""
+
+    def on(self, s):
+        s.dns.update(servers=["1.1.1.1", "1.0.0.1", "8.8.8.8"], static=True)
+        for address in ("1.1.1.1", "1.0.0.1", "8.8.8.8"):
+            s.doh[address]["auto_upgrade"] = True
+
+    def test_on_with_a_vpn_up_warns_and_can_still_be_turned_off(self):
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        s.dns["vpn_up"] = True                            # the WireGuard tunnel of the dev PC
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.supported, st.enabled), (True, True))
+        self.assertIn("VPN", text(st.warning))
+        self.assertEqual(text(st.reason), "")
+        self.assertTrue(mgr.disable("dns_fastest").ok)
+
+    def test_on_in_a_network_with_an_internal_domain_or_a_portal_warns(self):
+        for name, change, expected in (("suffix", dict(suffix="corp.example"), "DNS suffix"),
+                                       ("domain", dict(domain_joined=True), "domain")):
+            with self.subTest(name):
+                mgr, s, _, _, _ = setup(["dns_fastest"])
+                self.on(s)
+                s.dns.update(change)
+                self.assertIn(expected, text(mgr.state("dns_fastest").warning))
+        mgr, s, _, _, _ = setup(["dns_fastest"], network=Network(captive=True))
+        self.on(s)
+        self.assertIn("captive portal", text(mgr.state("dns_fastest").warning))
+
+    def test_on_in_a_quiet_network_has_no_warning(self):
+        mgr, s, _, _, _ = setup(["dns_fastest"])
+        self.on(s)
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.enabled, text(st.warning)), (True, ""))
+
+    def test_the_portal_probe_is_not_repeated_on_every_listing_but_apply_always_asks(self):
+        net = Network()
+        mgr, s, _, _, _ = setup(["dns_fastest"], network=net)
+        clock = [1000.0]
+        mgr.get("dns_fastest")._clock = lambda: clock[0]
+        for _ in range(3):
+            mgr.state("dns_fastest")
+        self.assertEqual(net.captive_checks, 1)           # one request for three listings
+        clock[0] += 61
+        mgr.state("dns_fastest")
+        self.assertEqual(net.captive_checks, 2)           # a minute later it is asked again
+        before = net.captive_checks
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        self.assertGreater(net.captive_checks, before)    # turning it on never trusts an old answer
+
+    def test_the_warning_reaches_the_state_the_ui_reads(self):
+        mgr, s, _, _, _ = setup(["dns_fastest"])
+        self.on(s)
+        s.dns["vpn_up"] = True
+        st = mgr.states()[0]
+        self.assertTrue(i18n.render(st.warning, "vi"))
+        self.assertNotEqual(i18n.render(st.warning, "vi"), text(st.warning))
+
+
+class DnsFastestRestoreScopeTests(unittest.TestCase):
+    """restore() only undoes what apply() could have done."""
+
+    def test_a_doh_entry_somebody_else_changed_is_left_alone(self):
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        s.doh["9.9.9.9"].update(auto_upgrade=True, fallback_to_udp=False)     # a VPN client set this one up
+        s.doh["149.112.112.112"]["template"] = "https://dns.example/dns-query{?dns}"
+        out = mgr.disable("dns_fastest")
+        self.assertTrue(out.ok, out.message)
+        self.assertEqual(s.doh["9.9.9.9"]["auto_upgrade"], True)              # not reverted
+        self.assertEqual(s.doh["149.112.112.112"]["template"], "https://dns.example/dns-query{?dns}")
+        self.assertEqual(backup.data, {})
+        touched = {args[0] for kind, name, args in s.writes() if name in ("doh_set", "doh_remove")}
+        self.assertNotIn("9.9.9.9", {a for k, n, args in s.writes()[-8:] for a in args[:1] if n.startswith("doh")})
+        self.assertEqual(touched, {"1.1.1.1", "8.8.8.8", "1.0.0.1"})          # only what apply() had set
+
+    def test_restore_writes_nothing_that_is_already_as_it_was(self):
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        self.assertTrue(mgr.enable("dns_fastest").ok)
+        before = len(s.writes())
+        s.dns_servers_set(6, None)                                             # somebody already went back to DHCP
+        for address in ("1.1.1.1", "8.8.8.8", "1.0.0.1"):
+            s.doh[address].update(auto_upgrade=False, fallback_to_udp=False)
+        mark = len(s.writes())
+        self.assertTrue(mgr.disable("dns_fastest").ok)
+        self.assertEqual(s.writes()[mark:], [])
+        self.assertGreater(mark, before)
+
+    def test_without_doh_support_the_tweak_is_unsupported_not_an_error(self):
+        mgr, s, backup, _, _ = setup(["dns_fastest"])
+        s.doh = None                                                            # Windows 10 without the cmdlets
+        st = mgr.state("dns_fastest")
+        self.assertEqual((st.supported, st.error), (False, None))
+        self.assertIn("DNS over HTTPS", text(st.reason))
+        out = mgr.enable("dns_fastest")
+        self.assertFalse(out.ok)
+        self.assertEqual((s.writes(), backup.data), ([], {}))
+
+    def test_a_reason_stays_in_the_language_of_the_ui_when_a_change_fails(self):
+        bench = bench_of({"1.1.1.1": 10, "1.0.0.1": 12})                        # one provider only
+        mgr, s, *_ = setup(["dns_fastest"], network=Network(bench))
+        out = mgr.enable("dns_fastest")
+        self.assertFalse(out.ok)
+        rendered = i18n.render(out.message, "vi")
+        self.assertNotIn("two public DNS providers", rendered)
+        self.assertIn("hai nhà cung cấp DNS", rendered)
+
+    def test_a_failed_change_of_the_dns_tweak_counts_for_dnswatch(self):
+        bench = bench_of({"1.1.1.1": 10, "1.0.0.1": 12})
+        mgr, s, _, events, _ = setup(["dns_fastest"], network=Network(bench))
+        mgr.enable("dns_fastest")
+        kind, message, _ = events[-1]
+        self.assertTrue(app_changed([{"ts": 1000, "kind": kind, "message": message}], 1100))
 
 
 if __name__ == "__main__":

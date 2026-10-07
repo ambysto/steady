@@ -27,19 +27,21 @@
 | `config.py` | Paths, `settings.json`, the backup lock; `load_backup` / `save_backup` go to `backupstore` |
 | `backupstore.py` | The backups (original values before a tweak, failover metrics) in `HKLM\SOFTWARE\Ambysto\Steady`, readable by everyone, writable only elevated; imports the old `backup.json` once ([ADR-0018](adr/0018-backups-in-hklm.md)) |
 | `winutil.py` | Helpers for calling PowerShell (`-EncodedCommand`, returns JSON), `netsh`, Admin check, detection of the Wi‑Fi card and the main network path (uplink) |
-| `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned |
+| `icmp.py` | Ping via `IcmpSendEcho` (iphlpapi, ctypes) — no Admin needed, no process spawned; optional payload size and "do not fragment" flag |
+| `pmtu.py` | Path MTU: binary search with "do not fragment" pings, pure over an injected send function (diagnostic #16) |
 | `dnsprobe.py` | UDP DNS queries with hand-built packets to benchmark each DNS server |
 | `storage.py` | SQLite: per-minute statistics, Wi‑Fi signal, events; cleanup of old data |
 | `monitor.py` | Ping thread per target, reads Wi‑Fi state, detects incidents, aggregates per-minute statistics |
 | `watchdog.py` | Automatic recovery when an incident persists — see [WATCHDOG.md](WATCHDOG.md) |
 | `tweaks.py` | Toggle catalog and the `read / capture / apply / restore` framework — see [TWEAKS.md](TWEAKS.md) |
+| `calibration.py` | The measurement behind a measured tweak's value: validation, network id, staleness, the before/after verdict ([ADR-0016](adr/0016-measured-tweaks.md)) |
 | `diagnostics.py` | Diagnostic checks — see [DIAGNOSTICS.md](DIAGNOSTICS.md) |
 | `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
 | `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
 | `notify.py` | Windows toasts on connection loss (after 30s) / when the watchdog intervenes, disables itself, or hits an error; rate-limited; runs in the background |
 | `singleton.py` | Prevents two monitors running on the same data directory (named mutex) |
 | `autostart.py` | Task Scheduler task that starts the monitor at logon (created from XML) |
-| `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding) |
+| `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding, the tool's QoS policy) |
 | `elevated.py`, `elevation.py` | Child process running as Admin via UAC for write operations — ADR-0005 |
 | `server.py` | HTTP server, API routing, serves `web/` |
 | `desktop.py` | Desktop shell (ADR-0002): a pywebview window using the native Windows frame (Snap Layouts, resizing, title bar painted the same color as the page background) around the UI + tray icon (pystray). It is only a viewer: closing the window = hiding to the tray, "Quit" only closes the shell, the monitor keeps running. Only this module needs `requirements.txt` |
@@ -133,4 +135,4 @@ UI turns toggle on → POST /api/tweaks/{id} {enable:true}
   → read() again and return the new state to the UI
 ```
 
-Disable: `check_original(backup)` (the entry must lie in the tweak's own domain, [ADR-0016](adr/0016-validate-backup-before-restore.md)) → `restore(backup)` → delete backup → write event. The backup comes from the HKLM store, which a process without Admin cannot write ([ADR-0018](adr/0018-backups-in-hklm.md)). If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.
+Disable: `check_original(backup)` (the entry must lie in the tweak's own domain, [ADR-0017](adr/0017-validate-backup-before-restore.md)) → `restore(backup)` → delete backup → write event. The backup comes from the HKLM store, which a process without Admin cannot write ([ADR-0018](adr/0018-backups-in-hklm.md)). If there is no backup (the value had been changed before the tool was used), restore to the driver/Windows default.

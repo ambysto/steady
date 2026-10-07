@@ -273,7 +273,7 @@ def user_source(load_settings: Callable[[], dict] = config.load_settings) -> str
 
 def check_metric_original(index: Any, entry: Any) -> dict[str, Any]:
     """The original metric of a backup.json entry, refused (ValueError) unless it is one prefer() could have
-    recorded: backup.json is writable without Admin, the helper that restores it is not (ADR-0016)."""
+    recorded: backup.json is writable without Admin, the helper that restores it is not (ADR-0017)."""
     if type(index) is not int or index < 1:
         raise ValueError(f"interface {index!r} is not an index")
     if not isinstance(entry, dict):

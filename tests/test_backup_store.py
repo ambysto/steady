@@ -202,7 +202,7 @@ class ImportTests(StoreCase):
         dns_on(self.system)
         planted = {
             "tcp_timedwait": {"original": {"path": r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
-                                           "name": "TcpTimedWaitDelay", "value": 0}},         # ADR-0016 check fails
+                                           "name": "TcpTimedWaitDelay", "value": 0}},         # ADR-0017 check fails
             "tcp_ecn": {"original": {"setting": "ecncapability", "value": "disabled"}},     # the tweak is off: stale
             "dns_fastest": {"captured_at": 1},                                               # no original
             "failover:6": {"original": {"automatic": False, "metric": 0}},                  # metric out of range

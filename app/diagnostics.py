@@ -1,4 +1,4 @@
-"""Diagnostics: 14 read-only checks (plus on-demand ones), each returning ok / warn / bad / info.
+"""Diagnostics: 15 read-only checks (plus on-demand ones), each returning ok / warn / bad / info.
 
 Every check is split in two:
   * `evaluate_*`  pure function over already-collected data - this is what the tests exercise
@@ -29,7 +29,7 @@ from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime
 from typing import Any, Callable, Iterable
 
-from . import config, dnsprobe, i18n, probe, winutil
+from . import config, dnsprobe, i18n, pmtu, probe, winutil
 from .i18n import msg
 from .storage import Storage
 
@@ -720,7 +720,10 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
                   else msg("diag.bufferbloat.by", delta=float(biggest)))
         summary = msg("diag.bufferbloat.rise", amount=amount, where=where)
     advice = msg("diag.bufferbloat.advice") if status != OK else ""
-    return CheckResult(**base, status=status, summary=summary, details=details, advice=advice)
+    # Queueing under upload can be limited from the PC itself (ADR-0016); the download cannot.
+    upload_bloat = delta_by.get(("internet", "upload"), 0.0) >= BLOAT_WARN_MS
+    return CheckResult(**base, status=status, summary=summary, details=details, advice=advice,
+                       tweak="upload_shaping" if status != OK and upload_bloat else None)
 
 
 # --- 15. route to far-away destinations ----------------------------------------------------------------
@@ -774,6 +777,52 @@ def _tunnel_up(adapters: list[dict]) -> bool:
                and a.get("Status") == "Up" for a in adapters)
 
 
+# --- 16. path MTU -------------------------------------------------------------------------------
+
+PPPOE_MTU = 1492
+
+
+def evaluate_path_mtu(interface: dict | None, paths: list[pmtu.PathResult], ipv4_route: bool = True) -> CheckResult:
+    """`interface`: {"alias", "mtu"} of the interface Internet traffic leaves by; `paths`: one probe per target;
+    `ipv4_route`: False when there is no IPv4 route to the Internet at all (IPv6-only).
+
+    The largest MTU any target reached is the access link's: a smaller one at a single target is
+    that destination's own path, not something this PC can fix. A smaller path only hurts when
+    large packets vanish silently (PMTUD blackhole): when a router answers "too big" (or Windows
+    already learned the path MTU from such an answer), connections adapt, so that is only info.
+    """
+    base = dict(id=16, key="path_mtu", title=title_of("path_mtu"))
+    if not ipv4_route:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.no_ipv4"))
+    if not interface:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.no_interface"))
+    mtu, name = interface["mtu"], interface.get("alias") or ""
+    details: list[Message] = [msg("diag.path_mtu.interface", name=name, mtu=mtu)]
+    if mtu > pmtu.MAX_MTU:
+        details.append(msg("diag.path_mtu.capped", cap=pmtu.MAX_MTU))
+    details += [msg("diag.path_mtu.target", target=p.target, mtu=p.mtu) if p.mtu
+                else msg("diag.path_mtu.target_silent", target=p.target) for p in paths]
+    answered = [p for p in paths if p.mtu]
+    if not answered:
+        return CheckResult(**base, status=INFO, summary=msg("diag.path_mtu.no_reply"), details=details)
+    path = max(p.mtu for p in answered)
+    if path >= min(mtu, pmtu.MAX_MTU):
+        summary = msg("diag.path_mtu.ok", mtu=mtu) if mtu <= pmtu.MAX_MTU else msg("diag.path_mtu.ok_capped", cap=path)
+        return CheckResult(**base, status=OK, summary=summary, details=details)
+    if path == PPPOE_MTU:
+        details.append(msg("diag.path_mtu.pppoe"))
+    summary = msg("diag.path_mtu.too_big", mtu=mtu, path=path)
+    advice = msg("diag.path_mtu.advice", path=path, name=name)
+    if any(p.too_big for p in answered):
+        details.append(msg("diag.path_mtu.reported"))
+        return CheckResult(**base, status=INFO, summary=summary, details=details, advice=advice)
+    if len(answered) == 1:   # a single target that drops some pings anyway can fake a small path
+        details.append(msg("diag.path_mtu.one_target"))
+        return CheckResult(**base, status=INFO, summary=summary, details=details, advice=advice)
+    details.append(msg("diag.path_mtu.silent"))
+    return CheckResult(**base, status=WARN, summary=summary, details=details, advice=advice)
+
+
 # --- context: lazy, cached data access ----------------------------------------------------------
 
 class Context:
@@ -801,6 +850,7 @@ class Context:
             "tweak_states": self._load_tweak_states,
             "bufferbloat": self._load_bufferbloat,
             "route_rtts": measure_route,
+            "path_mtu": self._load_path_mtu,
         }
         self._loaders.update(loaders or {})
 
@@ -872,6 +922,13 @@ class Context:
             targets = {"router": gateway, **targets}
         down, up = bufferbloat.real_loads()
         return bufferbloat.measure(bufferbloat.real_ping(), targets, down, up)
+
+    def _load_path_mtu(self) -> tuple[dict | None, list[pmtu.PathResult], bool]:
+        """The MTU of the interface the probes leave by (a VPN's while it is up), the probes, and
+        whether there is an IPv4 route to the Internet at all."""
+        route = winutil.internet_route_native(pmtu.TARGETS[0]) or self.get("uplink")
+        interface = winutil.get_interface_mtu(route["interface_index"]) if route else None
+        return interface, (pmtu.measure(interface["mtu"]) if interface else []), route is not None
 
     def _load_tweak_states(self) -> dict[str, dict] | None:
         try:
@@ -954,6 +1011,10 @@ def check_route(ctx: Context) -> CheckResult:
     return evaluate_route(ctx.get("route_rtts"))
 
 
+def check_path_mtu(ctx: Context) -> CheckResult:
+    return evaluate_path_mtu(*ctx.get("path_mtu"))
+
+
 # (id, key, function). The title of each is the message "diag.<key>.title".
 CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (1, "driver", check_driver),
@@ -970,6 +1031,7 @@ CHECKS: list[tuple[int, str, Callable[[Context], CheckResult]]] = [
     (12, "modem_wifi", check_modem_wifi),
     (13, "physical_link", check_link),
     (15, "route", check_route),   # 14 is the on-demand bufferbloat check
+    (16, "path_mtu", check_path_mtu),
 ]
 
 

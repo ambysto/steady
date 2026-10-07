@@ -34,6 +34,11 @@ class EvaluateTests(unittest.TestCase):
         self.assertEqual(r.status, d.BAD)
         self.assertIn("thêm 180 ms", r.summary)
 
+    def test_upload_bloat_points_at_the_upload_limit_tweak(self):
+        self.assertEqual(d.evaluate_bufferbloat(meas(up_inet=200)).tweak, "upload_shaping")
+        self.assertIsNone(d.evaluate_bufferbloat(meas(down_inet=300)).tweak)    # download: only the router can
+        self.assertIsNone(d.evaluate_bufferbloat(meas()).tweak)
+
     def test_healthy_summary_and_no_advice(self):
         r = d.evaluate_bufferbloat(meas())
         self.assertEqual(r.status, d.OK)

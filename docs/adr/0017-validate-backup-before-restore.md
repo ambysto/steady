@@ -1,4 +1,4 @@
-# ADR-0016: The elevated helper validates every backup entry against the tweak's own domain before restoring it
+# ADR-0017: The elevated helper validates every backup entry against the tweak's own domain before restoring it
 
 - **Status:** Accepted (amended by [ADR-0018](0018-backups-in-hklm.md), which takes option 1)
 - **Date:** 2026-10-07
@@ -11,7 +11,7 @@ The elevated helper ([ADR-0005](0005-unelevated-server-uac-writes.md)) restores 
 - `DnsFastestTweak.restore` set the IPv4 DNS servers of any interface index, and DoH templates (URLs) for the six candidate addresses, from the file.
 - The other kinds took the adapter name, property keyword, binding component, `netsh` / offload setting name, power-plan GUIDs and failover's interface index from the file too.
 
-[ADR-0015](0015-tweak-value-from-measurement.md) already clamps calibration values the helper reads from user-writable files. Two fixes were considered:
+[ADR-0015](0015-tweak-value-from-measurement.md) and [ADR-0016](0016-measured-tweaks.md) already clamp calibration values the helper reads from user-writable files. Two fixes were considered:
 
 1. **Store backups where only the elevated side can write** (an Admin-only ACL in ProgramData, or `HKLM\SOFTWARE`), and migrate existing `backup.json` entries.
 2. **Validate every restore value** against what the tweak itself could have captured, right before restoring it.
@@ -22,7 +22,8 @@ The elevated helper ([ADR-0005](0005-unelevated-server-uac-writes.md)) restores 
    - fixed fields must equal the declaration: registry value name, power-plan subgroup and setting, binding component, `netsh` and offload setting names;
    - fields the tweak resolves on the machine must equal what it resolves now: the registry path (e.g. the Wi‑Fi card's class key), the Wi‑Fi adapter name, the advanced-property keyword (one of the properties the tweak's candidates match on this card);
    - values must be ones the setting accepts: a DWORD (or "not set"), a power index in the setting's range (`valid` per tweak), a registry value from the property's `ValidRegistryValues`, one of `TCP_GLOBAL_VALUES` / `OFFLOAD_VALUES`, booleans for flags;
-   - `dns_fastest`: DoH entries only for the six candidate addresses, with each provider's own template (any other URL is refused; restore always writes the built-in template); a static server list of 1–8 unicast IPv4 addresses (not unspecified, multicast, broadcast or reserved; loopback stays allowed for local resolvers); the interface index must be a positive integer.
+   - `upload_shaping` ([ADR-0016](0016-measured-tweaks.md)): only the tool's own QoS policy name, at a rate within the bounds the tweak itself derives (1–1000 Mbps) or "no policy";
+   - `dns_fastest`: DoH entries only for the six candidate addresses, with each provider's own template (any other URL is refused; restore always writes the built-in template); a static server list of 1–8 unicast IPv4 addresses (not unspecified, multicast, broadcast or reserved; loopback stays allowed for local resolvers); the interface GUID, when present (backups older than it have none), must be a well-formed InterfaceGuid (restore finds the interface by it), and the index a positive integer.
 2. **`TweakManager.disable` calls it before `restore`.** A refused entry (or one that is not an object with an `original`) restores nothing, keeps the backup (the user may still want it) and is reported as `tweak.result.backup_rejected` with level `bad`. `adopt_backup` uses the same check instead of the old shape-only `validate_original`.
 3. **Failover's `MetricSwitch.restore`** checks its entry the same way: the interface index comes from a `path:<digits>` key, the original is `{"automatic": true}` or a metric in 1–9999.
 4. Option 1 is not taken now. It needs a migration that would have to trust the user-writable file once anyway (so it needs this validation regardless), and it adds machine state that the uninstaller must clean. It stays possible later on top of this ADR.

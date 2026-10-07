@@ -150,6 +150,7 @@ class WifiState:
     rx_mbps: int | None
     tx_mbps: int | None
     profile: str = ""   # Wi-Fi profile in use (empty when disconnected)
+    band: str = ""      # "2.4 GHz", "5 GHz", "6 GHz" (Windows 11); "" when netsh does not say
 
     @property
     def connected(self) -> bool:
@@ -169,6 +170,7 @@ def wifi_state_from(fields: dict[str, str]) -> WifiState:
         rx_mbps=_to_int(fields.get("Receive rate (Mbps)")),
         tx_mbps=_to_int(fields.get("Transmit rate (Mbps)")),
         profile=fields.get("Profile", ""),
+        band=fields.get("Band", ""),
     )
 
 
@@ -328,6 +330,22 @@ def internet_route_native(destination: str = "1.1.1.1") -> dict[str, Any] | None
         "interface_index": row.dwForwardIfIndex,
         "metric": row.dwForwardMetric1,
     }
+
+
+def neighbor_physical_address(address: str) -> str | None:
+    """Physical (MAC) address of an IPv4 neighbour (the gateway) via iphlpapi.SendARP; answers from
+    the ARP cache when it can, no Admin rights needed. None when it does not answer or the call fails."""
+    try:
+        lib = ctypes.WinDLL("iphlpapi")
+        physical = (ctypes.c_ubyte * 8)()
+        length = ctypes.c_ulong(len(physical))
+        if lib.SendARP(int.from_bytes(socket.inet_aton(address), "little"), 0, physical, ctypes.byref(length)) != 0:
+            return None
+    except (AttributeError, OSError):
+        return None
+    if length.value != 6:
+        return None
+    return ":".join(f"{b:02x}" for b in physical[:6])
 
 
 class _SocketAddress(ctypes.Structure):
@@ -542,6 +560,18 @@ def get_dns_servers(interface_index: int) -> list[str]:
         "Sort-Object AddressFamily | ForEach-Object { $_.ServerAddresses }"
     )
     return [str(r) for r in rows]
+
+
+def get_interface_mtu(interface_index: int) -> dict[str, Any] | None:
+    """{"alias", "mtu"} of one interface's IPv4 side (NlMtu), or None if it has none."""
+    idx = int(interface_index)
+    rows = run_powershell_json(
+        f"Get-NetIPInterface -InterfaceIndex {idx} -AddressFamily IPv4 -ErrorAction SilentlyContinue | "
+        "Select-Object InterfaceAlias, NlMtu"
+    )
+    if not rows or rows[0].get("NlMtu") is None:
+        return None
+    return {"alias": str(rows[0].get("InterfaceAlias") or ""), "mtu": int(rows[0]["NlMtu"])}
 
 
 # One PowerShell process for every event-log query: process start-up dominates the cost.

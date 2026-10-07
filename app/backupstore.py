@@ -1,6 +1,6 @@
 """Where tweak and failover backups live (ADR-0018): HKLM\\SOFTWARE\\Ambysto\\Steady, value `Backup`,
 one JSON object. Everyone can read it; only Administrators and SYSTEM can write it, so a process of
-the user can no longer choose what the elevated helper restores (ADR-0016's residual risk).
+the user can no longer choose what the elevated helper restores (ADR-0017's residual risk).
 
     load()     the store; the first elevated call imports the user's old backup.json once
     save()     the whole store (needs Admin)
@@ -122,7 +122,7 @@ def legacy_id(path: Path) -> str:
 
 def entry_check(system: Any, catalog: list[Any]) -> EntryCheck:
     """An old backup.json entry is imported only if it would be restored anyway: it passes the
-    tweak's check_original (ADR-0016) and the tweak is on now, or it is a valid failover metric."""
+    tweak's check_original (ADR-0017) and the tweak is on now, or it is a valid failover metric."""
     from . import failover
 
     def check(key: str, entry: Any) -> None:
