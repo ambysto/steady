@@ -46,7 +46,7 @@ def real_card_system():
 
 def catalog():
     """The real catalog, with the network questions of dns_fastest answered by fakes."""
-    return tweaks.build_catalog(dns_benchmark=lambda servers: bench_of(FAST_CLOUDFLARE), captive=lambda: False)
+    return tweaks.build_catalog(dns_benchmark=lambda servers, names=None: bench_of(FAST_CLOUDFLARE), captive=lambda: False)
 
 
 def bloated_upload(mgr):

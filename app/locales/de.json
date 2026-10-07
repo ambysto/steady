@@ -416,6 +416,7 @@
   "tweak.reason.dns_static_v6": "Der Netzwerkadapter hat einen statischen IPv6-DNS-Server, den das Zurücksetzen löschen würde",
   "tweak.reason.dns_captive": "Das Netzwerk sieht nach einem Captive Portal aus (einer Anmeldeseite)",
   "tweak.reason.dns_no_fast_servers": "Der Benchmark hat keine zwei öffentlichen DNS-Anbieter gefunden, die zuverlässig antworten; es wurde nichts geändert",
+  "tweak.reason.dns_not_faster": "Das verwendete DNS ({current}) ist nicht deutlich langsamer als das schnellste öffentliche DNS ({server}): gängige Namen {current_ms:.0f} gegenüber {public_ms:.0f} ms, noch nicht zwischengespeicherte Namen {current_uncached_ms:.0f} gegenüber {public_uncached_ms:.0f} ms; es wurde nichts geändert",
   "tweak.reason.no_default_dns": "Kein Backup; die ursprünglichen DNS-Einstellungen sind unbekannt",
   "tweak.reason.dns_other_interface": "die gespeicherten ursprünglichen DNS-Einstellungen gehören zu einer anderen Netzwerkverbindung. Zuerst ausschalten, solange diese Verbindung verwendet wird",
   "tweak.reason.dns_backup_elsewhere": "Für eine andere Netzwerkverbindung ({name}) eingeschaltet, nicht für die aktuell verwendete. Ausschalten, um den DNS dieser Verbindung wiederherzustellen",

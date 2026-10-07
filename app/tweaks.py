@@ -23,6 +23,7 @@ import argparse
 import ipaddress
 import json
 import re
+import secrets
 import sys
 import threading
 import time
@@ -106,6 +107,11 @@ class Tweak:
 
     def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
         """Why turning the tweak on must wait while `original` is the saved backup (None: nothing in the way)."""
+        return None
+
+    def preflight(self, sys_: System) -> Message | None:
+        """Why turning the tweak on now would not help, found without Admin rights so the user is told
+        before any UAC prompt (None: go ahead). apply() still decides for itself."""
         return None
 
     def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
@@ -597,7 +603,7 @@ DOH_ADDRESSES: dict[str, tuple[str, str]] = {address: (provider, template)
                                              for address in addresses}   # address -> (provider, template)
 CAPTIVE_PROBE_URL = "http://cp.cloudflare.com/generate_204"
 
-Benchmark = Callable[[list[str]], "list[dnsprobe.ServerBenchmark]"]
+Benchmark = Callable[[list[str], "tuple[str, ...]"], "list[dnsprobe.ServerBenchmark]"]   # (servers, names)
 CaptiveCheck = Callable[[], bool]
 
 
@@ -605,10 +611,57 @@ class NoFastServers(_MessageError):
     """The benchmark did not find two working providers to switch to."""
 
 
-def benchmark_servers(servers: list[str]) -> list[dnsprobe.ServerBenchmark]:
-    """The DNS benchmark of diagnostics check #6, one thread per server."""
+class DnsNotFaster(_MessageError):
+    """The DNS in use answers as fast as the best public servers: switching would not help (SIC-96)."""
+
+
+# A public DNS replaces the one in use only when it is this much faster, on common names and on names no
+# resolver has cached (SIC-96, EXP-021). The benchmark asks over plain DNS while the tweak sets DoH, which
+# costs more per lookup, so a server that is only a little faster here is not faster in use.
+DNS_GAIN_RATIO = 0.8     # at most 80% of the time of the DNS in use...
+DNS_GAIN_MS = 10.0       # ...and at least 10 ms less
+# Large domains whose authoritative servers answer everywhere: a fresh random label under them is a name
+# no resolver can have cached, so every server has to resolve it (the router's cache cannot flatter it).
+UNCACHED_DOMAINS = ("wikipedia.org", "cloudflare.com", "google.com", "microsoft.com", "github.com",
+                    "amazon.com", "apple.com", "mozilla.org")
+
+
+def uncached_names() -> tuple[str, ...]:
+    return tuple(f"si-{secrets.token_hex(5)}.{domain}" for domain in UNCACHED_DOMAINS)
+
+
+def benchmark_servers(servers: list[str], names: tuple[str, ...] = dnsprobe.DEFAULT_NAMES) -> list[dnsprobe.ServerBenchmark]:
+    """The DNS benchmark of diagnostics check #6 (common names by default), one thread per server."""
     with ThreadPoolExecutor(max_workers=max(1, len(servers))) as pool:
-        return list(pool.map(lambda s: dnsprobe.benchmark([s], timeout=1.5)[0], servers))
+        return list(pool.map(lambda s: dnsprobe.benchmark([s], names, timeout=1.5)[0], servers))
+
+
+def check_public_dns_faster(current: list[str], chosen: str, common: dict[str, dnsprobe.ServerBenchmark],
+                            uncached: dict[str, dnsprobe.ServerBenchmark]) -> None:
+    """Raise DnsNotFaster unless switching from the DNS in use to `chosen` is worth it (pure, SIC-96).
+
+    Worth it when the DNS in use is broken (no server, one that lost a query, or one that never answered),
+    which is what diagnostics check #6 points at this tweak for, or when `chosen` is faster by
+    DNS_GAIN_RATIO and DNS_GAIN_MS both on common names and on uncached ones. The benchmarks are keyed by
+    server; the first server in use is the one Windows asks first."""
+    def broken(b: dnsprobe.ServerBenchmark | None) -> bool:
+        return b is None or bool(b.failures) or b.median_ms is None
+
+    if not current or any(broken(common.get(s)) for s in current) or broken(uncached.get(current[0])):
+        return
+    mine_c, mine_u = common[current[0]].median_ms, uncached[current[0]].median_ms
+    theirs_c, theirs_u = common.get(chosen), uncached.get(chosen)
+
+    def faster(mine: float, theirs: dnsprobe.ServerBenchmark | None) -> bool:
+        return (not broken(theirs) and theirs.median_ms <= mine * DNS_GAIN_RATIO
+                and mine - theirs.median_ms >= DNS_GAIN_MS)
+
+    if faster(mine_c, theirs_c) and faster(mine_u, theirs_u):
+        return
+    raise DnsNotFaster(msg("tweak.reason.dns_not_faster", current=current[0], server=chosen,
+                           current_ms=float(mine_c), public_ms=float(theirs_c.median_ms) if not broken(theirs_c) else 0.0,
+                           current_uncached_ms=float(mine_u),
+                           public_uncached_ms=float(theirs_u.median_ms) if not broken(theirs_u) else 0.0))
 
 
 def captive_portal() -> bool:
@@ -772,13 +825,36 @@ class DnsFastestTweak(Tweak):
         return Reading(True, True, {"servers": info["servers"], "static": info["static"]},
                        warning=msg("tweak.reason.dns_backup_elsewhere", name=info["alias"]))
 
+    def _choose(self, info: dict[str, Any]) -> list[str]:
+        """The servers to switch to, or DnsNotFaster / NoFastServers. Common names rank the public providers
+        and compare them with the DNS in use; names nobody has cached compare them again (SIC-96)."""
+        current = [s for s in info["servers"] if dnsprobe.is_usable_server(s)]
+        common = {b.server: b for b in self._benchmark(list(dict.fromkeys([*DOH_ADDRESSES, *current])),
+                                                       dnsprobe.DEFAULT_NAMES)}
+        servers = choose_dns_servers([common[s] for s in DOH_ADDRESSES if s in common])
+        uncached = {b.server: b for b in self._benchmark(list(dict.fromkeys([*current[:1], servers[0]])),
+                                                         uncached_names())}
+        check_public_dns_faster(current, servers[0], common, uncached)
+        return servers
+
+    def preflight(self, sys_: System) -> Message | None:
+        try:
+            info = self._info(sys_)
+            blocked = self._blocked(info, fresh=True)
+            if blocked is not None:
+                return blocked
+            self._choose(info)
+        except (Unsupported, NoFastServers, DnsNotFaster) as exc:
+            return exc.message
+        return None
+
     def apply(self, sys_: System) -> None:
         info = self._info(sys_)
         self._doh(sys_)
         blocked = self._blocked(info, fresh=True)
         if blocked is not None:   # the state may have changed since it was read (a VPN came up...)
             raise Unsupported(blocked)
-        servers = choose_dns_servers(self._benchmark(list(DOH_ADDRESSES)))
+        servers = self._choose(info)
         for address in servers:   # DoH first: the moment the server is used, Windows already knows to upgrade
             sys_.doh_set(address, DOH_ADDRESSES[address][1], True, True)
         sys_.dns_servers_set(info["index"], servers)
@@ -1288,6 +1364,18 @@ class TweakManager:
         except ValueError as exc:
             raise Refused(msg("tweak.result.bad_measurement", error=str(exc))) from None
         return checked, t.derive(checked)
+
+    def preflight(self, tweak_id: str) -> Message | None:
+        """Why turning `tweak_id` on would not help, asked before elevating so a refusal needs no UAC
+        prompt (None: go ahead, including when the check itself fails; enable() decides again)."""
+        t = self.get(tweak_id)
+        try:
+            r = t.read(self.system)
+            if r.enabled or not r.supported:
+                return None   # enable() reports these itself
+            return t.preflight(self.system)
+        except Exception:
+            return None
 
     def enable(self, tweak_id: str, measurement: Any = None) -> Outcome:
         """measurement: required by a measured tweak (ADR-0016), ignored by the others."""

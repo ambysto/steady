@@ -418,6 +418,7 @@
   "tweak.reason.dns_static_v6": "The network adapter has a static IPv6 DNS server, which restoring would erase",
   "tweak.reason.dns_captive": "The network looks like a captive portal (a sign-in page)",
   "tweak.reason.dns_no_fast_servers": "The benchmark did not find two public DNS providers that answer reliably; nothing was changed",
+  "tweak.reason.dns_not_faster": "The DNS in use ({current}) is not clearly slower than the fastest public DNS ({server}): common names {current_ms:.0f} vs {public_ms:.0f} ms, names not yet cached {current_uncached_ms:.0f} vs {public_uncached_ms:.0f} ms; nothing was changed",
   "tweak.reason.no_default_dns": "No backup; the original DNS settings are unknown",
   "tweak.reason.dns_other_interface": "the saved original DNS settings belong to another network connection. Turn this off first, while that connection is in use",
   "tweak.reason.dns_backup_elsewhere": "On for another network connection ({name}), not the one in use now. Turn it off to put that connection's DNS back",

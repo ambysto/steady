@@ -459,7 +459,10 @@ class Api:
         enable = body["enable"]
 
         def work() -> dict:
-            if enable and self._is_measured(tweak_id):
+            refusal = None if not enable or self._is_measured(tweak_id) else self._tweak_manager().preflight(tweak_id)
+            if refusal is not None:   # told before any UAC prompt (SIC-96); nothing was written
+                result = {"ok": False, "changed": False, "message": refusal, "elevated": False}
+            elif enable and self._is_measured(tweak_id):
                 result = self._enable_measured(tweak_id)
             elif self._is_admin():
                 mgr = self._tweak_manager()
