@@ -226,6 +226,34 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
   - Side note: the TCP handshake time to 1.1.1.1:443 (median 105 ms) is twice the ping (47 ms), whereas for 8.8.8.8 they are nearly equal (66 vs. 54 ms). Cloudflare's Anycast may route TCP differently. Therefore probes are only used to know "is the Internet still up or not", not as a latency measurement.
 - **Conclusion:** the main cause of the dropouts was **the card's antennas being blocked by the metal desk frame/PC case** + the configuration factors already dealt with (modem broadcasting Wi‑Fi, MLO). **No need to buy the AX3 yet.** EXP-011/012 become fallbacks.
 
+## EXP-015 — Speed tweaks: which ones can be measured on this PC (2026-10-07)
+
+The speed changes made by hand on 2026-08-31 were applied together and measured before the antenna fault (EXP-014) was found, so none of them has its own result. They are now tweaks in the app. This entry records, per tweak, what a before/after measurement on this PC can show. Read-only inventory at 09:20 (+07), app at `main` 87cc23c (`python -m app.tweaks list`, `Get-NetAdapterAdvancedProperty`, `Get-NetAdapterRsc`, `Get-NetOffloadGlobalSetting`):
+
+| Tweak | State on this PC | Result / what is needed |
+|---|---|---|
+| `wifi_prefer_5g` | ON | **Nothing to measure here:** the MediaTek driver's own default for Preferred Band is already "Prefer 5GHz band". The tweak only changes something on drivers whose default is "No Preference". |
+| `wifi_tx_power_max` | ON | **Nothing to measure here:** the driver's default Transmit Power Level is already "Highest". |
+| `rsc_off` | not supported | **Not applicable:** the card reports no RSC hardware (`RscHardwareCapabilities` IPv4/IPv6 = False). The "RSC off" done by hand on 08-31 never had an effect on this card. |
+| `packet_coalescing_off` | ON (global `PacketCoalescingFilter` = Disabled) | Baseline needs it back to Enabled (write). |
+| `tcp_ecn` | ON (set by hand 08-31) | Baseline needs ECN back to disabled (write). |
+| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Not to be enabled from the app yet:** the code review found that its restore breaks when the uplink changes, and that the static DNS follows the card to other networks. After the fix, the baseline needs DNS back to DHCP (write). |
+| Upload limit (bufferbloat) | not built yet | Waits for the tweak. Was removed by hand earlier; no QoS policy on the PC now. |
+| MTU from path MTU | not built yet (interface MTU 1492 set by hand) | Waits for the tweak. Baseline needs MTU 1500 (write). |
+
+Conditions seen at the same time:
+
+- A WireGuard tunnel is up. Check #15 measures the tunnel's routes, not the ISP's, and `dns_fastest` is not meant to be offered with a VPN ⇒ **the tunnel must be off for every measurement below.**
+- DNS benchmark (check #6, cached names): the router answers in **8 ms**; the hand-set DoH servers in **45–52 ms**. A cold-cache test is needed before saying `dns_fastest` helps here; it may be slower than DHCP DNS.
+- Bufferbloat (check #14): +4 ms under load at ~79 Mbps, verdict OK. There is little headroom for ECN or an upload limit to show a gain.
+
+**Protocol for the remaining tweaks.** These change speed or latency at once, so they are measured with short interleaved runs, not with the 24-hour windows of [ADR-0007](adr/0007-measured-impact.md) (those suit stability outcomes such as outages). Each step that writes to the PC runs only after the owner agrees to it.
+
+1. Tunnel off, nothing else using the line, same hour of the day for A and B.
+2. State A = Windows/driver default, state B = the tweak enabled from the app. Run **A, B, A, B**; in each run: `python -m app.diagnostics --bufferbloat --no-save` and `python -m app.diagnostics --only 5,6,15 --no-save`; for `dns_fastest` also a cold-cache lookup of 20 names that are not in the router's cache.
+3. Better only when B beats both A runs on the tweak's own metric (DNS: median lookup; ECN, packet coalescing: added latency and loss under load; MTU: path MTU result and loss of large packets) by more than the A-to-A difference. Otherwise "no clear difference" ⇒ the tweak stays experimental or is dropped, and [TWEAKS.md](TWEAKS.md) says so.
+4. Leave the winning state on; after 24 hours the app's effect report ([ADR-0007](adr/0007-measured-impact.md)) checks that stability did not get worse.
+
 ## EXP-011 — Wired extension Wi‑Fi antenna for the PCIe card (planned)
 
 - **Context:** the PC is **upstairs**, the BE3 router is **downstairs**, a LAN cable cannot be run ⇒ explains the signal of only −66…−80 dBm.
