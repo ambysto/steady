@@ -5,14 +5,16 @@ import SwiftUI
 /// Latency and loss over the last hour, day or week, from the minutes stored on the device.
 struct HistoryView: View {
     @Environment(AppModel.self) private var model
-    @State private var range: HistorySeries.Range = .hour
     @State private var points: [HistorySeries.Point] = []
     @Environment(\.localizer) private var text
 
+    private var range: HistorySeries.Range { model.historyRange }
+
     var body: some View {
+        @Bindable var model = model
         Form {
             Section {
-                Picker(text("ui.nav.history"), selection: $range) {
+                Picker(text("ui.nav.history"), selection: $model.historyRange) {
                     ForEach(HistorySeries.Range.allCases) { range in
                         Text(text(range.titleKey)).tag(range)
                     }

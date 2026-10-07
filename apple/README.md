@@ -71,6 +71,7 @@ The Overview's main button ([ADR-0020](../docs/adr/0020-check-fix-result-flow.md
 
 ## History and problem reports
 
+- **Overview > Last 7 days** (`WeekCard`, SIC-108): `WeekSummary` reads the stored minutes of the week: minutes measured, median per-minute latency to the router and the Internet, loss to the Internet pings, and outages (runs of minutes in which every Internet target, pings and TCP probes, lost everything). Below `WeekSummary.enoughMinutes` (60) it shows only how long it measured.
 - **History** draws latency and loss to the router and to the Internet from the stored minutes (`HistorySeries`: per minute over an hour, 10-minute buckets over a day, hours over a week; a gap starts a new line segment).
 - **Settings > Report a problem** ([ADR-0012](../docs/adr/0012-user-sent-problem-reports.md)): `ProblemReport` writes the text the user reads in full and sends themselves; addresses are masked except the public resolvers. `CrashReports` keeps short MetricKit summaries on the device; `RecentLog` reads the app's own log.
 
