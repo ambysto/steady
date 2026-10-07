@@ -720,7 +720,10 @@ def evaluate_bufferbloat(m: "Any") -> CheckResult:
                   else msg("diag.bufferbloat.by", delta=float(biggest)))
         summary = msg("diag.bufferbloat.rise", amount=amount, where=where)
     advice = msg("diag.bufferbloat.advice") if status != OK else ""
-    return CheckResult(**base, status=status, summary=summary, details=details, advice=advice)
+    # Queueing under upload can be limited from the PC itself (ADR-0016); the download cannot.
+    upload_bloat = delta_by.get(("internet", "upload"), 0.0) >= BLOAT_WARN_MS
+    return CheckResult(**base, status=status, summary=summary, details=details, advice=advice,
+                       tweak="upload_shaping" if status != OK and upload_bloat else None)
 
 
 # --- 15. route to far-away destinations ----------------------------------------------------------------

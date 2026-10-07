@@ -99,7 +99,8 @@ def suggest(results: list[dict], tweak_states: dict[str, dict] | None, done: dic
         tid = result.get("tweak")
         if tid and result.get("status") in ("warn", "bad") and tweak_open(tid):
             meta = tweak_meta[tid]
-            add("tweak", tid, result, title=meta["name"], body=meta.get("note") or "", risk=meta.get("risk"))
+            add("tweak", tid, result, title=meta["name"], body=meta.get("note") or "", risk=meta.get("risk"),
+                measured=bool(meta.get("measured")))
     tweaks_check = by_key.get("tweaks")
     if tweaks_check and tweaks_check.get("status") == "info":
         for tid in tweaks_check.get("details") or []:
