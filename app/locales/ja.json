@@ -828,6 +828,7 @@
   "apple.diag.physical_link.ok": "送信レートとルーターへのパケット損失は安定しています",
   "apple.diag.physical_link.advice": "このチェックでは原因を特定できません。まず次を除外してください: チャンネル干渉、ルーターの Wi‑Fi 設定（MLO/Wi‑Fi 7、古いモデムの Wi‑Fi）。それらに問題がなければ、Mac の周囲を疑ってください。金属、閉じたふた、ドック、ディスプレイがアンテナを遮ることがあります。Mac を開けた場所やルーターの近くに移し、数時間後にもう一度比べてください。",
   "apple.diag.physical_link.advice_improved": "Mac やルーターを動かしたり設定を変えたりした直後であれば、あと数時間様子を見て確認してください。",
+  "apple.ui.language.auto": "システムに合わせる",
 
   "ui.nav.history": "履歴",
   "ui.overview.all_ok": "すべてのチェックは正常です",

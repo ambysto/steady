@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Apple app: choose the language in Settings** (SIC-106). A Language picker at the top of Settings offers "Same as system" and every language the app ships, read from the bundle (so a language removed from `app/locales` drops out by itself), each named in its own language and ordered as on Windows. The choice is kept across launches and applies at once to the whole app: one `Localizer` in the SwiftUI environment replaces the one each view made, and the root sets `\.locale` so numbers, dates and system controls follow it. A stored language the app no longer has falls back to "Same as system". Problem reports stay in English. 1 new key in all 9 catalogs (`apple.ui.language.auto`, "Same as system" instead of "Same as Windows").
+
 ### Changed
 - **Landing page redesign** (SIC-54): a light, Speedify-like layout (DM Sans, mono labels, dark live panels) with motion that shows what the app does: a live-scrolling latency chart, packets travelling along the connection path and dropping at the failing hop, count-ups to the measured numbers. The page no longer needs the company site's stylesheet; the logo is the app icon (Wi‑Fi arcs, dot and "A"/"S" on the graphite tile, from `apple/Steady/AppIcon.icon`), with a matching touch icon, in `site/assets/img`. Install text matches 0.6.0 (all users, one Administrator approval). All motion is off with `prefers-reduced-motion`.
 

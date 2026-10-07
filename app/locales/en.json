@@ -830,6 +830,7 @@
   "apple.diag.physical_link.ok": "The transmit rate and packet loss to the router are stable",
   "apple.diag.physical_link.advice": "This check cannot tell the cause. Rule out first: channel interference and the router's Wi‑Fi settings (MLO/Wi‑Fi 7, an old modem's Wi‑Fi). If those are clean, suspect what is around the Mac: metal, a closed lid, a dock or a display can block its antennas; move it into the open or closer to the router, and compare again after a few hours.",
   "apple.diag.physical_link.advice_improved": "If you just moved the Mac or the router, or changed a setting, watch a few more hours to confirm.",
+  "apple.ui.language.auto": "Same as system",
 
   "ui.nav.history": "History",
   "ui.overview.all_ok": "All checks are OK",

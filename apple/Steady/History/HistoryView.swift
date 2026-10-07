@@ -7,7 +7,7 @@ struct HistoryView: View {
     @Environment(AppModel.self) private var model
     @State private var range: HistorySeries.Range = .hour
     @State private var points: [HistorySeries.Point] = []
-    private let text = Localizer()
+    @Environment(\.localizer) private var text
 
     var body: some View {
         Form {

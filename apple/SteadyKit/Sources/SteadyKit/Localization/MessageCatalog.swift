@@ -189,5 +189,6 @@ public enum MessageCatalog {
         "diag.ping.router_jitter",
         "diag.ping.router_loss",
         "diag.signal.advice",
+        "ui.language.auto",
     ]
 }

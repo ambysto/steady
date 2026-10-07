@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Mirrors app/i18n.py: a key missing from the catalog renders as the key itself, an unknown
 /// parameter stays as "{name}", and numbers use the language's decimal separator.
-public struct Localizer {
+public struct Localizer: Sendable {
     public let bundle: Bundle
     /// Catalog language code ("en", "pt-BR", "zh-Hans"...), the name of its .lproj folder.
     public let language: String

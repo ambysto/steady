@@ -50,6 +50,8 @@ xcrun devicectl device process launch --device <UDID> --terminate-existing com.a
 
 Every user-visible string comes from `app/locales/*.json`. To add one: add the key to `en.json` and the other 8 catalogs, run `python scripts/locales_to_xcstrings.py`, then render it with `Localizer` (`text("ui.path.connected")`, or a `Message` with parameters). Pass strings to SwiftUI as values (`Text(text(...))`), never as literals, so Xcode does not extract or look up keys on its own.
 
+Views read the shared `Localizer` from the environment (`@Environment(\.localizer) private var text`); `ContentView` builds it from the language chosen in Settings (`AppLanguage`, stored under the `language` key: `auto` or a catalog language) and sets `\.locale` to match. Do not create `Localizer()` in a view, or it ignores that choice. Problem reports render with an English `Localizer` on purpose.
+
 ## Measurements
 
 While the app has a window open, whichever tab is shown, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
