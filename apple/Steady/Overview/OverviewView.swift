@@ -5,7 +5,7 @@ import SwiftUI
 /// measurements of the router and the Internet.
 struct OverviewView: View {
     @Environment(AppModel.self) private var model
-    private let text = Localizer()
+    @Environment(\.localizer) private var text
 
     var body: some View {
         Form {
