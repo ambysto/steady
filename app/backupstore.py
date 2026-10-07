@@ -131,18 +131,23 @@ REGISTRY = RegistryStore()
 
 # --- the old backup.json ------------------------------------------------------------------------
 
-def entry_check(system: Any, catalog: list[Any]) -> EntryCheck:
+def entry_check(system: Any, catalog: list[Any], metrics: Any = None) -> EntryCheck:
     """An old backup.json entry is imported only if it would be restored now: it passes the tweak's
-    check_original (ADR-0017) and the tweak is on (its own reading, or the reading of the subject its
-    backup belongs to), or it is a valid failover metric."""
+    check_original (ADR-0017) and the change it was captured before is still in effect (backup_in_effect), or
+    it is a failover metric whose switch is still in effect. `metrics` reads interface metrics (default: system)."""
     from . import failover
+    metrics = metrics or system
 
     def check(key: str, entry: Any) -> None:
         if key.startswith(failover.BACKUP_PREFIX):
             index = key[len(failover.BACKUP_PREFIX):]
             if not (index.isascii() and index.isdigit()):
                 raise UnknownEntry(f"{key!r} is not a failover path")
-            failover.check_metric_original(int(index), entry)
+            original = failover.check_metric_original(int(index), entry)
+            now = metrics.interface_metric_get(int(index))      # raises when the interface is gone: wait
+            # prefer() always sets a manual metric: an automatic one, or the saved one, means no switch is in effect.
+            if now["automatic"] or (not original["automatic"] and now["metric"] == original["metric"]):
+                raise ValueError(f"no switch to path {index} is in effect, its backup is stale")
             return
         tweak = next((t for t in catalog if t.id == key), None)
         if tweak is None:
@@ -150,10 +155,8 @@ def entry_check(system: Any, catalog: list[Any]) -> EntryCheck:
         if not isinstance(entry, dict) or "original" not in entry:
             raise UnknownEntry("the backup entry has no original")
         tweak.check_original(system, entry["original"])
-        if not tweak.read(system).enabled:
-            elsewhere = tweak.backup_reading(system, entry["original"])
-            if elsewhere is None or not elsewhere.enabled:
-                raise ValueError(f"{key} is off, its backup is stale")
+        if not tweak.backup_in_effect(system, entry["original"]):
+            raise ValueError(f"{key} is not in effect, its backup is stale")
     return check
 
 
@@ -185,10 +188,17 @@ def _sort(entries: dict[str, Any], backup: dict[str, Any], check: EntryCheck) ->
 
 
 def import_legacy(store: RegistryStore, check: EntryCheck = default_check) -> None:
-    """Read the old backup.json once per machine (needs Admin and the backup lock). Nothing is renamed
+    """Read the old backup.json once per machine (needs Admin and the backup lock), even when it is missing or
+    corrupt: afterwards no backup.json is ever read by an elevated process again. Nothing is renamed
     or deleted in the user's folder: an elevated move there could be redirected by a junction."""
     path = config.backup_path()
-    stored = config.read_backup_file(path) if path.is_file() else {}
+    try:
+        stored = config.read_backup_file(path) if path.is_file() else {}
+    except (ValueError, OSError) as exc:
+        # Unreadable: nothing in it can be checked, so nothing is imported, and the import is closed all the
+        # same. Leaving it open would fail every elevated operation and keep the window open for a later file.
+        log.warning("old backup %s not imported, it cannot be read: %s", path, exc)
+        stored = {}
     backup = store.read()
     waiting = _sort(stored, backup, check)
     store.write(backup)

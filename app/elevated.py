@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -26,6 +27,8 @@ from typing import Any
 
 from . import config, winutil
 from .i18n import msg
+
+log = logging.getLogger("stableinternet.elevated")
 
 OPS = ("tweak-enable", "tweak-disable", "restart-adapter", "path-prefer", "path-restore", "restore-all")
 _RESULT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
@@ -54,6 +57,7 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
         return {"ok": False, "message": f"{op} takes no measurement"}
     if not winutil.is_admin():
         return {"ok": False, "message": msg("elevation.not_admin")}
+    _close_backup_import()
     if op in ("tweak-enable", "tweak-disable"):
         from . import calibration, tweaks
         from .storage import Storage
@@ -79,6 +83,15 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
     except ValueError as exc:
         return {"ok": False, "message": str(exc)}
     return {"ok": res.ok, "message": res.message}
+
+
+def _close_backup_import() -> None:
+    """Every operation reads the backups once, so the first UAC prompt of this version imports the old
+    backup.json and closes that window for good (ADR-0018), even for an operation that needs no backup."""
+    try:
+        config.load_backup()
+    except Exception as exc:   # the operation reports its own trouble with the store, if it needs it
+        log.warning("reading the backups failed: %s", exc)
 
 
 def restore_everything() -> dict[str, Any]:

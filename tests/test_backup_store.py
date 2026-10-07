@@ -11,10 +11,11 @@ from app import backupstore, config, elevated, failover, i18n, tweaks, winutil
 from app.tweaks import Reading, TweakManager
 from tests.test_backup_trust import catalog
 from tests.test_failover import FakeSystem as MetricSystem
-from tests.test_tweaks import FakeSystem
+from tests.test_tweaks import WIFI_GUID, FakeSystem
 
 DOH_FLAGS = {"auto_upgrade": False, "fallback_to_udp": False}
 ECN_OFF = {"original": {"setting": "ecncapability", "value": "disabled"}}
+DOCK_GUID = "{00000000-0000-4000-8000-0000000000BB}"
 
 
 class FakeWinreg:
@@ -119,6 +120,8 @@ class ElsewhereTweak:
     def backup_reading(self, system, original):
         return Reading(True, True, None) if self.on_there else None
 
+    backup_in_effect = tweaks.Tweak.backup_in_effect     # the default: read(), else backup_reading()
+
 
 class StoreCase(unittest.TestCase):
     """The registry backend (STABLEINTERNET_BACKUP unset), a fake HKLM, the old backup.json in a temp folder."""
@@ -138,7 +141,8 @@ class StoreCase(unittest.TestCase):
         self.new_process()
         self.legacy = self.tmp / "backup.json"
         self.system = FakeSystem()
-        self.check = backupstore.entry_check(self.system, catalog())
+        self.metrics = MetricSystem({21: {"automatic": False, "metric": 5}})   # failover has switched to path 21
+        self.check = backupstore.entry_check(self.system, catalog(), self.metrics)
         self.events = []
 
     def new_process(self):
@@ -333,11 +337,23 @@ class ImportTests(StoreCase):
         self.new_process()
         self.assertEqual(self.load(), {})
 
-    def test_a_corrupt_backup_json_is_not_imported_as_empty(self):
-        self.legacy.write_text("{not json", encoding="utf-8")
-        with self.assertRaises(ValueError):
-            self.load()
-        self.assertIsNone(self.reg.value(backupstore.IMPORTED_VALUE))
+    def test_a_corrupt_backup_json_imports_nothing_and_closes_the_import(self):
+        """Left open, it would fail every elevated operation and keep the window open for a later file."""
+        for text in ("{not json", "[1, 2]"):
+            with self.subTest(text=text):
+                self.reg.keys.clear()
+                self.new_process()
+                self.legacy.write_text(text, encoding="utf-8")
+                self.assertEqual(self.load(), {})
+                self.assertEqual(self.reg.value(backupstore.IMPORTED_VALUE), 1)
+                self.assertEqual(self.legacy.read_text(encoding="utf-8"), text)
+
+    def test_every_elevated_operation_closes_the_import(self):
+        """Even one that needs no backup (restart-adapter): the window ends at the first UAC prompt."""
+        self.plant({})
+        with mock.patch.object(backupstore, "default_check", self.check):
+            elevated._close_backup_import()
+        self.assertEqual(self.reg.value(backupstore.IMPORTED_VALUE), 1)
 
 
 class RealBackupImportTests(StoreCase):
@@ -412,6 +428,61 @@ class RealBackupImportTests(StoreCase):
                 self.reg.keys.clear()
                 self.assertEqual(self.imported(t, s, {"original": {**original, "keyword": keyword}}), {})
                 self.assertEqual(set(self.reg.quarantine()), {"wifi_power_saving"})
+
+
+class ForgedImportTests(StoreCase):
+    """A backup.json planted before the first elevated run: an entry whose "in effect" only the forged backup
+    itself creates is never imported (it waits in the quarantine, where nothing restores it)."""
+
+    def dock(self, **dns):
+        self.system.extra_interfaces.append({"index": 9, "guid": DOCK_GUID, "alias": "Ethernet",
+                                             "servers": ["192.168.1.1"], "static": False, "static_v6": False,
+                                             "suffix": "", "domain_joined": False, "vpn_up": False, **dns})
+
+    def test_dns_for_another_interface_that_does_not_have_the_tweaks_dns(self):
+        self.dock()
+        forged = {"original": {**dns_original(["203.0.113.66"]), "guid": DOCK_GUID, "interface_index": 9}}
+        self.plant({"dns_fastest": forged})
+        self.assertEqual(self.load(), {})
+        self.assertEqual(self.reg.quarantine(), {"dns_fastest": forged})
+
+    def test_dns_for_another_interface_that_has_the_tweaks_dns_is_imported(self):
+        """The docked case the review asked to keep: the tweak was turned on there, the PC is on Wi-Fi now."""
+        self.dock(servers=["1.1.1.1", "8.8.8.8"], static=True)
+        for address in ("1.1.1.1", "8.8.8.8"):
+            self.system.doh[address]["auto_upgrade"] = True
+        real = {"original": {**dns_original(["192.0.2.53"]), "guid": DOCK_GUID, "interface_index": 9}}
+        self.plant({"dns_fastest": real})
+        self.assertEqual(self.load(), {"dns_fastest": real})
+
+    def test_an_mtu_above_the_interfaces_is_never_imported(self):
+        """apply only ever lowers the MTU: a saved MTU below the current one cannot be an original."""
+        forged = {"original": {"guid": WIFI_GUID, "interface_index": 6, "alias": "Wi-Fi", "mtu": 1280}}
+        self.plant({"mtu_pmtu": forged})
+        self.assertEqual(self.load(), {})
+        self.assertEqual(self.reg.quarantine(), {"mtu_pmtu": forged})
+        self.system.mtu[WIFI_GUID] = 1400                  # lowered: the saved 1500 is a plausible original
+        real = {"original": {**forged["original"], "mtu": 1500}}
+        self.reg.keys.clear()
+        self.plant({"mtu_pmtu": real})
+        self.new_process()
+        self.assertEqual(self.load(), {"mtu_pmtu": real})
+
+    def test_a_failover_metric_without_a_switch_in_effect(self):
+        for now in ({"automatic": True, "metric": 35}, {"automatic": False, "metric": 1}):
+            with self.subTest(now=now):
+                self.reg.keys.clear()
+                self.new_process()
+                self.metrics.metrics[21] = now
+                forged = {"original": {"automatic": False, "metric": 1}, "home": 6}
+                self.plant({"failover:21": forged})
+                self.assertEqual(self.load(), {})
+                self.assertEqual(self.reg.quarantine(), {"failover:21": forged})
+
+    def test_a_failover_metric_of_an_interface_that_is_gone_waits(self):
+        self.plant({"failover:33": {"original": {"automatic": True}, "home": 6}})
+        self.assertEqual(self.load(), {})
+        self.assertEqual(set(self.reg.quarantine()), {"failover:33"})
 
 
 class TamperedBackupJsonTests(StoreCase):
