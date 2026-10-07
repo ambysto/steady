@@ -23,10 +23,9 @@ svg.icon { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: no
   background: var(--sidebar); backdrop-filter: blur(30px) saturate(1.6);
   border-right: .5px solid var(--separator); overflow-y: auto;
 }
-.titlebar { height: var(--space-4); }
-.app-name { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-2) var(--space-3);
-  font-size: var(--text-footnote); font-weight: var(--weight-semibold); color: var(--text-secondary); }
-.app-name svg.icon { color: var(--accent); }
+/* No app name here: the window's title bar (or the browser tab) already shows it. The spacer
+   centres the first item on the content header's line (less the sidebar's 2px gap). */
+.titlebar { height: calc((var(--titlebar-height) - 30px) / 2 - 2px); }
 .nav-item {
   display: flex; align-items: center; gap: var(--space-2); width: 100%; height: 30px; padding: 0 var(--space-2);
   border-radius: var(--radius-control); cursor: default; white-space: nowrap;
@@ -248,11 +247,53 @@ svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.
 .outcome { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .outcome .name { font-weight: var(--weight-medium); }
 .outcome .secondary { width: 100%; }
-/* The Fix sheet: a list to choose from, so left-aligned and wider. */
-.sheet.wide { width: 460px; max-width: calc(100% - 32px); max-height: calc(100% - 2 * var(--titlebar-height)); overflow-y: auto; text-align: left; }
-.sheet.wide h3 { text-align: center; }
-.fix-group { margin: var(--space-3) 0 var(--space-1); font-size: var(--text-footnote); font-weight: var(--weight-semibold);
-  color: var(--text-secondary); }
+/* Nothing to fix: a screen with a tick, flat, in the accent colour. */
+.clear-art { width: 132px; height: 110px; fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round;
+  stroke-linejoin: round; }
+.clear-art .tick { stroke-width: 7; }
+.check-hero .more { flex-basis: 100%; margin: 0 auto var(--space-1); max-width: 52ch; color: var(--text-secondary); }
+.link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+/* The result: the summary to tick on the left, the details on the right, Back / Fix under them. It takes
+   the whole Overview (the other cards hide) until Back. */
+#screen-overview.result-open > :not(.content-header):not(.check-slot) { display: none; }
+.result-view { display: grid; grid-template-columns: clamp(200px, 28%, 260px) minmax(0, 1fr); margin-top: var(--space-3);
+  height: calc(100vh - var(--titlebar-height) - var(--space-3) - var(--space-8)); min-height: 440px; }
+.result-side { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-2); overflow-y: auto;
+  background: var(--sidebar); border-right: .5px solid var(--separator); }
+.side-item { display: flex; align-items: center; gap: var(--space-2); width: 100%; min-height: 32px; padding: 4px var(--space-2);
+  border: 0; border-radius: var(--radius-control); background: none; text-align: left; cursor: default; }
+.side-item:hover { background: var(--surface-hover); }
+.side-item[aria-current="true"] { background: var(--surface); box-shadow: var(--shadow-control); font-weight: var(--weight-semibold); }
+.side-item .name { flex: 1; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+  line-height: 1.3; }
+.side-item input { margin: 0; flex: none; }
+.side-group { margin: var(--space-3) var(--space-2) var(--space-1); font-size: var(--text-footnote);
+  font-weight: var(--weight-semibold); color: var(--text-secondary); }
+svg.icon.s { width: 14px; height: 14px; }
+svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.icon.s.bad { color: var(--bad); }
+svg.icon.s.info { color: var(--info); }
+.result-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.result-scroll { flex: 1; overflow-y: auto; padding: var(--space-5) var(--space-6) var(--space-4); }
+.result-scroll h2 { margin: 0; font-size: var(--text-title); font-weight: var(--weight-bold); }
+.result-scroll .lead { margin: var(--space-1) 0 var(--space-4); color: var(--text-secondary); }
+.result-scroll .big { font-size: var(--text-headline); font-weight: var(--weight-semibold); }
+.finding { display: flex; align-items: flex-start; gap: var(--space-3); width: 100%; margin-top: var(--space-2);
+  padding: var(--space-3); border: 0; border-radius: var(--radius-group); background: var(--surface-hover);
+  text-align: left; cursor: default; }
+.finding:hover { background: var(--surface-pressed); }
+.finding .main { flex: 1; min-width: 0; }
+.finding .secondary { color: var(--text-secondary); font-size: var(--text-footnote); }
+.finding .turns-on, .finding .kind { margin-top: 4px; font-size: var(--text-footnote); color: var(--accent); }
+.finding .kind { color: var(--text-tertiary); }
+.finding .chevron { align-self: center; color: var(--text-tertiary); }
+.detail-head { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.detail-head h2 { margin-bottom: 2px; }
+.result-scroll > .big { margin: 0 0 var(--space-3); }
+.result-scroll .advice { margin-bottom: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-control);
+  background: var(--accent-soft); }
+.result-scroll .advice b { display: block; margin-bottom: 2px; color: var(--accent); }
+.result-scroll .side-group { margin-left: 0; }
 .fix-item { display: flex; align-items: flex-start; gap: var(--space-2); padding: 6px var(--space-2); border-radius: var(--radius-control); }
 .fix-item:hover { background: var(--surface-hover); }
 .fix-item input { margin: 3px 0 0; }
@@ -260,10 +301,17 @@ svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.
 .fix-item .name { font-weight: var(--weight-medium); }
 .fix-item .for { font-size: var(--text-caption); color: var(--text-tertiary); }
 .fix-item svg.icon { margin-top: 2px; color: var(--text-tertiary); }
-.fix-list .note { display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0;
-  font-size: var(--text-footnote); color: var(--text-secondary); text-align: left; }
-.fix-list .note[hidden] { display: none; }
-.fix-list .note svg.icon { flex: none; margin-top: 2px; }
+.result-foot { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-6) var(--space-4);
+  border-top: .5px solid var(--separator); }
+.result-foot .notes:empty { display: none; }
+.result-foot .note { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0;
+  font-size: var(--text-footnote); color: var(--text-secondary); }
+.result-foot .note + .note { margin-top: 4px; }
+.result-foot .note[hidden] { display: none; }
+.result-foot .note svg.icon { flex: none; margin-top: 2px; }
+.result-foot .buttons { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); }
+.result-foot .count { margin-right: auto; font-size: var(--text-footnote); color: var(--text-secondary); }
+.result-foot .button { min-width: 96px; justify-content: center; }
 #sheet-content:not(:empty) { margin-bottom: var(--space-4); }
 
 /* --- diagnostics ------------------------------------------------------------------------------ */
@@ -300,7 +348,6 @@ svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.
   .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--space-1); overflow: visible;
     padding: var(--space-2); border-right: 0; border-bottom: .5px solid var(--separator); }
   .titlebar { display: none; }
-  .app-name { width: 100%; padding: 0 var(--space-1) var(--space-1); }
   .sidebar .spacer, .sidebar .conn, .nav-item .badge { display: none; }
   .nav-item { width: auto; }
   .content { padding: 0 var(--space-4) var(--space-6); }
@@ -311,4 +358,8 @@ svg.icon.s.ok { color: var(--ok); } svg.icon.s.warn { color: var(--warn); } svg.
   .check-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mini-stats { grid-template-columns: repeat(2, 1fr); }
   .problem-action { flex-wrap: wrap; }
+  .result-view { grid-template-columns: 1fr; height: auto; min-height: 0; }
+  .result-side { border-right: 0; border-bottom: .5px solid var(--separator); }
+  .result-scroll { padding: var(--space-4); }
+  .result-foot { padding: var(--space-3) var(--space-4); }
 }

@@ -3,7 +3,7 @@
 
 import { get, runJob } from "../api.js";
 import { latencyChart } from "../chart.js";
-import { $, confirmSheet, el, fill, icon, svgEl, toast } from "../dom.js";
+import { $, el, fill, icon, svgEl, toast } from "../dom.js";
 import { duration, number, t, timeOf } from "../i18n.js";
 import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
 import { failoverKey, failoverRows, suggestionAction } from "../widgets.js";
@@ -299,6 +299,7 @@ function checkCard(ctx) {
   if (fix.phase === "applying" || fix.phase === "undoing") return busyCard(ctx, card);
   if (fix.phase === "result" && fix.outcome) return resultCard(ctx, card);
   if (!suggestions) return el("div", { class: "group loading" }, "…");
+  if (result.open && suggestions.check?.count) return resultView(ctx);
   const start = () => runCheck(ctx);
   const summary = suggestions.check;
   if (!suggestions.run || !summary) {
@@ -313,20 +314,175 @@ function checkCard(ctx) {
   const centre = fallback => (stale ? bigButton(t("ui.check.again"), start) : fallback);
   const staleNote = stale ? el("p", { class: "stale" }, t("ui.check.stale", { duration: duration(age) })) : null;
   if (!summary.count) {
-    return card(checkHero({ circle: centre(statusCircle("ok", "check")), title: t("ui.check.clear_title"),
-                            body: t("ui.check.clear_body", { total: summary.total, time }), below: again || staleNote }),
+    // Nothing to fix: a plain "all good", the numbers behind it, and where to go for more (never a push).
+    const more = alsoIds(summary).length;
+    const optimize = el("p", { class: "more" }, more ? t("ui.check.clear_more", { count: more }) : t("ui.check.clear_more_none"), " ",
+      el("a", { class: "link", href: "#/optimize" }, t("ui.check.open_optimize")));
+    return card(checkHero({ circle: centre(clearArt()), title: t("ui.check.clear_title"),
+                            body: t("ui.check.clear_body", { total: summary.total, time }),
+                            below: [optimize, again || staleNote] }),
       miniStats(ctx));
   }
   const worst = summary.problems.some(p => p.status === "bad") ? "bad" : "warn";
   // What the app can fix is the big button; an old result gives that place to checking again.
   const fixLabel = t("ui.check.fix_some", { fixable: summary.fixable, count: summary.count });
-  const openSheet = () => openFix(ctx);
-  const circle = stale || !summary.fixable ? centre(statusCircle(worst, "alert")) : bigButton(fixLabel, openSheet, "sliders");
-  const fixSmall = stale && summary.fixable ? el("button", { class: "button primary", onclick: openSheet }, fixLabel) : null;
+  const open = () => openResult(ctx);
+  const circle = stale || !summary.fixable ? centre(statusCircle(worst, "alert")) : bigButton(fixLabel, open, "sliders");
+  const details = el("button", { class: `button${stale || !summary.fixable ? " primary" : ""}`, onclick: open }, t("ui.check.see_details"));
   return card(checkHero({ circle, title: t("ui.check.found_title", { count: summary.count }),
                           body: t("ui.check.found_body", { time, ok: summary.ok, total: summary.total }),
-                          below: again ? [fixSmall, again] : [staleNote, fixSmall] }),
-    el("div", { class: "rows" }, summary.problems.map(p => problemRow(p, ctx))));
+                          below: again ? [details, again] : [staleNote, details] }));
+}
+
+/** A screen with a tick: what "nothing to fix" looks like (flat, in the accent colour). */
+function clearArt() {
+  const svg = svgEl("svg", { viewBox: "0 0 120 100", class: "clear-art", "aria-hidden": "true" });
+  svg.append(svgEl("rect", { x: 8, y: 6, width: 104, height: 68, rx: 8 }),
+             svgEl("path", { d: "M50 74v12M70 74v12M38 88h44" }),
+             svgEl("path", { class: "tick", d: "M44 40l11 11 22-22" }));
+  return svg;
+}
+
+// --- the result (ADR-0020): after a check that found problems, what to fix together, ticked, each ---------
+// problem's detail, then Back or Fix. It takes the whole Overview until Back.
+
+// focus: "summary", "also" or a problem's key; selected: the tweak ids the Fix button turns on.
+const result = { open: false, focus: "summary", selected: new Set() };
+
+/** Low-risk tweaks the run suggests for no counted problem (check #10 lists what is not on yet). */
+const alsoIds = summary => {
+  const fromProblems = new Set(summary.problems.flatMap(p => p.batch));
+  return summary.also.filter(id => !fromProblems.has(id));
+};
+
+function openResult(ctx) {
+  const summary = suggestions.check;
+  Object.assign(result, { open: true, focus: "summary",
+                          selected: new Set([...summary.problems.flatMap(p => p.batch), ...alsoIds(summary)]) });
+  drawCheck(ctx);
+  root().scrollIntoView?.({ block: "start" });
+}
+
+function closeResult(ctx) {
+  result.open = false;
+  drawCheck(ctx);
+}
+
+function resultView(ctx) {
+  const summary = suggestions.check;
+  const also = alsoIds(summary);
+  const fixable = summary.problems.filter(p => p.batch.length);
+  const others = summary.problems.filter(p => !p.batch.length);
+  const selected = result.selected;
+  const boxes = [];             // [checkbox, ids]: kept in step without redrawing (the details keep their scroll)
+  const countNote = el("span", { class: "count" });
+  const fixButton = el("button", { class: "button primary", onclick: () => { closeResult(ctx); runFix(ctx, [...selected]); } },
+    t("ui.check.fix"));
+  const disruptsNote = el("p", { class: "note" }, icon("wifi-off"), el("span", {}, t("ui.check.sheet.disrupts")));
+  const sync = () => {
+    for (const [box, ids] of boxes) {
+      const on = ids.filter(id => selected.has(id)).length;
+      box.checked = on === ids.length;
+      box.indeterminate = on > 0 && on < ids.length;
+    }
+    countNote.textContent = t("ui.check.selected", { count: selected.size });
+    fixButton.disabled = !selected.size;
+    disruptsNote.hidden = ![...selected].some(id => tweakItem(id).disrupts);
+  };
+  const tick = ids => {
+    const box = el("input", { type: "checkbox", "aria-label": t("ui.check.fix") });
+    box.addEventListener("click", e => e.stopPropagation());
+    box.addEventListener("change", () => {
+      for (const id of ids) box.checked ? selected.add(id) : selected.delete(id);
+      sync();
+    });
+    boxes.push([box, ids]);
+    return box;
+  };
+  const show = focus => { result.focus = focus; drawCheck(ctx); };
+  const sideItem = (focus, lead, label, trail) => el("button", {
+    class: "side-item", "aria-current": result.focus === focus ? "true" : null, onclick: () => show(focus) },
+    lead, el("span", { class: "name" }, label), trail);
+  const statusMark = p => icon(STATUS_ICON[p.status], `icon s ${p.status}`);
+
+  const side = el("div", { class: "result-side" },
+    sideItem("summary", icon("list"), t("ui.check.summary")),
+    fixable.length || also.length ? el("div", { class: "side-group" }, t("ui.check.sheet.fixes")) : null,
+    fixable.map(p => sideItem(p.key, tick(p.batch), p.title, statusMark(p))),
+    also.length ? sideItem("also", tick(also), t("ui.check.sheet.also"), el("span", { class: "pill" }, also.length)) : null,
+    others.length ? el("div", { class: "side-group" }, t("ui.check.group.other")) : null,
+    others.map(p => sideItem(p.key, statusMark(p), p.title, null)));
+
+  const problem = summary.problems.find(p => p.key === result.focus);
+  const main = problem ? problemDetail(problem, ctx, tick)
+    : result.focus === "also" ? alsoDetail(also, tick)
+    : summaryDetail(summary, fixable, also, others, show);
+
+  const foot = el("div", { class: "result-foot" },
+    el("div", { class: "notes" }, disruptsNote,
+      ctx.state?.is_admin ? null : el("p", { class: "note" }, icon("lock"), el("span", {}, t("ui.check.sheet.admin")))),
+    el("div", { class: "buttons" }, countNote,
+      el("button", { class: "button", onclick: () => closeResult(ctx) }, t("ui.check.back")), fixButton));
+  sync();
+  return el("div", { class: "group result-view" }, side, el("div", { class: "result-main" }, main, foot));
+}
+
+/** One card per finding: what was measured, and what happens to it. A card opens the finding. */
+function summaryDetail(summary, fixable, also, others, show) {
+  const names = ids => ids.map(id => tweakItem(id).title).join(" · ");
+  const findingCard = (p, line) => el("button", { class: "finding", onclick: () => show(p.key) },
+    el("div", { class: `icon-tile ${p.status}` }, icon(STATUS_ICON[p.status])),
+    el("div", { class: "main" }, el("div", { class: "big" }, p.summary), el("div", { class: "secondary" }, p.title), line),
+    icon("chevron", "icon chevron"));
+  const time = timeOf(suggestions.run.ts, { withDate: true });
+  return el("div", { class: "result-scroll" },
+    el("h2", {}, t("ui.check.found_title", { count: summary.count })),
+    el("p", { class: "lead" }, t("ui.check.found_body", { time, ok: summary.ok, total: summary.total })),
+    fixable.map(p => findingCard(p, el("div", { class: "turns-on" }, t("ui.check.turns_on", { names: names(p.batch) })))),
+    also.length ? el("button", { class: "finding", onclick: () => show("also") },
+      el("div", { class: "icon-tile accent" }, icon("sliders")),
+      el("div", { class: "main" }, el("div", { class: "big" }, t("ui.check.also_count", { count: also.length })),
+        el("div", { class: "secondary" }, names(also))),
+      icon("chevron", "icon chevron")) : null,
+    others.map(p => findingCard(p, el("div", { class: "kind" }, t(`ui.check.kind.${p.kind}`)))));
+}
+
+/** A tweak the Fix button can turn on, with its own tick; `reason` says what it is for. */
+function fixRow(id, tick, reason = null) {
+  const item = tweakItem(id);
+  return el("label", { class: "fix-item" }, tick([id]),
+    el("div", {}, el("div", { class: "name" }, item.title), reason ? el("div", { class: "for" }, reason) : null),
+    item.disrupts ? el("span", { title: t("ui.optimize.disrupts") }, icon("wifi-off")) : null);
+}
+
+function problemDetail(problem, ctx, tick) {
+  const onChange = () => loadSuggestions(ctx).then(() => drawCheck(ctx));
+  // Suggestions the Fix button does not take (manual steps, tweaks that need their own confirmation).
+  const rest = problem.actions.filter(a => !problem.batch.includes(a.id));
+  return el("div", { class: "result-scroll" },
+    el("div", { class: "detail-head" }, el("div", { class: `icon-tile ${problem.status}` }, icon(STATUS_ICON[problem.status])),
+      el("div", {}, el("h2", {}, problem.title),
+        el("span", { class: `pill ${problem.kind === "app" ? "accent" : ""}` }, t(`ui.check.kind.${problem.kind}`)))),
+    el("p", { class: "big" }, problem.summary),
+    problem.advice ? el("div", { class: "advice" }, el("b", {}, t("ui.diag.advice")), problem.advice) : null,
+    problem.batch.length ? [el("div", { class: "side-group" }, t("ui.check.fix_together")),
+                            el("div", { class: "fix-list" }, problem.batch.map(id => fixRow(id, tick)))] : null,
+    rest.length ? el("div", { class: "problem-actions" }, rest.map(a => el("div", { class: "problem-action" },
+      el("div", { class: "main" }, el("div", { class: "label" }, a.title),
+        a.kind === "manual" && a.body ? el("div", { class: "secondary" }, a.body) : null),
+      suggestionAction(a, { onChange, isAdmin: ctx.state?.is_admin })))) : null);
+}
+
+function alsoDetail(also, tick) {
+  return el("div", { class: "result-scroll" },
+    el("div", { class: "detail-head" }, el("div", { class: "icon-tile accent" }, icon("sliders")),
+      el("div", {}, el("h2", {}, t("ui.check.also_count", { count: also.length })),
+        el("span", { class: "pill accent" }, t("ui.check.kind.app")))),
+    el("p", { class: "lead" }, t("ui.check.also_body")),
+    el("div", { class: "fix-list" }, also.map(id => {
+      const reason = tweakItem(id).reason?.title;
+      return fixRow(id, tick, reason ? t("ui.check.sheet.for", { reason }) : null);
+    })));
 }
 
 // --- Fix (ADR-0020 points 5-7): the low-risk tweaks together, one UAC prompt, then check again ----------
@@ -336,38 +492,6 @@ const RANK = { ok: 0, info: 0, warn: 1, bad: 2 };
 const fix = { phase: null, ids: [], before: null, after: null, outcome: null };
 
 const tweakItem = id => (suggestions?.items || []).find(i => i.kind === "tweak" && i.id === id) || { id, title: id };
-
-/** The sheet: what the Fix button would turn on, ticked, each with why; nothing happens until confirmed. */
-async function openFix(ctx) {
-  const summary = suggestions.check;
-  const forProblem = summary.problems.flatMap(p => p.batch.map(id => [id, p.title]));
-  const fromProblems = new Set(forProblem.map(([id]) => id));
-  const also = summary.also.filter(id => !fromProblems.has(id)).map(id => [id, tweakItem(id).reason?.title]);
-  const selected = new Set([...forProblem, ...also].map(([id]) => id));
-  const disruptsNote = el("p", { class: "note" }, icon("wifi-off"), el("span", {}, t("ui.check.sheet.disrupts")));
-  const refresh = () => {
-    $("#sheet-title").textContent = t("ui.check.sheet.title", { count: selected.size });
-    $("#sheet-confirm").disabled = !selected.size;
-    disruptsNote.hidden = ![...selected].some(id => tweakItem(id).disrupts);
-  };
-  const row = ([id, reason]) => {
-    const item = tweakItem(id);
-    const box = el("input", { type: "checkbox", checked: true });
-    box.addEventListener("change", () => { box.checked ? selected.add(id) : selected.delete(id); refresh(); });
-    return el("label", { class: "fix-item" }, box,
-      el("div", {}, el("div", { class: "name" }, item.title), reason ? el("div", { class: "for" }, t("ui.check.sheet.for", { reason })) : null),
-      item.disrupts ? el("span", { title: t("ui.optimize.disrupts") }, icon("wifi-off")) : null);
-  };
-  const content = el("div", { class: "fix-list" },
-    forProblem.length ? [el("div", { class: "fix-group" }, t("ui.check.sheet.fixes")), forProblem.map(row)] : null,
-    also.length ? [el("div", { class: "fix-group" }, t("ui.check.sheet.also")), also.map(row)] : null,
-    disruptsNote,
-    ctx.state?.is_admin ? null : el("p", { class: "note" }, icon("lock"), el("span", {}, t("ui.check.sheet.admin"))));
-  const sheet = confirmSheet({ title: "", content, wide: true, symbol: "sliders", tile: "accent",
-                              confirm: t("ui.check.sheet.confirm"), cancel: t("ui.sheet.cancel") });
-  refresh();
-  if (await sheet) await runFix(ctx, [...selected]);
-}
 
 async function runFix(ctx, ids) {
   Object.assign(fix, { phase: "applying", ids, before: suggestions.check, after: null, outcome: null });
@@ -463,6 +587,7 @@ function resultCard(ctx, card) {
 }
 
 function drawCheck(ctx) {
+  root().classList.toggle("result-open", result.open && Boolean(suggestions?.check?.count) && !check.running && !fix.phase);
   slots.check && fill(slots.check, checkCard(ctx));
   slots.value && fill(slots.value, valueCard(ctx));
 }
@@ -479,6 +604,10 @@ async function runCheck(ctx) {
     await loadSuggestions(ctx);
     loadBadge().catch(() => {});        // the sidebar count and the Diagnostics page follow the new run
     ok = true;
+    if (fix.phase !== "rechecking" && suggestions.check?.count) {
+      check.running = false;
+      openResult(ctx);                  // a fresh result opens on what was found
+    }
   } catch (err) {
     toast(t("ui.error.failed", { message: err.message }), { bad: true });
   } finally {
@@ -523,6 +652,7 @@ async function loadFailover() {
 
 function draw(ctx) {
   for (const name of ["hero", "check", "value", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
+  slots.check.className = "check-slot";
   slots.stats.style.marginTop = "var(--space-3)";
   fill(root(), 
     el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview"))),
@@ -562,7 +692,7 @@ export async function refresh(ctx) {
   if (++tick % 15 === 0) {     // every ~30 s: events, suggestions and settings change slowly
     if (range === "live") events = (await get("/api/events?limit=300")).events;
     await Promise.all([loadSuggestions(ctx), loadFailover()]);
-    if (!root().querySelector(".group button:disabled")) drawSlow(ctx);
+    if (!result.open && !root().querySelector(".group button:disabled")) drawSlow(ctx);
   } else if (tick % 2 === 0) { // every ~4 s: which connection carries the traffic can change any moment
     const before = failoverKey(failover);
     await loadFailover();
