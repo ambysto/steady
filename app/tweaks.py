@@ -28,7 +28,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
 
 from . import bufferbloat, calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
@@ -147,6 +147,10 @@ def _same(stored: Any, expected: Any, what: str) -> None:
     _require(stored == expected, f"{what} {stored!r} is not this tweak's ({expected!r})")
 
 
+def _check_guid(guid: Any) -> None:
+    _require(isinstance(guid, str) and _ADAPTER_GUID_RE.match(guid) is not None, f"{guid!r} is not an interface GUID")
+
+
 def _check_wifi_adapter(sys_: System, stored: Any) -> str:
     try:
         adapter = _wifi_adapter(sys_)
@@ -163,10 +167,29 @@ def _wifi_adapter(sys_: System) -> str:
     return name
 
 
+class Match(NamedTuple):
+    """How one driver family spells a property. `name` and `value` are the English DisplayName and
+    target DisplayValue regexes (the fallback on a driver whose keyword is not listed); `keyword`
+    is the RegistryKeyword, which a localized driver does not translate; `registry` is the registry
+    value that means "target" for that keyword, recorded only where it was read from a card or is
+    fixed by Microsoft (docs/TWEAKS.md, "How a property and its value are matched")."""
+    name: str
+    value: str
+    keyword: str | None = None
+    registry: str | None = None
+
+
+def _keyword_key(keyword: str) -> str:
+    return keyword.lstrip("*").lower()
+
+
 class AdapterPropertyTweak(Tweak):
-    """An advanced property of the Wi-Fi driver. Property names differ per chip vendor, so
-    `candidates` lists (DisplayName regex, target DisplayValue regex) pairs; the first
-    property present on this card wins. Values are written as RegistryValue.
+    """An advanced property of the Wi-Fi driver. Property names differ per chip vendor and are
+    translated on a localized driver, so `candidates` lists a `Match` per driver family (a plain
+    (DisplayName regex, DisplayValue regex) pair is a Match with no keyword). The property is found
+    by RegistryKeyword first, in the order listed, then by DisplayName. The target is the known
+    registry value when the property was found by its keyword, otherwise the value whose
+    DisplayValue matches. Values are written as RegistryValue.
 
     `precondition(sys_)` may return a message saying why the tweak does not suit the machine
     right now (e.g. the connected network has no 5 GHz access point). It only gates turning the
@@ -177,22 +200,41 @@ class AdapterPropertyTweak(Tweak):
                  precondition: Callable[[System], Message | None] | None = None, **kw: Any) -> None:
         kw.setdefault("disrupts_network", True)  # changing a driver property restarts the adapter
         super().__init__(id, name, risk, **kw)
-        self.candidates = [(re.compile(dn, re.I), re.compile(tv, re.I)) for dn, tv in candidates]
+        self.candidates = [Match(*c) for c in candidates]
+        self._name_res = [(re.compile(m.name, re.I), re.compile(m.value, re.I)) for m in self.candidates]
         self._precondition = precondition
 
     def _resolve(self, sys_: System) -> tuple[str, dict[str, Any], str]:
         adapter = _wifi_adapter(sys_)
         props = sys_.adapter_properties(adapter)
-        for dn_re, tv_re in self.candidates:
-            prop = next((p for p in props if dn_re.fullmatch(p["DisplayName"])), None)
-            if prop is None:
+        for m, (_, tv_re) in zip(self.candidates, self._name_res):
+            if m.keyword is None:
                 continue
-            for disp, reg in zip(prop["ValidDisplayValues"], prop["ValidRegistryValues"]):
-                if tv_re.fullmatch(disp):
-                    return adapter, prop, reg
-            raise Unsupported(msg("tweak.reason.no_matching_value", property=prop["DisplayName"],
-                                  values=list(prop["ValidDisplayValues"]) or msg("tweak.common.unknown")))
+            prop = next((p for p in props if _keyword_key(p["RegistryKeyword"]) == _keyword_key(m.keyword)), None)
+            if prop is not None:
+                return adapter, prop, self._target(prop, m, tv_re)
+        for m, (dn_re, tv_re) in zip(self.candidates, self._name_res):
+            prop = next((p for p in props if dn_re.fullmatch(p["DisplayName"])), None)
+            if prop is not None:
+                return adapter, prop, self._target(prop, m, tv_re)
         raise Unsupported(msg("tweak.reason.no_property"))
+
+    @staticmethod
+    def _target(prop: dict[str, Any], m: Match, tv_re: re.Pattern) -> str:
+        """The registry value to write for `prop`, found through `m`."""
+        pairs = list(zip(prop["ValidDisplayValues"], prop["ValidRegistryValues"]))
+        by_text = next((reg for disp, reg in pairs if tv_re.fullmatch(disp)), None)
+        known = (m.registry if m.registry is not None and m.keyword is not None
+                 and _keyword_key(prop["RegistryKeyword"]) == _keyword_key(m.keyword)
+                 and m.registry in prop["ValidRegistryValues"] else None)
+        # A driver that spells the same value in English but numbers it differently is not the card
+        # this registry value was recorded on: write nothing rather than the wrong value.
+        if known is not None and (by_text is None or by_text == known):
+            return known
+        if known is None and by_text is not None:
+            return by_text
+        raise Unsupported(msg("tweak.reason.no_matching_value", property=prop["DisplayName"],
+                              values=list(prop["ValidDisplayValues"]) or msg("tweak.common.unknown")))
 
     @staticmethod
     def _current(prop: dict[str, Any]) -> str:
@@ -236,10 +278,14 @@ class AdapterPropertyTweak(Tweak):
 
     def check_original(self, sys_: System, original: Any) -> None:
         _fields(original, {"adapter", "keyword", "value"}, frozenset({"display"}))
-        adapter = _check_wifi_adapter(sys_, original["adapter"])
-        prop = next((p for p in sys_.adapter_properties(adapter) if p["RegistryKeyword"] == original["keyword"]
-                     and any(dn_re.fullmatch(p["DisplayName"]) for dn_re, _ in self.candidates)), None)
-        _require(prop is not None, f"property {original['keyword']!r} is not one this tweak changes")
+        _check_wifi_adapter(sys_, original["adapter"])
+        try:
+            _, prop, _ = self._resolve(sys_)   # the property this tweak changes on this card, however it is spelled
+        except Unsupported:
+            raise ValueError("this card has no property this tweak changes") from None
+        # Exactly as Windows reports it, as capture() saved it: "WakeOnMagicPacket" and "*WakeOnMagicPacket" are
+        # two registry values, so the looser _keyword_key() match used to find the property is not enough here.
+        _same(original["keyword"], prop["RegistryKeyword"], "property")
         _require(isinstance(original["value"], str) and original["value"] in prop["ValidRegistryValues"],
                  f"{original['value']!r} is not a valid value of {prop['DisplayName']!r}")
 
@@ -756,8 +802,7 @@ class DnsFastestTweak(Tweak):
 
     def check_original(self, sys_: System, original: Any) -> None:
         _fields(original, {"interface_index", "static", "servers", "doh"}, frozenset({"guid"}))   # no guid: older backup
-        guid = original.get("guid", "{00000000-0000-0000-0000-000000000000}")
-        _require(isinstance(guid, str) and _ADAPTER_GUID_RE.match(guid) is not None, f"{guid!r} is not an interface GUID")
+        _check_guid(original.get("guid", "{00000000-0000-0000-0000-000000000000}"))
         _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
         _require(isinstance(original["static"], bool), "static is not true or false")
         servers = original["servers"]
@@ -792,6 +837,7 @@ class MeasuredTweak(Tweak):
     `applied_value` reads back what is in effect. Plain `apply` has no value to write."""
 
     measurement_kind = ""
+    verdict_prefix = "tweak"   # messages <prefix>.event.verified_<key> and <prefix>.verdict.<key>
 
     def check(self, measurement: Any, now: float) -> dict[str, Any]:
         """The measurement validated (ValueError when it is malformed or too old)."""
@@ -817,31 +863,45 @@ class MeasuredTweak(Tweak):
         """The value and the measurement it came from, for the user."""
         raise NotImplementedError
 
+    def verdict(self, before: dict[str, Any], after: dict[str, Any] | None) -> dict[str, Any]:
+        """Did it help? The measurement before enabling against the one right after; "helped" is True,
+        False or None (could not measure again). The other fields fill the verdict messages."""
+        return calibration.verdict(before, after)
+
+    def verdict_params(self, v: dict[str, Any]) -> dict[str, Any]:
+        return dict(before=v["before_ms"], after=v["after_ms"])
+
 
 UPLOAD_POLICY = "StableInternet-Upload"
 UPLOAD_MARGIN = 0.85
 UPLOAD_MIN_BPS, UPLOAD_MAX_BPS = 1_000_000, 1_000_000_000
 UPLOAD_STEP_BPS = 100_000
+# Destinations the upload limit must not reach: private, link-local and unique-local networks (a NAS
+# copy or casting runs at LAN speed, far above any Internet uplink).
+LOCAL_DESTINATIONS = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16", "fc00::/7", "fe80::/10")
 
 
 class UploadShapingTweak(MeasuredTweak):
-    """A QoS policy of the tool's own name throttling all outbound traffic to 85% of the measured
-    upload, so the queue builds on the PC (short) instead of in the modem (long). Restore removes
-    exactly that policy, which is also the safe default without a backup (the name is ours)."""
+    """A QoS policy of the tool's own name throttling outbound traffic to 85% of the measured upload,
+    so the queue builds on the PC (short) instead of in the modem (long). The throttle matches all
+    traffic (-Default), so one more specific policy per local network exempts the LAN; they are
+    written before the throttle and removed after it. Restore removes exactly the tool's policies,
+    which is also the safe default without a backup (the names are ours)."""
 
     measurement_kind = "upload"
 
     def __init__(self, id: str, name: Message, risk: str, *, policy: str = UPLOAD_POLICY, **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
         self.policy = policy
+        self.exemptions = {f"{policy}-Local{i}": prefix for i, prefix in enumerate(LOCAL_DESTINATIONS, 1)}
 
     def check(self, measurement: Any, now: float) -> dict[str, Any]:
         return calibration.check_upload(measurement, now)
 
     def derive(self, measurement: dict[str, Any]) -> int:
-        mbps, samples = float(measurement["upload_mbps"]), int(measurement["samples"])
-        if mbps < calibration.MIN_UPLOAD_MBPS or samples < calibration.MIN_SAMPLES:
-            raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=samples))
+        mbps, attempted = float(measurement["upload_mbps"]), int(measurement["attempted"])
+        if mbps < calibration.MIN_UPLOAD_MBPS or attempted < calibration.MIN_SAMPLES:
+            raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=attempted))
         # The measurement stops at a fixed volume, so near its ceiling it shows its own limit, not the line's.
         ceiling = bufferbloat.LOAD_CEILING_MBPS
         if mbps >= calibration.AT_CEILING * ceiling:
@@ -855,8 +915,20 @@ class UploadShapingTweak(MeasuredTweak):
                               low=UPLOAD_MIN_BPS / 1e6, high=UPLOAD_MAX_BPS / 1e6))
         return cap
 
+    def _policies(self, sys_: System) -> dict[str, dict[str, Any]]:
+        """The tool's policies by lower-case name (the ActiveStore lower-cases them)."""
+        return {name.lower(): p for name, p in sys_.qos_policies_get(self.policy).items()}
+
+    def _exempted(self, policies: dict[str, dict[str, Any]]) -> list[str]:
+        """Exemption policies present with their intended destination."""
+        return sorted(n for n, prefix in self.exemptions.items()
+                      if (policies.get(n.lower()) or {}).get("destination") == prefix)
+
     def applied_value(self, sys_: System) -> int | None:
-        return sys_.qos_policy_get(self.policy)
+        """The throttle in effect, counted only while every local network is exempted."""
+        policies = self._policies(sys_)
+        rate = (policies.get(self.policy.lower()) or {}).get("rate_bps")
+        return rate if rate is not None and len(self._exempted(policies)) == len(self.exemptions) else None
 
     def value_matches(self, applied: int | None, value: int) -> bool:
         # Windows may round the rate it stores; 1% is far below the margin taken.
@@ -866,39 +938,176 @@ class UploadShapingTweak(MeasuredTweak):
         return msg("tweak.upload_shaping.value", limit=value / 1e6, upload=float(measurement["upload_mbps"]))
 
     def read(self, sys_: System) -> Reading:
-        rate = self.applied_value(sys_)
-        return Reading(True, rate is not None, None if rate is None else {"limit_mbps": round(rate / 1e6, 1)})
+        policies = self._policies(sys_)
+        rate = (policies.get(self.policy.lower()) or {}).get("rate_bps")
+        if rate is None:
+            return Reading(True, False, None)
+        return Reading(True, True, {"limit_mbps": round(rate / 1e6, 1),
+                                    "local_exempt": len(self._exempted(policies)) == len(self.exemptions)})
 
     def capture(self, sys_: System) -> dict[str, Any]:
-        return {"policy": self.policy, "rate_bps": self.applied_value(sys_)}
+        policies = self._policies(sys_)
+        return {"policy": self.policy, "rate_bps": (policies.get(self.policy.lower()) or {}).get("rate_bps"),
+                "exempt": self._exempted(policies)}
 
     def apply_value(self, sys_: System, value: int) -> None:
+        for name, prefix in self.exemptions.items():   # the LAN is exempted before anything is throttled
+            sys_.qos_exempt_set(name, prefix)
         sys_.qos_policy_set(self.policy, value)
 
-    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
-        if original is None or original["rate_bps"] is None:
-            sys_.qos_policy_remove(self.policy)
-        else:
-            sys_.qos_policy_set(original["policy"], int(original["rate_bps"]))
-
-    def restore_key(self, original: dict[str, Any]) -> Any:
-        rate = original["rate_bps"]
-        return (original["policy"], None if rate is None else int(rate))
-
     def check_original(self, sys_: System, original: Any) -> None:
-        # Only the tool's own policy, at a rate this tweak could have set (a policy of that name can only be ours).
-        _fields(original, {"policy", "rate_bps"})
+        # Only the tool's own policies, at a rate this tweak could have set (ADR-0017). `exempt` is missing
+        # from backups made before the LAN exemptions.
+        _fields(original, {"policy", "rate_bps"}, frozenset({"exempt"}))
         _same(original["policy"], self.policy, "QoS policy")
         rate = original["rate_bps"]
         _require(rate is None or _is_int(rate, UPLOAD_MIN_BPS, UPLOAD_MAX_BPS),
                  f"rate {rate!r} is outside {UPLOAD_MIN_BPS}..{UPLOAD_MAX_BPS} bit/s")
+        exempt = original.get("exempt", [])
+        _require(isinstance(exempt, list) and all(isinstance(n, str) and n in self.exemptions for n in exempt)
+                 and len(set(exempt)) == len(exempt), f"exemption policies {exempt!r} are not this tweak's")
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        # Only ever the tool's own names: the policy is self.policy, exemptions are looked up in self.exemptions.
+        rate = None if original is None else original["rate_bps"]
+        keep = set() if original is None else set(original.get("exempt", []))
+        if rate is None:
+            sys_.qos_policy_remove(self.policy)
+        else:
+            sys_.qos_policy_set(self.policy, int(rate))
+        present = {n for n in self.exemptions if n.lower() in self._policies(sys_)}
+        for name in sorted(present - keep):        # the throttle is gone or back: exemptions can follow
+            sys_.qos_policy_remove(name)
+        for name in sorted(keep):
+            sys_.qos_exempt_set(name, self.exemptions[name])
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        rate = original["rate_bps"]
+        return (original["policy"], None if rate is None else int(rate), tuple(sorted(original.get("exempt", []))))
+
+
+MTU_LOWEST = 1280            # no plain PPPoE or tunnel is that small; it is also IPv6's minimum
+MTU_HIGHEST_PROBED = 1500    # above this the interface uses jumbo frames, a LAN choice to leave alone
+
+
+class MtuTweak(MeasuredTweak):
+    """The uplink's IPv4 MTU lowered to the path MTU measured by check #16, only when large packets
+    vanish silently (PMTUD blackhole). Windows keeps no mark of who set an MTU, so read() never
+    reports it on: it is on while this tweak's backup exists and that interface's MTU differs from
+    the saved one (backup_reading). Like dns_fastest the backup names its interface by GUID."""
+
+    measurement_kind = "path_mtu"
+    verdict_prefix = "tweak.mtu_pmtu"
+    has_default_restore = False
+
+    @staticmethod
+    def _info(sys_: System, guid: str | None = None) -> dict[str, Any]:
+        info = sys_.ipv4_interface(guid) if guid else sys_.ipv4_interface()
+        if info is None:
+            raise Unsupported(msg("tweak.mtu_pmtu.reason.interface_gone" if guid else "tweak.mtu_pmtu.reason.no_uplink"))
+        return info
+
+    def check(self, measurement: Any, now: float) -> dict[str, Any]:
+        return calibration.check_path_mtu(measurement, now)
+
+    def derive(self, measurement: dict[str, Any]) -> int:
+        interface, path = int(measurement["interface_mtu"]), int(measurement["path_mtu"])
+        if measurement["tunnel"]:
+            raise Refused(msg("tweak.mtu_pmtu.refused.tunnel"))
+        if interface > MTU_HIGHEST_PROBED:
+            raise Refused(msg("tweak.mtu_pmtu.refused.jumbo", mtu=interface))
+        if path >= interface:
+            raise Refused(msg("tweak.mtu_pmtu.refused.not_needed", mtu=interface))
+        if measurement["too_big"]:
+            raise Refused(msg("tweak.mtu_pmtu.refused.pmtud_works", mtu=interface, path=path))
+        if int(measurement["answered"]) < calibration.MIN_PATH_TARGETS:
+            raise Refused(msg("tweak.mtu_pmtu.refused.one_target", path=path))
+        if path < MTU_LOWEST:
+            raise Refused(msg("tweak.mtu_pmtu.refused.bounds", path=path, low=MTU_LOWEST))
+        return path
+
+    def describe_value(self, value: int, measurement: dict[str, Any]) -> Message:
+        return msg("tweak.mtu_pmtu.value", mtu=value, before=int(measurement["interface_mtu"]))
+
+    def verdict(self, before: dict[str, Any], after: dict[str, Any] | None) -> dict[str, Any]:
+        return calibration.path_mtu_verdict(before, after)
+
+    def verdict_params(self, v: dict[str, Any]) -> dict[str, Any]:
+        return dict(mtu=v["mtu"], path=v["path_after"])
+
+    def read(self, sys_: System) -> Reading:
+        try:
+            info = self._info(sys_)
+        except Unsupported as exc:
+            return Reading(False, False, None, exc.message)
+        return Reading(True, False, {"interface": info["alias"], "mtu": info["mtu"]})
+
+    def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
+        try:
+            info = self._info(sys_, original.get("guid"))
+        except Unsupported:
+            return None   # the adapter is gone: nothing left to turn off
+        if info["mtu"] == int(original["mtu"]):
+            return None
+        try:
+            here = sys_.ipv4_interface()
+        except Exception:
+            here = None
+        elsewhere = here is None or here["guid"] != info["guid"]
+        return Reading(True, True, {"interface": info["alias"], "mtu": info["mtu"]},
+                       warning=msg("tweak.mtu_pmtu.reason.backup_elsewhere", name=info["alias"]) if elsewhere else "")
+
+    def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
+        info = sys_.ipv4_interface()
+        if info is not None and original.get("guid") and info["guid"] != original["guid"]:
+            return msg("tweak.mtu_pmtu.reason.other_interface")
+        return None
+
+    @staticmethod
+    def _snapshot(info: dict[str, Any]) -> dict[str, Any]:
+        return {"guid": info["guid"], "interface_index": info["index"], "alias": info["alias"], "mtu": info["mtu"]}
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return self._snapshot(self._info(sys_))
+
+    def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
+        return self._snapshot(self._info(sys_, original.get("guid")))
+
+    def applied_value(self, sys_: System) -> int | None:
+        info = sys_.ipv4_interface()
+        return None if info is None else int(info["mtu"])
+
+    def apply_value(self, sys_: System, value: int) -> None:
+        info = self._info(sys_)
+        if int(value) >= int(info["mtu"]):   # only ever lowers it; the interface may have changed since measuring
+            raise Refused(msg("tweak.mtu_pmtu.refused.not_needed", mtu=info["mtu"]))
+        sys_.ipv4_mtu_set(info["index"], int(value))
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None:
+            raise NoDefaultRestore(msg("tweak.mtu_pmtu.reason.no_default"))
+        info = self._info(sys_, original.get("guid"))   # the interface that was changed, wherever it is now
+        if int(info["mtu"]) != int(original["mtu"]):
+            sys_.ipv4_mtu_set(info["index"], int(original["mtu"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        return int(original["mtu"])
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        # The interface is found by its GUID, and the MTU is one derive() could have lowered from (ADR-0017).
+        _fields(original, {"guid", "interface_index", "alias", "mtu"})
+        _check_guid(original["guid"])
+        _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
+        _require(isinstance(original["alias"], str), "alias is not text")
+        _require(_is_int(original["mtu"], MTU_LOWEST, MTU_HIGHEST_PROBED),
+                 f"MTU {original['mtu']!r} is outside {MTU_LOWEST}..{MTU_HIGHEST_PROBED}")
 
 
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
                  "binding_get", "wifi_ssid_bands", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface",
-                 "doh_get", "qos_policy_get")
+                 "doh_get", "qos_policies_get", "ipv4_interface")
 
 
 class _CachedReads:
@@ -1330,27 +1539,39 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
     return [
         # 1. Wi-Fi card (driver advanced properties). Property names vary by chip vendor.
         AdapterPropertyTweak("wifi_power_saving", _name("wifi_power_saving"), "low",
-                             [(r"Power Saving", r"Disabled"), (r"MIMO Power Save Mode", r"No SMPS")],
+                             [Match(r"Power Saving", r"Disabled", "LowPowerEnable", "0"),
+                              Match(r"MIMO Power Save Mode", r"No SMPS", "MIMOPowerSaveMode")],
                              group=GROUP_WIFI, note=_note("wifi_power_saving")),
         AdapterPropertyTweak("wifi_wake_magic", _name("wifi_wake_magic"), "low",
-                             [(r"Wake on Magic Packet", r"Disabled")], group=GROUP_WIFI,
+                             [Match(r"Wake on Magic Packet", r"Disabled", "DisableWakeOnMagic", "1"),
+                              Match(r"Wake on Magic Packet", r"Disabled", "*WakeOnMagicPacket", "0")], group=GROUP_WIFI,
                              note=_note("wifi_wake_magic")),
         AdapterPropertyTweak("wifi_wake_pattern", _name("wifi_wake_pattern"), "low",
-                             [(r"Wake on Pattern Match", r"Disabled")], group=GROUP_WIFI),
+                             [Match(r"Wake on Pattern Match", r"Disabled", "DisableWakeOnPattern", "1"),
+                              Match(r"Wake on Pattern Match", r"Disabled", "*WakeOnPattern", "0")], group=GROUP_WIFI),
         AdapterPropertyTweak("wifi_roaming", _name("wifi_roaming"), "low",
-                             [(r"Roaming Aggressiveness", _N + r"Lowest")], group=GROUP_WIFI,
+                             [Match(r"Roaming Aggressiveness", _N + r"Lowest", "RoamingAggressiveness")],
+                             group=GROUP_WIFI,
                              note=_note("wifi_roaming")),
         AdapterPropertyTweak("wifi_bw20_5g", _name("wifi_bw20_5g"), "experimental",
-                             [(r"5GHz channel bandwidth", _N + r"20MHz only")], group=GROUP_WIFI,
+                             [Match(r"5GHz channel bandwidth", _N + r"20MHz only", "BWSelection5G", "1")],
+                             group=GROUP_WIFI,
                              note=_note("wifi_bw20_5g")),
         AdapterPropertyTweak("wifi_mode_ac", _name("wifi_mode_ac"), "experimental",
-                             [(re.escape("802.11ax/ac/n/abg"), _N + re.escape("802.11ac"))], group=GROUP_WIFI,
+                             [Match(re.escape("802.11ax/ac/n/abg"), _N + re.escape("802.11ac"), "CurrPhyMode", "1")],
+                             group=GROUP_WIFI,
                              note=_note("wifi_mode_ac")),
         AdapterPropertyTweak("wifi_prefer_5g", _name("wifi_prefer_5g"), "low",
-                             [(r"Preferred Band|Band Preference", _N + r"Prefer 5\s?GHz(?: band)?")],
+                             [Match(r"Preferred Band|Band Preference", _N + r"Prefer 5\s?GHz(?: band)?",
+                                    "PreferredBand", "2"),
+                              Match(r"Preferred Band|Band Preference", _N + r"Prefer 5\s?GHz(?: band)?",
+                                    "RoamingPreferredBandType")],
                              precondition=_stuck_on_24ghz, group=GROUP_WIFI, note=_note("wifi_prefer_5g")),
         AdapterPropertyTweak("wifi_tx_power_max", _name("wifi_tx_power_max"), "low",
-                             [(r"Transmit Power(?: Level)?|Tx Power(?: Level)?", _N + r"Highest")],
+                             [Match(r"Transmit Power(?: Level)?|Tx Power(?: Level)?", _N + r"Highest",
+                                    "TxPowerLevel", "0"),
+                              Match(r"Transmit Power(?: Level)?|Tx Power(?: Level)?", _N + r"Highest",
+                                    "TransmitPower")],
                              group=GROUP_WIFI, note=_note("wifi_tx_power_max")),
         # 2. Windows power management
         RegistryDwordTweak("device_power_off", _name("device_power_off"), "low", path=_wifi_class_key,
@@ -1375,11 +1596,12 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
         OffloadGlobalTweak("packet_coalescing_off", _name("packet_coalescing_off"), "experimental",
                            setting="PacketCoalescingFilter", target="Disabled", group=GROUP_STACK,
                            note=_note("packet_coalescing_off")),
-        DnsFastestTweak("dns_fastest", _name("dns_fastest"), "medium", benchmark=dns_benchmark, captive=captive,
+        DnsFastestTweak("dns_fastest", _name("dns_fastest"), "experimental", benchmark=dns_benchmark, captive=captive,
                         group=GROUP_STACK, note=_note("dns_fastest")),
         # 4. Measured tweaks (ADR-0016)
         UploadShapingTweak("upload_shaping", _name("upload_shaping"), "medium", group=GROUP_MEASURED,
                            note=_note("upload_shaping")),
+        MtuTweak("mtu_pmtu", _name("mtu_pmtu"), "medium", group=GROUP_MEASURED, note=_note("mtu_pmtu")),
     ]
 
 
@@ -1396,7 +1618,12 @@ def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict
     t = mgr.get(tweak_id)
     if not isinstance(t, MeasuredTweak):
         raise ValueError(f"{tweak_id} is not a measured tweak")
-    if mgr.state(tweak_id).enabled:
+    state = mgr.state(tweak_id)
+    if state.error:          # do not load the line, nor ask for UAC, for a state that cannot be read
+        return {"ok": False, "changed": False, "message": msg("tweak.result.read_failed", error=state.error)}
+    if not state.supported:
+        return {"ok": False, "changed": False, "message": msg("tweak.result.unsupported", reason=state.reason)}
+    if state.enabled:
         return {"ok": True, "changed": False, "message": msg("tweak.result.already_on")}
     before = measure()
     if before is None:
@@ -1413,18 +1640,20 @@ def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict
     if not (out.ok and result["changed"]):
         return result
     after = measure()
-    v = calibration.verdict(before, after)
+    v = t.verdict(before, after)
     key = {True: "helped", False: "no_help", None: "unknown"}[v["helped"]]
-    params = dict(name=t.name, before=v["before_ms"], after=v["after_ms"], tweak_id=t.id)
-    record_event("tweak_verified", msg(f"tweak.event.verified_{key}", **params), "warn" if key == "no_help" else "info")
+    params = dict(name=t.name, tweak_id=t.id, **t.verdict_params(v))
+    prefix = t.verdict_prefix
+    record_event("tweak_verified", msg(f"{prefix}.event.verified_{key}", **params),
+                 "warn" if key == "no_help" else "info")
     result.update(verdict=v, message=msg("tweak.result.measured_enabled", value=t.describe_value(value, before),
-                                         verdict=msg(f"tweak.verdict.{key}", **params)))
+                                         verdict=msg(f"{prefix}.verdict.{key}", **params)))
     return result
 
 
 def measure_for(t: MeasuredTweak) -> Callable[[], dict | None]:
     """The real measurement a measured tweak derives its value from (generates traffic)."""
-    return {"upload": calibration.measure_upload}[t.measurement_kind]
+    return {"upload": calibration.measure_upload, "path_mtu": calibration.measure_path_mtu}[t.measurement_kind]
 
 
 def default_manager(storage: Any = None) -> TweakManager:
@@ -1438,10 +1667,11 @@ def default_manager(storage: Any = None) -> TweakManager:
 
 
 def list_states() -> dict[str, dict[str, Any]] | None:
-    """For diagnostics check #10. None while no tweak is declared. No side effects."""
+    """For diagnostics (check #10, and #14 for the upload limit). None while no tweak is declared.
+    No side effects."""
     if not CATALOG:
         return None
-    return {s.id: {"risk": s.risk, "enabled": s.enabled, "supported": s.supported}
+    return {s.id: {"risk": s.risk, "enabled": s.enabled, "supported": s.supported, "current": s.current}
             for s in default_manager().states()}
 
 

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Check #14 "Bufferbloat" (docs/DIAGNOSTICS.md), a port of `evaluate_bufferbloat` in
-/// app/diagnostics.py. On demand only: measuring it moves up to ~200 MB.
+/// app/diagnostics.py. On demand only: measuring it moves real data (see BufferbloatTest).
 /// spec/diagnosis/bufferbloat.json holds the cases both implementations must agree on.
 public enum Bufferbloat {
     /// Ping samples to one target during a phase, in measuring order; nil = lost.
@@ -23,11 +23,26 @@ public enum Bufferbloat {
         public var mbps: Double?
         /// Why the load could not be generated, or "".
         public var error: String
+        /// The load stopped at its byte limit, so the line may be faster (nil: no).
+        public var capped: Bool?
+        /// HTTP status when the test server refused the load (429/403), nil otherwise.
+        public var refused: Int?
+        /// How long the server asked to wait, in seconds, when it said.
+        public var retryAfterS: Double?
 
-        public init(rtts: [Samples], mbps: Double? = nil, error: String = "") {
+        enum CodingKeys: String, CodingKey {
+            case rtts, mbps, error, capped, refused
+            case retryAfterS = "retry_after_s"
+        }
+
+        public init(rtts: [Samples], mbps: Double? = nil, error: String = "", capped: Bool? = nil,
+                    refused: Int? = nil, retryAfterS: Double? = nil) {
             self.rtts = rtts
             self.mbps = mbps
             self.error = error
+            self.capped = capped
+            self.refused = refused
+            self.retryAfterS = retryAfterS
         }
     }
 
@@ -67,17 +82,40 @@ public enum Bufferbloat {
         var statuses: [CheckStatus] = []
         var deltas: [(label: String, delta: Double, loss: Double)] = []
         var notes: [MessageValue] = []
+        // A direction that was not measured, or not loaded fully, cannot vouch for "ok"; a rise it did
+        // measure is still real and is reported.
+        var incomplete = false, refused = false
 
         for (phase, direction) in [(measurement.download, "download"), (measurement.upload, "upload")] {
             let name = MessageValue.message(Message("diag.bufferbloat.\(direction)"))
             let mbps = phase.mbps ?? 0
+            if let status = phase.refused {
+                incomplete = true
+                refused = true
+                if let wait = phase.retryAfterS {
+                    let minutes = max(1.0, (wait / 60).rounded(.up))
+                    notes.append(.message(Message("diag.bufferbloat.refused", [
+                        "phase": name, "status": .number(Double(status)), "minutes": .number(minutes),
+                    ])))
+                } else {
+                    notes.append(.message(Message("diag.bufferbloat.refused_later",
+                                                  ["phase": name, "status": .number(Double(status))])))
+                }
+                continue
+            }
             if !phase.error.isEmpty && mbps == 0 {
+                incomplete = true
                 notes.append(.message(Message("diag.bufferbloat.no_load", ["phase": name, "error": .text(phase.error)])))
                 continue
             }
             if mbps < minMbps {
+                incomplete = true
                 notes.append(.message(Message("diag.bufferbloat.weak_load", ["phase": name, "mbps": .number(mbps)])))
                 continue
+            }
+            if phase.capped == true {
+                incomplete = true
+                notes.append(.message(Message("diag.bufferbloat.at_ceiling", ["phase": name, "mbps": .number(mbps)])))
             }
             for target in phase.rtts {
                 guard let idleValue = idle(target.label), target.samples.count >= minSamples else { continue }
@@ -102,7 +140,9 @@ public enum Bufferbloat {
         details += notes
         guard !statuses.isEmpty else {
             return CheckResult(id: 14, key: "bufferbloat", status: .info, summary: Message("diag.bufferbloat.no_result"),
-                               details: details, advice: .message(Message("diag.bufferbloat.advice_unreachable")))
+                               details: details,
+                               advice: .message(Message(refused ? "diag.bufferbloat.advice_later"
+                                                                : "diag.bufferbloat.advice_unreachable")))
         }
 
         let overall = CheckStatus.worst(statuses)
@@ -110,6 +150,11 @@ public enum Bufferbloat {
         let router = deltas.filter { $0.label == "router" }
         let biggest = internet.map(\.delta).max() ?? 0
         let worstLoss = internet.map(\.loss).max() ?? 0
+        if overall == .ok && incomplete {
+            return CheckResult(id: 14, key: "bufferbloat", status: .info,
+                               summary: Message("diag.bufferbloat.ok_incomplete", ["delta": .number(max(biggest, 0))]),
+                               details: details, advice: .message(Message("diag.bufferbloat.advice_incomplete")))
+        }
         let summary: Message
         if overall == .ok {
             summary = Message("diag.bufferbloat.ok", ["delta": .number(max(biggest, 0))])

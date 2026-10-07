@@ -39,6 +39,7 @@ OFFLOAD_SETTINGS = ("PacketCoalescingFilter",)
 OFFLOAD_VALUES = ("Default", "Enabled", "Disabled")
 _QOS_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 QOS_MIN_BPS, QOS_MAX_BPS = 1_000_000, 1_000_000_000
+MTU_MIN, MTU_MAX = 576, 9000
 
 
 class SystemReadError(RuntimeError):
@@ -97,7 +98,8 @@ class System(Protocol):
     def dns_interface(self, guid: str | None = None) -> dict[str, Any] | None: ...
     def doh_get(self) -> dict[str, dict[str, Any]] | None: ...
 
-    def qos_policy_get(self, name: str) -> int | None: ...
+    def qos_policies_get(self, prefix: str) -> dict[str, dict[str, Any]]: ...
+    def ipv4_interface(self, guid: str | None = None) -> dict[str, Any] | None: ...
 
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
@@ -114,7 +116,9 @@ class System(Protocol):
     def doh_remove(self, address: str) -> None: ...
 
     def qos_policy_set(self, name: str, bits_per_second: int) -> None: ...
+    def qos_exempt_set(self, name: str, destination: str) -> None: ...
     def qos_policy_remove(self, name: str) -> None: ...
+    def ipv4_mtu_set(self, interface_index: int, mtu: int) -> None: ...
 
 
 def _as_list(value: Any) -> list[str]:
@@ -260,14 +264,41 @@ class WindowsSystem:
         current = state.band or next((e.band for e in same if bssid and e.bssid.lower() == bssid), "")
         return WifiBands(state.ssid, current, frozenset(e.band for e in same))
 
-    def qos_policy_get(self, name: str) -> int | None:
-        """Throttle rate (bit/s) of the QoS policy `name` in the default (persistent) store; None if
-        there is none. Lists the store rather than asking by name, so "absent" never hides an error."""
-        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq "
-                             f"{ps_literal(_check_qos_name(name))} }}) | Select-Object Name, ThrottleRateAction")
+    def qos_policies_get(self, prefix: str) -> dict[str, dict[str, Any]]:
+        """The QoS policies of the default (persistent) store whose name starts with `prefix`:
+        name -> {"rate_bps": throttle bit/s or None, "destination": destination prefix or None}. Lists the
+        store rather than asking by name, so "absent" never hides an error."""
+        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -like "
+                             f"({ps_literal(_check_qos_name(prefix))} + '*') }}) | "
+                             "Select-Object Name, ThrottleRateAction, IPDstPrefixMatchCondition")
+        return {str(r["Name"]): {"rate_bps": int(r.get("ThrottleRateAction") or 0) or None,
+                                 "destination": r.get("IPDstPrefixMatchCondition") or None} for r in rows}
+
+    def ipv4_interface(self, guid: str | None = None) -> dict[str, Any] | None:
+        """{"index", "guid", "alias", "mtu"} of the IPv4 side of the uplink (the default route's interface), or of
+        the interface with this InterfaceGuid. None when there is no such interface (offline; adapter gone)."""
+        if guid is not None:
+            if not _ADAPTER_GUID_RE.match(guid):
+                raise ValueError(f"not an interface GUID: {guid!r}")
+            find = ("$a = Get-NetAdapter -ErrorAction Stop | Where-Object { $_.InterfaceGuid -eq "
+                    f"{ps_literal(guid)} " "} | Select-Object -First 1; ")
+        else:
+            route = self._route()
+            if not route:
+                return None
+            find = f"$a = Get-NetAdapter -InterfaceIndex {int(route['interface_index'])} -ErrorAction Stop; "
+        try:
+            rows = self._ps_json(
+                find + "if ($a) { $ip = Get-NetIPInterface -InterfaceIndex $a.InterfaceIndex -AddressFamily IPv4 "
+                "-ErrorAction SilentlyContinue; if ($ip) { [pscustomobject]@{ Index = $a.InterfaceIndex; "
+                "Guid = [string]$a.InterfaceGuid; Alias = $a.Name; Mtu = $ip.NlMtu } } }")
+        except PowerShellError as exc:
+            raise SystemReadError(f"cannot read the interface MTU: {exc}") from exc
         if not rows:
             return None
-        return int(rows[0].get("ThrottleRateAction") or 0)
+        r = rows[0]
+        return {"index": int(r["Index"]), "guid": str(r.get("Guid") or ""), "alias": r.get("Alias") or "",
+                "mtu": int(r["Mtu"])}
 
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
@@ -449,6 +480,19 @@ class WindowsSystem:
                        f"else {{ New-NetQosPolicy -Name $name -Default -ThrottleRateActionBitsPerSecond {rate} "
                        "-ErrorAction Stop | Out-Null }", f"setting QoS policy {name} to {rate} bit/s")
 
+    def qos_exempt_set(self, name: str, destination: str) -> None:
+        """A policy for traffic to `destination` (an address prefix) that throttles nothing, so the
+        broader throttle does not reach it: of several matching policies, Windows applies the most
+        specific. DSCP 0 is only there because a policy needs an action; it is the unmarked default."""
+        prefix = str(ipaddress.ip_network(destination, strict=True))
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; $prefix = {ps_literal(prefix)}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       "Set-NetQosPolicy -Name $name -IPDstPrefixMatchCondition $prefix -DSCPAction 0 "
+                       "-Confirm:$false -ErrorAction Stop } "
+                       "else { New-NetQosPolicy -Name $name -IPDstPrefixMatchCondition $prefix -DSCPAction 0 "
+                       "-ErrorAction Stop | Out-Null }", f"setting QoS exemption {name} for {prefix}")
+
     def qos_policy_remove(self, name: str) -> None:
         """Remove exactly the policy `name`: persistent store first, then the active store if it lingers."""
         lit = ps_literal(_check_qos_name(name))
@@ -459,6 +503,16 @@ class WindowsSystem:
                        "Where-Object { $_.Name -eq $name }).Count) { "
                        "Remove-NetQosPolicy -Name $name -PolicyStore ActiveStore -Confirm:$false -ErrorAction Stop }",
                        f"removing QoS policy {name}")
+
+    def ipv4_mtu_set(self, interface_index: int, mtu: int) -> None:
+        """The IPv4 MTU of one interface, kept across restarts. By index, so there is no name to quote."""
+        idx, value = int(interface_index), int(mtu)
+        if not MTU_MIN <= value <= MTU_MAX:
+            raise ValueError(f"MTU out of range: {value}")
+        code, out = self._netsh("interface", "ipv4", "set", "subinterface", str(idx), f"mtu={value}", "store=persistent")
+        if code != 0:
+            raise SystemWriteError(f"netsh interface ipv4 set subinterface {idx} mtu={value} exited {code}: "
+                                   f"{out.strip()[:200]}")
 
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None:
         if not _COMPONENT_RE.match(component):

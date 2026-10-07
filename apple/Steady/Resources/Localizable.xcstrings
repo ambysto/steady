@@ -1360,6 +1360,124 @@
         }
       }
     },
+    "diag.bufferbloat.advice_incomplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur ein Lauf, in dem beide Richtungen die Leitung auslasten, kann zeigen, dass alles in Ordnung ist; später erneut ausführen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only a run in which both directions fill the line can show that it is fine; run it again later."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo una ejecución en la que ambos sentidos llenen la línea puede mostrar que todo está bien; vuelve a ejecutarla más tarde."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seule une mesure où les deux sens saturent la ligne peut montrer que tout va bien ; relancez plus tard."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "両方向とも回線を満たした測定でなければ問題ないとは言えません。しばらくしてからもう一度実行してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 방향 모두 회선을 가득 채운 측정만이 문제가 없음을 보여 줄 수 있습니다. 나중에 다시 실행하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Só uma execução em que os dois sentidos encham a linha pode mostrar que está tudo bem; execute novamente mais tarde."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chỉ một lần đo mà cả hai chiều đều làm đầy đường truyền mới cho biết mọi thứ ổn; chạy lại sau."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有两个方向都占满线路的测量才能说明一切正常；请稍后重新运行。"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.advice_later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warten, bis der Testserver die Last wieder annimmt, dann erneut ausführen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wait until the test server accepts the load again, then run again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espera a que el servidor de prueba vuelva a aceptar la carga y vuelve a ejecutar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attendez que le serveur de test accepte à nouveau la charge, puis relancez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストサーバーが再び負荷を受け付けるまで待ってから、もう一度実行してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 서버가 다시 부하를 받아들일 때까지 기다린 후 다시 실행하십시오."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguarde até o servidor de teste aceitar a carga de novo e execute novamente."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chờ máy chủ đo nhận tải trở lại rồi chạy lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请等待测试服务器重新接受负载后再运行。"
+          }
+        }
+      }
+    },
     "diag.bufferbloat.advice_retry" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1533,6 +1651,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@：%2$@期间所有 ping 均丢失"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.at_ceiling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die %1$@-Last stoppte an der eigenen Grenze des Tests (%2$@ Mbps): Die Leitung ist womöglich schneller, ihre Warteschlange hat sich dann nicht gefüllt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The %1$@ load stopped at the test's own limit (%2$@ Mbps): the line may be faster, so its queue may not have filled"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La carga de %1$@ se detuvo en el límite propio de la prueba (%2$@ Mbps): la línea puede ser más rápida, así que su cola quizá no se llenó"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La charge (%1$@) s'est arrêtée à la limite propre du test (%2$@ Mbps) : la ligne est peut-être plus rapide, sa file d'attente ne s'est donc peut-être pas remplie"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@の負荷はテスト自体の上限（%2$@ Mbps）で止まりました。回線はさらに速い可能性があり、キューが満たされていないかもしれません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 부하가 테스트 자체 한도(%2$@ Mbps)에서 멈췄습니다. 회선이 더 빠를 수 있어 대기열이 채워지지 않았을 수 있습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A carga de %1$@ parou no limite do próprio teste (%2$@ Mbps): a linha pode ser mais rápida, então a fila dela pode não ter enchido"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tải chiều %1$@ dừng ở giới hạn của chính phép đo (%2$@ Mbps): đường truyền có thể nhanh hơn, nên hàng đợi có thể chưa đầy"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@负载停在了测试自身的上限（%2$@ Mbps）：线路可能更快，因此其队列可能未被填满"
           }
         }
       }
@@ -2068,6 +2245,183 @@
         }
       }
     },
+    "diag.bufferbloat.ok_incomplete" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Anstieg, soweit messbar (höchstens +%1$@ ms), aber die Messung ist unvollständig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No rise where it could be measured (at most +%1$@ ms), but the measurement is incomplete"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sin aumento donde se pudo medir (como máximo +%1$@ ms), pero la medición está incompleta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune hausse là où la mesure a été possible (+%1$@ ms au maximum), mais la mesure est incomplète"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "測定できた範囲では上昇はありません（最大 +%1$@ ms）が、測定は不完全です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "측정할 수 있었던 범위에서는 증가가 없지만 (최대 +%1$@ ms), 측정이 불완전합니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhum aumento onde foi possível medir (no máximo +%1$@ ms), mas a medição está incompleta"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không thấy độ trễ tăng ở phần đo được (tối đa +%1$@ ms), nhưng phép đo chưa đầy đủ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在能测到的范围内延迟没有上升（最多 +%1$@ ms），但测量不完整"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.refused" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Testserver hat die %1$@-Last abgelehnt (HTTP %2$@: er begrenzt Testverkehr pro Adresse); in etwa %3$@ Min. erneut versuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The test server refused the %1$@ load (HTTP %2$@: it limits test traffic per address); try again in about %3$@ min"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor de prueba rechazó la carga de %1$@ (HTTP %2$@: limita el tráfico de prueba por dirección); vuelve a intentarlo en unos %3$@ min"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur de test a refusé la charge (%1$@) (HTTP %2$@ : il limite le trafic de test par adresse) ; réessayez dans environ %3$@ min"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストサーバーが%1$@の負荷を拒否しました（HTTP %2$@: アドレスごとにテスト通信を制限しています）。約 %3$@ 分後にもう一度試してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 서버가 %1$@ 부하를 거부했습니다 (HTTP %2$@: 주소별로 테스트 트래픽을 제한합니다). 약 %3$@분 후 다시 시도하십시오"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor de teste recusou a carga de %1$@ (HTTP %2$@: ele limita o tráfego de teste por endereço); tente novamente em cerca de %3$@ min"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ đo đã từ chối tải chiều %1$@ (HTTP %2$@: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau khoảng %3$@ phút"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试服务器拒绝了%1$@负载（HTTP %2$@：它按地址限制测试流量）；请约 %3$@ 分钟后重试"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.refused_later" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Testserver hat die %1$@-Last abgelehnt (HTTP %2$@: er begrenzt Testverkehr pro Adresse); später erneut versuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The test server refused the %1$@ load (HTTP %2$@: it limits test traffic per address); try again later"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El servidor de prueba rechazó la carga de %1$@ (HTTP %2$@: limita el tráfico de prueba por dirección); vuelve a intentarlo más tarde"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le serveur de test a refusé la charge (%1$@) (HTTP %2$@ : il limite le trafic de test par adresse) ; réessayez plus tard"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "テストサーバーが%1$@の負荷を拒否しました（HTTP %2$@: アドレスごとにテスト通信を制限しています）。しばらくしてからもう一度試してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테스트 서버가 %1$@ 부하를 거부했습니다 (HTTP %2$@: 주소별로 테스트 트래픽을 제한합니다). 나중에 다시 시도하십시오"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O servidor de teste recusou a carga de %1$@ (HTTP %2$@: ele limita o tráfego de teste por endereço); tente novamente mais tarde"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Máy chủ đo đã từ chối tải chiều %1$@ (HTTP %2$@: máy chủ giới hạn lưu lượng đo theo từng địa chỉ); thử lại sau"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测试服务器拒绝了%1$@负载（HTTP %2$@：它按地址限制测试流量）；请稍后重试"
+          }
+        }
+      }
+    },
     "diag.bufferbloat.rise" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2123,6 +2477,124 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "线路繁忙时到互联网的延迟%1$@%2$@"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.shaped" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload von dieser App auf %1$@ Mbit/s begrenzt (Optimieren), daher wird durch die Begrenzung hindurch gemessen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limited by this app to %1$@ Mbps (Optimize), so this is measured through the limit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subida limitada por esta app a %1$@ Mbps (Optimizar), así que esto se mide a través del límite"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi limité par cette app à %1$@ Mbit/s (Optimiser) : la mesure passe donc par cette limite"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロードはこのアプリにより %1$@ Mbps に制限されています（最適化）。この測定はその制限を通して行われています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 앱이 업로드를 %1$@ Mbps로 제한하고 있어(최적화) 이 측정은 그 제한을 거쳐 이루어졌습니다"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limitado por este app a %1$@ Mbps (Otimizar), então esta medição passa pelo limite"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload đang bị ứng dụng giới hạn ở %1$@ Mbps (Tối ưu), nên phép đo này đi qua mức giới hạn đó"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传已被本应用限制为 %1$@ Mbps（优化），因此本次测量经过了该限制"
+          }
+        }
+      }
+    },
+    "diag.bufferbloat.shaped_at_limit" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload von dieser App auf %1$@ Mbit/s begrenzt, und der Upload hat sie erreicht (%2$@ Mbit/s): Wenn Ihr Tarif schneller geworden ist, schalten Sie die Begrenzung aus und wieder ein, um die Leitung zu messen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limited by this app to %1$@ Mbps and the upload reached it (%2$@ Mbps): if your plan got faster, turn the limit off and on again to measure the line"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subida limitada por esta app a %1$@ Mbps y la subida lo alcanzó (%2$@ Mbps): si tu plan es ahora más rápido, desactiva y vuelve a activar el límite para medir la línea"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoi limité par cette app à %1$@ Mbit/s, et l’envoi l’a atteinte (%2$@ Mbit/s) : si votre forfait est devenu plus rapide, désactivez puis réactivez la limite pour mesurer la ligne"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アップロードはこのアプリにより %1$@ Mbps に制限されており、その上限に達しました（%2$@ Mbps）。プランが速くなった場合は、制限をオフにしてから再度オンにして回線を測定してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 앱이 업로드를 %1$@ Mbps로 제한하고 있으며 업로드가 그 한도에 도달했습니다(%2$@ Mbps). 요금제가 빨라졌다면 제한을 껐다가 다시 켜서 회선을 측정하세요"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload limitado por este app a %1$@ Mbps e o upload chegou ao limite (%2$@ Mbps): se o seu plano ficou mais rápido, desative e ative o limite de novo para medir a linha"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upload đang bị ứng dụng giới hạn ở %1$@ Mbps và đã chạm mức đó (%2$@ Mbps): nếu gói cước đã nhanh hơn, hãy tắt rồi bật lại giới hạn để đo đường truyền"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上传已被本应用限制为 %1$@ Mbps，且上传已达到该限制（%2$@ Mbps）：如果你的套餐变快了，请关闭再开启该限制以测量线路"
           }
         }
       }
@@ -8295,6 +8767,65 @@
         }
       }
     },
+    "diag.path_mtu.advice_v4" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Große Pakete können unterwegs verworfen werden: Seiten laden nur halb, Downloads stocken. Setzen Sie die MTU von %1$@ auf %2$@ (als Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) oder aktivieren Sie MSS-Clamping am Router."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Large packets can be dropped on the way, so pages hang half-loaded and downloads stall. Set the MTU of %1$@ to %2$@ (as Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), or turn on MSS clamping on the router."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los paquetes grandes pueden perderse por el camino: las páginas se quedan a medio cargar y las descargas se atascan. Ajuste la MTU de %1$@ a %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) o active el MSS clamping en el router."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les gros paquets peuvent être perdus en route : les pages restent à moitié chargées et les téléchargements calent. Réglez la MTU de %1$@ sur %2$@ (en administrateur : netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou activez le MSS clamping sur le routeur."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大きなパケットが途中で破棄され、ページが途中で止まったりダウンロードが停滞したりすることがあります。%1$@ の MTU を %2$@ に設定するか（管理者として: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent）、ルーターで MSS クランプを有効にしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "큰 패킷이 도중에 버려져 페이지가 반쯤 로드된 채 멈추거나 다운로드가 끊길 수 있습니다. %1$@의 MTU를 %2$@(으)로 설정하거나(관리자 권한: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), 라우터에서 MSS 클램핑을 켜세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pacotes grandes podem se perder no caminho: páginas ficam carregadas pela metade e downloads travam. Defina a MTU de %1$@ como %2$@ (como administrador: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent) ou ative o MSS clamping no roteador."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gói lớn có thể bị rơi dọc đường nên trang treo nửa chừng, tải xuống chập chờn. Đặt MTU của %1$@ thành %2$@ (quyền Admin: netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent), hoặc bật MSS clamping trên router."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大数据包可能在途中被丢弃，导致网页加载到一半卡住、下载停滞。请将 %1$@ 的 MTU 设为 %2$@（以管理员身份：netsh interface ipv4 set subinterface \"%1$@\" mtu=%2$@ store=persistent），或在路由器上开启 MSS 钳制。"
+          }
+        }
+      }
+    },
     "diag.path_mtu.capped" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8478,55 +9009,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keine IPv4-Route ins Internet: diese Prüfung misst nur IPv4"
+            "value" : "Keine IPv4-Route ins Internet (offline oder nur IPv6): diese Prüfung misst nur IPv4"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No IPv4 route to the Internet: this check measures IPv4 only"
+            "value" : "No IPv4 route to the Internet (offline, or IPv6 only): this check measures IPv4 only"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No hay ruta IPv4 a Internet: esta comprobación solo mide IPv4"
+            "value" : "No hay ruta IPv4 a Internet (sin conexión o solo IPv6): esta comprobación solo mide IPv4"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aucune route IPv4 vers Internet : cette vérification ne mesure que l'IPv4"
+            "value" : "Aucune route IPv4 vers Internet (hors ligne, ou IPv6 uniquement) : cette vérification ne mesure que l'IPv4"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インターネットへの IPv4 経路がありません。このチェックは IPv4 のみを測定します"
+            "value" : "インターネットへの IPv4 経路がありません（オフライン、または IPv6 のみ）。このチェックは IPv4 のみを測定します"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "인터넷으로 가는 IPv4 경로가 없습니다. 이 검사는 IPv4만 측정합니다"
+            "value" : "인터넷으로 가는 IPv4 경로가 없습니다(오프라인 또는 IPv6 전용). 이 검사는 IPv4만 측정합니다"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sem rota IPv4 para a Internet: esta verificação mede apenas IPv4"
+            "value" : "Sem rota IPv4 para a Internet (offline ou só IPv6): esta verificação mede apenas IPv4"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Không có tuyến IPv4 ra Internet: kiểm tra này chỉ đo IPv4"
+            "value" : "Không có tuyến IPv4 ra Internet (mất mạng, hoặc chỉ có IPv6): kiểm tra này chỉ đo IPv4"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有通往互联网的 IPv4 路由：此检查只测量 IPv4"
+            "value" : "没有通往互联网的 IPv4 路由（离线或仅有 IPv6）：此检查只测量 IPv4"
           }
         }
       }
@@ -16537,55 +17068,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dabei werden etwa 30 Sekunden lang bis zu rund 200 MB von speed.cloudflare.com heruntergeladen und hochgeladen."
+            "value" : "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This downloads and uploads up to about 200 MB from speed.cloudflare.com for about 30 seconds."
+            "value" : "This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esto descarga y sube hasta unos 200 MB desde speed.cloudflare.com durante unos 30 segundos."
+            "value" : "Esto descarga y sube desde speed.cloudflare.com a toda velocidad durante unos 30 segundos: unos 250 MB por cada 100 Mbps de velocidad de la línea, como máximo 2 GB."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cela télécharge et envoie jusqu'à environ 200 Mo depuis speed.cloudflare.com pendant environ 30 secondes."
+            "value" : "Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes : environ 250 Mo par tranche de 100 Mbps de débit, 2 Go au maximum."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "speed.cloudflare.com から最大約 200 MB のダウンロードとアップロードを約 30 秒間行います。"
+            "value" : "speed.cloudflare.com との間で約 30 秒間、全速でダウンロードとアップロードを行います。回線速度 100 Mbps あたり約 250 MB、最大 2 GB です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "speed.cloudflare.com에서 약 30초 동안 최대 200 MB를 다운로드하고 업로드합니다."
+            "value" : "speed.cloudflare.com에서 약 30초 동안 최대 속도로 다운로드하고 업로드합니다. 회선 속도 100 Mbps당 약 250 MB, 최대 2 GB입니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Isto faz download e upload de até cerca de 200 MB de speed.cloudflare.com por cerca de 30 segundos."
+            "value" : "Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos: cerca de 250 MB a cada 100 Mbps de velocidade da linha, no máximo 2 GB."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thao tác này tải xuống và tải lên tối đa khoảng 200 MB từ speed.cloudflare.com trong khoảng 30 giây."
+            "value" : "Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这将在约 30 秒内从 speed.cloudflare.com 下载和上传最多约 200 MB 的数据。"
+            "value" : "这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。"
           }
         }
       }
@@ -16596,55 +17127,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Messen (ca. 30 s, bis zu 200 MB Datenverbrauch)"
+            "value" : "Messen (ca. 30 s, bei schneller Leitung bis zu 2 GB Datenverbrauch)"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Measure (about 30 s, uses up to 200 MB)"
+            "value" : "Measure (about 30 s, uses up to 2 GB on a fast line)"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medir (unos 30 s, usa hasta 200 MB)"
+            "value" : "Medir (unos 30 s, usa hasta 2 GB en una línea rápida)"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mesurer (environ 30 s, jusqu'à 200 Mo)"
+            "value" : "Mesurer (environ 30 s, jusqu'à 2 Go sur une ligne rapide)"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "測定（約 30 秒、最大 200 MB を使用）"
+            "value" : "測定（約 30 秒、高速回線では最大 2 GB を使用）"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "측정 (약 30초, 최대 200 MB 사용)"
+            "value" : "측정 (약 30초, 빠른 회선에서는 최대 2 GB 사용)"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Medir (cerca de 30 s, usa até 200 MB)"
+            "value" : "Medir (cerca de 30 s, usa até 2 GB numa linha rápida)"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đo (khoảng 30 giây, dùng tối đa 200 MB)"
+            "value" : "Đo (khoảng 30 giây, dùng tối đa 2 GB nếu mạng nhanh)"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "测量（约 30 秒，最多使用 200 MB）"
+            "value" : "测量（约 30 秒，线路快时最多使用 2 GB）"
           }
         }
       }
@@ -21124,6 +21655,65 @@
         }
       }
     },
+    "ui.optimize.measured.mtu_pmtu" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — das größte Paket, das der Pfad transportierte, gemessen am %2$@ (vorher %3$@)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — the largest packet the path carried, measured on %2$@ (was %3$@)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — el paquete más grande que admitía la ruta, medido el %2$@ (antes %3$@)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — le plus gros paquet que le chemin transportait, mesuré le %2$@ (avant %3$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — 経路が運べた最大のパケット、%2$@ に測定（以前は %3$@）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — 경로가 전달한 가장 큰 패킷, %2$@에 측정(이전 %3$@)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — o maior pacote que o caminho transportava, medido em %2$@ (antes %3$@)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — gói lớn nhất đường truyền chở được, đo ngày %2$@ (trước là %3$@)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MTU %1$@ — 路径可传输的最大数据包，测量于 %2$@（原为 %3$@）"
+          }
+        }
+      }
+    },
     "ui.optimize.measured.upload_shaping" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21474,6 +22064,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关闭后再开启即可测量此网络"
+          }
+        }
+      }
+    },
+    "ui.optimize.stale.no_record" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Messung gespeichert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No measurement on record"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay medición guardada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune mesure enregistrée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存された測定結果がありません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장된 측정 결과 없음"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma medição registrada"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Không có phép đo lưu lại"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有保存的测量结果"
           }
         }
       }
@@ -26670,55 +27319,55 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang (bis zu 100 MB), vor und nach der Änderung, und wird nicht angewendet, wenn nichts zu beheben ist."
+            "value" : "„%1$@“ misst Ihren Upload etwa 15 Sekunden lang vor der Änderung und danach noch einmal (jeweils etwa 125 MB pro 100 Mbit/s Upload) und wird nicht angewendet, wenn nichts zu beheben ist."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” measures your upload for about 15 seconds (up to 100 MB), before and after the change, and is not applied if there is nothing to fix."
+            "value" : "“%1$@” measures your upload for about 15 seconds before the change and again after it (each time about 125 MB per 100 Mbps of upload), and is not applied if there is nothing to fix."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "«%1$@» mide tu subida durante unos 15 segundos (hasta 100 MB), antes y después del cambio, y no se aplica si no hay nada que corregir."
+            "value" : "«%1$@» mide tu subida durante unos 15 segundos antes del cambio y otra vez después (cada vez unos 125 MB por cada 100 Mbps de subida), y no se aplica si no hay nada que corregir."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes (jusqu’à 100 Mo), avant et après la modification, et n’est pas appliqué s’il n’y a rien à corriger."
+            "value" : "« %1$@ » mesure votre débit montant pendant environ 15 secondes avant la modification, puis de nouveau après (à chaque fois environ 125 Mo par tranche de 100 Mbit/s d’envoi), et n’est pas appliqué s’il n’y a rien à corriger."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「%1$@」は変更の前後にアップロードを約 15 秒（最大 100 MB）測定し、直すことがなければ適用しません。"
+            "value" : "「%1$@」は変更の前に約 15 秒アップロードを測定し、変更後にもう一度測定します（各回、アップロード 100 Mbps あたり約 125 MB）。直すことがなければ適用しません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "'%1$@'은(는) 변경 전후로 업로드를 약 15초(최대 100MB) 측정하며, 고칠 것이 없으면 적용하지 않습니다."
+            "value" : "'%1$@'은(는) 변경 전에 업로드를 약 15초 측정하고 변경 후에 다시 측정하며(매번 업로드 100 Mbps당 약 125MB), 고칠 것이 없으면 적용하지 않습니다."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” mede seu upload por cerca de 15 segundos (até 100 MB), antes e depois da mudança, e não é aplicado se não houver nada a corrigir."
+            "value" : "“%1$@” mede seu upload por cerca de 15 segundos antes da mudança e de novo depois (a cada vez cerca de 125 MB por 100 Mbps de upload), e não é aplicado se não houver nada a corrigir."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@” sẽ đo upload khoảng 15 giây (tối đa 100 MB), trước và sau khi thay đổi, và không áp dụng nếu không có gì cần sửa."
+            "value" : "“%1$@” sẽ đo upload khoảng 15 giây trước khi thay đổi và đo lại sau đó (mỗi lần khoảng 125 MB cho mỗi 100 Mbps upload), và không áp dụng nếu không có gì cần sửa."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "“%1$@”会在更改前后各测量约 15 秒上传（最多 100 MB），没有需要修复的问题时不会应用。"
+            "value" : "“%1$@”会在更改前测量约 15 秒上传，更改后再测量一次（每次每 100 Mbps 上传约 125 MB），没有需要修复的问题时不会应用。"
           }
         }
       }
