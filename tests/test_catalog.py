@@ -55,6 +55,15 @@ def bloated_upload(mgr):
             "loss_pct": 0.0, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
 
 
+def blackholed_path(mgr):
+    """A path MTU measurement taken now: PPPoE behind a 1500 interface, large packets lost silently."""
+    return {"kind": "path_mtu", "interface_mtu": 1500, "path_mtu": 1492, "answered": 3, "too_big": False,
+            "tunnel": False, "measured_at": int(mgr._clock()), "network": "0123456789abcdef"}
+
+
+MEASUREMENTS = {"upload": bloated_upload, "path_mtu": blackholed_path}
+
+
 def manager(system=None):
     system = system or real_card_system()
     backup = MemoryBackup()   # one object for both directions, like backup.json
@@ -65,7 +74,7 @@ def manager(system=None):
 class CatalogMatchesDocsTests(unittest.TestCase):
     def test_ids_and_risks_match_docs_tweaks_md(self):
         docs = doc_tweaks()
-        self.assertEqual(len(docs), 18, docs)
+        self.assertEqual(len(docs), 19, docs)
         self.assertEqual({t.id: t.risk for t in tweaks.CATALOG}, docs)
 
     def test_ids_are_unique_and_names_vietnamese_present(self):
@@ -82,7 +91,7 @@ class CatalogMatchesDocsTests(unittest.TestCase):
                     "wifi_mode_ac", "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "ipv6_off",
                     "rsc_off"):
             self.assertTrue(by[tid].disrupts_network, tid)             # 🔌
-        for tid in ("tcp_ecn", "packet_coalescing_off", "dns_fastest"):
+        for tid in ("tcp_ecn", "packet_coalescing_off", "dns_fastest", "upload_shaping", "mtu_pmtu"):
             self.assertFalse(by[tid].disrupts_network, tid)
         for t in tweaks.CATALOG:
             self.assertTrue(t.needs_admin, t.id)                       # 🛡
@@ -98,7 +107,7 @@ class CatalogMatchesDocsTests(unittest.TestCase):
         self.assertTrue(by["tcp_timedwait"].has_default_restore)        # Windows default is "not set"
         self.assertFalse(by["power_pcie_aspm_off"].has_default_restore)
         self.assertTrue(by["tcp_ecn"].has_default_restore)              # Windows' own value is "disabled"
-        for tid in ("rsc_off", "packet_coalescing_off", "dns_fastest"):
+        for tid in ("rsc_off", "packet_coalescing_off", "dns_fastest", "mtu_pmtu"):
             self.assertFalse(by[tid].has_default_restore, tid)          # the original is only in the backup
 
 
@@ -112,10 +121,11 @@ class RealCardTests(unittest.TestCase):
         for tid in ("wifi_power_saving", "wifi_wake_magic", "wifi_wake_pattern", "wifi_bw20_5g", "wifi_mode_ac",
                     "wifi_prefer_5g", "wifi_tx_power_max", "device_power_off", "power_wireless_max",
                     "power_pcie_aspm_off", "tcp_timedwait", "ipv6_off", "tcp_ecn", "rsc_off", "packet_coalescing_off",
-                    "dns_fastest", "upload_shaping"):
+                    "dns_fastest", "upload_shaping", "mtu_pmtu"):
             self.assertTrue(st[tid].supported, tid)
-        self.assertTrue(st["upload_shaping"].measured)
-        self.assertFalse(any(s.measured for tid, s in st.items() if tid != "upload_shaping"))
+        measured = {"upload_shaping", "mtu_pmtu"}
+        self.assertTrue(all(st[tid].measured for tid in measured))
+        self.assertFalse(any(s.measured for tid, s in st.items() if tid not in measured))
         # fresh machine: only these two read as on, and only because the driver ships that way
         self.assertEqual({tid for tid, s in st.items() if s.enabled}, {"wifi_prefer_5g", "wifi_tx_power_max"})
         self.assertEqual({tid for tid, s in st.items() if s.on_by_default}, {"wifi_prefer_5g", "wifi_tx_power_max"})
@@ -154,7 +164,7 @@ class RealCardTests(unittest.TestCase):
         before = s.snapshot()
         for t in catalog():
             if mgr.state(t.id).supported and not mgr.state(t.id).enabled:
-                measurement = bloated_upload(mgr) if isinstance(t, tweaks.MeasuredTweak) else None
+                measurement = MEASUREMENTS[t.measurement_kind](mgr) if isinstance(t, tweaks.MeasuredTweak) else None
                 out = mgr.enable(t.id, measurement)
                 self.assertTrue(out.ok and out.changed, (t.id, i18n.render(out.message)))
         self.assertTrue(all(st.enabled for st in mgr.states() if st.supported))
