@@ -304,6 +304,12 @@
   "tweak.wifi_mode_ac.name": "Forçar Wi‑Fi 5 (802.11ac)",
   "tweak.wifi_mode_ac.note": "Experimente quando suspeitar de problema de compatibilidade Wi‑Fi 6 entre a placa e o roteador",
 
+  "tweak.wifi_prefer_5g.name": "Preferir a banda de 5 GHz",
+  "tweak.wifi_prefer_5g.note": "Move para 5 GHz uma placa que fica presa em 2,4 GHz quando há sinal, e continua voltando para 2,4 GHz em outros lugares. Disponível apenas quando a sua rede tem um ponto de acesso de 5 GHz",
+
+  "tweak.wifi_tx_power_max.name": "Potência de transmissão máxima",
+  "tweak.wifi_tx_power_max.note": "Mantém a placa no nível máximo de transmissão em vez de deixar o driver reduzi-lo. Um pouco mais de calor e de consumo de bateria em um notebook",
+
   "tweak.device_power_off.name": "Não permitir que o Windows desligue a placa",
   "tweak.device_power_off.note": "Tem efeito após reiniciar a placa ou o PC",
 
@@ -322,6 +328,9 @@
   "tweak.reason.no_wifi_card": "Nenhuma placa Wi‑Fi encontrada",
   "tweak.reason.no_matching_value": "'{property}' não tem um valor adequado (disponíveis: {values})",
   "tweak.reason.no_property": "A placa não possui esta propriedade",
+  "tweak.reason.not_connected": "Não conectado a uma rede Wi‑Fi",
+  "tweak.reason.bands_unknown": "A última varredura do Windows não mostra quais bandas “{ssid}” usa",
+  "tweak.reason.no_5ghz": "“{ssid}” não tem nenhum ponto de acesso de 5 GHz ao alcance",
   "tweak.reason.multi_value": "'{property}' tem um valor de várias partes, não suportado",
   "tweak.reason.no_registry_key": "Chave do Registro não encontrada",
   "tweak.reason.no_binding": "A placa não tem o vínculo {component}",

@@ -304,6 +304,12 @@
   "tweak.wifi_mode_ac.name": "Wi‑Fi 5 (802.11ac) erzwingen",
   "tweak.wifi_mode_ac.note": "Ausprobieren, wenn ein Wi‑Fi-6-Kompatibilitätsproblem zwischen Karte und Router vermutet wird",
 
+  "tweak.wifi_prefer_5g.name": "5-GHz-Band bevorzugen",
+  "tweak.wifi_prefer_5g.note": "Holt eine Karte, die am 2,4-GHz-Band festhängt, auf 5 GHz, sobald es in Reichweite ist, und weicht anderswo weiterhin auf 2,4 GHz aus. Nur verfügbar, wenn Ihr Netzwerk einen 5-GHz-Access-Point hat",
+
+  "tweak.wifi_tx_power_max.name": "Höchste Sendeleistung",
+  "tweak.wifi_tx_power_max.note": "Hält die Karte auf ihrer höchsten Sendestufe, statt den Treiber sie senken zu lassen. Auf einem Laptop etwas mehr Wärme und Akkuverbrauch",
+
   "tweak.device_power_off.name": "Windows das Ausschalten der Karte verbieten",
   "tweak.device_power_off.note": "Wirksam nach einem Neustart der Karte oder des PCs",
 
@@ -322,6 +328,9 @@
   "tweak.reason.no_wifi_card": "Keine Wi‑Fi-Karte gefunden",
   "tweak.reason.no_matching_value": "„{property}“ hat keinen passenden Wert (verfügbar: {values})",
   "tweak.reason.no_property": "Die Karte besitzt diese Eigenschaft nicht",
+  "tweak.reason.not_connected": "Nicht mit einem Wi‑Fi-Netzwerk verbunden",
+  "tweak.reason.bands_unknown": "Der letzte Windows-Scan zeigt nicht, welche Bänder „{ssid}“ nutzt",
+  "tweak.reason.no_5ghz": "„{ssid}“ hat in Reichweite keinen 5-GHz-Access-Point",
   "tweak.reason.multi_value": "„{property}“ hat einen mehrteiligen Wert, nicht unterstützt",
   "tweak.reason.no_registry_key": "Registrierungsschlüssel nicht gefunden",
   "tweak.reason.no_binding": "Die Karte hat keine {component}-Bindung",

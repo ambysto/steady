@@ -18,6 +18,12 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 | `wifi_roaming` | Reduce roaming | `Roaming Aggressiveness` = Lowest (Intel) | low | 🔌🛡 Limits AP hopping when using mesh |
 | `wifi_bw20_5g` | 5GHz bandwidth 20MHz only | `5GHz channel bandwidth` = 20MHz only | experimental | 🔌🛡 Lowers maximum speed in exchange for stability in noisy environments |
 | `wifi_mode_ac` | Force Wi‑Fi 5 (802.11ac) | `802.11ax/ac/n/abg` = 802.11ac | experimental | 🔌🛡 Try when a Wi‑Fi 6 compatibility bug between card and router is suspected |
+| `wifi_prefer_5g` | Prefer the 5 GHz band | `Preferred Band` / `Band Preference` = Prefer 5GHz (never "5G only") | low | 🔌🛡 A card that clings to a 2.4 GHz access point (802.11n, 65 Mbps link, 5% router loss) moved to 5 GHz 802.11ac (175 Mbps, 0% loss) when this was set. It only prefers 5 GHz: the card still falls back to 2.4 GHz where 5 GHz is out of range, which is why "5G only" is not used (some drivers ignore it anyway). Offered only while the connected network has a 5 GHz access point in Windows' last scan; otherwise it is shown as not supported, with the reason |
+| `wifi_tx_power_max` | Highest transmit power | `Transmit Power` / `Transmit Power Level` / `Tx Power` = Highest | low | 🔌🛡 Some drivers lower the transmit power on their own to save energy; this keeps the card at its top level. Slightly more heat and battery use on a laptop |
+
+Matching rules for both: the property is found by `DisplayName` and the value by `DisplayValue`, each a full-match regular expression that tolerates a numeric prefix such as `3. ` (Intel and MediaTek add one). A card with no such property, or with no matching value, is shown as "not supported". Restore uses the value saved in `backup.json`, or `Reset-NetAdapterAdvancedProperty` (the driver default) when there is no backup.
+
+How `wifi_prefer_5g` reads the connected network (read-only, never triggers a scan): the SSID from `netsh wlan show interfaces`, then the bands of that SSID's access points in `netsh wlan show networks mode=bssid`. Three reasons it is not offered: not connected to Wi‑Fi, the SSID is not in the last scan (the bands are unknown), or the SSID has no 5 GHz access point. When the property already holds the target value the tweak is shown as on whatever the network looks like, so it can still be turned off.
 
 ## 2. Windows power
 
@@ -56,6 +62,8 @@ Applied via `Set-NetAdapterAdvancedProperty`; restored without a backup via `Res
 | `wifi_power_saving` | Auto | Enable tweak |
 | `wifi_wake_magic` / `wifi_wake_pattern` | Enabled | Enable tweak |
 | `wifi_roaming` | — (card not supported) | — |
+| `wifi_prefer_5g` | `Preferred Band` = `3. Prefer 5GHz band` (read 2026-10-07; already on) | Keep. It was the change that helped most on 31 Aug (see the tweak's notes above) |
+| `wifi_tx_power_max` | `Transmit Power Level` = `1. Highest` (read 2026-10-07; the driver default, so already on) | Nothing to do; the tweak only guards against a driver or a reset lowering it |
 | `device_power_off` | `PnPCapabilities` = 16 (turning off allowed) | Enable tweak |
 | `power_wireless_max` | AC 0 / DC 2 | Enable tweak (desktop, small impact) |
 | `power_pcie_aspm_off` | AC **1 (Moderate)** / DC 2 | Enable tweak — high priority |
