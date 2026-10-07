@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Landing page redesign** (SIC-54): a light, Speedify-like layout (DM Sans, mono labels, dark live panels) with motion that shows what the app does: a live-scrolling latency chart, packets travelling along the connection path and dropping at the failing hop, count-ups to the measured numbers. The page no longer needs the company site's stylesheet; the logo is the app icon (Wi‑Fi arcs, dot and "A"/"S" on the graphite tile, from `apple/Steady/AppIcon.icon`), with a matching touch icon, in `site/assets/img`. Install text matches 0.6.0 (all users, one Administrator approval). All motion is off with `prefers-reduced-motion`.
 
 ### Removed
+- **Japanese and Korean are no longer offered as UI languages** (SIC-104). They were machine-translated with no native reviewer. `app/locales/ja.json` and `ko.json` are deleted, along with their entries in the Apple String Catalogs, `knownRegions` and the mockup; 7 languages remain. A saved `ui.language` of `ja` or `ko`, or `auto` on a Japanese or Korean Windows, now shows English.
 - **The code signing policy is gone**: the project no longer applies to SignPath Foundation. `CODE_SIGNING.md` is deleted, and `README.md`, the release notes and the landing page no longer link to `/codesigningpolicy` or mention SignPath. Releases are still unsigned, so the SmartScreen guidance stays.
 
 ## [0.6.0] - 2026-10-07
