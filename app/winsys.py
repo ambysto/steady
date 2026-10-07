@@ -3,7 +3,7 @@
 Writes covered: adapter advanced properties, HKLM DWORD values, powercfg indices of the
 active plan, adapter protocol bindings, TCP global parameters (netsh), receive segment
 coalescing, global offload settings, the DNS servers of the uplink and the DoH entries
-Windows keeps for them. Every write raises SystemWriteError on failure;
+Windows keeps for them, the tool's own QoS throttle policy. Every write raises SystemWriteError on failure;
 callers (app.tweaks) handle backup, verification and rollback.
 
 String values reach PowerShell only as base64 (see ps_literal): PowerShell also treats
@@ -35,6 +35,8 @@ TCP_GLOBAL_VALUES = ("enabled", "disabled", "default")
 # Set-NetOffloadGlobalSetting parameters a tweak may change.
 OFFLOAD_SETTINGS = ("PacketCoalescingFilter",)
 OFFLOAD_VALUES = ("Default", "Enabled", "Disabled")
+_QOS_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+QOS_MIN_BPS, QOS_MAX_BPS = 1_000_000, 1_000_000_000
 
 
 class SystemReadError(RuntimeError):
@@ -55,6 +57,12 @@ def _check_guid(value: str) -> str:
     if not _GUID_RE.match(value):
         raise ValueError(f"not a GUID: {value!r}")
     return value
+
+
+def _check_qos_name(name: str) -> str:
+    if not _QOS_NAME_RE.match(name):
+        raise ValueError(f"bad QoS policy name: {name!r}")
+    return name
 
 
 def _check_hklm_path(path: str) -> str:
@@ -79,6 +87,8 @@ class System(Protocol):
     def dns_interface(self) -> dict[str, Any] | None: ...
     def doh_get(self) -> dict[str, dict[str, Any]]: ...
 
+    def qos_policy_get(self, name: str) -> int | None: ...
+
     def adapter_property_set(self, adapter: str, keyword: str, value: str) -> None: ...
     def adapter_property_reset(self, adapter: str, keyword: str) -> None: ...
     def registry_set_dword(self, path: str, name: str, value: int) -> None: ...
@@ -92,6 +102,9 @@ class System(Protocol):
     def dns_servers_set(self, interface_index: int, servers: list[str] | None) -> None: ...
     def doh_set(self, address: str, template: str, auto_upgrade: bool, fallback_to_udp: bool) -> None: ...
     def doh_remove(self, address: str) -> None: ...
+
+    def qos_policy_set(self, name: str, bits_per_second: int) -> None: ...
+    def qos_policy_remove(self, name: str) -> None: ...
 
 
 def _as_list(value: Any) -> list[str]:
@@ -237,6 +250,15 @@ class WindowsSystem:
         if state is None or not state.connected or not state.ssid:
             return None
         return state.ssid, frozenset(e.band for e in self._scan() if e.ssid == state.ssid and e.band)
+
+    def qos_policy_get(self, name: str) -> int | None:
+        """Throttle rate (bit/s) of the QoS policy `name` in the default (persistent) store; None if
+        there is none. Lists the store rather than asking by name, so "absent" never hides an error."""
+        rows = self._ps_json("@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq "
+                             f"{ps_literal(_check_qos_name(name))} }}) | Select-Object Name, ThrottleRateAction")
+        if not rows:
+            return None
+        return int(rows[0].get("ThrottleRateAction") or 0)
 
     def interface_metric_get(self, interface_index: int) -> dict[str, Any]:
         """{"automatic": bool, "metric": int} of an interface's IPv4 settings."""
@@ -391,6 +413,29 @@ class WindowsSystem:
             proc = self._powercfg(*args)
             if proc.returncode != 0:
                 raise SystemWriteError(f"powercfg {' '.join(args)} exited {proc.returncode}")
+
+    def qos_policy_set(self, name: str, bits_per_second: int) -> None:
+        """Create (or re-rate) a policy throttling all outbound traffic, in the persistent store."""
+        rate = int(bits_per_second)
+        if not QOS_MIN_BPS <= rate <= QOS_MAX_BPS:
+            raise ValueError(f"throttle rate out of range: {rate}")
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       f"Set-NetQosPolicy -Name $name -ThrottleRateActionBitsPerSecond {rate} -Confirm:$false -ErrorAction Stop }} "
+                       f"else {{ New-NetQosPolicy -Name $name -Default -ThrottleRateActionBitsPerSecond {rate} "
+                       "-ErrorAction Stop | Out-Null }", f"setting QoS policy {name} to {rate} bit/s")
+
+    def qos_policy_remove(self, name: str) -> None:
+        """Remove exactly the policy `name`: persistent store first, then the active store if it lingers."""
+        lit = ps_literal(_check_qos_name(name))
+        self._ps_write(f"$name = {lit}; "
+                       "if (@(Get-NetQosPolicy -ErrorAction Stop | Where-Object { $_.Name -eq $name }).Count) { "
+                       "Remove-NetQosPolicy -Name $name -Confirm:$false -ErrorAction Stop }; "
+                       "if (@(Get-NetQosPolicy -PolicyStore ActiveStore -ErrorAction Stop | "
+                       "Where-Object { $_.Name -eq $name }).Count) { "
+                       "Remove-NetQosPolicy -Name $name -PolicyStore ActiveStore -Confirm:$false -ErrorAction Stop }",
+                       f"removing QoS policy {name}")
 
     def binding_set(self, adapter: str, component: str, enabled: bool) -> None:
         if not _COMPONENT_RE.match(component):

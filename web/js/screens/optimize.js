@@ -3,7 +3,7 @@
 
 import { get } from "../api.js";
 import { $, el, fill, icon, switchEl } from "../dom.js";
-import { t } from "../i18n.js";
+import { t, timeOf } from "../i18n.js";
 import { effectBox, setTweak, suggestionRow } from "../widgets.js";
 
 const RISK_PILL = { low: "ok", medium: "warn", experimental: "bad" };
@@ -23,12 +23,17 @@ function tweakRow(ctx, st) {
   if (st.disrupts_network) pills.push(el("span", { class: "pill" }, t("ui.optimize.disrupts")));
   if (st.needs_reboot) pills.push(el("span", { class: "pill warn" }, t("ui.optimize.needs_reboot")));
   const note = !st.supported ? `${t("ui.optimize.not_supported")}${st.reason ? ` — ${st.reason}` : ""}` : st.error || st.note;
+  // A measured tweak (ADR-0016): the measurement behind the value, and whether it still fits this network.
+  const m = st.enabled ? st.measurement : null;
+  const measuredFrom = m && m.value ? t(`ui.optimize.measured.${st.id}`, {
+    limit: m.value / 1e6, upload: m.upload_mbps, date: timeOf(m.measured_at, { withDate: true }) }) : null;
+  for (const why of (m && st.stale) || []) pills.push(el("span", { class: "pill warn" }, t(`ui.optimize.stale.${why}`)));
   const sw = switchEl(st.enabled, {
     disabled: !st.supported || busy, label: st.name,
     onToggle: async node => {
       busy = true;
       root().querySelectorAll(".switch").forEach(s => { s.disabled = true; });
-      const changed = await setTweak({ id: st.id, name: st.name, risk: st.risk }, !st.enabled,
+      const changed = await setTweak({ id: st.id, name: st.name, risk: st.risk, measured: st.measured }, !st.enabled,
                                      { button: node, isAdmin: ctx.state?.is_admin });
       busy = false;
       await reload(ctx, changed);
@@ -37,6 +42,8 @@ function tweakRow(ctx, st) {
   return el("div", { class: `row${st.supported ? "" : " disabled"}` },
     el("div", { class: "main" }, el("div", { class: "label" }, st.name),
       note ? el("div", { class: "secondary" }, note) : null,
+      measuredFrom ? el("div", { class: "secondary" }, measuredFrom) : null,
+      m && st.stale?.length ? el("div", { class: "secondary" }, t("ui.optimize.stale.hint")) : null,
       el("div", { class: "meta" }, pills),
       st.enabled ? effectBox(data.impact?.[st.id]) : null),
     sw);

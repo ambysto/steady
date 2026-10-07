@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Measured tweaks** (SIC-84, [ADR-0016](docs/adr/0016-measured-tweaks.md)): a tweak whose value is computed from a measurement of the network in use, taken just before it is turned on. The measurement is stored with the backup (values, time, a hashed id of the router; no SSID, MAC or IP address). The elevated helper receives the measurement, not the value, and works the value out itself. The tweak is refused before any UAC prompt when there is nothing to fix. A changed network or a measurement older than 30 days is flagged in the UI, never re-measured or rewritten automatically.
+- **Upload limit against bufferbloat** (`upload_shaping`, SIC-85): measures the upload (~15 s, without the download phase of check #14), then throttles all outbound traffic to 85% of it with a `NetQosPolicy` of the tool's own name (`StableInternet-Upload`, 1–1000 Mbps). Refused when latency rises less than 30 ms under upload. After applying it measures again and records whether it helped (`tweak_verified` event); if it did not, the result suggests turning it off. Turning it off removes exactly that policy. The bufferbloat check now suggests it when the upload direction is bloated. 27 new keys in all 9 catalogs. Uses the default (`localhost`) policy store: `-PolicyStore PersistentStore` is not a NetQos store. Not yet applied on a real machine.
+
 ## [0.3.0] - 2026-10-07
 
 Two new Wi‑Fi tweaks: prefer the 5 GHz band and highest transmit power.
