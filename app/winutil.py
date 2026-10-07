@@ -150,6 +150,7 @@ class WifiState:
     rx_mbps: int | None
     tx_mbps: int | None
     profile: str = ""   # Wi-Fi profile in use (empty when disconnected)
+    band: str = ""      # "2.4 GHz", "5 GHz", "6 GHz" (Windows 11); "" when netsh does not say
 
     @property
     def connected(self) -> bool:
@@ -169,6 +170,7 @@ def wifi_state_from(fields: dict[str, str]) -> WifiState:
         rx_mbps=_to_int(fields.get("Receive rate (Mbps)")),
         tx_mbps=_to_int(fields.get("Transmit rate (Mbps)")),
         profile=fields.get("Profile", ""),
+        band=fields.get("Band", ""),
     )
 
 
@@ -328,6 +330,22 @@ def internet_route_native(destination: str = "1.1.1.1") -> dict[str, Any] | None
         "interface_index": row.dwForwardIfIndex,
         "metric": row.dwForwardMetric1,
     }
+
+
+def neighbor_physical_address(address: str) -> str | None:
+    """Physical (MAC) address of an IPv4 neighbour (the gateway) via iphlpapi.SendARP; answers from
+    the ARP cache when it can, no Admin rights needed. None when it does not answer or the call fails."""
+    try:
+        lib = ctypes.WinDLL("iphlpapi")
+        physical = (ctypes.c_ubyte * 8)()
+        length = ctypes.c_ulong(len(physical))
+        if lib.SendARP(int.from_bytes(socket.inet_aton(address), "little"), 0, physical, ctypes.byref(length)) != 0:
+            return None
+    except (AttributeError, OSError):
+        return None
+    if length.value != 6:
+        return None
+    return ":".join(f"{b:02x}" for b in physical[:6])
 
 
 class _SocketAddress(ctypes.Structure):

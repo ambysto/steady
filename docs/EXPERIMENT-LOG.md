@@ -226,7 +226,24 @@ powershell -ExecutionPolicy Bypass -File scripts\manual\restore.ps1 -Backup data
   - Side note: the TCP handshake time to 1.1.1.1:443 (median 105 ms) is twice the ping (47 ms), whereas for 8.8.8.8 they are nearly equal (66 vs. 54 ms). Cloudflare's Anycast may route TCP differently. Therefore probes are only used to know "is the Internet still up or not", not as a latency measurement.
 - **Conclusion:** the main cause of the dropouts was **the card's antennas being blocked by the metal desk frame/PC case** + the configuration factors already dealt with (modem broadcasting Wi‑Fi, MLO). **No need to buy the AX3 yet.** EXP-011/012 become fallbacks.
 
-## EXP-015 — Speed tweaks: which ones can be measured on this PC (2026-10-07)
+## EXP-015 — `upload_shaping` on the dev PC, through the tool (2026-10-07)
+
+- **What:** the first run of the upload limit (ADR-0016) on a real machine, from an Administrator PowerShell, with the owner's agreement: plan, `enable --apply`, `disable --apply`, then the three QoS commands of `app/winsys.py` on a throwaway policy `StableInternet-Test` at 900 and 800 Mbps (above the line's speed, so traffic was not limited).
+- **Before:** no QoS policy in the default store or in the `ActiveStore`.
+- **Enable:** measured the upload (~15 s), then **refused**: "Latency rises only 25 ms under upload; nothing to fix, so nothing was changed" (threshold 30 ms). No backup written, no policy created; `disable` answered "Already off". This is the intended behavior on a line without upload bufferbloat, so the limit itself, and the measurement taken again after it, could not be exercised on this line today.
+- **QoS commands, checked on the real machine:**
+
+  | Step | Read back (`Get-NetQosPolicy`) |
+  |---|---|
+  | `qos_policy_set` (no policy yet ⇒ `New-NetQosPolicy -Default`) | 900000000 bit/s |
+  | `qos_policy_set` again (exists ⇒ `Set-NetQosPolicy`) | 800000000 bit/s, exactly |
+  | Both stores | default store: `StableInternet-Test`, 800000000; `ActiveStore`: `stableinternet-test` (lower case), 800000000 — active at once |
+  | `qos_policy_remove` | gone from both stores; a second remove is a no-op |
+
+- **After:** no QoS policy in either store; the machine is as before.
+- **Takeaways:** the rate Windows stores is exactly the rate asked for (no rounding at these values); a policy created in the default store shows up in the `ActiveStore` immediately, under a lower-case name (`-eq` in PowerShell ignores case, so the removal still finds it). Whether the limit lowers latency under upload remains to be measured on a line that has upload bufferbloat — the tweak records that itself (`tweak_verified`).
+
+## EXP-016 — Speed tweaks: which ones can be measured on this PC (2026-10-07)
 
 The speed changes made by hand on 2026-08-31 were applied together and measured before the antenna fault (EXP-014) was found, so none of them has its own result. They are now tweaks in the app. This entry records, per tweak, what a before/after measurement on this PC can show. Read-only inventory at 09:20 (+07), app at `main` 87cc23c (`python -m app.tweaks list`, `Get-NetAdapterAdvancedProperty`, `Get-NetAdapterRsc`, `Get-NetOffloadGlobalSetting`):
 
@@ -235,10 +252,10 @@ The speed changes made by hand on 2026-08-31 were applied together and measured 
 | `wifi_prefer_5g` | ON | **Nothing to measure here:** the MediaTek driver's own default for Preferred Band is already "Prefer 5GHz band". The tweak only changes something on drivers whose default is "No Preference". |
 | `wifi_tx_power_max` | ON | **Nothing to measure here:** the driver's default Transmit Power Level is already "Highest". |
 | `rsc_off` | not supported | **Not applicable:** the card reports no RSC hardware (`RscHardwareCapabilities` IPv4/IPv6 = False). The "RSC off" done by hand on 08-31 never had an effect on this card. |
-| `packet_coalescing_off` | ON (global `PacketCoalescingFilter` = Disabled) | Measured in EXP-017: no clear difference (upload only). |
-| `tcp_ecn` | ON (set by hand 08-31) | Measured in EXP-016: no clear difference. |
-| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Not to be enabled from the app yet:** the code review found that its restore breaks when the uplink changes, and that the static DNS follows the card to other networks. After the fix, the baseline needs DNS back to DHCP (write). |
-| Upload limit (bufferbloat) | not built yet | Waits for the tweak. Was removed by hand earlier; no QoS policy on the PC now. |
+| `packet_coalescing_off` | ON (global `PacketCoalescingFilter` = Disabled) | Measured in EXP-018: no clear difference (upload only). |
+| `tcp_ecn` | ON (set by hand 08-31) | Measured in EXP-017: no clear difference. |
+| `dns_fastest` | ON: static 1.1.1.1 / 1.0.0.1 / 8.8.8.8 + DoH, set by hand | **Not to be enabled from the app yet:** the code review found that its restore broke when the uplink changed, and that the static DNS followed the card to other networks. PR #30 fixes both; a remaining gap (switching it off from the UI while offline or on another uplink) is being fixed. Then the baseline needs DNS back to DHCP (write). |
+| `upload_shaping` (upload limit) | built after this inventory (PR #25) | First run in EXP-015: refused, latency rose only 25 ms under upload. That load was capped at 80 Mbps (see EXP-017), so the line's real behaviour under a full upload is still unknown. |
 | MTU from path MTU | not built yet (interface MTU 1492 set by hand) | Waits for the tweak. Baseline needs MTU 1500 (write). |
 
 Conditions seen at the same time:
@@ -254,7 +271,7 @@ Conditions seen at the same time:
 3. Better only when B beats both A runs on the tweak's own metric (DNS: median lookup; ECN, packet coalescing: added latency and loss under load; MTU: path MTU result and loss of large packets) by more than the A-to-A difference. Otherwise "no clear difference" ⇒ the tweak stays experimental or is dropped, and [TWEAKS.md](TWEAKS.md) says so.
 4. Leave the winning state on; after 24 hours the app's effect report ([ADR-0007](adr/0007-measured-impact.md)) checks that stability did not get worse.
 
-## EXP-016 — `tcp_ecn`: A/B/A/B (2026-10-07 09:50, +07)
+## EXP-017 — `tcp_ecn`: A/B/A/B (2026-10-07 09:50, +07)
 
 - **Done with:** an elevated helper script that sets the value, waits 15 s, and runs `python -m app.diagnostics --bufferbloat` and `--only 6,15` (`--json --no-save`). The tunnel was off. A = `netsh int tcp set global ecncapability=default`, which reads back as **Disabled** on this Windows build. B = `enabled` (the hand-set value). Put back to Enabled at the end.
 
@@ -270,7 +287,7 @@ Conditions seen at the same time:
 - **Caveat:** the load was only ~80 Mbps (see below), so the queue that ECN acts on was probably never full.
 - `tcp_ecn` stays **experimental**, and the hand-set value stays on until a test that fills the line exists.
 
-## EXP-017 — `packet_coalescing_off`: A/B/A/B (2026-10-07 09:55, +07)
+## EXP-018 — `packet_coalescing_off`: A/B/A/B (2026-10-07 09:55, +07)
 
 - **Done with:** the same script. A = `Set-NetOffloadGlobalSetting -PacketCoalescingFilter Enabled`; B = `Disabled` (the hand-set value). Put back to Disabled at the end.
 - **The download load failed in all 4 rounds** with `HTTP 429` from speed.cloudflare.com (rate-limited after the ECN runs), so only upload was measured. Coalescing acts on received packets, so upload is the less relevant direction.
@@ -287,7 +304,7 @@ Conditions seen at the same time:
 
 **What these two runs showed about the measuring tool** (more important than the tweaks):
 
-- The bufferbloat check caps each 10-second load phase at `MAX_BYTES` = 100 MB, i.e. **80 Mbps**. Every phase here ran at 79–80 Mbps, so on a faster line the check never fills the queue and reports "OK" without having tested it. The upload-limit tweak, whose value comes from this check, would inherit the same blind spot.
+- The bufferbloat check caps each 10-second load phase at `MAX_BYTES` = 100 MB, i.e. **80 Mbps**. Every phase here ran at 79–80 Mbps, so on a faster line the check never fills the queue and reports "OK" without having tested it. The upload limit (`upload_shaping`, ADR-0016) inherits the blind spot: its value is the measured upload speed times a margin, so on a line faster than 80 Mbps it either says "not needed" (as in EXP-015) or, when latency already rises at 80 Mbps, sets a limit below what the line can carry.
 - After about 6 runs in 10 minutes, speed.cloudflare.com answers `HTTP 429` to the download, and the check carries on with upload only.
 - Internet ICMP loss of 5–23% under load matches the ICMP-only loss seen in EXP-014, so loss under load is a weak signal on this line.
 

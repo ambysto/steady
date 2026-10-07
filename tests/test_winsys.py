@@ -50,29 +50,60 @@ class ProtocolTests(unittest.TestCase):
 
 
 class SsidBandsTests(unittest.TestCase):
-    """What the connected network offers, from `netsh wlan show interfaces` and `... networks mode=bssid`."""
+    """What an adapter's connection looks like, from `netsh wlan show interfaces` and `... networks mode=bssid`."""
 
     @staticmethod
-    def system(ssid="HomeNet", state="connected", scan=()):
-        wifi = None if state is None else SimpleNamespace(connected=state == "connected", ssid=ssid)
-        entries = [SimpleNamespace(ssid=s, band=b) for s, b in scan]
-        return winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_state=lambda: wifi, scan=lambda: entries)
+    def iface(name="Wi-Fi", state="connected", ssid="HomeNet", bssid="02:5e:00:9a:40:24", band="2.4 GHz"):
+        return SimpleNamespace(interface=name, connected=state == "connected", ssid=ssid, bssid=bssid, band=band)
 
-    def test_bands_of_the_connected_ssid_only(self):
-        sys_ = self.system(scan=[("HomeNet", "2.4 GHz"), ("HomeNet", "5 GHz"), ("HomeNet", "5 GHz"),
-                                 ("Neighbour", "6 GHz")])
-        self.assertEqual(sys_.wifi_ssid_bands(), ("HomeNet", frozenset({"2.4 GHz", "5 GHz"})))
+    @staticmethod
+    def system(*ifaces, scan=()):
+        entries = [SimpleNamespace(ssid=s, bssid=b, band=band) for s, b, band in scan]
+        return winsys.WindowsSystem(ps=None, ps_json=None, run=None, wifi_states=lambda: list(ifaces),
+                                    scan=lambda: entries)
 
-    def test_ssid_missing_from_the_scan_gives_no_bands(self):
-        self.assertEqual(self.system(scan=[("Other", "5 GHz")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+    def test_current_band_and_the_bands_of_the_same_network(self):
+        sys_ = self.system(self.iface(), scan=[("HomeNet", "02:5e:00:9a:40:24", "2.4 GHz"),
+                                               ("HomeNet", "02:5e:00:9a:40:25", "5 GHz"),
+                                               ("HomeNet", "02:5e:00:9a:40:26", "5 GHz"),
+                                               ("Neighbour", "02:5e:00:11:22:33", "6 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi"),
+                         winsys.WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz", "5 GHz"})))
+
+    def test_band_comes_from_netsh_when_it_says_so_not_from_the_channel(self):
+        sys_ = self.system(self.iface(band="6 GHz"), scan=[("HomeNet", "02:5e:00:9a:40:24", "6 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi").current_band, "6 GHz")
+
+    def test_band_falls_back_to_the_scan_entry_of_the_connected_bssid(self):
+        sys_ = self.system(self.iface(band=""), scan=[("HomeNet", "02:5E:00:9A:40:24", "5 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi").current_band, "5 GHz")
+
+    def test_band_unknown_when_neither_netsh_nor_the_scan_says(self):
+        got = self.system(self.iface(band=""), scan=[("Other", "02:5e:00:00:00:01", "5 GHz")]).wifi_ssid_bands("Wi-Fi")
+        self.assertEqual(got, winsys.WifiBands("HomeNet", "", frozenset()))
+
+    def test_hidden_network_is_matched_by_the_connected_bssid(self):
+        sys_ = self.system(self.iface(band=""), scan=[("", "02:5e:00:9a:40:24", "2.4 GHz"),
+                                                      ("", "02:5e:00:ff:ff:ff", "5 GHz")])
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi"),
+                         winsys.WifiBands("HomeNet", "2.4 GHz", frozenset({"2.4 GHz"})))
+
+    def test_the_interface_with_the_adapters_name_is_used(self):
+        sys_ = self.system(self.iface(name="Wi-Fi 2", ssid="Other", band="5 GHz"), self.iface(name="Wi-Fi"))
+        self.assertEqual(sys_.wifi_ssid_bands("wi-fi").ssid, "HomeNet")
+        self.assertEqual(sys_.wifi_ssid_bands("Wi-Fi 2").current_band, "5 GHz")
 
     def test_entries_without_a_band_are_ignored(self):
-        self.assertEqual(self.system(scan=[("HomeNet", "")]).wifi_ssid_bands(), ("HomeNet", frozenset()))
+        got = self.system(self.iface(), scan=[("HomeNet", "02:5e:00:9a:40:99", "")]).wifi_ssid_bands("Wi-Fi")
+        self.assertEqual(got.bands, frozenset())
 
-    def test_none_when_not_connected(self):
-        self.assertIsNone(self.system(state="disconnected").wifi_ssid_bands())
-        self.assertIsNone(self.system(state=None).wifi_ssid_bands())
-        self.assertIsNone(self.system(ssid="").wifi_ssid_bands())
+    def test_none_only_when_that_interface_is_not_connected(self):
+        self.assertIsNone(self.system(self.iface(state="disconnected")).wifi_ssid_bands("Wi-Fi"))
+
+    def test_an_interface_netsh_does_not_list_is_unknown_not_disconnected(self):
+        self.assertEqual(self.system().wifi_ssid_bands("Wi-Fi"), winsys.WifiBands("", "", frozenset()))
+        self.assertEqual(self.system(self.iface(name="Ethernet")).wifi_ssid_bands("Wi-Fi"),
+                         winsys.WifiBands("", "", frozenset()))
 
 
 class ScriptConstructionTests(unittest.TestCase):
@@ -138,11 +169,6 @@ class ScriptConstructionTests(unittest.TestCase):
             sys_.registry_set_dword(r"SOFTWARE\x", "v", -1)
 
 
-NETSH_GLOBAL = (b"\r\nQuerying active state...\r\n\r\nTCP Global Parameters\r\n----------------------------------------------\r\n"
-                b"Receive-Side Scaling State          : enabled\r\nECN Capability                      : Enabled \r\n"
-                b"Receive Segment Coalescing State    : enabled\r\n")
-
-
 class NetworkStackSystemTests(unittest.TestCase):
     """The system calls behind tcp_ecn, rsc_off, packet_coalescing_off and dns_fastest."""
 
@@ -151,23 +177,20 @@ class NetworkStackSystemTests(unittest.TestCase):
         return winsys.WindowsSystem(ps=ps or FakePs(), ps_json=lambda script, **k: rows or [],
                                     run=run or (lambda *a, **k: SimpleNamespace(returncode=0, stdout=b"Ok.")), route=route)
 
-    def test_netsh_table_is_parsed_whatever_the_case_and_padding(self):
-        table = winsys.parse_netsh_table(NETSH_GLOBAL.decode())
-        self.assertEqual(table["ECN Capability"], "enabled")
-        self.assertEqual(table["Receive-Side Scaling State"], "enabled")
-        self.assertNotIn("TCP Global Parameters", table)
-
-    def test_tcp_global_read_and_write_go_through_netsh(self):
-        calls = []
+    def test_tcp_global_is_read_from_get_nettcpsetting_and_written_with_netsh(self):
+        # `netsh int tcp show global` prints translated labels; Get-NetTCPSetting has fixed property names.
+        calls, ps = [], FakePs("Enabled\r\n")
 
         def run(args, **kw):
             calls.append(args)
-            return SimpleNamespace(returncode=0, stdout=NETSH_GLOBAL)
-        sys_ = self.system(run=run)
+            return SimpleNamespace(returncode=0, stdout=b"Ok.")
+        sys_ = self.system(ps=ps, run=run)
         self.assertEqual(sys_.tcp_global_get("ecncapability"), "enabled")
-        sys_.tcp_global_set("ecncapability", "disabled")
-        self.assertEqual(calls, [["netsh", "int", "tcp", "show", "global"],
-                                 ["netsh", "int", "tcp", "set", "global", "ecncapability=disabled"]])
+        self.assertIn("Get-NetTCPSetting -SettingName Internet", ps.scripts[0])
+        self.assertIn(".EcnCapability", ps.scripts[0])
+        sys_.tcp_global_set("ecncapability", "default")
+        self.assertEqual(calls, [["netsh", "int", "tcp", "set", "global", "ecncapability=default"]])
+        self.assertIsNone(self.system(ps=FakePs("")).tcp_global_get("ecncapability"))
 
     def test_tcp_global_is_validated_and_a_failed_netsh_is_reported(self):
         sys_ = self.system()
@@ -180,12 +203,11 @@ class NetworkStackSystemTests(unittest.TestCase):
         failing = self.system(run=lambda *a, **k: SimpleNamespace(returncode=1, stdout=b"The requested operation requires elevation."))
         with self.assertRaises(winsys.SystemWriteError):
             failing.tcp_global_set("ecncapability", "enabled")
-        with self.assertRaises(winsys.SystemReadError):
-            failing.tcp_global_get("ecncapability")
 
-    def test_a_setting_netsh_does_not_list_is_none(self):
-        sys_ = self.system(run=lambda *a, **k: SimpleNamespace(returncode=0, stdout=b"TCP Global Parameters\r\n"))
-        self.assertIsNone(sys_.tcp_global_get("ecncapability"))
+        def broken(script, **kw):
+            raise winsys.PowerShellError("Get-NetTCPSetting failed")
+        with self.assertRaises(winsys.SystemReadError):
+            winsys.WindowsSystem(ps=broken, ps_json=lambda *a, **k: [], run=None).tcp_global_get("ecncapability")
 
     def test_rsc_read_and_write(self):
         row = {"IPv4": True, "IPv6": False, "IPv4Supported": True, "IPv6Supported": False}
@@ -223,17 +245,42 @@ class NetworkStackSystemTests(unittest.TestCase):
             sys_.offload_global_set("PacketCoalescingFilter", "Disabled; calc")
 
     def test_dns_interface_reads_the_uplink_and_spots_a_vpn(self):
-        row = {"Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
+        row = {"Index": 6, "Guid": "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}", "Alias": "Wi-Fi", "StaticV4": True, "StaticV6": False, "Servers": {"value": ["1.1.1.1", "8.8.8.8"], "Count": 2},
                "Suffix": "", "Domain": False, "Up": ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter", "WARP Cloudflare WARP Interface Tunnel"]}
         info = self.system(rows=[row]).dns_interface()
-        self.assertEqual(info, {"index": 6, "alias": "Wi-Fi", "servers": ["1.1.1.1", "8.8.8.8"], "static": True,
-                                "static_v6": False, "suffix": "", "domain_joined": False, "vpn_up": True})
+        self.assertEqual(info, {"index": 6, "guid": "{2F70B5EE-2B7E-4D1A-8C6A-4FD6AC8C98B7}", "alias": "Wi-Fi",
+                                "servers": ["1.1.1.1", "8.8.8.8"], "static": True, "static_v6": False, "suffix": "",
+                                "domain_joined": False, "vpn_up": True})
         row["Up"] = ["Wi-Fi TP-Link Wi-Fi 6 PCIe Adapter"]
         self.assertFalse(self.system(rows=[row]).dns_interface()["vpn_up"])
 
     def test_dns_interface_is_none_without_an_uplink(self):
         self.assertIsNone(self.system(route=lambda: None).dns_interface())
         self.assertIsNone(self.system(rows=[]).dns_interface())
+
+    def test_an_interface_is_found_by_its_guid_not_by_the_uplink(self):
+        scripts = []
+        sys_ = winsys.WindowsSystem(ps=FakePs(), ps_json=lambda script, **k: scripts.append(script) or [],
+                                    run=None, route=lambda: self.fail("the uplink must not be asked"))
+        guid = "{A407D7A1-D1F3-4322-88DC-940E2CE6E38F}"
+        self.assertIsNone(sys_.dns_interface(guid))
+        self.assertIn("InterfaceGuid -eq", scripts[0])
+        self.assertNotIn("Get-NetAdapter -InterfaceIndex", scripts[0])
+        for bad in ("A407D7A1-D1F3-4322-88DC-940E2CE6E38F", "{x'; calc; '}", ""):
+            with self.assertRaises(ValueError):
+                sys_.dns_interface(bad)
+        self.assertNotIn("calc", "".join(scripts))
+
+    def test_without_doh_support_the_list_is_none(self):
+        def no_cmdlet(script, **kw):
+            raise winsys.PowerShellError("The term 'Get-DnsClientDohServerAddress' is not recognized as the name of a cmdlet")
+        sys_ = winsys.WindowsSystem(ps=FakePs(), ps_json=no_cmdlet, run=None)
+        self.assertIsNone(sys_.doh_get())
+
+        def broken(script, **kw):
+            raise winsys.PowerShellError("Access is denied")
+        with self.assertRaises(winsys.SystemReadError):
+            winsys.WindowsSystem(ps=FakePs(), ps_json=broken, run=None).doh_get()
 
     def test_doh_list_is_read_into_flags(self):
         rows = [{"ServerAddress": "1.1.1.1", "DohTemplate": "https://cloudflare-dns.com/dns-query", "AutoUpgrade": True,
@@ -248,14 +295,17 @@ class NetworkStackSystemTests(unittest.TestCase):
         sys_.dns_servers_set(6, ["1.1.1.1", "8.8.8.8"])
         sys_.dns_servers_set("6", None)
         sys_.doh_set("1.1.1.1", "https://cloudflare-dns.com/dns-query", True, False)
+        sys_.doh_set("1.1.1.1", None, False, False)
         sys_.doh_remove("1.1.1.1")
         self.assertIn("Set-DnsClientServerAddress -InterfaceIndex 6 -ServerAddresses '1.1.1.1','8.8.8.8'", ps.scripts[0])
         self.assertIn("-ResetServerAddresses", ps.scripts[1])
         self.assertIn("Set-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -AutoUpgrade $true -AllowFallbackToUdp $false",
                       ps.scripts[2])
-        self.assertIn("Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate 'https://cloudflare-dns.com/dns-query'",
-                      ps.scripts[2])
-        self.assertIn("Remove-DnsClientDohServerAddress", ps.scripts[3])
+        self.assertIn("Add-DnsClientDohServerAddress -ServerAddress '1.1.1.1' -DohTemplate ([Text.Encoding]", ps.scripts[2])
+        self.assertIn("Remove-DnsClientDohServerAddress", ps.scripts[4])
+        # restoring an entry that exists never needs (or checks) its template
+        self.assertTrue(ps.scripts[3].startswith("Set-DnsClientDohServerAddress -ServerAddress '1.1.1.1'"))
+        self.assertNotIn("DohTemplate", ps.scripts[3])
 
     def test_dns_and_doh_arguments_are_validated(self):
         ps = FakePs()
@@ -265,9 +315,14 @@ class NetworkStackSystemTests(unittest.TestCase):
                 sys_.dns_servers_set(6, bad)
         with self.assertRaises(ValueError):
             sys_.dns_servers_set("6; calc", ["1.1.1.1"])
-        for template in ("http://insecure.example/dns", "https://x.example/'; calc", "javascript:alert(1)", ""):
+        for template in ("http://insecure.example/dns", "javascript:alert(1)", "", "https://x.example/\n; calc"):
             with self.assertRaises(ValueError):
                 sys_.doh_set("1.1.1.1", template, True, True)
+        # RFC 8484 templates may carry {?dns} or a query string; they only ever reach PowerShell as base64
+        for template in ("https://dns.example/dns-query{?dns}", "https://dns.example/q?x=1&y='2'", "https://x.example/'; calc"):
+            sys_.doh_set("1.1.1.1", template, True, True)
+        self.assertNotIn("calc", "".join(ps.scripts))
+        ps.scripts.clear()
         for address in ("1.1.1.1'; calc", "one.one.one.one"):
             with self.assertRaises(ValueError):
                 sys_.doh_set(address, "https://cloudflare-dns.com/dns-query", True, True)
@@ -332,10 +387,11 @@ class RealReadsTests(unittest.TestCase):
         info = self.sys.dns_interface()
         if info is None:
             self.skipTest("no uplink")
-        self.assertEqual(set(info), {"index", "alias", "servers", "static", "static_v6", "suffix", "domain_joined",
-                                     "vpn_up"})
+        self.assertEqual(set(info), {"index", "guid", "alias", "servers", "static", "static_v6", "suffix",
+                                     "domain_joined", "vpn_up"})
         self.assertIsInstance(info["servers"], list)
-        for entry in self.sys.doh_get().values():
+        self.assertEqual(self.sys.dns_interface(info["guid"])["index"], info["index"])   # found again by its GUID
+        for entry in (self.sys.doh_get() or {}).values():
             self.assertEqual(set(entry), {"template", "auto_upgrade", "fallback_to_udp"})
 
 

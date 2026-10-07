@@ -8,8 +8,9 @@ See docs/adr/0003-tweak-framework.md. In short:
 
 Tweaks are declarations built from a few primitive kinds (adapter advanced property,
 HKLM DWORD, powercfg AC/DC index, adapter binding, TCP global parameter, adapter RSC, global
-offload setting) plus one measured tweak (DnsFastestTweak, ADR-0015). The catalog itself lives
-in CATALOG.
+offload setting), plus tweaks whose value comes from a measurement: DnsFastestTweak measures
+in apply() (ADR-0015), a MeasuredTweak takes a measurement made before enabling it
+(ADR-0016). The catalog itself lives in CATALOG.
 
     python -m app.tweaks list
     python -m app.tweaks enable <id>             # dry run: shows the plan
@@ -28,7 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from . import config, dnsprobe, i18n, winutil
+from . import calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
 from .winsys import System
 
@@ -50,12 +51,18 @@ class Unsupported(_MessageError):
     """The tweak does not apply to this machine (missing property, key, adapter...)."""
 
 
+class Refused(_MessageError):
+    """A measured tweak will not derive a value from this measurement (nothing to fix, too slow...)."""
+
+
 @dataclass(frozen=True)
 class Reading:
     supported: bool
     enabled: bool
     current: Any = None
     reason: Message = ""
+    driver_default: bool = False   # enabled only because the driver ships with the target value
+    warning: Message = ""   # on, but something about the machine now deserves a look (shown beside the switch)
 
 
 # --- the primitive kinds -------------------------------------------------------------
@@ -90,6 +97,15 @@ class Tweak:
     def restore_key(self, original: dict[str, Any]) -> Any:
         """The part of an `original` that a successful restore must reproduce."""
         return original
+
+    def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
+        """capture() after restoring `original`, to compare with it. A tweak whose subject can move (the uplink
+        changes) reads the subject `original` names, not whatever is current."""
+        return self.capture(sys_)
+
+    def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
+        """Why turning the tweak on must wait while `original` is the saved backup (None: nothing in the way)."""
+        return None
 
     def validate_original(self, original: dict[str, Any]) -> None:
         """Raise ValueError if `original` is not shaped like this tweak's capture()."""
@@ -145,13 +161,15 @@ class AdapterPropertyTweak(Tweak):
         try:
             _, prop, target = self._resolve(sys_)
             cur = self._current(prop)
+            default = prop.get("DefaultRegistryValue")
             if cur != target and self._precondition is not None:
                 why = self._precondition(sys_)
                 if why:
                     raise Unsupported(why)
         except Unsupported as exc:
             return Reading(False, False, None, exc.message)
-        return Reading(True, cur == target, prop["DisplayValue"])
+        return Reading(True, cur == target, prop["DisplayValue"],
+                       driver_default=cur == target and default is not None and str(default) == str(cur))
 
     def capture(self, sys_: System) -> dict[str, Any]:
         adapter, prop, _ = self._resolve(sys_)
@@ -463,26 +481,45 @@ def choose_dns_servers(bench: list[dnsprobe.ServerBenchmark]) -> list[str]:
     return [winner[0][1], runner_up[0][1]] + [row[1] for row in winner[1:]]
 
 
+def _looks_ours(entry: dict[str, Any]) -> bool:
+    """A DoH entry in the state apply() leaves it in (auto-upgrade on, fallback to UDP on)."""
+    return bool(entry["auto_upgrade"] and entry["fallback_to_udp"])
+
+
 class DnsFastestTweak(Tweak):
     """The uplink's IPv4 DNS set to the fastest public servers, each with DoH auto-upgrade on.
 
     read() never measures: "on" is a property of the configuration (static servers, all from the
     candidate list, two providers or more, DoH auto-upgrade on). The benchmark runs in apply().
-    capture() therefore records the DoH flags of every candidate, not only the chosen ones."""
+    capture() therefore records the DoH flags of every candidate, not only the chosen ones.
+
+    The backup belongs to one interface, found again by its GUID (an ifIndex can be reused). Turning
+    the tweak off, and checking that it worked, look at that interface and not at whichever one is the
+    uplink now; turning it on while the backup is another interface's is refused. restore() touches only
+    what apply() could have changed: a DoH entry somebody else has changed since is left alone."""
 
     has_default_restore = False
+    CAPTIVE_TTL_S = 60.0
 
     def __init__(self, id: str, name: str, risk: str, *, benchmark: Benchmark = benchmark_servers,
-                 captive: CaptiveCheck = captive_portal, **kw: Any) -> None:
+                 captive: CaptiveCheck = captive_portal, clock: Callable[[], float] = time.monotonic, **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
-        self._benchmark, self._captive = benchmark, captive
+        self._benchmark, self._captive, self._clock = benchmark, captive, clock
+        self._captive_seen: tuple[float, bool] | None = None
 
     @staticmethod
-    def _info(sys_: System) -> dict[str, Any]:
-        info = sys_.dns_interface()
+    def _info(sys_: System, guid: str | None = None) -> dict[str, Any]:
+        info = sys_.dns_interface(guid) if guid else sys_.dns_interface()
         if info is None:
-            raise Unsupported(msg("tweak.reason.no_uplink"))
+            raise Unsupported(msg("tweak.reason.dns_interface_gone" if guid else "tweak.reason.no_uplink"))
         return info
+
+    @staticmethod
+    def _doh(sys_: System) -> dict[str, dict[str, Any]]:
+        doh = sys_.doh_get()
+        if doh is None:
+            raise Unsupported(msg("tweak.reason.no_doh"))
+        return doh
 
     @staticmethod
     def _is_on(info: dict[str, Any], doh: dict[str, dict[str, Any]]) -> bool:
@@ -491,7 +528,14 @@ class DnsFastestTweak(Tweak):
                     and len({DOH_ADDRESSES[s][0] for s in servers}) >= 2
                     and all(doh.get(s, {}).get("auto_upgrade") for s in servers))
 
-    def _blocked(self, info: dict[str, Any]) -> Message | None:
+    def _captive_portal(self, fresh: bool) -> bool:
+        """The probe is a web request: listings reuse an answer for a minute, apply() always asks."""
+        now = self._clock()
+        if fresh or self._captive_seen is None or now - self._captive_seen[0] > self.CAPTIVE_TTL_S:
+            self._captive_seen = (now, self._captive())
+        return self._captive_seen[1]
+
+    def _blocked(self, info: dict[str, Any], fresh: bool = False) -> Message | None:
         """Why this network should be left alone (None: fine). The cheap checks come first."""
         if info["vpn_up"]:
             return msg("tweak.reason.dns_vpn")
@@ -499,32 +543,55 @@ class DnsFastestTweak(Tweak):
             return msg("tweak.reason.dns_domain")
         if info["static_v6"]:
             return msg("tweak.reason.dns_static_v6")
-        if self._captive():
+        if self._captive_portal(fresh):
             return msg("tweak.reason.dns_captive")
         return None
 
     def read(self, sys_: System) -> Reading:
         try:
             info = self._info(sys_)
+            doh = self._doh(sys_)
         except Unsupported as exc:
             return Reading(False, False, None, exc.message)
         current = {"servers": info["servers"], "static": info["static"]}
-        if self._is_on(info, sys_.doh_get()):
-            return Reading(True, True, current)
         blocked = self._blocked(info)
+        if self._is_on(info, doh):
+            # Static DNS stays with the interface, not with the network: another network may need its own.
+            return Reading(True, True, current, warning=blocked or "")
         return Reading(blocked is None, False, current, blocked or "")
 
-    def capture(self, sys_: System) -> dict[str, Any]:
-        info, doh = self._info(sys_), sys_.doh_get()
-        return {"interface_index": info["index"], "static": info["static"], "servers": list(info["servers"]),
+    @staticmethod
+    def _snapshot(info: dict[str, Any], doh: dict[str, dict[str, Any]]) -> dict[str, Any]:
+        return {"guid": info["guid"], "interface_index": info["index"], "static": info["static"],
+                "servers": list(info["servers"]),
                 "doh": {address: {"present": address in doh, "template": doh.get(address, {}).get("template", ""),
                                   "auto_upgrade": doh.get(address, {}).get("auto_upgrade", False),
                                   "fallback_to_udp": doh.get(address, {}).get("fallback_to_udp", False)}
                         for address in DOH_ADDRESSES}}
 
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return self._snapshot(self._info(sys_), self._doh(sys_))
+
+    def recapture(self, sys_: System, original: dict[str, Any]) -> dict[str, Any]:
+        snapshot = self._snapshot(self._info(sys_, original["guid"]), self._doh(sys_))
+        for address, now in snapshot["doh"].items():   # an entry somebody else changed is not ours to compare
+            was = original["doh"][address]
+            same = (now["present"], now["auto_upgrade"], now["fallback_to_udp"]) == \
+                   (was["present"], was["auto_upgrade"], was["fallback_to_udp"])
+            if not same and not (now["present"] and _looks_ours(now)) and not (was["present"] and not now["present"]):
+                snapshot["doh"][address] = dict(was)
+        return snapshot
+
+    def backup_conflict(self, sys_: System, original: dict[str, Any]) -> Message | None:
+        info = sys_.dns_interface()
+        if info is not None and original.get("guid") and info["guid"] != original["guid"]:
+            return msg("tweak.reason.dns_other_interface")
+        return None
+
     def apply(self, sys_: System) -> None:
         info = self._info(sys_)
-        blocked = self._blocked(info)
+        self._doh(sys_)
+        blocked = self._blocked(info, fresh=True)
         if blocked is not None:   # the state may have changed since it was read (a VPN came up...)
             raise Unsupported(blocked)
         servers = choose_dns_servers(self._benchmark(list(DOH_ADDRESSES)))
@@ -535,28 +602,135 @@ class DnsFastestTweak(Tweak):
     def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
         if original is None:
             raise NoDefaultRestore(msg("tweak.reason.no_default_dns"))
-        sys_.dns_servers_set(original["interface_index"], list(original["servers"]) if original["static"] else None)
+        info = self._info(sys_, original["guid"])   # the interface that was changed, wherever it is now
+        wanted = list(original["servers"]) if original["static"] else None
+        if (wanted is None and info["static"]) or (wanted is not None and (not info["static"] or info["servers"] != wanted)):
+            sys_.dns_servers_set(info["index"], wanted)
+        doh = self._doh(sys_)
         for address, was in original["doh"].items():
-            if was["present"]:
+            now = doh.get(address)
+            if was["present"] and now is None:   # the entry vanished: put it back
                 sys_.doh_set(address, was["template"] or DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
                              bool(was["fallback_to_udp"]))
-            else:
+            elif was["present"]:
+                if (now["auto_upgrade"], now["fallback_to_udp"]) != (was["auto_upgrade"], was["fallback_to_udp"]) \
+                        and _looks_ours(now):
+                    sys_.doh_set(address, None, bool(was["auto_upgrade"]), bool(was["fallback_to_udp"]))
+            elif now is not None and _looks_ours(now):   # not there before: apply() added it
                 sys_.doh_remove(address)
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         # DHCP servers come and go with the lease: only "static" and a static list must come back.
-        return (original["interface_index"], bool(original["static"]),
+        return (original.get("guid"), bool(original["static"]),
                 tuple(original["servers"]) if original["static"] else None,
                 tuple(sorted((a, bool(d["present"]), bool(d["auto_upgrade"]) if d["present"] else None,
                               bool(d["fallback_to_udp"]) if d["present"] else None)
                              for a, d in original["doh"].items())))
 
 
+# --- calibrated by a measurement made before enabling (ADR-0016) -----------------------------------
+
+class MeasuredTweak(Tweak):
+    """A tweak whose value comes from a measurement taken just before enabling it (ADR-0016).
+    `derive` is pure and carries the safety margins; `apply_value` writes the derived value and
+    `applied_value` reads back what is in effect. Plain `apply` has no value to write."""
+
+    measurement_kind = ""
+
+    def check(self, measurement: Any, now: float) -> dict[str, Any]:
+        """The measurement validated (ValueError when it is malformed or too old)."""
+        raise NotImplementedError
+
+    def derive(self, measurement: dict[str, Any]) -> int:
+        """The value to apply, or Refused."""
+        raise NotImplementedError
+
+    def apply(self, sys_: System) -> None:
+        raise Refused(msg("tweak.reason.needs_measurement"))
+
+    def apply_value(self, sys_: System, value: int) -> None:
+        raise NotImplementedError
+
+    def applied_value(self, sys_: System) -> int | None:
+        raise NotImplementedError
+
+    def value_matches(self, applied: int | None, value: int) -> bool:
+        return applied == value
+
+    def describe_value(self, value: int, measurement: dict[str, Any]) -> Message:
+        """The value and the measurement it came from, for the user."""
+        raise NotImplementedError
+
+
+UPLOAD_POLICY = "StableInternet-Upload"
+UPLOAD_MARGIN = 0.85
+UPLOAD_MIN_BPS, UPLOAD_MAX_BPS = 1_000_000, 1_000_000_000
+UPLOAD_STEP_BPS = 100_000
+
+
+class UploadShapingTweak(MeasuredTweak):
+    """A QoS policy of the tool's own name throttling all outbound traffic to 85% of the measured
+    upload, so the queue builds on the PC (short) instead of in the modem (long). Restore removes
+    exactly that policy, which is also the safe default without a backup (the name is ours)."""
+
+    measurement_kind = "upload"
+
+    def __init__(self, id: str, name: Message, risk: str, *, policy: str = UPLOAD_POLICY, **kw: Any) -> None:
+        super().__init__(id, name, risk, **kw)
+        self.policy = policy
+
+    def check(self, measurement: Any, now: float) -> dict[str, Any]:
+        return calibration.check_upload(measurement, now)
+
+    def derive(self, measurement: dict[str, Any]) -> int:
+        mbps, samples = float(measurement["upload_mbps"]), int(measurement["samples"])
+        if mbps < calibration.MIN_UPLOAD_MBPS or samples < calibration.MIN_SAMPLES:
+            raise Refused(msg("tweak.upload_shaping.refused.weak", mbps=mbps, samples=samples))
+        rise = calibration.rise_ms(measurement)
+        if rise < calibration.NOT_NEEDED_MS:
+            raise Refused(msg("tweak.upload_shaping.refused.not_needed", rise=max(rise, 0.0)))
+        cap = int(mbps * 1e6 * UPLOAD_MARGIN) // UPLOAD_STEP_BPS * UPLOAD_STEP_BPS
+        if not UPLOAD_MIN_BPS <= cap <= UPLOAD_MAX_BPS:
+            raise Refused(msg("tweak.upload_shaping.refused.bounds", cap=cap / 1e6,
+                              low=UPLOAD_MIN_BPS / 1e6, high=UPLOAD_MAX_BPS / 1e6))
+        return cap
+
+    def applied_value(self, sys_: System) -> int | None:
+        return sys_.qos_policy_get(self.policy)
+
+    def value_matches(self, applied: int | None, value: int) -> bool:
+        # Windows may round the rate it stores; 1% is far below the margin taken.
+        return applied is not None and abs(applied - value) <= max(8_000, value // 100)
+
+    def describe_value(self, value: int, measurement: dict[str, Any]) -> Message:
+        return msg("tweak.upload_shaping.value", limit=value / 1e6, upload=float(measurement["upload_mbps"]))
+
+    def read(self, sys_: System) -> Reading:
+        rate = self.applied_value(sys_)
+        return Reading(True, rate is not None, None if rate is None else {"limit_mbps": round(rate / 1e6, 1)})
+
+    def capture(self, sys_: System) -> dict[str, Any]:
+        return {"policy": self.policy, "rate_bps": self.applied_value(sys_)}
+
+    def apply_value(self, sys_: System, value: int) -> None:
+        sys_.qos_policy_set(self.policy, value)
+
+    def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
+        if original is None or original["rate_bps"] is None:
+            sys_.qos_policy_remove(self.policy)
+        else:
+            sys_.qos_policy_set(original["policy"], int(original["rate_bps"]))
+
+    def restore_key(self, original: dict[str, Any]) -> Any:
+        rate = original["rate_bps"]
+        return (original["policy"], None if rate is None else int(rate))
+
+
 # --- read cache ------------------------------------------------------------------------
 
 _READ_METHODS = ("wifi_adapter_name", "adapter_properties", "adapter_class_key", "registry_get", "power_get",
                  "binding_get", "wifi_ssid_bands", "tcp_global_get", "rsc_get", "offload_global_get", "dns_interface",
-                 "doh_get")
+                 "doh_get", "qos_policy_get")
 
 
 class _CachedReads:
@@ -604,6 +778,10 @@ class TweakState:
     can_restore_without_backup: bool
     error: str | None = None     # reading failed (not the same as "unsupported")
     note: Message = ""
+    on_by_default: bool = False  # on only because the driver ships that way: the tool wrote nothing, nothing to turn off
+    warning: Message = ""
+    measured: bool = False       # the value comes from a measurement (ADR-0016)
+    measurement: dict[str, Any] | None = None   # the one stored with the backup, while on
 
 
 @dataclass(frozen=True)
@@ -646,28 +824,34 @@ class TweakManager:
         except KeyError:
             raise KeyError(f"unknown tweak {tweak_id!r}") from None
 
-    def _backup_ids(self) -> set[str] | None:
+    def _backups(self) -> dict[str, Any] | None:
         try:
-            return set(self._load())
+            return self._load()
         except Exception:
             return None
 
-    def _state(self, t: Tweak, sys_: Any, backups: set[str] | None) -> TweakState:
+    def _state(self, t: Tweak, sys_: Any, backups: dict[str, Any] | None) -> TweakState:
         try:
             r, error = t.read(sys_), None
         except Exception as exc:
             r, error = Reading(False, False, None, msg("tweak.reason.unreadable")), f"{type(exc).__name__}: {exc}"
-        return TweakState(t.id, t.name, t.risk, t.group, r.supported, r.enabled, r.current, r.reason,
-                          None if backups is None else t.id in backups, t.needs_admin, t.disrupts_network,
-                          t.needs_reboot, t.has_default_restore, error, t.note)
+        entry = (backups or {}).get(t.id)
+        measurement = entry.get("measurement") if isinstance(entry, dict) and r.enabled else None
+        has_backup = None if backups is None else t.id in backups
+        on_by_default = r.enabled and r.driver_default and has_backup is False
+        return TweakState(t.id, t.name, t.risk, t.group, r.supported, r.enabled, r.current,
+                          msg("tweak.reason.driver_default") if on_by_default else r.reason,
+                          has_backup, t.needs_admin, t.disrupts_network, t.needs_reboot,
+                          t.has_default_restore, error, t.note, on_by_default, r.warning,
+                          isinstance(t, MeasuredTweak), measurement)
 
     def states(self) -> list[TweakState]:
         """Read-only snapshot of every tweak; reads are shared across tweaks."""
-        cached, backups = _CachedReads(self.system), self._backup_ids()
+        cached, backups = _CachedReads(self.system), self._backups()
         return [self._state(t, cached, backups) for t in self._tweaks.values()]
 
     def state(self, tweak_id: str) -> TweakState:
-        return self._state(self.get(tweak_id), _CachedReads(self.system), self._backup_ids())
+        return self._state(self.get(tweak_id), _CachedReads(self.system), self._backups())
 
     def recently_changed(self, within_s: float) -> bool:
         """True if a tweak changed the machine in the last `within_s` seconds (for the watchdog)."""
@@ -682,12 +866,26 @@ class TweakManager:
     def _rollback(self, t: Tweak, to: dict[str, Any]) -> bool:
         try:
             t.restore(self.system, to)
-            return t.restore_key(t.capture(self.system)) == t.restore_key(to)
+            return t.restore_key(t.recapture(self.system, to)) == t.restore_key(to)
         except Exception:
             return False
 
-    def enable(self, tweak_id: str) -> Outcome:
+    def derive(self, tweak_id: str, measurement: Any) -> tuple[dict[str, Any], int]:
+        """For a measured tweak: (checked measurement, value), or Refused. Writes nothing, so callers
+        can refuse before a UAC prompt."""
         t = self.get(tweak_id)
+        if not isinstance(t, MeasuredTweak):
+            raise ValueError(f"{tweak_id} is not a measured tweak")
+        try:
+            checked = t.check(measurement, self._clock())
+        except ValueError as exc:
+            raise Refused(msg("tweak.result.bad_measurement", error=str(exc))) from None
+        return checked, t.derive(checked)
+
+    def enable(self, tweak_id: str, measurement: Any = None) -> Outcome:
+        """measurement: required by a measured tweak (ADR-0016), ignored by the others."""
+        t = self.get(tweak_id)
+        measured = isinstance(t, MeasuredTweak)
         with self._lock:
             try:
                 r = t.read(self.system)
@@ -697,6 +895,14 @@ class TweakManager:
                 return Outcome(False, False, msg("tweak.result.unsupported", reason=r.reason), self.state(t.id))
             if r.enabled:
                 return Outcome(True, False, msg("tweak.result.already_on"), self.state(t.id))
+            value = None
+            if measured:
+                if measurement is None:
+                    return Outcome(False, False, msg("tweak.reason.needs_measurement"), self.state(t.id))
+                try:
+                    measurement, value = self.derive(t.id, measurement)
+                except Refused as exc:
+                    return Outcome(False, False, exc.message, self.state(t.id))
             if t.needs_admin and not self._is_admin():
                 return Outcome(False, False, msg("tweak.result.needs_admin"), self.state(t.id))
             try:
@@ -705,6 +911,13 @@ class TweakManager:
                 return self._fail(t, msg("tweak.result.backup_unreadable_apply", error=str(exc)))
 
             created = t.id not in backup
+            if not created:
+                try:
+                    conflict = t.backup_conflict(self.system, backup[t.id]["original"])
+                except Exception as exc:
+                    return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
+                if conflict is not None:
+                    return Outcome(False, False, msg("tweak.result.backup_other", reason=conflict), self.state(t.id))
             try:
                 before = t.capture(self.system)
             except Exception as exc:
@@ -716,13 +929,19 @@ class TweakManager:
                     return self._fail(t, msg("tweak.result.backup_write_failed", error=str(exc)))
 
             try:
-                t.apply(self.system)
-                applied = t.read(self.system).enabled
+                if measured:
+                    t.apply_value(self.system, value)
+                    applied = t.value_matches(t.applied_value(self.system), value)
+                else:
+                    t.apply(self.system)
+                    applied = t.read(self.system).enabled
                 problem = None if applied else msg("tweak.result.no_effect")
             except Exception as exc:
-                problem = msg("tweak.result.apply_failed", error=str(exc))
+                problem = msg("tweak.result.apply_failed", error=exc.message if isinstance(exc, _MessageError) else str(exc))
             if problem is None:
                 self.last_change_ts = self._clock()
+                if measured:
+                    self._keep_measurement(t, {**measurement, "value": value})
                 self._event("tweak_enabled", msg("tweak.event.enabled", name=t.name, tweak_id=t.id), "info")
                 return Outcome(True, True, msg("tweak.result.enabled"), self.state(t.id))
 
@@ -737,21 +956,38 @@ class TweakManager:
             return self._fail(t, msg("tweak.result.rollback_failed", problem=problem),
                               changed=True, level="bad")
 
+    def _keep_measurement(self, t: Tweak, record: dict[str, Any]) -> None:
+        """Store the measurement behind the applied value in the tweak's backup entry. Only
+        bookkeeping: the machine is already right, so a failure is logged, not rolled back."""
+        try:
+            entry = self._load().get(t.id)
+            if isinstance(entry, dict):
+                self._put(t.id, {**entry, "measurement": record})
+        except Exception as exc:
+            self._event("tweak_failed", msg("tweak.event.measurement_not_kept", name=t.name, error=str(exc),
+                                            tweak_id=t.id), "warn")
+
     def disable(self, tweak_id: str) -> Outcome:
         t = self.get(tweak_id)
         with self._lock:
+            read_error = None
             try:
                 r = t.read(self.system)
             except Exception as exc:
-                return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
+                r, read_error = None, exc   # with a backup, restoring does not need the current state
             try:
                 backup = self._load()
             except Exception as exc:
                 return self._fail(t, msg("tweak.result.backup_unreadable", error=str(exc)))
             entry = backup.get(t.id)
+            if entry is None and read_error is not None:
+                return self._fail(t, msg("tweak.result.read_failed", error=str(read_error)))
             if entry is None and not r.enabled:
                 return Outcome(True, False, msg("tweak.result.already_off"), self.state(t.id))
-            if not r.supported and entry is None:
+            if entry is None and r.enabled and r.driver_default:
+                # Resetting to the driver default would restart the adapter and leave the same value.
+                return Outcome(True, False, msg("tweak.result.driver_default"), self.state(t.id))
+            if entry is None and not r.supported:
                 return Outcome(False, False, msg("tweak.result.unsupported", reason=r.reason), self.state(t.id))
             if t.needs_admin and not self._is_admin():
                 return Outcome(False, False, msg("tweak.result.needs_admin"), self.state(t.id))
@@ -767,13 +1003,19 @@ class TweakManager:
                     self.last_change_ts = self._clock()
                     return self._fail(t, msg("tweak.result.default_restore_failed", error=str(exc)), changed=True, level="bad")
                 self.last_change_ts = self._clock()
+                try:
+                    still_on = t.read(self.system).enabled
+                except Exception:
+                    still_on = False   # cannot read it back: report the reset, as before
+                if still_on:
+                    return self._fail(t, msg("tweak.result.default_restore_no_effect"), changed=True, level="bad")
                 self._event("tweak_disabled", msg("tweak.event.disabled_default", name=t.name, tweak_id=t.id), "info")
                 return Outcome(True, True, msg("tweak.result.restored_default"), self.state(t.id))
 
             original = entry["original"]
             try:
                 t.restore(self.system, original)
-                matches = t.restore_key(t.capture(self.system)) == t.restore_key(original)
+                matches = t.restore_key(t.recapture(self.system, original)) == t.restore_key(original)
             except Exception as exc:
                 self.last_change_ts = self._clock()
                 return self._fail(t, msg("tweak.result.restore_failed", error=str(exc)), changed=True, level="bad")
@@ -828,6 +1070,8 @@ class TweakManager:
         elif not st.supported:
             lines.append(msg("tweak.plan.unsupported", reason=st.reason))
         elif enable:
+            if st.measured and not st.enabled:
+                lines.append(msg("tweak.plan.will_measure"))
             lines.append(msg("tweak.plan.nothing_on") if st.enabled else
                          msg("tweak.plan.will_apply",
                              disrupts=msg("tweak.plan.disrupts") if st.disrupts_network else "",
@@ -835,12 +1079,14 @@ class TweakManager:
         else:
             if st.has_backup:
                 lines.append(msg("tweak.plan.will_restore"))
+            elif st.on_by_default:
+                lines.append(msg("tweak.plan.is_default"))
             elif st.enabled:
                 lines.append(msg("tweak.plan.will_default") if st.can_restore_without_backup else
                              msg("tweak.plan.will_refuse"))
             else:
                 lines.append(msg("tweak.plan.nothing_off"))
-        if st.needs_admin and not self._is_admin():
+        if st.needs_admin and not self._is_admin() and (enable or not st.on_by_default):
             lines.append(msg("tweak.plan.needs_admin"))
         return "\n".join(i18n.render(line, lang) for line in lines)
 
@@ -863,16 +1109,26 @@ def _wifi_class_key(sys_: System) -> str | None:
     return sys_.adapter_class_key(name)
 
 
-def _has_5ghz_access_point(sys_: System) -> Message | None:
-    """Why "prefer 5 GHz" would do nothing here, or None when the connected network offers 5 GHz."""
-    seen = sys_.wifi_ssid_bands()
+def _band_key(band: str) -> str:
+    return re.sub(r"\s", "", band).lower()   # "5 GHz" and "5GHz" are the same band
+
+
+def _stuck_on_24ghz(sys_: System) -> Message | None:
+    """Why "prefer 5 GHz" would do nothing (or harm) here, or None when it fits: the card is on a
+    2.4 GHz access point and the same network has a 5 GHz one. A card already on 5 GHz gains
+    nothing; one on 6 GHz could be pulled down. The band always comes from a Band field: a channel
+    number alone cannot tell 2.4 GHz from 6 GHz."""
+    seen = sys_.wifi_ssid_bands(_wifi_adapter(sys_))
     if seen is None:
         return msg("tweak.reason.not_connected")
-    ssid, bands = seen
-    if not bands:
-        return msg("tweak.reason.bands_unknown", ssid=ssid)
-    if not any(re.sub(r"\s", "", band).lower() == "5ghz" for band in bands):
-        return msg("tweak.reason.no_5ghz", ssid=ssid)
+    if not _band_key(seen.current_band):
+        return msg("tweak.reason.band_unknown")
+    if _band_key(seen.current_band) != "2.4ghz":
+        return msg("tweak.reason.not_on_24ghz", band=seen.current_band)
+    if not seen.bands:
+        return msg("tweak.reason.bands_unknown", ssid=seen.ssid)
+    if not any(_band_key(band) == "5ghz" for band in seen.bands):
+        return msg("tweak.reason.no_5ghz", ssid=seen.ssid)
     return None
 
 
@@ -884,8 +1140,8 @@ def _note(tweak_id: str) -> Message:
     return msg(f"tweak.{tweak_id}.note")
 
 
-GROUP_WIFI, GROUP_POWER, GROUP_STACK = (msg("tweak.group.wifi_card"), msg("tweak.group.power"),
-                                        msg("tweak.group.stack"))
+GROUP_WIFI, GROUP_POWER, GROUP_STACK, GROUP_MEASURED = (
+    msg("tweak.group.wifi_card"), msg("tweak.group.power"), msg("tweak.group.stack"), msg("tweak.group.measured"))
 
 
 def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: CaptiveCheck = captive_portal) -> list[Tweak]:
@@ -911,7 +1167,7 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
                              note=_note("wifi_mode_ac")),
         AdapterPropertyTweak("wifi_prefer_5g", _name("wifi_prefer_5g"), "low",
                              [(r"Preferred Band|Band Preference", _N + r"Prefer 5\s?GHz(?: band)?")],
-                             precondition=_has_5ghz_access_point, group=GROUP_WIFI, note=_note("wifi_prefer_5g")),
+                             precondition=_stuck_on_24ghz, group=GROUP_WIFI, note=_note("wifi_prefer_5g")),
         AdapterPropertyTweak("wifi_tx_power_max", _name("wifi_tx_power_max"), "low",
                              [(r"Transmit Power(?: Level)?|Tx Power(?: Level)?", _N + r"Highest")],
                              group=GROUP_WIFI, note=_note("wifi_tx_power_max")),
@@ -932,17 +1188,61 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
         BindingTweak("ipv6_off", _name("ipv6_off"), "experimental", component="ms_tcpip6", enabled=False,
                      group=GROUP_STACK, note=_note("ipv6_off")),
         TcpGlobalTweak("tcp_ecn", _name("tcp_ecn"), "experimental", setting="ecncapability", target="enabled",
-                       default="disabled", group=GROUP_STACK, note=_note("tcp_ecn")),
+                       default="default", group=GROUP_STACK, note=_note("tcp_ecn")),
         RscTweak("rsc_off", _name("rsc_off"), "experimental", group=GROUP_STACK, note=_note("rsc_off")),
         OffloadGlobalTweak("packet_coalescing_off", _name("packet_coalescing_off"), "experimental",
                            setting="PacketCoalescingFilter", target="Disabled", group=GROUP_STACK,
                            note=_note("packet_coalescing_off")),
         DnsFastestTweak("dns_fastest", _name("dns_fastest"), "medium", benchmark=dns_benchmark, captive=captive,
                         group=GROUP_STACK, note=_note("dns_fastest")),
+        # 4. Measured tweaks (ADR-0016)
+        UploadShapingTweak("upload_shaping", _name("upload_shaping"), "medium", group=GROUP_MEASURED,
+                           note=_note("upload_shaping")),
     ]
 
 
 CATALOG: list[Tweak] = build_catalog()
+
+
+def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict | None],
+                    enable: Callable[[dict], Any], record_event: EventSink) -> dict[str, Any]:
+    """Turn a measured tweak on (ADR-0016): measure with it off, refuse before any write (and so
+    before any UAC prompt) when there is nothing to fix, enable through `enable(measurement)` (the
+    manager directly, or the elevated helper), then measure again and record whether it helped.
+
+    `enable` returns an object with ok / message and optionally changed / cancelled."""
+    t = mgr.get(tweak_id)
+    if not isinstance(t, MeasuredTweak):
+        raise ValueError(f"{tweak_id} is not a measured tweak")
+    if mgr.state(tweak_id).enabled:
+        return {"ok": True, "changed": False, "message": msg("tweak.result.already_on")}
+    before = measure()
+    if before is None:
+        return {"ok": False, "changed": False, "message": msg("tweak.result.measure_failed")}
+    try:
+        _, value = mgr.derive(tweak_id, before)
+    except Refused as exc:
+        return {"ok": False, "changed": False, "message": exc.message, "measurement": before}
+    out = enable(before)
+    result = {"ok": bool(out.ok), "changed": bool(getattr(out, "changed", out.ok)), "message": out.message,
+              "measurement": before}
+    if getattr(out, "cancelled", False):
+        result["cancelled"] = True
+    if not (out.ok and result["changed"]):
+        return result
+    after = measure()
+    v = calibration.verdict(before, after)
+    key = {True: "helped", False: "no_help", None: "unknown"}[v["helped"]]
+    params = dict(name=t.name, before=v["before_ms"], after=v["after_ms"], tweak_id=t.id)
+    record_event("tweak_verified", msg(f"tweak.event.verified_{key}", **params), "warn" if key == "no_help" else "info")
+    result.update(verdict=v, message=msg("tweak.result.measured_enabled", value=t.describe_value(value, before),
+                                         verdict=msg(f"tweak.verdict.{key}", **params)))
+    return result
+
+
+def measure_for(t: MeasuredTweak) -> Callable[[], dict | None]:
+    """The real measurement a measured tweak derives its value from (generates traffic)."""
+    return {"upload": calibration.measure_upload}[t.measurement_kind]
 
 
 def default_manager(storage: Any = None) -> TweakManager:
@@ -988,7 +1288,7 @@ def main(argv: list[str] | None = None) -> int:
             for s in ([] if args.json else states):
                 flag = (i18n.t("tweak.cli.on", args.lang) if s.enabled
                         else "—" if s.supported else i18n.t("tweak.cli.unsupported", args.lang))
-                why = i18n.render(s.reason, args.lang) or s.error
+                why = i18n.render(s.reason, args.lang) or i18n.render(s.warning, args.lang) or s.error
                 print(f"{s.id:24} {flag:14} {s.risk:12} {i18n.render(s.name, args.lang)}  [{s.current!r}]"
                       + (f"  ({why})" if why else ""))
             return 0
@@ -998,6 +1298,14 @@ def main(argv: list[str] | None = None) -> int:
         if not args.apply:
             print(mgr.plan(args.tweak_id, enable, args.lang) + "\n\n" + i18n.t("tweak.cli.dry_run", args.lang))
             return 0
+        if enable and isinstance(mgr.get(args.tweak_id), MeasuredTweak):
+            print(i18n.t("tweak.cli.measuring", args.lang), flush=True)
+            res = enable_measured(mgr, args.tweak_id, measure_for(mgr.get(args.tweak_id)),
+                                  lambda m: mgr.enable(args.tweak_id, m),
+                                  lambda kind, message, level: storage.add_event(int(time.time()), kind, message,
+                                                                                 level=level))
+            print(i18n.render(res["message"], args.lang))
+            return 0 if res["ok"] else 1
         out = mgr.enable(args.tweak_id) if enable else mgr.disable(args.tweak_id)
         print(i18n.render(out.message, args.lang))
         return 0 if out.ok else 1
