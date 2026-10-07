@@ -23,6 +23,14 @@ public enum CheckFlow {
             .map { Problem(result: $0, remedy: remedy(for: $0)) }
     }
 
+    /// A result older than this may no longer hold: "Check again" becomes the big button again
+    /// and the result stays below with how long ago it was (ADR-0020, as on Windows).
+    public static let staleAfter: Double = 3 * 3600
+
+    public static func isStale(checkedAt: Double, now: Double) -> Bool {
+        now - checkedAt > staleAfter
+    }
+
     /// The results that are fine; with the problems, what the result headline counts.
     public static func okCount(_ results: [CheckResult]) -> Int {
         results.filter { $0.status == .ok }.count

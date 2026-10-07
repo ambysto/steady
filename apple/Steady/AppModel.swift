@@ -63,7 +63,7 @@ final class AppModel {
 
     init() {
         #if DEBUG
-        // `-StoreScreenshots [-StoreTab diagnostics] [-SampleProblems] [-RunCheck]`: the made-up
+        // `-StoreScreenshots [-StoreTab diagnostics] [-SampleProblems] [-RunCheck [-StaleCheck]]`: the made-up
         // network of apple/AppStore; with `-SampleProblems` it has a fair signal (Mac), failing DNS
         // and loss past the router, and `-RunCheck` runs Check my connection on it at launch.
         let arguments = ProcessInfo.processInfo.arguments
@@ -86,7 +86,8 @@ final class AppModel {
                 selectedTab = AppTab(rawValue: arguments[index + 1]) ?? .overview
             }
             if arguments.contains("-RunCheck") {
-                runCheck()
+                // `-StaleCheck`: as if that run had ended 3 h 25 min ago, for the stale state.
+                runCheck(endedAgo: arguments.contains("-StaleCheck") ? 3 * 3600 + 25 * 60 : 0)
             }
             return
         }
@@ -143,6 +144,10 @@ final class AppModel {
     /// Runs the checks one after another and records each as it really starts and finishes: no
     /// minimum duration, so a check that only reads what the app already measured is instant.
     func runCheck() {
+        runCheck(endedAgo: 0)
+    }
+
+    private func runCheck(endedAgo: TimeInterval) {
         guard checkTask == nil else { return }
         checkTask = Task {
             checkRun = CheckRun(steps: Self.checkSteps)
@@ -155,7 +160,7 @@ final class AppModel {
             }
             checkRun?.current = nil
             checkRun?.measured = measuredNow()
-            checkRun?.finishedAt = .now
+            checkRun?.finishedAt = .now - endedAgo
             checkTask = nil
         }
     }

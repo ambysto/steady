@@ -67,7 +67,7 @@ While the app has a window open, whichever tab is shown, `LiveMonitor` measures 
 
 ## Check my connection
 
-The Overview's main button ([ADR-0020](../docs/adr/0020-check-fix-result-flow.md) point 11): `AppModel.runCheck()` goes through `AppModel.checkSteps` one by one and keeps the run in `CheckRun`; `CheckFlow` (SteadyKit) decides what counts (warn and bad only), worst first, and whether the user can fix it. Nothing is changed on the device, so there is no Fix step.
+The Overview's main button ([ADR-0020](../docs/adr/0020-check-fix-result-flow.md) point 11): `AppModel.runCheck()` goes through `AppModel.checkSteps` one by one and keeps the run in `CheckRun`; `CheckFlow` (SteadyKit) decides what counts (warn and bad only), worst first, and whether the user can fix it. Nothing is changed on the device, so there is no Fix step. `CheckCard` draws it like the Windows card (`web/app.css`, "connection check"): the 180 pt dial, the six-segment ring, the percent ring while checking, and the stale state after `CheckFlow.staleAfter`.
 
 ## History and problem reports
 
