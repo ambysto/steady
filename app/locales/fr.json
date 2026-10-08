@@ -828,6 +828,7 @@
   "apple.diag.physical_link.advice_improved": "Si vous venez de déplacer le Mac ou le routeur, ou de changer un réglage, observez encore quelques heures pour confirmer.",
   "apple.ui.language.auto": "Identique au système",
   "apple.ui.check.idle_body": "Lance {count} vérifications sur la connexion, le routeur et le DNS. Rien n'est modifié.",
+  "apple.ui.check.start": "Analyser",
   "apple.ui.check.kind.none": "Rien sur cet appareil ne le corrige",
 
   "ui.nav.history": "Historique",

@@ -24,7 +24,7 @@ struct CheckCard: View {
             Section {
                 CheckHero(title: text("ui.check.idle_title"),
                           message: text("ui.check.idle_body", ["count": .number(Double(AppModel.checkSteps.count))])) {
-                    BigButton(label: text("ui.check.start"), action: model.runCheck)
+                    BigButton(label: text("ui.check.start"), icon: "magnifyingglass", action: model.runCheck)
                 }
             }
         }
@@ -184,10 +184,12 @@ nonisolated private struct Segments: Shape {
 
 /// The big round button. Flat like a macOS control: the system accent, the standard control
 /// shadow, darker on hover and press. On a Mac, with the pointer on it, the ring turns once
-/// every 8 s and the label gives way to a magnifier; with Reduce Motion the ring stays still.
-/// iPhone and iPad have no hover, so the label stays.
+/// every 8 s; with Reduce Motion the ring stays still. With an `icon` the button shows it above
+/// a short label; without one the label gives way to a magnifier on hover (iPhone and iPad have
+/// no hover, so the label stays).
 private struct BigButton: View {
     let label: String
+    var icon: String? = nil
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
@@ -202,21 +204,35 @@ private struct BigButton: View {
                     Segments()
                         .stroke(Color.accentColor.opacity(0.35), lineWidth: 12)
                         .rotationEffect(.degrees(angle(at: context.date)))
-                    ZStack {
-                        Text(label)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                            .minimumScaleFactor(0.7)
-                            .padding(.horizontal, 16)
-                            .opacity(hovering ? 0 : 1)
-                            .scaleEffect(hovering ? 0.9 : 1)
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 40, weight: .medium))
-                            .opacity(hovering ? 1 : 0)
-                            .scaleEffect(hovering ? 1 : 0.8)
+                    if let icon {
+                        VStack(spacing: 6) {
+                            Image(systemName: icon)
+                                .font(.system(size: 40, weight: .medium))
+                            Text(label)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .minimumScaleFactor(0.7)
+                                .padding(.horizontal, 16)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: Dial.size - 2 * Dial.discInset, height: Dial.size - 2 * Dial.discInset)
+                    } else {
+                        ZStack {
+                            Text(label)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .minimumScaleFactor(0.7)
+                                .padding(.horizontal, 16)
+                                .opacity(hovering ? 0 : 1)
+                                .scaleEffect(hovering ? 0.9 : 1)
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40, weight: .medium))
+                                .opacity(hovering ? 1 : 0)
+                                .scaleEffect(hovering ? 1 : 0.8)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: Dial.size - 2 * Dial.discInset, height: Dial.size - 2 * Dial.discInset)
                     }
-                    .foregroundStyle(.white)
-                    .frame(width: Dial.size - 2 * Dial.discInset, height: Dial.size - 2 * Dial.discInset)
                 }
             }
         }

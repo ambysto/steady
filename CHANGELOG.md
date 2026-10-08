@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **Apple app: the big check button shows a magnifier and "Scan".** iPhone and iPad have no hover, so it only ever showed "Check my connection". The Apple wording `apple.ui.check.start` is new in all 7 catalogs; Windows keeps its text and "Check again" is unchanged.
+
 ## [0.7.1] - 2026-10-07
 
 After a check, what it found opens in its own view: the problems to fix ticked on the left, each finding on the right, Back and Fix below. "Nothing to fix" shows a screen with a tick and what is left on Optimize. The sidebar no longer repeats the app name.

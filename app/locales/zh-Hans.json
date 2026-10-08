@@ -828,6 +828,7 @@
   "apple.diag.physical_link.advice_improved": "如果你刚移动过 Mac 或路由器，或更改了设置，请再观察几个小时以确认。",
   "apple.ui.language.auto": "跟随系统",
   "apple.ui.check.idle_body": "对连接、路由器和 DNS 运行 {count} 项检查。不会做任何更改。",
+  "apple.ui.check.start": "扫描",
   "apple.ui.check.kind.none": "此设备上无法修复",
 
   "ui.nav.history": "历史",
