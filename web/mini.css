@@ -28,38 +28,50 @@ html[data-glass] .segmented { background: color-mix(in srgb, var(--surface-press
 /* --- the one-line bar (default) and the full table: one of them shows --- */
 html[data-mode="bar"] .mini, html:not([data-mode="bar"]) .minibar { display: none !important; }
 
-/* A thermometer (app/desktop.py cuts the window to this outline): a 32 px bulb (Optimize) with a
-   ring, and a 22 px tube under its edge carrying the numbers and the arrow. The 1 px outlines hide
-   the cut's stair-stepped edge. */
-html[data-mode="bar"] body { background: none; }
-.minibar { position: relative; height: 100vh; white-space: nowrap; font-size: var(--text-caption); }
-.minibar .tube { position: absolute; left: 26px; right: 0; top: 50%; height: 22px; transform: translateY(-50%);
-  display: flex; align-items: center; gap: 8px; padding: 0 2px 0 12px; border-radius: 11px;
-  background: var(--window); box-shadow: inset 0 0 0 1px var(--border); }
-.minibar .optimize { position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  background: color-mix(in srgb, var(--accent) 10%, var(--window)); }
-.minibar .optimize:hover { background: color-mix(in srgb, var(--accent) 20%, var(--window)); }
-html[data-glass] .minibar .tube, html[data-glass] .minibar .optimize:not(.fix) {
-  background: linear-gradient(color-mix(in srgb, var(--window) 58%, transparent), color-mix(in srgb, var(--window) 58%, transparent)),
-    var(--backdrop) left center / 340px 32px no-repeat;
+/* A thermometer (app/desktop.py cuts the window to this outline, BULB/TUBE): a round bulb (Optimize)
+   and a tube under its edge with the numbers and the arrow, as one dark piece of tinted glass in
+   either theme, like an overlay. The shapes are drawn here, 1.5 px inside the cut, so their edges are
+   smooth; with Glass the sliver between shows the screen behind, unblurred (--behind). */
+.minibar {
+  --bar-tint: rgba(17, 21, 36, .74); --bar-solid: #161a2a; --bar-edge: rgba(255, 255, 255, .16);
+  --bar-text: #eef1f8; --bar-dim: rgba(238, 241, 248, .6); --bar-accent: #6cb4ff;
+  position: relative; height: 100vh; white-space: nowrap; font-size: var(--text-footnote); color: var(--bar-text);
 }
-html[data-glass] .minibar .tube { background-position: -26px center, -26px center; }
-.minibar .stat { display: inline-flex; align-items: center; gap: 2px; flex: 1; min-width: 0; font-variant-numeric: tabular-nums;
-  font-weight: var(--weight-medium); }
-.minibar .stat .icon { width: 11px; height: 11px; }
-.minibar .dot { width: 6px; height: 6px; }
-.minibar .icon.down { color: var(--accent); } .minibar .icon.up { color: var(--chart-internet); }
-.minibar .icon.ping { color: var(--ok); }
+html[data-mode="bar"] body { background: none; }
+html[data-mode="bar"][data-glass] body { background: var(--behind) left top / 100% 100% no-repeat; }
+.minibar .tube { position: absolute; left: 25px; right: 1.5px; top: 50%; height: 21px; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 6px; padding: 0 2px 0 12px; border-radius: 10.5px;
+  background: var(--bar-solid); box-shadow: inset 0 0 0 .75px var(--bar-edge); }
+.minibar .optimize { position: absolute; left: 1.5px; top: 50%; width: 29px; height: 29px; transform: translateY(-50%);
+  background: var(--bar-solid); color: var(--bar-accent); box-shadow: inset 0 0 0 .75px var(--bar-edge); }
+.minibar .optimize .ring { width: 29px; height: 29px; }
+.minibar .optimize:hover { background: #222842; }
+html[data-glass] .minibar .tube, html[data-glass] .minibar .optimize {
+  background: linear-gradient(var(--bar-tint), var(--bar-tint)), var(--backdrop) left top / var(--bar-w) 32px no-repeat;
+}
+html[data-glass] .minibar .tube { background-position: -25px center, -25px center; }
+html[data-glass] .minibar .optimize { background-position: -1.5px center, -1.5px center; }
+html:not([data-glass]) .minibar .tube { left: 24px; right: 0; height: 24px; border-radius: 12px; }
+html:not([data-glass]) .minibar .optimize { left: 0; width: 32px; height: 32px; }
+html:not([data-glass]) .minibar .optimize .ring { width: 32px; height: 32px; }
+.minibar .stat { display: inline-flex; align-items: center; gap: 2px; width: 66px; flex: none; font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold); letter-spacing: -.1px; }
+.minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; }
+.minibar .dot { width: 6px; height: 6px; margin-right: 2px; }
+.minibar .icon.down { color: #6cb4ff; } .minibar .icon.up { color: #c99bff; } .minibar .icon.ping { color: #5fd68a; }
+.minibar .optimize.issues { color: #ffb340; } .minibar .optimize.good { color: #5fd68a; }
+.minibar .optimize.busy .ring .track { stroke: rgba(255, 255, 255, .14); }
 .arrow { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; flex: none; border: 0; border-radius: 50%;
   background: var(--accent); color: var(--accent-text); cursor: default; }
 .arrow:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
 .arrow .icon { width: 13px; height: 13px; stroke-width: 2.2; }
 .bar .arrow { width: 24px; height: 24px; }
-.tube .arrow { width: 18px; height: 18px; }
-.tube .arrow .icon { width: 11px; height: 11px; }
-/* Optimize: a 32 px ring around one icon. idle: bolt; busy: the ring fills with the check's progress
-   and a magnifier drifts in a small circle; fix: solid accent disc with the count; issues: warn ring
-   with the count; good: a green tick. Flat colours, no glow (macOS native). */
+.tube .arrow { width: 17px; height: 17px; margin-left: auto; background: #2f7bf6; }
+.tube .arrow:hover { background: #4a8ef8; }
+.tube .arrow .icon { width: 10px; height: 10px; }
+/* Optimize: a ring around one icon. idle: bolt; busy: the ring fills with the check's progress and
+   a magnifier drifts in a small loop; fix: the count, a heavier ring; issues: amber ring with the
+   count; good: a green tick. Flat colours, no glow (macOS native). */
 .optimize { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: none;
   border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: default; }
 .optimize:hover { background: var(--accent-soft); }
@@ -73,9 +85,7 @@ html[data-glass] .minibar .tube { background-position: -26px center, -26px cente
 .optimize.busy .ring .track { stroke: var(--surface-pressed); }
 .optimize.busy .ring .fill { display: inline; }
 .optimize.busy .glyph { animation: seek 1.6s ease-in-out infinite; }
-.optimize.fix { background: var(--accent); color: var(--accent-text); }
-.optimize.fix:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
-.optimize.fix .ring .track { stroke: var(--accent); }
+.optimize.fix .ring .track { stroke-width: 3; }
 .optimize.issues { color: var(--warn); }
 .optimize.good { color: var(--ok); }
 /* The magnifier looks around: a small loop, not a spin. */

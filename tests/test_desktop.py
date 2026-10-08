@@ -258,7 +258,10 @@ class MiniWindowTests(unittest.TestCase):
     def test_glass_leaves_the_window_out_of_captures_only_while_on(self):
         calls, scripts = [], []
         self.shell.mini.evaluate_js = scripts.append
-        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: calls.append((hwnd, on)) or True),                 mock.patch.object(desktop, "set_form_opacity", lambda form, value: True):
+        exclude = lambda hwnd, on: calls.append((hwnd, on)) or True
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77), \
+                mock.patch.object(desktop, "exclude_from_capture", exclude), \
+                mock.patch.object(desktop, "set_form_opacity", lambda form, value: True):
             self.shell.set_mini_transparency("glass")
             self.shell.set_mini_transparency("off")
         self.assertEqual(calls, [(77, True), (77, False)])
@@ -268,7 +271,8 @@ class MiniWindowTests(unittest.TestCase):
         scripts = []
         self.shell.mini.evaluate_js = scripts.append
         self.shell.mini_state["open"] = True
-        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False):
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77), \
+                mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False):
             self.shell.apply_glass()
         self.assertFalse(self.shell.glass_on())           # the capture would show the window itself
         self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
@@ -286,15 +290,20 @@ class MiniWindowTests(unittest.TestCase):
         from PIL import Image
         scripts = []
         self.shell.mini.evaluate_js = scripts.append
-        picture = Image.new("RGB", (340, 36), (200, 120, 40))
-        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, 340, 36)),                 mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+        picture = Image.new("RGB", desktop.BAR_SIZE, (200, 120, 40))
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77), \
+                mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, *desktop.BAR_SIZE)), \
+                mock.patch.object(desktop, "grab_screen", lambda *box: picture):
             self.assertTrue(self.shell.update_backdrop())
             self.assertFalse(self.shell.update_backdrop())      # nothing changed behind it: not sent again
         self.assertEqual(len(scripts), 1)
-        self.assertRegex(scripts[0], r"^window\.steadyMini && window\.steadyMini\.setBackdrop\('data:image/jpeg;base64,[A-Za-z0-9+/=]+'\)$")
-        jpeg = desktop.frosted(picture)
-        self.assertEqual(jpeg[:2], bytes([0xFF, 0xD8]))          # a JPEG
-        self.assertEqual(Image.open(__import__("io").BytesIO(jpeg)).size, (340 // desktop.GLASS_SCALE, 36 // desktop.GLASS_SCALE))
+        url = r"'data:image/jpeg;base64,[A-Za-z0-9+/=]+'"
+        # on the bar: the blurred picture, and the sharp one for the sliver around its smooth edges
+        self.assertRegex(scripts[0], rf"^window\.steadyMini && window\.steadyMini\.setBackdrop\({url}, {url}\)$")
+        frost = desktop.frosted(picture)
+        self.assertEqual(frost[:2], bytes([0xFF, 0xD8]))          # a JPEG
+        self.assertEqual(Image.open(io.BytesIO(frost)).size,
+                         (desktop.BAR_SIZE[0] // desktop.GLASS_SCALE, desktop.BAR_SIZE[1] // desktop.GLASS_SCALE))
 
     def test_bar_grows_away_from_the_screen_edge_it_is_near(self):
         screens = [Screen(0, 0, 1920, 1080)]
@@ -310,7 +319,7 @@ class MiniWindowTests(unittest.TestCase):
         # a bar in the upper half opens downward; collapsing brings it back up, not to the table's bottom
         top = desktop.anchor_of(1500, 400, bar, screens)
         tx, ty = desktop.resized_position(1500, 400, bar, full, screens, top)
-        self.assertEqual((tx, ty), (1500, 400))
+        self.assertEqual((tx, ty), (1500 + bar[0] - full[0], 400))      # wider: grows to the left (right half)
         self.assertEqual(desktop.resized_position(tx, ty, full, bar, screens, top), (1500, 400))
         # never off screen
         self.assertEqual(desktop.resized_position(0, 1050, bar, full, screens)[1], 1080 - full[1])

@@ -216,10 +216,10 @@ SELFTEST_SIZE = (600, 760)
 # --- the floating monitor ----------------------------------------------------------------------
 
 MINI_SIZE = (340, 500)          # expanded: the full table
-BAR_SIZE = (340, 32)            # collapsed: one line, as wide as the table
+BAR_SIZE = (290, 32)            # collapsed: one line, as long as its numbers need
 # The bar is shaped like a thermometer: a round bulb (Optimize) and a lower tube (the numbers).
-BULB = 32                       # diameter, the bar's full height
-TUBE = (26, 22)                 # where the tube starts (under the bulb's edge) and its height
+BULB = 32                       # diameter of the cut, the bar's full height (web/mini.css draws 1.5 px inside)
+TUBE = (24, 24)                 # where the tube's cut starts (under the bulb's edge) and its height
 SIZES = {"full": MINI_SIZE, "bar": BAR_SIZE}
 MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear of the taskbar)
 MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
@@ -389,6 +389,12 @@ def grab_screen(left: int, top: int, right: int, bottom: int) -> Any:
         gdi32.DeleteObject(bitmap)
         gdi32.DeleteDC(memory)
         user32.ReleaseDC(None, screen)
+
+
+def jpeg(image: Any, quality: int = 85) -> bytes:
+    out = io.BytesIO()
+    image.save(out, "JPEG", quality=quality)
+    return out.getvalue()
 
 
 def frosted(image: Any) -> bytes:
@@ -679,12 +685,15 @@ class Desktop:
         if image is None:
             return False
         picture = frosted(image)
-        digest = hashlib.sha1(picture).hexdigest()
+        # The bar's smooth edges sit inside its cut; the sliver between shows this, unblurred.
+        sharp = jpeg(image) if self.mini_state["mode"] == "bar" else b""
+        digest = hashlib.sha1(picture + sharp).hexdigest()
         if digest == self._glass_digest:
             return False
         self._glass_digest = digest
-        url = "data:image/jpeg;base64," + base64.b64encode(picture).decode("ascii")
-        self._run_js(f"window.steadyMini && window.steadyMini.setBackdrop('{url}')")
+        as_url = lambda data: "'data:image/jpeg;base64," + base64.b64encode(data).decode("ascii") + "'"
+        self._run_js(f"window.steadyMini && window.steadyMini.setBackdrop({as_url(picture)}, "
+                     f"{as_url(sharp) if sharp else 'null'})")
         return True
 
     def _glass_loop(self) -> None:

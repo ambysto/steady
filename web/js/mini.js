@@ -411,14 +411,20 @@ async function start() {
   setActive(true);
 }
 
-/** Glass (ADR-0021): a blurred picture of what is behind the window, or null to drop it. */
-function setBackdrop(url) {
+const JPEG_URL = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/;
+
+/** Glass (ADR-0021): a blurred picture of what is behind the window, or null to drop it; on the
+ *  bar also the same area unblurred, for the sliver around its smooth edges. */
+function setBackdrop(url, sharp = null) {
   const root = document.documentElement;
-  if (url && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(url)) {
+  if (url && JPEG_URL.test(url)) {
     root.style.setProperty("--backdrop", `url("${url}")`);
+    root.style.setProperty("--bar-w", `${window.innerWidth}px`);
+    if (sharp && JPEG_URL.test(sharp)) root.style.setProperty("--behind", `url("${sharp}")`);
+    else root.style.removeProperty("--behind");
     root.dataset.glass = "";
   } else {
-    root.style.removeProperty("--backdrop");
+    for (const name of ["--backdrop", "--behind", "--bar-w"]) root.style.removeProperty(name);
     delete root.dataset.glass;
   }
 }
