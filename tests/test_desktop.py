@@ -184,13 +184,38 @@ class MiniWindowTests(unittest.TestCase):
     def saved(self):
         return json.loads(Path(self.tmp.name, "mini.json").read_text(encoding="utf-8"))
 
+    DEFAULTS = {"open": False, "x": None, "y": None, "transparency": "low", "seen_version": None}
+
     def test_state_defaults_and_bad_files(self):
-        self.assertEqual(desktop.load_mini_state(), {"open": False, "x": None, "y": None})
-        for text in ("not json", "[1]", '{"open": "yes", "x": true, "y": 1.5}'):
+        self.assertEqual(desktop.load_mini_state(), self.DEFAULTS)
+        for text in ("not json", "[1]", '{"open": "yes", "x": true, "y": 1.5, "transparency": "glass", "seen_version": 7}'):
             Path(self.tmp.name, "mini.json").write_text(text, encoding="utf-8")
-            self.assertEqual(desktop.load_mini_state(), {"open": False, "x": None, "y": None}, text)
-        desktop.save_mini_state({"open": True, "x": -300, "y": 40})
-        self.assertEqual(desktop.load_mini_state(), {"open": True, "x": -300, "y": 40})
+            self.assertEqual(desktop.load_mini_state(), self.DEFAULTS, text)
+        saved = {"open": True, "x": -300, "y": 40, "transparency": "high", "seen_version": "0.8.0"}
+        desktop.save_mini_state(saved)
+        self.assertEqual(desktop.load_mini_state(), saved)
+
+    def test_a_new_version_opens_it_once(self):
+        state = desktop.load_mini_state()                  # first install: no mini.json yet
+        self.assertTrue(desktop.open_for_new_version(state, "0.8.0"))
+        self.assertEqual((state["open"], state["seen_version"]), (True, "0.8.0"))
+        state["open"] = False                              # the user closed it
+        self.assertFalse(desktop.open_for_new_version(state, "0.8.0"))
+        self.assertFalse(state["open"])
+        self.assertTrue(desktop.open_for_new_version(state, "0.8.1"))    # upgrade
+        self.assertTrue(state["open"])
+
+    def test_transparency_levels(self):
+        applied = []
+        self.shell.mini.native = "form"
+        with mock.patch.object(desktop, "set_form_opacity", lambda form, value: applied.append(value) or True):
+            self.assertEqual(self.shell.set_mini_transparency("high"), "high")
+            self.assertEqual(self.shell.set_mini_transparency("glass"), "high")      # unknown level: ignored
+            self.shell.mini_hover(False)
+            self.shell.mini_hover(True)
+        self.assertEqual(applied, [1.0, desktop.TRANSPARENCY["high"], 1.0])          # solid under the pointer
+        self.assertEqual(self.saved()["transparency"], "high")
+        self.assertEqual(desktop.TRANSPARENCY["off"], 1.0)
 
     def test_opens_bottom_right_or_where_it_was_left(self):
         screens = [Screen(0, 0, 1920, 1080), Screen(-1280, 0, 1280, 1024)]
@@ -209,7 +234,7 @@ class MiniWindowTests(unittest.TestCase):
         self.shell._on_mini_moved(12, 34)
         self.shell.toggle_mini()
         self.assertIn("hide", self.shell.mini.calls)
-        self.assertEqual(self.saved(), {"open": False, "x": 12, "y": 34})
+        self.assertEqual({k: self.saved()[k] for k in ("open", "x", "y")}, {"open": False, "x": 12, "y": 34})
 
     def test_hiding_pauses_the_page(self):
         scripts = []
@@ -229,12 +254,18 @@ class MiniWindowTests(unittest.TestCase):
         self.assertTrue(self.saved()["open"])           # quitting keeps it open for the next start
         self.assertIn("destroy", self.shell.mini.calls)
 
-    def test_the_page_can_only_hide_the_window(self):
-        hidden = []
-        bridge = desktop.MiniBridge(lambda: hidden.append(1))
-        self.assertEqual([n for n in dir(bridge) if not n.startswith("_")], ["hide_mini"])
+    def test_what_the_pages_may_call(self):
+        bridge = desktop.MiniBridge(self.shell)
+        self.assertEqual([n for n in dir(bridge) if not n.startswith("_")],
+                         ["get_transparency", "hide_mini", "hover", "set_transparency"])
+        self.assertEqual(bridge.get_transparency(), "low")
         bridge.hide_mini()
-        self.assertEqual(hidden, [1])
+        self.assertIn("hide", self.shell.mini.calls)
+        main = desktop.MainBridge(self.shell)
+        self.assertEqual([n for n in dir(main) if not n.startswith("_")], ["open_mini"])
+        main.open_mini()
+        self.assertIn("show", self.shell.mini.calls)
+        self.assertTrue(self.saved()["open"])
 
     def test_mini_page_follows_the_monitor(self):
         self.assertIsNone(self.shell.mini_url())

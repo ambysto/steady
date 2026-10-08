@@ -9,7 +9,8 @@ viewer. Closing the window hides it to the tray; "Quit" ends this process, never
 
 The tray menu also toggles the floating monitor (web/mini.html): a small frameless window that
 stays on top with download/upload/ping on a sweep chart, the apps holding connections and the
-connection's basic facts. Whether it is open and where it sits is remembered in mini.json.
+connection's basic facts. Whether it is open, where it sits and how see-through it is are
+remembered in mini.json; a new version opens it once, so an install or upgrade shows it.
 
 Needs `pip install -r requirements.txt` (pywebview, pystray, Pillow). Nothing else in app/
 imports this module, so the monitor stays standard-library only (ADR-0001).
@@ -29,7 +30,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-from . import config
+from . import __version__, config
 
 log = logging.getLogger("stableinternet.desktop")
 
@@ -216,15 +217,23 @@ MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear
 MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
 DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND = 33, 2
 BACKGROUNDS = {"light": "#F5F5F7", "dark": "#1E1E1F"}     # --window of tokens.css
+# Window opacity per "transparency" level. A real frosted backdrop (acrylic) is not possible here:
+# WebView2 draws on its own child window, which DWM backdrops and colour keys do not reach.
+TRANSPARENCY = {"off": 1.0, "low": 0.9, "high": 0.78}
+DEFAULT_TRANSPARENCY = "low"
 
 
 def mini_file() -> Path:
     return config.user_dir() / "mini.json"
 
 
+MINI_KEYS = ("open", "x", "y", "transparency", "seen_version")
+
+
 def load_mini_state() -> dict[str, Any]:
-    """{"open": bool, "x": int | None, "y": int | None}; defaults when the file is missing or bad."""
-    state: dict[str, Any] = {"open": False, "x": None, "y": None}
+    """{"open", "x", "y", "transparency", "seen_version"}; defaults when the file is missing or bad."""
+    state: dict[str, Any] = {"open": False, "x": None, "y": None, "transparency": DEFAULT_TRANSPARENCY,
+                             "seen_version": None}
     try:
         saved = json.loads(mini_file().read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -234,12 +243,24 @@ def load_mini_state() -> dict[str, Any]:
         for key in ("x", "y"):
             if isinstance(saved.get(key), int) and not isinstance(saved.get(key), bool):
                 state[key] = saved[key]
+        if saved.get("transparency") in TRANSPARENCY:
+            state["transparency"] = saved["transparency"]
+        if isinstance(saved.get("seen_version"), str):
+            state["seen_version"] = saved["seen_version"]
     return state
+
+
+def open_for_new_version(state: dict[str, Any], version: str = __version__) -> bool:
+    """The first start of a version (an install or an upgrade) opens the floating window once."""
+    if state.get("seen_version") == version:
+        return False
+    state.update(seen_version=version, open=True)
+    return True
 
 
 def save_mini_state(state: dict[str, Any]) -> None:
     try:
-        mini_file().write_text(json.dumps({k: state.get(k) for k in ("open", "x", "y")}), encoding="utf-8")
+        mini_file().write_text(json.dumps({k: state.get(k) for k in MINI_KEYS}), encoding="utf-8")
     except OSError as exc:
         log.warning("could not save the floating window state: %r", exc)
 
@@ -266,15 +287,45 @@ def round_corners(hwnd: int) -> bool:
                                                       ctypes.byref(pref), ctypes.sizeof(pref)) == 0
 
 
-class MiniBridge:
-    """What mini.html may call through window.pywebview.api: hiding itself, nothing else.
-    pywebview exposes every public attribute, so the callback stays private."""
+def set_form_opacity(form: Any, value: float) -> bool:
+    """Form.Opacity on the window's own UI thread (WinForms refuses it from another thread)."""
+    try:
+        from System import Action      # pythonnet, loaded by pywebview
+        form.Invoke(Action(lambda: setattr(form, "Opacity", float(value))))
+        return True
+    except Exception as exc:
+        log.debug("could not set the floating window's opacity: %r", exc)
+        return False
 
-    def __init__(self, hide: Callable[[], None]) -> None:
-        self._hide = hide
+
+class MiniBridge:
+    """What mini.html may call through window.pywebview.api: hide itself, its own transparency,
+    nothing else. pywebview exposes every public attribute, so the shell stays private."""
+
+    def __init__(self, shell: "Desktop") -> None:
+        self._shell = shell
 
     def hide_mini(self) -> None:
-        self._hide()
+        self._shell.hide_mini()
+
+    def get_transparency(self) -> str:
+        return self._shell.mini_state["transparency"]
+
+    def set_transparency(self, level: str) -> str:
+        return self._shell.set_mini_transparency(level)
+
+    def hover(self, inside: bool) -> None:
+        self._shell.mini_hover(bool(inside))
+
+
+class MainBridge:
+    """What the main window's page may call: open the floating monitor."""
+
+    def __init__(self, shell: "Desktop") -> None:
+        self._shell = shell
+
+    def open_mini(self) -> None:
+        self._shell.show_mini()
 
 
 class Desktop:
@@ -359,6 +410,7 @@ class Desktop:
             return
         self.mini.show()
         self._round_mini()
+        self.apply_mini_opacity()
         self._mini_active(True)
         self.mini_state["open"] = True
         save_mini_state(self.mini_state)
@@ -376,6 +428,26 @@ class Desktop:
             self.hide_mini()
         else:
             self.show_mini()
+
+    def apply_mini_opacity(self, hovered: bool = False) -> None:
+        """See-through at the chosen level; solid while the pointer is on it, to read it easily."""
+        if self.mini is None:
+            return
+        value = 1.0 if hovered else TRANSPARENCY[self.mini_state["transparency"]]
+        try:
+            set_form_opacity(self.mini.native, value)
+        except AttributeError:
+            pass                # not created yet
+
+    def set_mini_transparency(self, level: str) -> str:
+        if level in TRANSPARENCY:
+            self.mini_state["transparency"] = level
+            save_mini_state(self.mini_state)
+            self.apply_mini_opacity(hovered=True)      # the pointer is on the window while choosing
+        return self.mini_state["transparency"]
+
+    def mini_hover(self, inside: bool) -> None:
+        self.apply_mini_opacity(hovered=inside)
 
     def _round_mini(self) -> None:
         try:
@@ -454,12 +526,15 @@ class Desktop:
         html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline"))
         self.window = webview.create_window(self.text("app.name") if self.messages else "Ambysto Steady",
                                             url=url, html=html, width=1100, height=740, min_size=MIN_SIZE,
-                                            hidden=self.minimized and not selftest, background_color="#F5F5F7")
+                                            hidden=self.minimized and not selftest, background_color="#F5F5F7",
+                                            js_api=MainBridge(self))
         self.window.events.closing += self._on_closing
         self.window.events.shown += self.paint_title_bar
         result: dict[str, Any] = {}
         if selftest:
             return self._run_selftest(webview, result, screenshot)
+        if open_for_new_version(self.mini_state):
+            save_mini_state(self.mini_state)
         self.create_mini(webview)
         self.build_tray().run_detached()
         threading.Thread(target=self._poll, name="desktop-poll", daemon=True).start()
@@ -478,10 +553,11 @@ class Desktop:
             self.text("ui.tray.mini") if self.messages else "Ambysto Steady", url=url, html=html,
             width=MINI_SIZE[0], height=MINI_SIZE[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
             on_top=True, hidden=not self.mini_state["open"], background_color=BACKGROUNDS[theme],
-            js_api=MiniBridge(self.hide_mini))
+            js_api=MiniBridge(self))
         self.mini.events.closing += self._on_mini_closing
         self.mini.events.moved += self._on_mini_moved
         self.mini.events.shown += self._round_mini
+        self.mini.events.shown += self.apply_mini_opacity
         self.mini.events.loaded += self._on_mini_loaded
 
     def _run_selftest(self, webview: Any, result: dict, screenshot: str | None) -> int:

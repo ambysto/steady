@@ -2,7 +2,7 @@
 // Changes go through POST /api/settings, which validates every key (app/server.py).
 
 import { get, post } from "../api.js";
-import { $, el, fill, icon, switchEl, toast } from "../dom.js";
+import { $, desktopOnly, el, fill, icon, switchEl, toast } from "../dom.js";
 import { duration, language, t } from "../i18n.js";
 import { failoverKey, failoverRows } from "../widgets.js";
 
@@ -60,6 +60,23 @@ function themeControl(ctx) {
       t(`ui.settings.theme.${value}`))));
 }
 
+function miniTheme() {
+  try { return localStorage.getItem("mini-theme") || "system"; } catch { return "system"; }
+}
+
+// The floating monitor keeps its own light / dark / system choice (web/js/mini.js reads it).
+function miniControls(ctx) {
+  const theme = miniTheme();
+  const choose = value => {
+    try { localStorage.setItem("mini-theme", value); } catch { /* storage blocked */ }
+    draw(ctx);
+  };
+  return el("div", { class: "row-controls" },
+    el("div", { class: "segmented" }, ["system", "light", "dark"].map(value =>
+      el("button", { "aria-pressed": String(value === theme), onclick: () => choose(value) }, t(`ui.settings.theme.${value}`)))),
+    el("button", { class: "button", onclick: () => ctx.openMini() }, t("ui.settings.mini_open")));
+}
+
 function draw(ctx) {
   const wd = ctx.state?.settings?.watchdog || {};
   const startup = autostart === null ? el("span", { class: "pill" }, "…")
@@ -70,6 +87,7 @@ function draw(ctx) {
     el("div", { class: "group" },
       row("accent", "globe", t("ui.language.label"), t("ui.language.hint"), languageSelect(ctx)),
       row("", "sun", t("ui.settings.appearance"), null, themeControl(ctx)),
+      desktopOnly(row("accent", "pulse", t("ui.tray.mini"), t("ui.settings.mini_hint"), miniControls(ctx))),
       row("", "power", t("ui.settings.startup"), t("ui.settings.startup_hint"), startup)),
     el("div", { class: "section-title" }, t("ui.settings.notifications")),
     el("div", { class: "group" },

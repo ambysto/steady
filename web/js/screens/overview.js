@@ -3,7 +3,7 @@
 
 import { get, runJob } from "../api.js";
 import { latencyChart } from "../chart.js";
-import { $, el, fill, icon, svgEl, toast } from "../dom.js";
+import { $, desktopOnly, el, fill, icon, svgEl, toast } from "../dom.js";
 import { duration, number, t, timeOf } from "../i18n.js";
 import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
 import { failoverKey, failoverRows, suggestionAction } from "../widgets.js";
@@ -655,7 +655,9 @@ function draw(ctx) {
   slots.check.className = "check-slot";
   slots.stats.style.marginTop = "var(--space-3)";
   fill(root(), 
-    el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview"))),
+    el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview")),
+      el("div", { class: "actions" },
+        desktopOnly(el("button", { class: "button", onclick: () => ctx.openMini() }, icon("pulse"), t("ui.tray.mini"))))),
     slots.hero,
     slots.check, slots.value,
     el("div", { class: "section-title" }, t("ui.overview.latency")), slots.chart, slots.stats,

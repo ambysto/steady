@@ -1,6 +1,8 @@
 // The floating monitor: three metrics (download, upload, ping) on a sweep chart, the apps that
 // hold connections, and the connection's basic facts. Read-only; nothing here changes the machine.
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
+// Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
+// shell how see-through the window is (window.pywebview.api, kept in mini.json).
 
 import { get, onReachability } from "./api.js";
 import { $, el, fill } from "./dom.js";
@@ -19,11 +21,30 @@ const data = { traffic: null, live: null, state: null, offset: 0, reachable: tru
 let pollTimer = null;
 let frame = null;
 
-function applyTheme() {
+const THEMES = ["system", "light", "dark"];
+
+function currentTheme() {
   let theme = "system";
-  try { theme = localStorage.getItem("theme") || "system"; } catch { /* storage blocked: follow the system */ }
+  try { theme = localStorage.getItem("mini-theme") || "system"; } catch { /* storage blocked: follow the system */ }
+  return THEMES.includes(theme) ? theme : "system";
+}
+
+function applyTheme() {
+  const theme = currentTheme();
   if (theme === "system") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", theme);
+  document.querySelectorAll("#theme-choice button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.themeValue === theme)));
+}
+
+function setTheme(theme) {
+  try { localStorage.setItem("mini-theme", theme); } catch { /* applies until the window reloads */ }
+  applyTheme();
+}
+
+function markTransparency(level) {
+  document.querySelectorAll("#transparency-choice button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.level === level)));
 }
 
 // --- numbers -----------------------------------------------------------------------------------
@@ -84,9 +105,10 @@ function latest(points) {
 function renderTiles() {
   $("#value-down").textContent = data.traffic?.interface ? rateText(latest(series("down"))) : "—";
   $("#value-up").textContent = data.traffic?.interface ? rateText(latest(series("up"))) : "—";
+  // One lost ping is common (ISPs rate-limit ICMP): "Lost" only after two in a row.
   const ping = series("ping");
-  const last = ping[ping.length - 1];
-  $("#value-ping").textContent = last && last[1] === null ? t("ui.mini.lost") : msText(latest(ping));
+  const lostInARow = ping.length >= 2 && ping.slice(-2).every(p => p[1] === null);
+  $("#value-ping").textContent = lostInARow ? t("ui.mini.lost") : msText(latest(ping));
 }
 
 function renderHeader() {
@@ -228,7 +250,7 @@ function select(metric) {
 
 function showTab(tab) {
   view.tab = tab;
-  document.querySelectorAll(".segmented button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
+  document.querySelectorAll(".switcher button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
   $("#panel-apps").hidden = tab !== "apps";
   $("#panel-network").hidden = tab !== "network";
   render();
@@ -241,17 +263,33 @@ async function start() {
   translateStatic();
   document.title = t("app.name");
   $("#close").title = t("ui.mini.close");
+  $("#appearance").title = t("ui.mini.appearance");
+  $("#appearance").addEventListener("click", () => {
+    const open = $("#options").hidden;
+    $("#options").hidden = !open;
+    $("#appearance").setAttribute("aria-expanded", String(open));
+  });
+  document.querySelectorAll("#theme-choice button").forEach(b => b.addEventListener("click", () => setTheme(b.dataset.themeValue)));
+  applyTheme();
   document.querySelectorAll(".tile").forEach(b => b.addEventListener("click", () => select(b.dataset.metric)));
-  document.querySelectorAll(".segmented button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  document.querySelectorAll(".switcher button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
   // The close button exists only inside the desktop shell, which hides the window (the tray brings it back).
-  const bridge = () => {
-    if (!window.pywebview?.api?.hide_mini) return;
+  const bridge = async () => {
+    const api = window.pywebview?.api;
+    if (!api?.hide_mini) return;
     $("#close").hidden = false;
-    $("#close").addEventListener("click", () => window.pywebview.api.hide_mini());
+    $("#close").addEventListener("click", () => api.hide_mini());
+    // Solid while the pointer is on the window, see-through otherwise.
+    document.documentElement.addEventListener("mouseenter", () => api.hover(true));
+    document.documentElement.addEventListener("mouseleave", () => api.hover(false));
+    $("#transparency-row").hidden = false;
+    markTransparency(await api.get_transparency());
+    document.querySelectorAll("#transparency-choice button").forEach(b => b.addEventListener("click", async () =>
+      markTransparency(await api.set_transparency(b.dataset.level))));
   };
   if (window.pywebview?.api) bridge();
   else window.addEventListener("pywebviewready", bridge, { once: true });
-  window.addEventListener("storage", e => { if (e.key === "theme") applyTheme(); });
+  window.addEventListener("storage", e => { if (e.key === "mini-theme") applyTheme(); });   // set from Settings
   select(view.metric);
   render();
   setActive(true);

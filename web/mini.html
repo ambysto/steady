@@ -17,8 +17,28 @@
     <span class="dot info" id="state-dot"></span>
     <span class="name pywebview-drag-region" data-t="app.name">Ambysto Steady</span>
     <span class="state pywebview-drag-region" id="state-text"></span>
-    <button class="close" id="close" hidden data-t-title="ui.mini.close"><svg class="icon"><use href="#i-x"/></svg></button>
+    <button class="close" id="appearance" aria-expanded="false" aria-controls="options"><svg class="icon"><use href="#i-sun"/></svg></button>
+    <button class="close" id="close" hidden><svg class="icon"><use href="#i-x"/></svg></button>
   </header>
+
+  <div class="options" id="options" hidden>
+    <div class="option">
+      <span class="label" data-t="ui.mini.appearance">Appearance</span>
+      <div class="segmented" id="theme-choice">
+        <button data-theme-value="system" data-t="ui.mini.theme.system">Auto</button>
+        <button data-theme-value="light" data-t="ui.settings.theme.light">Light</button>
+        <button data-theme-value="dark" data-t="ui.settings.theme.dark">Dark</button>
+      </div>
+    </div>
+    <div class="option" id="transparency-row" hidden>
+      <span class="label" data-t="ui.mini.transparency">Transparency</span>
+      <div class="segmented" id="transparency-choice">
+        <button data-level="off" data-t="ui.mini.transparency.off">Off</button>
+        <button data-level="low" data-t="ui.mini.transparency.low">Low</button>
+        <button data-level="high" data-t="ui.mini.transparency.high">High</button>
+      </div>
+    </div>
+  </div>
 
   <div class="tiles" role="tablist">
     <button class="tile" role="tab" data-metric="down" aria-selected="true">
@@ -59,6 +79,7 @@
 <!-- Icons: simple strokes in the style of Lucide (MIT) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v15M6 13l6 6 6-6"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V5M6 11l6-6 6 6"/></symbol>
   <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h5l2-5 4 10 2-5h7"/></symbol>
