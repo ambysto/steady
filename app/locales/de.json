@@ -690,6 +690,9 @@
 
   "ui.diag.never": "Es wurde noch keine Diagnose ausgeführt",
   "ui.diag.bufferbloat_confirm": "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB.",
+  "ui.diag.bufferbloat_run_metered": "Messen (ca. 30 s, bis zu 500 MB mobile Daten)",
+  "ui.diag.bufferbloat_confirm_metered": "Du nutzt mobile Daten oder einen persönlichen Hotspot. Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen; es werden höchstens 500 MB deines Datenvolumens verbraucht. Eine Leitung schneller als 200 Mbps wird als unvollständig gemessen angezeigt.",
+  "ui.diag.bufferbloat_constrained": "Im Modus „Wenig Daten“ nicht verfügbar: Die Messung verbraucht Hunderte MB. Schalte „Wenig Daten“ aus, um sie auszuführen.",
   "ui.diag.measure": "Messen",
 
   "ui.common.on": "Ein",

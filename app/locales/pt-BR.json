@@ -690,6 +690,9 @@
 
   "ui.diag.never": "Nenhum diagnóstico foi executado ainda",
   "ui.diag.bufferbloat_confirm": "Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos: cerca de 250 MB a cada 100 Mbps de velocidade da linha, no máximo 2 GB.",
+  "ui.diag.bufferbloat_run_metered": "Medir (cerca de 30 s, até 500 MB de dados móveis)",
+  "ui.diag.bufferbloat_confirm_metered": "Você está usando dados móveis ou um acesso pessoal. Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos e usa no máximo 500 MB do seu plano de dados. Uma linha mais rápida que 200 Mbps aparece como medição incompleta.",
+  "ui.diag.bufferbloat_constrained": "Indisponível no Modo Pouco Dados: a medição usa centenas de MB. Desative o Modo Pouco Dados para executá-la.",
   "ui.diag.measure": "Medir",
 
   "ui.common.on": "Ativado",
