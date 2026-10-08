@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-08
+
+A floating monitor stays on top of other windows: download, upload and ping on a heart-monitor style chart, the apps holding connections, and the basics of the connection. The Apple app's check button says "Scan", and its bufferbloat check measures faster lines and uses less data on mobile data.
+
 ### Added
 - **Floating monitor** (SIC-117). "Floating monitor" in the tray menu opens a small frameless window that stays on top of other windows, can be dragged anywhere and reopens where it was left. Three tiles (download, upload, ping) pick what the chart shows; the chart is drawn like a heart monitor: the trace sweeps left to right once a minute, overwrites itself behind a short gap and fades as it ages, and a lost ping is marked in red. The Apps tab lists the apps with open connections to other machines, busiest first, with a browser's many processes as one row; it counts connections, not speed, and says so, because Windows gives speed per app only to administrators. The Network tab shows the basics of the connection: status, kind, adapter, Wi‑Fi network, signal, band and channel, link rate, local IP, router with its ping, DNS servers, Internet ping, packet loss and jitter. No public IP lookup and no links to other products. Everything is read-only and needs no Administrator approval. New `GET /api/traffic` (`app/traffic.py`): the interface counters are read once a second only while the window asks, and the reading stops 30 s after it closes. 34 new keys in all 7 catalogs.
 
