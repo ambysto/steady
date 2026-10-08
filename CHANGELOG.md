@@ -7,7 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
-- **Apple app: the big check button shows a magnifier and "Scan".** iPhone and iPad have no hover, so it only ever showed "Check my connection". The Apple wording `apple.ui.check.start` is new in all 7 catalogs; Windows keeps its text and "Check again" is unchanged.
+- **Apple app: the big check button shows a magnifier and "Scan".** iPhone and iPad have no hover, so it only ever showed "Check my connection". The Apple wording `apple.ui.check.start` is new in all 7 catalogs; Windows keeps its text and "Check again" is unchanged. A touch on the button turns its ring 60° clockwise (a finger has no hover, which turns it on a Mac or with a trackpad).
 
 ## [0.7.1] - 2026-10-07
 

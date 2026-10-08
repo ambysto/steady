@@ -183,8 +183,9 @@ nonisolated private struct Segments: Shape {
 }
 
 /// The big round button. Flat like a macOS control: the system accent, the standard control
-/// shadow, darker on hover and press. On a Mac, with the pointer on it, the ring turns once
-/// every 8 s; with Reduce Motion the ring stays still. With an `icon` the button shows it above
+/// shadow, darker on hover and press. With the pointer on it, the ring turns once every 8 s;
+/// a touch (iPhone, iPad) turns it 60° clockwise and it stops there. With Reduce Motion the
+/// ring stays still. With an `icon` the button shows it above
 /// a short label; without one the label gives way to a magnifier on hover (iPhone and iPad have
 /// no hover, so the label stays).
 private struct BigButton: View {
@@ -236,7 +237,11 @@ private struct BigButton: View {
                 }
             }
         }
-        .buttonStyle(DiscStyle(hovering: hovering))
+        .buttonStyle(DiscStyle(hovering: hovering) { pressed in
+            // A finger has no hover: touching the button nudges the ring instead.
+            guard pressed, turningSince == nil, !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 0.6)) { restAngle += 60 }
+        })
         .frame(width: Dial.size, height: Dial.size)
         .contentShape(Circle())
         .onHover { inside in
@@ -263,6 +268,8 @@ private struct BigButton: View {
 /// The accent disc behind the label: darker on hover (12% black) and press (22%), no bounce.
 private struct DiscStyle: ButtonStyle {
     let hovering: Bool
+    /// Called as a press starts (true) and ends (false).
+    var pressChanged: (Bool) -> Void = { _ in }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -274,6 +281,7 @@ private struct DiscStyle: ButtonStyle {
                     .padding(Dial.discInset)
                     .animation(.easeOut(duration: 0.15), value: hovering)
             }
+            .onChange(of: configuration.isPressed) { _, pressed in pressChanged(pressed) }
     }
 }
 
