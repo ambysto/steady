@@ -24,7 +24,8 @@ from types import SimpleNamespace
 from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlsplit
 
-from . import __version__, config, i18n, winutil
+from . import __version__, config, i18n, report, winutil
+from . import license as licensing
 from .i18n import msg
 
 log = logging.getLogger("stableinternet.server")
@@ -54,6 +55,8 @@ SETTINGS_SCHEMA: dict[str, dict[str, tuple]] = {
                  "verify_s": ((int, float), 10, 3600), "trip_after": (int, 1, 20)},
     "notify": {"enabled": (bool,)},   # re-read every 10 s by the running monitor
     "failover": {"enabled": (bool,), "dry_run": (bool,)},   # ADR-0008; re-read every 10 s
+    "speed": {"enabled": (bool,), "interval_min": (int, 10, 240),   # ADR-0021; re-read every cycle
+              "plan_down_mbps": ((int, float), 0, 100000), "plan_up_mbps": ((int, float), 0, 100000)},
     # (str, allowed-values function): the language must have a catalog, or be "auto".
     "ui": {"language": (str, lambda: [entry["code"] for entry in i18n.available()] + [i18n.AUTO])},
 }
@@ -154,6 +157,7 @@ class Api:
                  route: Callable[[], dict | None] = winutil.default_route_native,
                  measure_tweak: Callable[[str], dict | None] | None = None,
                  network_id: Callable[[], str | None] | None = None,
+                 open_file: Callable[[Path], bool] | None = None,
                  sync_jobs: bool = False) -> None:
         self.monitor, self.storage, self.failover = monitor, storage, failover
         self._load, self._save, self._is_admin, self._clock = load_settings, save_settings, is_admin, clock
@@ -166,6 +170,7 @@ class Api:
         self._run_bufferbloat = run_bufferbloat or self._default_bufferbloat
         self._measure_tweak = measure_tweak or self._default_measure_tweak
         self._network_id = network_id or self._default_network_id
+        self._open_file = open_file or self._default_open_file
         self.jobs = Jobs(clock)
         self._sync = sync_jobs
         self._settings_lock = threading.Lock()
@@ -187,6 +192,8 @@ class Api:
             ("GET", re.compile(r"^/api/impact$"), self.impact),
             ("GET", re.compile(r"^/api/suggestions$"), self.suggestions),
             ("GET", re.compile(r"^/api/value$"), self.value),
+            ("GET", re.compile(r"^/api/slowdowns$"), self.slowdowns),
+            ("POST", re.compile(r"^/api/report$"), self.make_report),
             ("GET", re.compile(r"^/api/failover$"), self.failover_state),
             ("POST", re.compile(r"^/api/failover/prefer/(?P<index>\d{1,6})$"), self.failover_prefer),
             ("POST", re.compile(r"^/api/failover/restore$"), self.failover_restore),
@@ -282,6 +289,15 @@ class Api:
         self._last_bufferbloat = results
         return {"ts": report.ts, "worst": report.worst, "results": results}
 
+    @staticmethod
+    def _default_open_file(path: Path) -> bool:
+        """Opens a file the app just wrote in the program Windows uses for it (the report, in a browser)."""
+        try:
+            os.startfile(str(path))   # type: ignore[attr-defined]
+            return True
+        except (AttributeError, OSError):
+            return False
+
     def _actions_obj(self) -> Any:
         if self._actions is None:
             from .actions import Actions
@@ -317,6 +333,65 @@ class Api:
         lang = self.language(query)   # ?lang= previews another one
         return {"setting": setting, "language": lang, "windows_language": i18n.windows_ui_language(),
                 "available": i18n.available(), "messages": i18n.messages(lang)}
+
+    SLOWDOWN_FREE_DAYS = 30
+    SLOWDOWN_CHART_DAYS = 14
+
+    def slowdowns(self, query: dict, **_: Any) -> dict:
+        """Slowdown history (ADR-0021): the episodes, the ones still going, the latest sample and the samples
+        of the last two weeks for the chart. Everyone sees the last 30 days; the supporter sees all that is kept."""
+        supporter = licensing.is_supporter()
+        most = 730 if supporter else self.SLOWDOWN_FREE_DAYS
+        days = self._int(query, "days", self.SLOWDOWN_FREE_DAYS, 1, 730)
+        shown = min(days, most)
+        now = int(self._clock())
+        rows = self.storage.query_slowdowns(since=now - shown * 86400)
+        samples = self.storage.query_speed_samples(now - min(shown, self.SLOWDOWN_CHART_DAYS) * 86400, now + 1)
+        measured = [r for r in samples if r["skipped"] is None]
+        return {"supporter": supporter, "days": shown, "max_days": most,
+                "settings": {k: self._load().get("speed", {}).get(k) for k in SETTINGS_SCHEMA["speed"]},
+                "active": [r for r in rows if r["end_ts"] is None],
+                "items": sorted(rows, key=lambda r: -r["start_ts"]),
+                "last_sample": (measured or samples or [None])[-1],
+                "samples": [[r["ts"], r["down_mbps"], r["up_mbps"], r["skipped"]] for r in samples]}
+
+    def make_report(self, query: dict, body: Any, **_: Any) -> dict:
+        """Writes the report of a week, month or quarter (HTML to print as PDF, plus CSVs) in the results
+        folder and opens the page. A supporter feature (ADR-0021 point 7)."""
+        from datetime import date, datetime
+        if not licensing.is_supporter():
+            raise ApiError(402, "reports are a supporter feature")
+        body = body if isinstance(body, dict) else {}
+        kind = body.get("kind", "month")
+        if kind not in report.KINDS:
+            raise ApiError(400, f"kind must be one of {list(report.KINDS)}")
+        try:
+            day = date.fromisoformat(body["date"]) if body.get("date") else datetime.fromtimestamp(self._clock()).date()
+        except (ValueError, TypeError):
+            raise ApiError(400, "date must be YYYY-MM-DD") from None
+        texts = {}
+        for key in ("provider", "public_ip"):
+            value = body.get(key, "")
+            if not isinstance(value, str) or len(value) > 120 or any(c in value for c in "<>\r\n"):
+                raise ApiError(400, f"{key} must be short plain text")
+            texts[key] = value.strip()
+        lang = self.language(query)
+        speed = self._load().get("speed", {})
+        start, end, label = report.period_bounds(kind, day)
+        data = report.build(self.storage, start, end, now=self._clock(), kind=kind, label=label,
+                            plan_down=speed.get("plan_down_mbps") or 0, plan_up=speed.get("plan_up_mbps") or 0,
+                            lang=lang, **texts)
+        folder = config.results_dir() / "reports"
+        folder.mkdir(parents=True, exist_ok=True)
+        stem = f"ambysto-steady-report-{label}"
+        files = {"html": folder / f"{stem}.html", "csv": folder / f"{stem}.csv",
+                 "samples_csv": folder / f"{stem}-samples.csv"}
+        files["html"].write_text(report.render_html(data, lang), encoding="utf-8")
+        files["csv"].write_text(report.render_csv(data), encoding="utf-8-sig", newline="")
+        files["samples_csv"].write_text(report.render_samples_csv(data), encoding="utf-8-sig", newline="")
+        opened = bool(body.get("open", True)) and self._open_file(files["html"])
+        return {"label": label, "summary": report.summary(data), "folder": str(folder),
+                "files": {k: str(v) for k, v in files.items()}, "opened": opened}
 
     def live(self, query: dict, **_: Any) -> dict:
         return self.monitor.snapshot(window_s=self._int(query, "window", 300, 1, 900))

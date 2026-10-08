@@ -24,3 +24,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0018](0018-backups-in-hklm.md) | Backups live in HKLM, where only the elevated side can write (amends 0017) | Accepted |
 | [0019](0019-per-machine-install.md) | Install for all users under Program Files; elevated code only runs from there | Accepted |
 | [0020](0020-check-fix-result-flow.md) | One "Check → Fix → Result" flow on the Overview, and a value card from the log | Accepted |
+| [0021](0021-slowdown-history-and-isp-reports.md) | Slowdown history from throughput samples, and weekly/monthly/quarterly ISP reports (Pro) | Accepted |
