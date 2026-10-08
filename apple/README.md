@@ -50,6 +50,8 @@ xcrun devicectl device process launch --device <UDID> --terminate-existing com.a
 
 Every user-visible string comes from `app/locales/*.json`. To add one: add the key to `en.json` and the other 8 catalogs, run `python scripts/locales_to_xcstrings.py`, then render it with `Localizer` (`text("ui.path.connected")`, or a `Message` with parameters). Pass strings to SwiftUI as values (`Text(text(...))`), never as literals, so Xcode does not extract or look up keys on its own.
 
+Views read the shared `Localizer` from the environment (`@Environment(\.localizer) private var text`); `ContentView` builds it from the language chosen in Settings (`AppLanguage`, stored under the `language` key: `auto` or a catalog language) and sets `\.locale` to match. Do not create `Localizer()` in a view, or it ignores that choice. Problem reports render with an English `Localizer` on purpose.
+
 ## Measurements
 
 While the app has a window open, whichever tab is shown, `LiveMonitor` measures with the Windows monitor's defaults (`app/config.py`): ICMP echo every second (900 ms timeout) to the router, `1.1.1.1` and `8.8.8.8`, and a TCP handshake to port 443 of both every 10 seconds (3 s timeout). Samples are grouped per minute exactly like `app/monitor.py` (sent, lost, jitter = mean absolute difference between consecutive replies), and check #5 runs over the completed minutes of the last hour.
@@ -63,8 +65,13 @@ While the app has a window open, whichever tab is shown, `LiveMonitor` measures 
 - When the route changes (connected or not, the preferred interface such as `en0` → `utun5` when a VPN starts, the router), the live numbers start afresh so they do not mix two routes. The history keeps those minutes (they are real measurements), but check #5 leaves out the minute of the change and the next one, as on Windows, when traffic moves from one working route to another (losing the connection and getting the same route back is an outage and still counts: there is no check #4 here); the times are stored as `route_change` rows in the Windows `events` table, so this holds across launches.
 - The iOS Simulator does not report the router address, IPv4/IPv6 or DNS support of the path, so the router row is missing there; Internet pings and TCP probes work.
 
+## Check my connection
+
+The Overview's main button ([ADR-0020](../docs/adr/0020-check-fix-result-flow.md) point 11): `AppModel.runCheck()` goes through `AppModel.checkSteps` one by one and keeps the run in `CheckRun`; `CheckFlow` (SteadyKit) decides what counts (warn and bad only), worst first, and whether the user can fix it. Nothing is changed on the device, so there is no Fix step. `CheckCard` draws it like the Windows card (`web/app.css`, "connection check"): the 180 pt dial, the six-segment ring, the percent ring while checking, and the stale state after `CheckFlow.staleAfter`.
+
 ## History and problem reports
 
+- **Overview > Last 7 days** (`WeekCard`, SIC-108): `WeekSummary` reads the stored minutes of the week: minutes measured, median per-minute latency to the router and the Internet, loss to the Internet pings, and outages (runs of minutes in which every Internet target, pings and TCP probes, lost everything). Below `WeekSummary.enoughMinutes` (60) it shows only how long it measured.
 - **History** draws latency and loss to the router and to the Internet from the stored minutes (`HistorySeries`: per minute over an hour, 10-minute buckets over a day, hours over a week; a gap starts a new line segment).
 - **Settings > Report a problem** ([ADR-0012](../docs/adr/0012-user-sent-problem-reports.md)): `ProblemReport` writes the text the user reads in full and sends themselves; addresses are masked except the public resolvers. `CrashReports` keeps short MetricKit summaries on the device; `RecentLog` reads the app's own log.
 

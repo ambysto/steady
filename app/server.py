@@ -87,13 +87,16 @@ class Jobs:
         self._running_by_key: dict[str, str] = {}
         self._clock = clock
 
-    def submit(self, kind: str, fn: Callable[[], Any], single: str | None = None, sync: bool = False) -> dict:
+    def submit(self, kind: str, fn: Callable[..., Any], single: str | None = None, sync: bool = False,
+               progress: bool = False) -> dict:
+        """With `progress`, `fn` is called with one argument: a callable that replaces the job's
+        "progress" field (a dict), which GET /api/jobs/<id> returns while the job runs."""
         with self._lock:
             if single and single in self._running_by_key:
                 return dict(self._jobs[self._running_by_key[single]])
             job_id = uuid.uuid4().hex
             job = {"id": job_id, "kind": kind, "status": "running", "started": self._clock(), "result": None,
-                   "error": None}
+                   "error": None, "progress": None}
             self._jobs[job_id] = job
             if single:
                 self._running_by_key[single] = job_id
@@ -101,9 +104,13 @@ class Jobs:
                 if self._jobs[old]["status"] != "running":
                     del self._jobs[old]
 
+        def set_progress(value: dict) -> None:
+            with self._lock:
+                job["progress"] = dict(value)
+
         def run() -> None:
             try:
-                result, error, status = fn(), None, "done"
+                result, error, status = (fn(set_progress) if progress else fn()), None, "done"
             except Exception as exc:
                 log.exception("job %s failed", kind)
                 result, error, status = None, f"{type(exc).__name__}: {exc}", "error"
@@ -139,7 +146,7 @@ class Api:
                  tweak_manager: Callable[[], Any] | None = None,
                  elevate: Callable[[str, str], Any] | None = None,
                  actions: Any = None,
-                 run_diagnostics: Callable[[], dict] | None = None,
+                 run_diagnostics: Callable[..., dict] | None = None,
                  run_bufferbloat: Callable[[], dict] | None = None,
                  clock: Callable[[], float] = time.time,
                  load_backup: Callable[[], dict] = config.load_backup,
@@ -179,10 +186,12 @@ class Api:
             ("GET", re.compile(r"^/api/tweaks$"), self.tweaks),
             ("GET", re.compile(r"^/api/impact$"), self.impact),
             ("GET", re.compile(r"^/api/suggestions$"), self.suggestions),
+            ("GET", re.compile(r"^/api/value$"), self.value),
             ("GET", re.compile(r"^/api/failover$"), self.failover_state),
             ("POST", re.compile(r"^/api/failover/prefer/(?P<index>\d{1,6})$"), self.failover_prefer),
             ("POST", re.compile(r"^/api/failover/restore$"), self.failover_restore),
             ("POST", re.compile(r"^/api/manual/(?P<step_id>[a-z_]{1,40})/done$"), self.manual_done),
+            ("POST", re.compile(r"^/api/tweaks/batch$"), self.set_tweaks),     # before the per-tweak route
             ("POST", re.compile(r"^/api/tweaks/(?P<tweak_id>[^/]+)$"), self.set_tweak),
             ("POST", re.compile(r"^/api/diagnostics$"), self.start_diagnostics),
             ("POST", re.compile(r"^/api/diagnostics/bufferbloat$"), self.start_bufferbloat),
@@ -247,9 +256,21 @@ class Api:
         from . import calibration
         return calibration.current_network_id()
 
-    def _default_diagnostics(self) -> dict:
+    def _default_diagnostics(self, progress: Callable[[dict], None] | None = None) -> dict:
         from . import diagnostics
-        report = diagnostics.run_all(diagnostics.Context(self.storage))
+
+        # Every finished check is listed, not only the last: a poll can miss steps of fast checks.
+        finished: list[dict] = []
+        current: list[str] = []
+
+        def report_progress(done: int, total: int, key: str | None, status: str | None) -> None:
+            if current and status is not None:
+                finished.append({"key": current[0], "title": diagnostics.title_of(current[0]), "status": status})
+            current[:] = [key] if key else []
+            if progress is not None:
+                progress({"done": done, "total": total, "key": key,
+                          "title": diagnostics.title_of(key) if key else None, "finished": list(finished)})
+        report = diagnostics.run_all(diagnostics.Context(self.storage), progress=report_progress)
         run_id = diagnostics.save_report(self.storage, report)
         return {"run_id": run_id, "ts": report.ts, "worst": report.worst,
                 "results": [r.to_dict() for r in report.results]}
@@ -339,15 +360,22 @@ class Api:
         from . import suggestions, tweaks
         states = self._tweak_cache["states"]
         tweak_states = {s["id"]: s for s in states} if states else None
-        meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk, "measured": isinstance(t, tweaks.MeasuredTweak)}
-                for t in tweaks.CATALOG}
+        meta = {t.id: {"name": t.name, "note": t.note, "risk": t.risk, "measured": isinstance(t, tweaks.MeasuredTweak),
+                       "disrupts": t.disrupts_network} for t in tweaks.CATALOG}
         out = suggestions.build(self.storage, self._clock(), tweak_states, meta)
+        from .diagnostics import CHECKS
+        out["checks_total"] = len(CHECKS)   # "Runs N checks", before the first run
         if self._last_bufferbloat:
             extra = suggestions.suggest(self._last_bufferbloat, tweak_states, suggestions.done_steps(self.storage, self._clock()), meta)
             known = {(i["kind"], i["id"]) for i in out["items"]}
             out["items"] = sorted(out["items"] + [i for i in extra if (i["kind"], i["id"]) not in known],
                                   key=suggestions.order)
         return out
+
+    def value(self, **_: Any) -> dict:
+        """What the app did over the last 7 days, counted from the log (ADR-0020 point 8)."""
+        from . import value
+        return value.summarize(self.storage, self._clock(), self._changes())
 
     def failover_state(self, **_: Any) -> dict:
         """Paths, which one carries the traffic, whether we switched (ADR-0008)."""
@@ -441,7 +469,9 @@ class Api:
     # -- write endpoints ---------------------------------------------------------------------
 
     def start_diagnostics(self, **_: Any) -> dict:
-        return self.jobs.submit("diagnostics", self._run_diagnostics, single="diagnostics", sync=self._sync)
+        """The job's "progress" says which check runs now and how many are done (ADR-0020)."""
+        return self.jobs.submit("diagnostics", self._run_diagnostics, single="diagnostics", sync=self._sync,
+                                progress=True)
 
     def start_bufferbloat(self, **_: Any) -> dict:
         """Generates real traffic (~30 s), so only on explicit request; the result is not stored as a run."""
@@ -459,7 +489,10 @@ class Api:
         enable = body["enable"]
 
         def work() -> dict:
-            if enable and self._is_measured(tweak_id):
+            refusal = None if not enable or self._is_measured(tweak_id) else self._tweak_manager().preflight(tweak_id)
+            if refusal is not None:   # told before any UAC prompt (SIC-96); nothing was written
+                result = {"ok": False, "changed": False, "message": refusal, "elevated": False}
+            elif enable and self._is_measured(tweak_id):
                 result = self._enable_measured(tweak_id)
             elif self._is_admin():
                 mgr = self._tweak_manager()
@@ -473,6 +506,32 @@ class Api:
             return result
         # One write at a time: two UAC prompts or two writers racing on backup.json would be confusing at best.
         return self.jobs.submit(f"tweak:{tweak_id}", work, single="tweak_write", sync=self._sync)
+
+    def set_tweaks(self, body: Any, **_: Any) -> dict:
+        """The Fix button (ADR-0020): several low-risk tweaks on (or back off) under one UAC prompt.
+        Body {"ids": [...], "enable": true|false}; the ids are checked here and again by the helper."""
+        from . import tweaks
+        if not isinstance(body, dict) or not isinstance(body.get("enable"), bool) or not isinstance(body.get("ids"), list) \
+                or not all(isinstance(i, str) and TWEAK_ID.match(i) for i in body["ids"]):
+            raise ApiError(400, 'body must be {"ids": [tweak ids], "enable": true|false}')
+        enable = body["enable"]
+        try:
+            chosen = tweaks.batch_tweaks(body["ids"])
+        except ValueError as exc:
+            raise ApiError(400, str(exc)) from None
+
+        def work() -> dict:
+            if self._is_admin():
+                result = {**tweaks.run_batch(self._tweak_manager(), chosen, enable), "elevated": False}
+            else:
+                op = "tweak-enable-many" if enable else "tweak-disable-many"
+                res = self._elevate(op, ",".join(t.id for t in chosen))
+                detail = getattr(res, "result", None) or {}   # empty when UAC was declined or no result came back
+                result = {"ok": res.ok, "message": res.message, "cancelled": res.cancelled, "elevated": True,
+                          "results": detail.get("results", []), "changed": detail.get("changed")}
+            self._tweak_cache["refreshed_at"] = None
+            return result
+        return self.jobs.submit("tweaks", work, single="tweak_write", sync=self._sync)
 
     @staticmethod
     def _is_measured(tweak_id: str) -> bool:

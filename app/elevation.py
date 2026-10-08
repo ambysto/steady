@@ -91,6 +91,9 @@ def run_elevated(op: str, value: str, *, measurement: dict[str, Any] | None = No
     if op not in OPS:
         raise ValueError(f"unknown elevated operation {op!r}")
     from . import calibration, runtime
+    if op != "install-machine" and not runtime.elevation_allowed():
+        # A packaged copy outside Program Files is writable without Admin: never run it elevated (ADR-0019).
+        return ElevationResult(False, msg("elevation.not_installed"))
     path = config.results_dir() / f"{uuid.uuid4().hex}.json"
     extra = ["--measurement", calibration.encode(measurement)] if measurement is not None else []
     if runtime.FROZEN:

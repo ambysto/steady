@@ -12,11 +12,16 @@ its caller: every argument is re-validated here, and the result may only be writ
     python -m app.elevated path-prefer <ifIndex>    --result-file <path>
     python -m app.elevated path-restore <ifIndex|all> --result-file <path>
     python -m app.elevated restore-all -              --result-file <path>   (uninstall)
+    "<exe>" elevated install-machine <caller pid>     --result-file <path>   (ADR-0019: copy this exe's folder
+                                                      under Program Files, register it for all users)
+    "<exe>" elevated uninstall-machine <caller pid>   --result-file <path>   (restore everything, then remove
+                                                      the all-users parts and the program folder)
 """
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
@@ -27,7 +32,10 @@ from typing import Any
 from . import config, winutil
 from .i18n import msg
 
-OPS = ("tweak-enable", "tweak-disable", "restart-adapter", "path-prefer", "path-restore", "restore-all")
+log = logging.getLogger("stableinternet.elevated")
+
+OPS = ("tweak-enable", "tweak-disable", "tweak-enable-many", "tweak-disable-many", "restart-adapter", "path-prefer",
+       "path-restore", "restore-all", "install-machine", "uninstall-machine")
 _RESULT_NAME = re.compile(r"^[0-9a-f]{32}\.json$")
 
 
@@ -54,6 +62,20 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
         return {"ok": False, "message": f"{op} takes no measurement"}
     if not winutil.is_admin():
         return {"ok": False, "message": msg("elevation.not_admin")}
+    from . import runtime
+    if op == "install-machine":
+        if not (value.isascii() and value.isdigit()):          # the source is always this exe's own folder
+            return {"ok": False, "message": f"{op} takes the caller's process id"}
+        from . import installer
+        return installer.install_machine(int(value))
+    if not runtime.elevation_allowed():
+        return {"ok": False, "message": msg("elevation.not_installed")}
+    _close_backup_import()
+    if op == "uninstall-machine":
+        if not (value.isascii() and value.isdigit()):
+            return {"ok": False, "message": f"{op} takes the caller's process id"}
+        from . import installer
+        return installer.uninstall_machine(int(value))
     if op in ("tweak-enable", "tweak-disable"):
         from . import calibration, tweaks
         from .storage import Storage
@@ -69,6 +91,17 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
             mgr = tweaks.default_manager(storage)
             out = mgr.enable(value, decoded) if op == "tweak-enable" else mgr.disable(value)
         return {"ok": out.ok, "changed": out.changed, "message": out.message}
+    if op in ("tweak-enable-many", "tweak-disable-many"):
+        # One UAC prompt for the Fix button (ADR-0020 point 6). The value is only a list of ids, and it is
+        # checked here again: known, low risk, not measured. Nothing more than each id could do on its own.
+        from . import tweaks
+        from .storage import Storage
+        try:
+            chosen = tweaks.batch_tweaks(value.split(","))
+        except ValueError as exc:
+            return {"ok": False, "message": str(exc)}
+        with Storage(config.db_path()) as storage:
+            return tweaks.run_batch(tweaks.default_manager(storage), chosen, enable=op == "tweak-enable-many")
     if op in ("path-prefer", "path-restore"):
         return _path_op(op, value)
     if op == "restore-all":
@@ -81,10 +114,20 @@ def run_op(op: str, value: str, measurement: str | None = None) -> dict[str, Any
     return {"ok": res.ok, "message": res.message}
 
 
+def _close_backup_import() -> None:
+    """Every operation reads the backups once, so the first UAC prompt of this version imports the old
+    backup.json and closes that window for good (ADR-0018), even for an operation that needs no backup."""
+    try:
+        config.load_backup()
+    except Exception as exc:   # the operation reports its own trouble with the store, if it needs it
+        log.warning("reading the backups failed: %s", exc)
+
+
 def restore_everything() -> dict[str, Any]:
     """Uninstall: every tweak that has a backup goes back to its original value, and so do
-    failover's interface metrics. Whatever cannot be restored keeps its backup."""
-    from . import failover, tweaks
+    failover's interface metrics. Whatever cannot be restored keeps its backup; once nothing is
+    left, the backup store itself is removed (HKLM, ADR-0018)."""
+    from . import backupstore, failover, tweaks
     from .storage import Storage
     from .winsys import WindowsSystem
     failed: list[Any] = []
@@ -100,6 +143,10 @@ def restore_everything() -> dict[str, Any]:
             failed.append(res.message)
     if failed:
         return {"ok": False, "message": failed[0], "failed": len(failed)}
+    try:
+        backupstore.remove()
+    except Exception as exc:
+        return {"ok": False, "message": msg("installer.store_kept", error=f"{type(exc).__name__}: {exc}")}
     return {"ok": True, "message": msg("installer.restored_all")}
 
 
@@ -147,15 +194,22 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--measurement")
     args = ap.parse_args(argv)
     try:
-        path = check_result_path(args.result_file)
+        path: Path | None = check_result_path(args.result_file)
     except ValueError as exc:
-        print(exc, file=sys.stderr)
-        return 2
+        # Over-the-shoulder UAC: this process runs as another account, so the caller's results folder is not
+        # this one's. Installing and uninstalling must still happen (the caller checks their effect, ADR-0019);
+        # the result is never written into another profile. Every other operation stops here, as before.
+        if args.op not in ("install-machine", "uninstall-machine"):
+            print(exc, file=sys.stderr)
+            return 2
+        log.warning("%s: the result cannot be written (%s); running it anyway", args.op, exc)
+        path = None
     try:
         result = run_op(args.op, args.value, args.measurement)
     except Exception as exc:  # report, never leave the caller without an answer
         result = {"ok": False, "message": f"{type(exc).__name__}: {exc}"}
-    _write(path, result)
+    if path is not None:
+        _write(path, result)
     return 0 if result.get("ok") else 1
 
 

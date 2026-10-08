@@ -51,12 +51,20 @@ export function toast(text, { bad = false, ms = 4000 } = {}) {
   toastTimer = setTimeout(() => { box.hidden = true; }, ms);
 }
 
-/** A confirmation sheet; resolves true when confirmed. */
-export function confirmSheet({ title, body, confirm, cancel }) {
+/** A confirmation sheet; resolves true when confirmed. `content` (a node) goes under the text, and a
+ *  `wide` sheet is left-aligned, for a list to choose from; `symbol`/`tile` pick the badge on top. */
+export function confirmSheet({ title, body, confirm, cancel, content = null, wide = false, symbol = "flask", tile = "warn" }) {
   return new Promise(resolve => {
     const scrim = $("#scrim");
+    const badge = $(".sheet > .icon-tile", scrim);
+    badge.className = `icon-tile ${tile}`;
+    fill(badge, icon(symbol));
     $("#sheet-title").textContent = title;
-    $("#sheet-body").textContent = body;
+    $("#sheet-body").textContent = body || "";
+    $("#sheet-body").hidden = !body;
+    fill($("#sheet-content"), content);
+    $(".sheet", scrim).classList.toggle("wide", wide);
+    $("#sheet-confirm").disabled = false;
     $("#sheet-confirm").textContent = confirm;
     $("#sheet-cancel").textContent = cancel;
     const done = value => { scrim.classList.remove("open"); resolve(value); };

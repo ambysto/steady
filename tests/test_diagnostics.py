@@ -675,6 +675,30 @@ class RunAllTests(unittest.TestCase):
         report = d.run_all(fake_context(), only={2, 13})
         self.assertEqual([r.id for r in report.results], [2, 13])
 
+    def test_progress_follows_the_checks_as_they_run(self):
+        calls = []
+        report = d.run_all(fake_context(), progress=lambda *a: calls.append(a))
+        total = len(report.results)
+        self.assertEqual(len(calls), total + 1)                    # one per check starting, one at the end
+        self.assertEqual([c[0] for c in calls], list(range(total + 1)))
+        self.assertTrue(all(c[1] == total for c in calls))
+        self.assertEqual([c[2] for c in calls[:-1]], [r.key for r in report.results])
+        self.assertEqual(calls[0][3], None)                        # nothing has finished yet
+        self.assertEqual([c[3] for c in calls[1:]], [r.status for r in report.results])
+        self.assertIsNone(calls[-1][2])
+
+    def test_progress_counts_only_the_selected_checks(self):
+        calls = []
+        d.run_all(fake_context(), only={2, 13}, progress=lambda *a: calls.append(a))
+        self.assertEqual([(c[0], c[1], c[2]) for c in calls], [(0, 2, "signal"), (1, 2, "physical_link"), (2, 2, None)])
+
+    def test_a_broken_progress_listener_does_not_stop_the_checks(self):
+        def boom(*_):
+            raise RuntimeError("UI gone")
+        with self.assertLogs("stableinternet.diagnostics", "ERROR"):
+            report = d.run_all(fake_context(), only={2, 13}, progress=boom)
+        self.assertEqual([r.id for r in report.results], [2, 13])
+
     def test_worst_reflects_results(self):
         ev = {"disconnects": [], "limited_connectivity": [], "ihv_stops": [int(NOW - H)], "port_exhaustion": [],
               "time_wait": 1, "errors": []}

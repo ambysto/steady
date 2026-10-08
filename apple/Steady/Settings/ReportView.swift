@@ -14,7 +14,7 @@ struct ReportView: View {
     @State private var log: [String] = []
     @State private var crashes: [String] = []
     @State private var copied = false
-    private let text = Localizer()
+    @Environment(\.localizer) private var text
 
     static let address = "contact@ambysto.com"
 

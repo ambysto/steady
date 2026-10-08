@@ -197,7 +197,7 @@ class LocalNetworkTests(unittest.TestCase):
         for original in ({"policy": "Backup-Agent", "rate_bps": None, "exempt": []},
                          {"policy": "StableInternet-Upload", "rate_bps": None, "exempt": ["Backup-Agent"]}):
             with self.assertRaises(ValueError):
-                shaping().validate_original(original)
+                shaping().check_original(None, original)
         mgr, s, backup, _ = manager()
         mgr.enable("upload_shaping", upload())
         backup.data["upload_shaping"]["original"]["policy"] = "Backup-Agent"

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from app import config, elevated, elevation, i18n
+from app.i18n import msg
 from app.server import Api, Jobs, Server
 from app.storage import Storage
 
@@ -22,6 +23,12 @@ class FakeMonitor:
 class FakeManager:
     def __init__(self):
         self.calls = []
+        self.refusal = None   # what preflight() answers: why turning a tweak on would not help
+
+    def preflight(self, tweak_id):
+        self.get(tweak_id)   # like the real manager: KeyError for an unknown id, before anything else
+        self.calls.append(("preflight", tweak_id))
+        return self.refusal
 
     def states(self):
         return []   # tests that need states replace this with real TweakState objects
@@ -81,7 +88,7 @@ class ServerTestCase(unittest.TestCase):
         self.api = Api(monitor=FakeMonitor(), storage=self.storage, load_settings=lambda: json.loads(json.dumps(self.settings)),
                        save_settings=self._save, is_admin=lambda: self.admin, tweak_manager=lambda: self.manager,
                        elevate=elevate, actions=self.actions,
-                       run_diagnostics=lambda: {"worst": "ok", "results": []}, sync_jobs=True,
+                       run_diagnostics=lambda progress=None: {"worst": "ok", "results": []}, sync_jobs=True,
                        load_backup=lambda: self.backup, autostart_status=self._autostart,
                        route=lambda: self.route)
         self.server = Server(self.api, 0)
@@ -347,13 +354,104 @@ class ReadApiTests(ServerTestCase):
         self.assertEqual(self.req("GET", "/api/diagnostics/runs")[1], {"runs": []})
         self.assertEqual(self.req("GET", "/api/diagnostics/runs/5")[0], 404)
 
+    def test_diagnostics_job_reports_progress(self):
+        seen = []
+
+        def run(progress):
+            progress({"done": 0, "total": 2, "key": "signal", "title": msg("diag.signal.title"), "finished": []})
+            seen.append(self.req("GET", f"/api/jobs/{self.api.jobs._running_by_key['diagnostics']}")[1]["progress"])
+            progress({"done": 2, "total": 2, "key": None, "title": None, "finished": []})
+            return {"worst": "ok", "results": []}
+        self.api._run_diagnostics = run
+        job = self.req("POST", "/api/diagnostics", {})[1]
+        self.assertEqual(seen[0]["title"], "Wi‑Fi signal")              # localized like every API answer
+        self.assertEqual((seen[0]["done"], seen[0]["total"], seen[0]["key"]), (0, 2, "signal"))
+        self.assertEqual(self.req("GET", f"/api/jobs/{job['id']}")[1]["progress"]["done"], 2)
+
+    def test_real_diagnostics_progress_lists_every_finished_check(self):
+        from app import diagnostics
+        calls = []
+        fake = [(2, "signal", lambda ctx: diagnostics.CheckResult(2, "signal", msg("diag.signal.title"), "warn", "s")),
+                (8, "vpn", lambda ctx: diagnostics.CheckResult(8, "vpn", msg("diag.vpn.title"), "ok", "v"))]
+        with mock.patch.object(diagnostics, "CHECKS", fake), mock.patch.object(diagnostics, "save_report", lambda *a: 1):
+            self.api._default_diagnostics(calls.append)
+        self.assertEqual([(c["done"], c["key"]) for c in calls], [(0, "signal"), (1, "vpn"), (2, None)])
+        self.assertEqual([(f["key"], f["status"]) for f in calls[-1]["finished"]], [("signal", "warn"), ("vpn", "ok")])
+        self.assertEqual(calls[1]["finished"][0]["title"], msg("diag.signal.title"))
+
+    def test_suggestions_say_how_many_checks_a_run_has(self):
+        from app import diagnostics
+        out = self.req("GET", "/api/suggestions")[1]
+        self.assertEqual((out["checks_total"], out["check"]), (len(diagnostics.CHECKS), None))
+
+    def test_other_jobs_have_no_progress(self):
+        job = self.req("POST", "/api/actions/reconnect", {})[1]
+        self.assertEqual(job["status"], "done")
+        self.assertIsNone(job["progress"])
+
+
+class BatchApiTests(ServerTestCase):
+    """POST /api/tweaks/batch: the Fix button (ADR-0020 point 6)."""
+
+    class Manager(FakeManager):
+        def get(self, tweak_id):
+            pass
+
+        def enable(self, tweak_id):
+            self.calls.append(("enable", tweak_id))
+            from app.tweaks import Outcome
+            return Outcome(True, True, "on")
+
+    def test_without_admin_one_uac_prompt_for_the_whole_batch(self):
+        ids = ["wifi_power_saving", "power_pcie_aspm_off"]
+        job = self.req("POST", "/api/tweaks/batch", {"ids": ids, "enable": True})[1]
+        self.assertEqual(self.elevations, [("tweak-enable-many", "power_pcie_aspm_off,wifi_power_saving")])
+        self.assertEqual(self.manager.calls, [])                              # nothing written here
+        self.assertTrue(job["result"]["cancelled"])
+        self.assertEqual(job["result"]["results"], [])
+
+    def test_turning_back_off_is_one_prompt_too(self):
+        self.req("POST", "/api/tweaks/batch", {"ids": ["wifi_power_saving"], "enable": False})
+        self.assertEqual(self.elevations, [("tweak-disable-many", "wifi_power_saving")])
+
+    def test_with_admin_each_tweak_goes_through_the_manager_in_order(self):
+        self.admin = True
+        self.manager = self.Manager()
+        job = self.req("POST", "/api/tweaks/batch", {"ids": ["device_power_off", "power_wireless_max"], "enable": True})[1]
+        self.assertEqual([c for c in self.manager.calls if c[0] == "enable"],
+                         [("enable", "power_wireless_max"), ("enable", "device_power_off")])
+        self.assertEqual([r["status"] for r in job["result"]["results"]], ["changed", "changed"])
+        self.assertEqual(job["result"]["message"], "Turned on 2 of 2")
+        self.assertEqual(self.elevations, [])
+
+    def test_anything_but_known_low_risk_tweaks_is_refused_before_any_prompt(self):
+        for body in ({"ids": ["tcp_timedwait"], "enable": True}, {"ids": ["dns_fastest"], "enable": True},
+                     {"ids": ["upload_shaping"], "enable": True}, {"ids": ["format_c"], "enable": True},
+                     {"ids": [], "enable": True}, {"ids": ["wifi_power_saving"] * 2, "enable": True},
+                     {"ids": "wifi_power_saving", "enable": True}, {"ids": ["wifi_power_saving"]},
+                     {"ids": ["wifi_power_saving,ipv6_off"], "enable": True}, {"ids": [1], "enable": True}):
+            self.assertEqual(self.req("POST", "/api/tweaks/batch", body)[0], 400, body)
+        self.assertEqual(self.elevations, [])
+
 
 class WriteApiTests(ServerTestCase):
     def test_tweak_without_admin_goes_through_uac(self):
         job = self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": True})[1]
         self.assertEqual(self.elevations, [("tweak-enable", "wifi_power_saving")])
-        self.assertEqual(self.manager.calls, [])
+        self.assertEqual(self.manager.calls, [("preflight", "wifi_power_saving")])   # asked before UAC, nothing written
         self.assertTrue(job["result"]["cancelled"])
+
+    def test_a_preflight_refusal_needs_no_uac_prompt(self):
+        self.manager.refusal = i18n.msg("tweak.reason.dns_no_fast_servers")
+        job = self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": True})[1]
+        self.assertEqual((self.elevations, self.manager.calls), ([], [("preflight", "wifi_power_saving")]))
+        self.assertFalse(job["result"]["ok"])
+        self.assertFalse(job["result"]["changed"])
+
+    def test_turning_off_is_not_preflighted(self):
+        self.manager.refusal = i18n.msg("tweak.reason.dns_no_fast_servers")
+        self.req("POST", "/api/tweaks/wifi_power_saving", {"enable": False})
+        self.assertEqual(self.elevations, [("tweak-disable", "wifi_power_saving")])
 
     def test_tweak_with_admin_runs_directly(self):
         self.admin = True
@@ -576,6 +674,36 @@ class ElevatedChildTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         os.environ["STABLEINTERNET_USERDIR"] = self.tmp.name
         self.addCleanup(os.environ.pop, "STABLEINTERNET_USERDIR", None)
+
+    def test_the_helper_checks_a_batch_again_before_touching_anything(self):
+        from app import tweaks
+        with mock.patch.object(elevated.winutil, "is_admin", return_value=True), \
+                mock.patch.object(tweaks, "default_manager", side_effect=AssertionError("must not build a manager")):
+            for value in ("tcp_timedwait", "wifi_power_saving,dns_fastest", "format_c", "", "wifi_power_saving,wifi_power_saving"):
+                out = elevated.run_op("tweak-enable-many", value)
+                self.assertFalse(out["ok"], value)
+                self.assertIsInstance(out["message"], str)
+
+    def test_the_helper_runs_a_valid_batch_through_the_manager(self):
+        from app import tweaks
+        os.environ["STABLEINTERNET_DATA"] = self.tmp.name
+        self.addCleanup(os.environ.pop, "STABLEINTERNET_DATA", None)
+        calls = []
+
+        class Manager:
+            def preflight(self, tweak_id):
+                return None
+
+            def enable(self, tweak_id):
+                calls.append(tweak_id)
+                return tweaks.Outcome(True, True, "on")
+
+        with mock.patch.object(elevated.winutil, "is_admin", return_value=True), \
+                mock.patch.object(tweaks, "default_manager", return_value=Manager()):
+            out = elevated.run_op("tweak-enable-many", "wifi_power_saving,power_pcie_aspm_off")
+        self.assertTrue(out["ok"])
+        self.assertEqual(calls, ["power_pcie_aspm_off", "wifi_power_saving"])
+        self.assertEqual([r["status"] for r in out["results"]], ["changed", "changed"])
 
     def test_result_path_must_be_ours(self):
         good = config.results_dir() / ("a" * 32 + ".json")

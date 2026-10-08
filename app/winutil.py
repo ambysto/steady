@@ -13,10 +13,48 @@ import socket
 import subprocess
 from ctypes import wintypes
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 CREATE_NO_WINDOW = 0x08000000
-_UTF8_PREAMBLE = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; $ProgressPreference = 'SilentlyContinue'; "
+# Commands and modules come only from Windows' own folders (ADR-0019). A process without Admin rights can
+# put files in the user's PATH (e.g. %LOCALAPPDATA%\Microsoft\WindowsApps, or any folder it adds through
+# HKCU\Environment) and in Documents\WindowsPowerShell\Modules; PowerShell 5.1 looks a not-yet-loaded cmdlet
+# up in PATH before autoloading its module, and -NoProfile stops neither. A Get-CimInstance.ps1 there would
+# run with the rights of an elevated caller. So the child gets a clean PATH and PSModulePath (safe_env), and
+# every script starts by setting both again (PowerShell 5.1 adds the user's module folder back at startup),
+# using .NET only: no cmdlet runs before the paths are safe.
+SAFE_MODULE_PATH = (
+    "$env:Path = [Environment]::SystemDirectory + ';' + [Environment]::GetFolderPath('Windows') + ';' + "
+    "[IO.Path]::Combine([Environment]::SystemDirectory, 'Wbem') + ';' + $PSHOME; "
+    "$env:PSModulePath = [IO.Path]::Combine($PSHOME, 'Modules') + ';' + "
+    "[IO.Path]::Combine([Environment]::GetFolderPath('ProgramFiles'), 'WindowsPowerShell', 'Modules'); ")
+_UTF8_PREAMBLE = SAFE_MODULE_PATH + ("[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+                                     "$ProgressPreference = 'SilentlyContinue'; ")
+FOLDERID_SYSTEM = "1ac14e77-02e7-4e5d-b744-2eb1ae5198b7"
+
+
+def powershell_exe() -> str:
+    """Windows PowerShell 5.1 by full path: a bare name is looked up in the caller's folder first."""
+    try:
+        return str(Path(known_folder(FOLDERID_SYSTEM)) / "WindowsPowerShell" / "v1.0" / "powershell.exe")
+    except (OSError, AttributeError):
+        return "powershell.exe"
+
+
+def safe_env() -> dict[str, str]:
+    """The environment for a PowerShell child: PATH and PSModulePath limited to Windows' own folders."""
+    import os
+    try:
+        system = Path(known_folder(FOLDERID_SYSTEM))
+    except (OSError, AttributeError):
+        return dict(os.environ)
+    windows, posh = system.parent, system / "WindowsPowerShell" / "v1.0"
+    env = dict(os.environ)
+    env["PATH"] = ";".join(str(p) for p in (system, windows, system / "Wbem", posh))
+    env["PSModulePath"] = ";".join(str(p) for p in (posh / "Modules",
+                                                     Path(known_folder(FOLDERID_PROGRAM_FILES)) / "WindowsPowerShell" / "Modules"))
+    return env
 
 
 class PowerShellError(RuntimeError):
@@ -38,13 +76,13 @@ def run_powershell(script: str, timeout: float = 30.0) -> str:
     missing. Scripts are passed with -EncodedCommand, never string-spliced.
     """
     cmd = [
-        "powershell.exe", "-NoProfile", "-NonInteractive",
+        powershell_exe(), "-NoProfile", "-NonInteractive",
         "-ExecutionPolicy", "Bypass",
         "-EncodedCommand", encode_command(_UTF8_PREAMBLE + script),
     ]
     try:
         proc = subprocess.run(
-            cmd, capture_output=True, timeout=timeout, creationflags=CREATE_NO_WINDOW,
+            cmd, capture_output=True, timeout=timeout, creationflags=CREATE_NO_WINDOW, env=safe_env(),
         )
     except subprocess.TimeoutExpired as exc:
         raise PowerShellError(f"PowerShell timed out after {timeout}s") from exc
@@ -101,6 +139,32 @@ def is_admin() -> bool:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
     except (AttributeError, OSError):
         return False
+
+
+# Known folders (SHGetKnownFolderPath): read from the shell, never from environment variables a user
+# can set in HKCU\Environment (ADR-0019).
+FOLDERID_PROGRAM_FILES = "905e63b6-c1bf-494e-b29c-65b732d3d21a"
+FOLDERID_COMMON_PROGRAMS = "0139d44e-6afe-49f2-8690-3dafcae6ffb8"   # Start menu programs of all users
+
+
+class _Guid(ctypes.Structure):
+    _fields_ = [("Data1", ctypes.c_ulong), ("Data2", ctypes.c_ushort), ("Data3", ctypes.c_ushort),
+                ("Data4", ctypes.c_ubyte * 8)]
+
+
+def known_folder(folder_id: str) -> str:
+    """The path of a known folder; raises OSError when the shell cannot give it."""
+    import uuid
+    u = uuid.UUID(folder_id)
+    guid = _Guid(u.fields[0], u.fields[1], u.fields[2], (ctypes.c_ubyte * 8)(*u.bytes[8:]))
+    path = ctypes.c_wchar_p()
+    hr = ctypes.windll.shell32.SHGetKnownFolderPath(ctypes.byref(guid), 0, None, ctypes.byref(path))
+    try:
+        if hr != 0:
+            raise OSError(f"SHGetKnownFolderPath({folder_id}) failed: 0x{hr & 0xFFFFFFFF:08x}")
+        return path.value
+    finally:
+        ctypes.windll.ole32.CoTaskMemFree(path)
 
 
 # --- netsh wlan show interfaces ------------------------------------------------

@@ -20,18 +20,20 @@ in apply() (ADR-0015), a MeasuredTweak takes a measurement made before enabling 
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import re
+import secrets
 import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, Iterable, NamedTuple
 
 from . import bufferbloat, calibration, config, dnsprobe, i18n, winutil
 from .i18n import msg
-from .winsys import System
+from .winsys import _ADAPTER_GUID_RE, OFFLOAD_VALUES, TCP_GLOBAL_VALUES, System
 
 RISKS = ("low", "medium", "experimental")
 Message = Any   # an i18n.msg() dict, or plain text (ADR-0006)
@@ -107,15 +109,70 @@ class Tweak:
         """Why turning the tweak on must wait while `original` is the saved backup (None: nothing in the way)."""
         return None
 
+    def preflight(self, sys_: System) -> Message | None:
+        """Why turning the tweak on now would not help, found without Admin rights so the user is told
+        before any UAC prompt (None: go ahead). apply() still decides for itself."""
+        return None
+
     def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
         """What to show while the saved backup `original` belongs to a subject read() does not look at (it
         reports the tweak off or unsupported there): a reading with enabled=True makes the switch turn the
         tweak off, which restores that backup. None: nothing to add."""
         return None
 
-    def validate_original(self, original: dict[str, Any]) -> None:
-        """Raise ValueError if `original` is not shaped like this tweak's capture()."""
-        self.restore_key(original)
+    def backup_in_effect(self, sys_: System, original: dict[str, Any]) -> bool:
+        """Is the change made after `original` was captured still on the machine? Asked before an outside backup
+        (the old backup.json, ADR-0018) is trusted: a backup of a tweak that is off is stale, and one whose "on"
+        only the backup itself creates is forged. Call check_original first."""
+        if self.read(sys_).enabled:
+            return True
+        elsewhere = self.backup_reading(sys_, original)
+        return bool(elsewhere and elsewhere.enabled)
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        """Raise ValueError unless `original` is shaped like this tweak's capture() AND every field lies in
+        this tweak's own domain, judged from its declaration and the machine now, never from the file
+        (ADR-0017: backup.json is writable without Admin, the helper that restores it is not). Fails closed."""
+        raise ValueError(f"{type(self).__name__} cannot check a backup")
+
+
+# --- backup checks (ADR-0017) ------------------------------------------------------------
+
+DWORD_MAX = 0xFFFFFFFF
+
+
+def _require(condition: bool, problem: str) -> None:
+    if not condition:
+        raise ValueError(problem)
+
+
+def _fields(original: Any, required: set[str], optional: frozenset[str] = frozenset()) -> dict[str, Any]:
+    _require(isinstance(original, dict), "the backup entry is not an object")
+    keys = set(original)
+    _require(required <= keys <= required | optional,
+             f"fields {sorted(keys)}, expected {sorted(required)}" + (f" (+ {sorted(optional)})" if optional else ""))
+    return original
+
+
+def _is_int(value: Any, low: int = 0, high: int = DWORD_MAX) -> bool:
+    return type(value) is int and low <= value <= high
+
+
+def _same(stored: Any, expected: Any, what: str) -> None:
+    _require(stored == expected, f"{what} {stored!r} is not this tweak's ({expected!r})")
+
+
+def _check_guid(guid: Any) -> None:
+    _require(isinstance(guid, str) and _ADAPTER_GUID_RE.match(guid) is not None, f"{guid!r} is not an interface GUID")
+
+
+def _check_wifi_adapter(sys_: System, stored: Any) -> str:
+    try:
+        adapter = _wifi_adapter(sys_)
+    except Unsupported:
+        raise ValueError("there is no Wi-Fi card to restore to") from None
+    _same(stored, adapter, "adapter")
+    return adapter
 
 
 def _wifi_adapter(sys_: System) -> str:
@@ -234,6 +291,19 @@ class AdapterPropertyTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["adapter"], original["keyword"], str(original["value"]))
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"adapter", "keyword", "value"}, frozenset({"display"}))
+        _check_wifi_adapter(sys_, original["adapter"])
+        try:
+            _, prop, _ = self._resolve(sys_)   # the property this tweak changes on this card, however it is spelled
+        except Unsupported:
+            raise ValueError("this card has no property this tweak changes") from None
+        # Exactly as Windows reports it, as capture() saved it: "WakeOnMagicPacket" and "*WakeOnMagicPacket" are
+        # two registry values, so the looser _keyword_key() match used to find the property is not enough here.
+        _same(original["keyword"], prop["RegistryKeyword"], "property")
+        _require(isinstance(original["value"], str) and original["value"] in prop["ValidRegistryValues"],
+                 f"{original['value']!r} is not a valid value of {prop['DisplayName']!r}")
+
     def original_from_display(self, sys_: System, display_value: str) -> dict[str, Any]:
         """Build an `original` from a DisplayValue (e.g. "Auto" in the EXP-001 manual backup)."""
         adapter, prop, _ = self._resolve(sys_)
@@ -290,6 +360,16 @@ class RegistryDwordTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["path"], original["name"], original["value"])
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"path", "name", "value"})
+        try:
+            path = self._path_of(sys_)
+        except Unsupported:
+            raise ValueError("the registry key of this tweak is not on this PC") from None
+        _same(original["path"], path, "registry path")
+        _same(original["name"], self.value_name, "registry value")
+        _require(original["value"] is None or _is_int(original["value"]), f"{original['value']!r} is not a DWORD")
+
 
 class PowerCfgTweak(Tweak):
     """An AC/DC index of the active power plan. No known per-setting default exists, so
@@ -298,9 +378,9 @@ class PowerCfgTweak(Tweak):
     has_default_restore = False
 
     def __init__(self, id: str, name: str, risk: str, *, subgroup: str, setting: str, ac: int, dc: int,
-                 **kw: Any) -> None:
+                 valid: range = range(DWORD_MAX + 1), **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
-        self.subgroup, self.setting, self.ac, self.dc = subgroup, setting, ac, dc
+        self.subgroup, self.setting, self.ac, self.dc, self.valid = subgroup, setting, ac, dc, valid
 
     def read(self, sys_: System) -> Reading:
         ac, dc = sys_.power_get(self.subgroup, self.setting)
@@ -320,6 +400,14 @@ class PowerCfgTweak(Tweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["subgroup"], original["setting"], int(original["ac"]), int(original["dc"]))
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"subgroup", "setting", "ac", "dc"})
+        _same(original["subgroup"], self.subgroup, "power subgroup")
+        _same(original["setting"], self.setting, "power setting")
+        for side in ("ac", "dc"):
+            _require(type(original[side]) is int and original[side] in self.valid,
+                     f"{side} index {original[side]!r} is outside {self.valid.start}..{self.valid.stop - 1}")
 
 
 class BindingTweak(Tweak):
@@ -355,10 +443,18 @@ class BindingTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["adapter"], original["component"], bool(original["enabled"]))
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"adapter", "component", "enabled"})
+        _check_wifi_adapter(sys_, original["adapter"])
+        _same(original["component"], self.component, "binding")
+        _require(isinstance(original["enabled"], bool), f"{original['enabled']!r} is not true or false")
+
 
 class TcpGlobalTweak(Tweak):
     """A `netsh int tcp set global` parameter. `default` is Windows' own value, used to restore when
     there is no backup (None: refuse instead)."""
+
+    VALUES = TCP_GLOBAL_VALUES
 
     def __init__(self, id: str, name: str, risk: str, *, setting: str, target: str, default: str | None,
                  **kw: Any) -> None:
@@ -395,6 +491,11 @@ class TcpGlobalTweak(Tweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["setting"], str(original["value"]))
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"setting", "value"})
+        _same(original["setting"], self.setting, "setting")
+        _require(original["value"] in self.VALUES, f"{original['value']!r} is not one of {self.VALUES}")
 
 
 class RscTweak(Tweak):
@@ -438,11 +539,19 @@ class RscTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["adapter"], original["ipv4"], original["ipv6"])
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"adapter", "ipv4", "ipv6"})
+        _check_wifi_adapter(sys_, original["adapter"])
+        for family in ("ipv4", "ipv6"):
+            _require(original[family] is None or isinstance(original[family], bool),
+                     f"{family} {original[family]!r} is not true, false or null")
+
 
 class OffloadGlobalTweak(Tweak):
     """A Set-NetOffloadGlobalSetting parameter. No known default: restoring needs the backup."""
 
     has_default_restore = False
+    VALUES = OFFLOAD_VALUES
 
     def __init__(self, id: str, name: str, risk: str, *, setting: str, target: str, **kw: Any) -> None:
         super().__init__(id, name, risk, **kw)
@@ -475,6 +584,11 @@ class OffloadGlobalTweak(Tweak):
     def restore_key(self, original: dict[str, Any]) -> Any:
         return (original["setting"], str(original["value"]))
 
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"setting", "value"})
+        _same(original["setting"], self.setting, "setting")
+        _require(original["value"] in self.VALUES, f"{original['value']!r} is not one of {self.VALUES}")
+
 
 # --- DNS: the fastest public servers, over HTTPS (ADR-0015) ---------------------------------------
 
@@ -489,7 +603,7 @@ DOH_ADDRESSES: dict[str, tuple[str, str]] = {address: (provider, template)
                                              for address in addresses}   # address -> (provider, template)
 CAPTIVE_PROBE_URL = "http://cp.cloudflare.com/generate_204"
 
-Benchmark = Callable[[list[str]], "list[dnsprobe.ServerBenchmark]"]
+Benchmark = Callable[[list[str], "tuple[str, ...]"], "list[dnsprobe.ServerBenchmark]"]   # (servers, names)
 CaptiveCheck = Callable[[], bool]
 
 
@@ -497,10 +611,57 @@ class NoFastServers(_MessageError):
     """The benchmark did not find two working providers to switch to."""
 
 
-def benchmark_servers(servers: list[str]) -> list[dnsprobe.ServerBenchmark]:
-    """The DNS benchmark of diagnostics check #6, one thread per server."""
+class DnsNotFaster(_MessageError):
+    """The DNS in use answers as fast as the best public servers: switching would not help (SIC-96)."""
+
+
+# A public DNS replaces the one in use only when it is this much faster, on common names and on names no
+# resolver has cached (SIC-96, EXP-021). The benchmark asks over plain DNS while the tweak sets DoH, which
+# costs more per lookup, so a server that is only a little faster here is not faster in use.
+DNS_GAIN_RATIO = 0.8     # at most 80% of the time of the DNS in use...
+DNS_GAIN_MS = 10.0       # ...and at least 10 ms less
+# Large domains whose authoritative servers answer everywhere: a fresh random label under them is a name
+# no resolver can have cached, so every server has to resolve it (the router's cache cannot flatter it).
+UNCACHED_DOMAINS = ("wikipedia.org", "cloudflare.com", "google.com", "microsoft.com", "github.com",
+                    "amazon.com", "apple.com", "mozilla.org")
+
+
+def uncached_names() -> tuple[str, ...]:
+    return tuple(f"si-{secrets.token_hex(5)}.{domain}" for domain in UNCACHED_DOMAINS)
+
+
+def benchmark_servers(servers: list[str], names: tuple[str, ...] = dnsprobe.DEFAULT_NAMES) -> list[dnsprobe.ServerBenchmark]:
+    """The DNS benchmark of diagnostics check #6 (common names by default), one thread per server."""
     with ThreadPoolExecutor(max_workers=max(1, len(servers))) as pool:
-        return list(pool.map(lambda s: dnsprobe.benchmark([s], timeout=1.5)[0], servers))
+        return list(pool.map(lambda s: dnsprobe.benchmark([s], names, timeout=1.5)[0], servers))
+
+
+def check_public_dns_faster(current: list[str], chosen: str, common: dict[str, dnsprobe.ServerBenchmark],
+                            uncached: dict[str, dnsprobe.ServerBenchmark]) -> None:
+    """Raise DnsNotFaster unless switching from the DNS in use to `chosen` is worth it (pure, SIC-96).
+
+    Worth it when the DNS in use is broken (no server, one that lost a query, or one that never answered),
+    which is what diagnostics check #6 points at this tweak for, or when `chosen` is faster by
+    DNS_GAIN_RATIO and DNS_GAIN_MS both on common names and on uncached ones. The benchmarks are keyed by
+    server; the first server in use is the one Windows asks first."""
+    def broken(b: dnsprobe.ServerBenchmark | None) -> bool:
+        return b is None or bool(b.failures) or b.median_ms is None
+
+    if not current or any(broken(common.get(s)) for s in current) or broken(uncached.get(current[0])):
+        return
+    mine_c, mine_u = common[current[0]].median_ms, uncached[current[0]].median_ms
+    theirs_c, theirs_u = common.get(chosen), uncached.get(chosen)
+
+    def faster(mine: float, theirs: dnsprobe.ServerBenchmark | None) -> bool:
+        return (not broken(theirs) and theirs.median_ms <= mine * DNS_GAIN_RATIO
+                and mine - theirs.median_ms >= DNS_GAIN_MS)
+
+    if faster(mine_c, theirs_c) and faster(mine_u, theirs_u):
+        return
+    raise DnsNotFaster(msg("tweak.reason.dns_not_faster", current=current[0], server=chosen,
+                           current_ms=float(mine_c), public_ms=float(theirs_c.median_ms) if not broken(theirs_c) else 0.0,
+                           current_uncached_ms=float(mine_u),
+                           public_uncached_ms=float(theirs_u.median_ms) if not broken(theirs_u) else 0.0))
 
 
 def captive_portal() -> bool:
@@ -637,6 +798,14 @@ class DnsFastestTweak(Tweak):
             return msg("tweak.reason.dns_other_interface")
         return None
 
+    def backup_in_effect(self, sys_: System, original: dict[str, Any]) -> bool:
+        """The interface the backup names (its GUID, or the uplink for a backup without one) has this tweak's
+        DNS now. backup_reading() only asks whether that interface exists, which a forged GUID satisfies."""
+        try:
+            return self._is_on(self._info(sys_, original.get("guid")), self._doh(sys_))
+        except Unsupported:
+            return False
+
     def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
         """The backup is another interface's (or the uplink cannot be read at all): the interface that was changed
         still has the tweak's DNS, so the switch must offer to turn it off. Gone adapter: nothing to restore."""
@@ -656,13 +825,36 @@ class DnsFastestTweak(Tweak):
         return Reading(True, True, {"servers": info["servers"], "static": info["static"]},
                        warning=msg("tweak.reason.dns_backup_elsewhere", name=info["alias"]))
 
+    def _choose(self, info: dict[str, Any]) -> list[str]:
+        """The servers to switch to, or DnsNotFaster / NoFastServers. Common names rank the public providers
+        and compare them with the DNS in use; names nobody has cached compare them again (SIC-96)."""
+        current = [s for s in info["servers"] if dnsprobe.is_usable_server(s)]
+        common = {b.server: b for b in self._benchmark(list(dict.fromkeys([*DOH_ADDRESSES, *current])),
+                                                       dnsprobe.DEFAULT_NAMES)}
+        servers = choose_dns_servers([common[s] for s in DOH_ADDRESSES if s in common])
+        uncached = {b.server: b for b in self._benchmark(list(dict.fromkeys([*current[:1], servers[0]])),
+                                                         uncached_names())}
+        check_public_dns_faster(current, servers[0], common, uncached)
+        return servers
+
+    def preflight(self, sys_: System) -> Message | None:
+        try:
+            info = self._info(sys_)
+            blocked = self._blocked(info, fresh=True)
+            if blocked is not None:
+                return blocked
+            self._choose(info)
+        except (Unsupported, NoFastServers, DnsNotFaster) as exc:
+            return exc.message
+        return None
+
     def apply(self, sys_: System) -> None:
         info = self._info(sys_)
         self._doh(sys_)
         blocked = self._blocked(info, fresh=True)
         if blocked is not None:   # the state may have changed since it was read (a VPN came up...)
             raise Unsupported(blocked)
-        servers = choose_dns_servers(self._benchmark(list(DOH_ADDRESSES)))
+        servers = self._choose(info)
         for address in servers:   # DoH first: the moment the server is used, Windows already knows to upgrade
             sys_.doh_set(address, DOH_ADDRESSES[address][1], True, True)
         sys_.dns_servers_set(info["index"], servers)
@@ -680,7 +872,8 @@ class DnsFastestTweak(Tweak):
             now = doh.get(address)
             if was["present"] and now is None:   # the entry vanished: put it back, if apply was using it
                 if address in self._applied:
-                    sys_.doh_set(address, was["template"] or DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
+                    # Always the provider's own template: a URL from the file could send DNS anywhere (ADR-0017).
+                    sys_.doh_set(address, DOH_ADDRESSES[address][1], bool(was["auto_upgrade"]),
                                  bool(was["fallback_to_udp"]))
             elif was["present"]:
                 if (now["auto_upgrade"], now["fallback_to_udp"]) != (was["auto_upgrade"], was["fallback_to_udp"]) \
@@ -697,6 +890,36 @@ class DnsFastestTweak(Tweak):
                 tuple(sorted((a, bool(d["present"]), bool(d["auto_upgrade"]) if d["present"] else None,
                               bool(d["fallback_to_udp"]) if d["present"] else None)
                              for a, d in original["doh"].items())))
+
+    MAX_SERVERS = 8
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        _fields(original, {"interface_index", "static", "servers", "doh"}, frozenset({"guid"}))   # no guid: older backup
+        _check_guid(original.get("guid", "{00000000-0000-0000-0000-000000000000}"))
+        _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
+        _require(isinstance(original["static"], bool), "static is not true or false")
+        servers = original["servers"]
+        _require(isinstance(servers, list) and all(isinstance(s, str) for s in servers), "servers is not a list")
+        if original["static"]:
+            _require(1 <= len(servers) <= self.MAX_SERVERS, f"{len(servers)} static servers")
+            for server in servers:
+                _require(_unicast_ipv4(server), f"{server!r} is not a unicast IPv4 address")
+        doh = original["doh"]
+        _require(isinstance(doh, dict) and set(doh) <= set(DOH_ADDRESSES), "DoH entries for other addresses")
+        for address, was in doh.items():
+            _fields(was, {"present", "template", "auto_upgrade", "fallback_to_udp"})
+            _require(all(isinstance(was[f], bool) for f in ("present", "auto_upgrade", "fallback_to_udp")),
+                     f"DoH flags of {address} are not true or false")
+            _require(was["template"] in ("", DOH_ADDRESSES[address][1]),
+                     f"DoH template {was['template']!r} is not {DOH_ADDRESSES[address][0]}'s")
+
+
+def _unicast_ipv4(text: str) -> bool:
+    try:
+        address = ipaddress.IPv4Address(text)
+    except ValueError:
+        return False
+    return not (address.is_unspecified or address.is_multicast or address.is_reserved)
 
 
 # --- calibrated by a measurement made before enabling (ADR-0016) -----------------------------------
@@ -825,16 +1048,20 @@ class UploadShapingTweak(MeasuredTweak):
             sys_.qos_exempt_set(name, prefix)
         sys_.qos_policy_set(self.policy, value)
 
-    def validate_original(self, original: dict[str, Any]) -> None:
-        if original["policy"] != self.policy:
-            raise ValueError(f"backup names policy {original['policy']!r}, not {self.policy!r}")
-        if not set(original.get("exempt", [])) <= set(self.exemptions):
-            raise ValueError("backup names an unknown exemption policy")
-        self.restore_key(original)
+    def check_original(self, sys_: System, original: Any) -> None:
+        # Only the tool's own policies, at a rate this tweak could have set (ADR-0017). `exempt` is missing
+        # from backups made before the LAN exemptions.
+        _fields(original, {"policy", "rate_bps"}, frozenset({"exempt"}))
+        _same(original["policy"], self.policy, "QoS policy")
+        rate = original["rate_bps"]
+        _require(rate is None or _is_int(rate, UPLOAD_MIN_BPS, UPLOAD_MAX_BPS),
+                 f"rate {rate!r} is outside {UPLOAD_MIN_BPS}..{UPLOAD_MAX_BPS} bit/s")
+        exempt = original.get("exempt", [])
+        _require(isinstance(exempt, list) and all(isinstance(n, str) and n in self.exemptions for n in exempt)
+                 and len(set(exempt)) == len(exempt), f"exemption policies {exempt!r} are not this tweak's")
 
     def restore(self, sys_: System, original: dict[str, Any] | None) -> None:
-        if original is not None:
-            self.validate_original(original)    # only ever touch the tool's own names
+        # Only ever the tool's own names: the policy is self.policy, exemptions are looked up in self.exemptions.
         rate = None if original is None else original["rate_bps"]
         keep = set() if original is None else set(original.get("exempt", []))
         if rate is None:
@@ -908,6 +1135,14 @@ class MtuTweak(MeasuredTweak):
             return Reading(False, False, None, exc.message)
         return Reading(True, False, {"interface": info["alias"], "mtu": info["mtu"]})
 
+    def backup_in_effect(self, sys_: System, original: dict[str, Any]) -> bool:
+        """apply_value() only ever lowers the MTU: the tweak is in effect only where the MTU is below the saved
+        one. "Differs" (backup_reading) would let a forged MTU create the "on" it needs."""
+        try:
+            return int(self._info(sys_, original.get("guid"))["mtu"]) < int(original["mtu"])
+        except Unsupported:
+            return False
+
     def backup_reading(self, sys_: System, original: dict[str, Any]) -> Reading | None:
         try:
             info = self._info(sys_, original.get("guid"))
@@ -958,6 +1193,15 @@ class MtuTweak(MeasuredTweak):
 
     def restore_key(self, original: dict[str, Any]) -> Any:
         return int(original["mtu"])
+
+    def check_original(self, sys_: System, original: Any) -> None:
+        # The interface is found by its GUID, and the MTU is one derive() could have lowered from (ADR-0017).
+        _fields(original, {"guid", "interface_index", "alias", "mtu"})
+        _check_guid(original["guid"])
+        _require(_is_int(original["interface_index"], 1), f"interface {original['interface_index']!r} is not an index")
+        _require(isinstance(original["alias"], str), "alias is not text")
+        _require(_is_int(original["mtu"], MTU_LOWEST, MTU_HIGHEST_PROBED),
+                 f"MTU {original['mtu']!r} is outside {MTU_LOWEST}..{MTU_HIGHEST_PROBED}")
 
 
 # --- read cache ------------------------------------------------------------------------
@@ -1121,6 +1365,18 @@ class TweakManager:
             raise Refused(msg("tweak.result.bad_measurement", error=str(exc))) from None
         return checked, t.derive(checked)
 
+    def preflight(self, tweak_id: str) -> Message | None:
+        """Why turning `tweak_id` on would not help, asked before elevating so a refusal needs no UAC
+        prompt (None: go ahead, including when the check itself fails; enable() decides again)."""
+        t = self.get(tweak_id)
+        try:
+            r = t.read(self.system)
+            if r.enabled or not r.supported:
+                return None   # enable() reports these itself
+            return t.preflight(self.system)
+        except Exception:
+            return None
+
     def enable(self, tweak_id: str, measurement: Any = None) -> Outcome:
         """measurement: required by a measured tweak (ADR-0016), ignored by the others."""
         t = self.get(tweak_id)
@@ -1251,7 +1507,13 @@ class TweakManager:
                 self._event("tweak_disabled", msg("tweak.event.disabled_default", name=t.name, tweak_id=t.id), "info")
                 return Outcome(True, True, msg("tweak.result.restored_default"), self.state(t.id))
 
-            original = entry["original"]
+            try:
+                original = entry["original"]
+                t.check_original(self.system, original)
+            except (KeyError, TypeError, ValueError) as exc:
+                return self._fail(t, msg("tweak.result.backup_rejected", error=str(exc)), level="bad")
+            except Exception as exc:   # the machine could not be read to judge it: still nothing restored
+                return self._fail(t, msg("tweak.result.read_failed", error=str(exc)))
             try:
                 t.restore(self.system, original)
                 matches = t.restore_key(t.recapture(self.system, original)) == t.restore_key(original)
@@ -1276,9 +1538,11 @@ class TweakManager:
         t = self.get(tweak_id)
         with self._lock:
             try:
-                t.validate_original(original)
+                t.check_original(self.system, original)
             except (KeyError, TypeError, ValueError) as exc:
                 return Outcome(False, False, msg("tweak.result.bad_backup", error=str(exc)), None)
+            except Exception as exc:
+                return Outcome(False, False, msg("tweak.result.read_failed", error=str(exc)), None)
             # An outside backup only makes sense for a tweak that is on right now. If it is
             # off, the current value IS the original; adopting a stale one could later
             # "restore" something wrong (seen on the dev PC: most of EXP-001 had been undone).
@@ -1428,10 +1692,11 @@ def build_catalog(*, dns_benchmark: Benchmark = benchmark_servers, captive: Capt
                            default_absent=False,  # the driver INF sets a value (16 here); deleting it is a guess
                            group=GROUP_POWER, disrupts_network=True, note=_note("device_power_off")),
         PowerCfgTweak("power_wireless_max", _name("power_wireless_max"), "low",
-                      subgroup=SUB_WIRELESS, setting=SET_WIRELESS, ac=0, dc=0, group=GROUP_POWER,
+                      subgroup=SUB_WIRELESS, setting=SET_WIRELESS, ac=0, dc=0, valid=range(4), group=GROUP_POWER,
                       note=_note("power_wireless_max")),
         PowerCfgTweak("power_pcie_aspm_off", _name("power_pcie_aspm_off"), "low", subgroup=SUB_PCIE,
-                      setting=SET_ASPM, ac=0, dc=0, group=GROUP_POWER, note=_note("power_pcie_aspm_off")),
+                      setting=SET_ASPM, ac=0, dc=0, valid=range(3), group=GROUP_POWER,
+                      note=_note("power_pcie_aspm_off")),
         # 3. Network stack
         RegistryDwordTweak("tcp_timedwait", _name("tcp_timedwait"), "medium", path=TCPIP_PARAMS,
                            value_name="TcpTimedWaitDelay", target=lambda cur: 30, default_absent=True,
@@ -1497,6 +1762,53 @@ def enable_measured(mgr: TweakManager, tweak_id: str, measure: Callable[[], dict
     result.update(verdict=v, message=msg("tweak.result.measured_enabled", value=t.describe_value(value, before),
                                          verdict=msg(f"{prefix}.verdict.{key}", **params)))
     return result
+
+
+BATCH_MAX = 16
+
+
+def batch_tweaks(ids: Iterable[str]) -> list[Tweak]:
+    """The tweaks one "Fix" may turn on (or back off) together, under one UAC prompt (ADR-0020 point 6):
+    known, low risk, not measured, each named once. Anything else refuses the whole batch with
+    ValueError before anything is written. Sorted so the tweaks that keep the network up go first."""
+    by_id = {t.id: t for t in CATALOG}
+    ids = list(ids)
+    if not ids or len(ids) > BATCH_MAX:
+        raise ValueError(f"a batch takes 1 to {BATCH_MAX} tweaks")
+    if len(set(ids)) != len(ids):
+        raise ValueError("a tweak is named twice")
+    chosen = []
+    for tweak_id in ids:
+        t = by_id.get(tweak_id)
+        if t is None:
+            raise ValueError(f"unknown tweak {tweak_id!r}")
+        if t.risk != "low" or isinstance(t, MeasuredTweak):
+            raise ValueError(f"{tweak_id} is not a low-risk tweak a batch may change")
+        chosen.append(t)
+    return sorted(chosen, key=lambda t: t.disrupts_network)
+
+
+def run_batch(mgr: TweakManager, tweaks: list[Tweak], enable: bool = True) -> dict[str, Any]:
+    """Each tweak through the manager, as one by one (backup, verification, events); one failing does
+    not stop the others. Every result says what happened: on, already on, not supported, failed."""
+    results = []
+    for t in tweaks:
+        try:
+            refusal = mgr.preflight(t.id) if enable else None
+            out = Outcome(False, False, refusal) if refusal is not None else (
+                mgr.enable(t.id) if enable else mgr.disable(t.id))
+        except Exception as exc:   # one broken tweak must not hide the others
+            out = Outcome(False, False, msg("tweak.result.apply_failed", error=f"{type(exc).__name__}: {exc}"))
+        if out.ok:
+            status = "changed" if out.changed else "unchanged"
+        else:
+            state = getattr(out, "state", None)
+            status = "unsupported" if state is not None and not state.supported else "failed"
+        results.append({"id": t.id, "name": t.name, "ok": out.ok, "changed": out.changed, "status": status,
+                        "message": out.message})
+    changed = sum(1 for r in results if r["changed"])
+    return {"ok": all(r["ok"] for r in results), "changed": changed > 0, "results": results,
+            "message": msg("tweak.batch.done" if enable else "tweak.batch.undone", changed=changed, total=len(results))}
 
 
 def measure_for(t: MeasuredTweak) -> Callable[[], dict | None]:

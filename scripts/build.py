@@ -127,11 +127,14 @@ def smoke(port: int = 47699, seconds: int = 25) -> dict:
     """Run the built monitor against a throwaway data folder on a spare port and fetch the UI."""
     exe = APP_DIR / runtime.EXE_NAME
     with tempfile.TemporaryDirectory() as tmp:
-        data, user = Path(tmp) / "data", Path(tmp) / "user"
-        data.mkdir()
+        # An elevated process of the packaged build ignores STABLEINTERNET_DATA/USERDIR (ADR-0018), and CI
+        # runners are elevated: point LOCALAPPDATA at the same throwaway folder so both ways lead there.
+        user = Path(tmp) / "StableInternet"          # as config.user_dir() names it under LOCALAPPDATA
+        data = user / "data"
+        data.mkdir(parents=True)
         (data / "settings.json").write_text(json.dumps({"server": {"enabled": True, "port": port},
                                                         "probes": {"enabled": False}}), encoding="utf-8")
-        env = dict(os.environ, STABLEINTERNET_DATA=str(data), STABLEINTERNET_USERDIR=str(user))
+        env = dict(os.environ, STABLEINTERNET_DATA=str(data), STABLEINTERNET_USERDIR=str(user), LOCALAPPDATA=tmp)
         proc = subprocess.Popen([str(exe), "monitor", "--seconds", str(seconds)], env=env)
         result: dict = {}
         try:

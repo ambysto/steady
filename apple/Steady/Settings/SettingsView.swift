@@ -1,17 +1,29 @@
 import SteadyKit
 import SwiftUI
 
-/// About the app, the measurement history kept on the device, and reporting a problem.
+/// The app's language, about the app, the measurement history kept on the device, and
+/// reporting a problem.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(AppLanguage.storageKey) private var language = AppLanguage.automatic
     @State private var storedMinutes: Int?
     @State private var confirmingDelete = false
-    private let text = Localizer()
+    @Environment(\.localizer) private var text
 
     static let privacyPolicy = URL(string: "https://steady.ambysto.com/privacy")!
 
     var body: some View {
         Form {
+            Section {
+                Picker(text("ui.language.label"), selection: languageChoice) {
+                    Text(text("ui.language.auto")).tag(AppLanguage.automatic)
+                    ForEach(AppLanguage.available(), id: \.self) { code in
+                        Text(AppLanguage.name(of: code)).tag(code)
+                    }
+                }
+            } footer: {
+                Text(text("ui.language.hint"))
+            }
             Section {
                 LabeledContent(text("app.name"), value: text("ui.settings.version", [
                     "version": .text(Self.version), "build": .text(Self.build),
@@ -55,6 +67,16 @@ struct SettingsView: View {
         .navigationTitle(text("ui.nav.settings"))
         .task(id: model.monitor.minutes.last?.start) {
             storedMinutes = model.monitor.storedMinutes
+        }
+    }
+
+    /// A language stored before it was removed from the app shows as "Same as system", which
+    /// is what the app then follows.
+    private var languageChoice: Binding<String> {
+        Binding {
+            AppLanguage.available().contains(language) ? language : AppLanguage.automatic
+        } set: {
+            language = $0
         }
     }
 

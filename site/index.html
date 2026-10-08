@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ambysto Steady — Stable Internet Connection for Windows</title>
+  <title>Ambysto Steady | Stable Internet Connection for Windows</title>
   <meta name="description" content="Four bars of Wi-Fi and the connection still drops? Ambysto Steady measures packet loss and silent stalls, finds the cause, and recovers on its own. Free and open source for Windows.">
-  <meta name="theme-color" content="#0B1020">
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0B0D14" media="(prefers-color-scheme: dark)">
   <link rel="canonical" href="https://steady.ambysto.com/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Ambysto Steady">
   <meta property="og:url" content="https://steady.ambysto.com/">
-  <meta property="og:title" content="Ambysto Steady — Stable Internet Connection for Windows">
+  <meta property="og:title" content="Ambysto Steady | Stable Internet Connection for Windows">
   <meta property="og:description" content="Measures packet loss and silent stalls, finds the cause, and recovers on its own. Free and open source. No account, no telemetry, no ads.">
   <link rel="icon" href="/assets/img/logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/steady.css">
   <script type="application/ld+json">
   {
@@ -38,231 +38,264 @@
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="nav" id="nav">
-    <a class="brand" href="/">
-      <img src="/assets/img/logo.svg" alt="" width="28" height="28">
-      <span>Ambysto <small>Steady</small></span>
-    </a>
-    <nav class="nav-links" id="nav-links" aria-label="Sections">
-      <a href="#problem">Problem</a>
-      <a href="#features">Features</a>
-      <a href="#evidence">Evidence</a>
-      <a href="#safety">Safety</a>
-      <a href="#faq">FAQ</a>
-    </nav>
-    <a class="btn btn-sm" href="#download">Download</a>
-    <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span></button>
+    <div class="nav-inner">
+      <a class="brand" href="/">
+        <img src="/assets/img/logo.svg" alt="" width="30" height="30">
+        <span>Ambysto <b>Steady</b></span>
+      </a>
+      <nav class="nav-links" id="nav-links" aria-label="Sections">
+        <a href="#problem">Problem</a>
+        <a href="#features">Features</a>
+        <a href="#evidence">Evidence</a>
+        <a href="#safety">Safety</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <a class="btn btn-sm nav-cta" href="#download">Download</a>
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><span></span><span></span></button>
+    </div>
   </header>
 
   <main id="main">
 
-    <!-- ===== Hero ===== -->
+    <!-- Hero -->
     <section class="hero">
-      <div>
-        <p class="eyebrow"><span class="dot"></span>Stable Internet Connection</p>
-        <h1>Four bars.<br><em>Still dropping.</em></h1>
-        <p class="lead">Signal bars show how strong your Wi‑Fi is, not whether data is getting through. Ambysto Steady measures what actually matters &mdash; packet loss, silent stalls, slow DNS &mdash; helps you find the cause, and recovers on its own when your connection hangs.</p>
-        <div class="hero-cta">
-          <a class="btn" href="https://github.com/ambysto/steady/releases/latest">Download for Windows <span>&rarr;</span></a>
-          <a class="btn btn-ghost" href="#features">See how it works</a>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Connection monitor &amp; recovery for Windows</p>
+          <h1>Four bars.<br><span class="accent">Still dropping.</span></h1>
+          <p class="lead">Signal bars show how strong your Wi‑Fi is, not whether data gets through. Ambysto Steady measures what actually matters: packet loss, silent stalls and slow DNS. It finds the cause and recovers on its own when your connection hangs.</p>
+          <div class="cta-row">
+            <a class="btn" href="https://github.com/ambysto/steady/releases/latest">Download for Windows <span aria-hidden="true">&rarr;</span></a>
+            <a class="btn btn-ghost" href="#path">How it works</a>
+          </div>
+          <ul class="chips" aria-label="Highlights">
+            <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3.2 7 2.3V7.6H1zM8 2.2 15 1.2V7.6H8zM1 8.4H7v5.3L1 12.8zM8 8.4h7v6.4l-7-1z"/></svg>Windows 10 &amp; 11</li>
+            <li><span class="dot d-teal"></span>Free &amp; open source</li>
+            <li><span class="dot d-violet"></span>No telemetry</li>
+            <li><span class="dot d-coral"></span>No ads</li>
+          </ul>
         </div>
-        <ul class="hero-pills" aria-label="Highlights">
-          <li><i class="c-ops"></i>Free &amp; open source</li>
-          <li><i class="c-ai"></i>No telemetry</li>
-          <li><i class="c-auto"></i>No ads</li>
-        </ul>
-      </div>
 
-      <div class="hero-visual">
-        <div class="orb"></div>
-        <figure class="app-win" aria-label="Illustration of the Overview screen with sample data">
-          <div class="app-bar" aria-hidden="true"><i class="tl tl-r"></i><i class="tl tl-y"></i><i class="tl tl-g"></i><span>Overview</span></div>
-          <div class="app-body">
-            <p class="app-status"><span class="led"></span><b>Connected</b><small>Router 4&nbsp;ms &middot; Internet 38&nbsp;ms &middot; loss 0.0%</small></p>
-            <svg class="app-chart" viewBox="0 0 400 130" role="img" aria-label="Latency over time with one short outage">
-              <line x1="0" y1="32" x2="400" y2="32" class="grid"/><line x1="0" y1="64" x2="400" y2="64" class="grid"/><line x1="0" y1="96" x2="400" y2="96" class="grid"/>
-              <rect x="236" y="4" width="34" height="122" rx="4" class="outage"/>
-              <polyline class="line-internet" points="0,84 24,80 48,86 72,78 96,82 120,76 144,84 168,80 192,86 216,79 236,82 270,82 294,78 318,84 342,80 366,83 400,79"/>
-              <polyline class="line-router" points="0,112 24,111 48,113 72,111 96,112 120,111 144,113 168,112 192,111 216,112 236,112 270,112 294,111 318,113 342,112 366,111 400,112"/>
-            </svg>
-            <ul class="app-legend" aria-hidden="true">
-              <li><i class="k-router"></i>Router</li><li><i class="k-internet"></i>Internet</li><li><i class="k-outage"></i>Outage</li>
-            </ul>
+        <figure class="monitor" aria-label="Illustration of the live monitor with sample data">
+          <div class="monitor-head">
+            <span>Live monitor</span>
+            <span class="live"><i></i>Connected</span>
+          </div>
+          <ul class="meters">
+            <li><span class="m-name"><i class="d-teal"></i>Router</span><span class="m-bar"><i class="b-teal" style="--w:8%"></i></span><span class="m-val">4 ms</span></li>
+            <li><span class="m-name"><i class="d-blue"></i>Internet</span><span class="m-bar"><i class="b-blue" style="--w:38%"></i></span><span class="m-val">38 ms</span></li>
+            <li><span class="m-name"><i class="d-violet"></i>DNS</span><span class="m-bar"><i class="b-violet" style="--w:16%"></i></span><span class="m-val">12 ms</span></li>
+          </ul>
+          <svg class="chart" viewBox="0 0 400 110" role="img" aria-label="Latency over time with one short outage">
+            <line x1="0" y1="27" x2="400" y2="27" class="grid"/><line x1="0" y1="55" x2="400" y2="55" class="grid"/><line x1="0" y1="83" x2="400" y2="83" class="grid"/>
+            <g class="scroll">
+              <g id="trace"><rect x="236" y="2" width="34" height="106" rx="4" class="outage"/>
+              <polyline class="line-internet" points="0,62 24,62 48,68 72,60 96,64 120,58 144,66 168,62 192,68 216,61 236,64 270,64 294,60 318,66 342,62 366,65 400,62"/>
+              <polyline class="line-router" points="0,96 24,95 48,97 72,95 96,96 120,95 144,97 168,96 192,95 216,96 236,96 270,96 294,95 318,97 342,96 366,95 400,96"/></g>
+              <use href="#trace" x="400"/>
+            </g>
+          </svg>
+          <div class="monitor-foot">
+            <span>Packet loss</span><b>0.0%</b>
+            <span class="sep"></span>
+            <span>Outage</span><b class="warn">11 s &middot; recovered</b>
           </div>
           <figcaption>Illustration with sample data</figcaption>
         </figure>
-        <div class="float-card fc-1"><b>Silent stall detected</b>Wi‑Fi says connected, nothing flows</div>
-        <div class="float-card fc-3"><b>Watchdog</b>Reconnects, then restarts the adapter</div>
       </div>
     </section>
 
-    <!-- ===== Problem ===== -->
-    <section class="section" id="problem">
-      <div class="section-head">
-        <p class="eyebrow">The problem</p>
-        <h2>A fast speed test doesn&rsquo;t mean a stable connection</h2>
-        <p class="lead">A speed test measures a short burst of throughput. Browsing, calls and games depend on something else: whether every packet arrives, on time.</p>
-      </div>
-      <div class="cards">
-        <article class="card a-coral">
-          <p class="tag">Wi‑Fi</p>
-          <h3>Signal is not flow</h3>
-          <p>Bars measure signal strength. A driver hang, interference or a crowded channel can stall your traffic while all four bars stay lit &mdash; and Windows often records nothing.</p>
-        </article>
-        <article class="card a-violet">
-          <p class="tag">Your provider</p>
-          <h3>Fast at home, slow abroad</h3>
-          <p>Domestic speed can be excellent while some international routes are congested or shaped, or while your provider&rsquo;s DNS servers are slow. It is not always your equipment.</p>
-        </article>
-        <article class="card a-teal">
-          <p class="tag">Time of day</p>
-          <h3>Evening peaks</h3>
-          <p>Shared networks &mdash; apartment Wi‑Fi, mobile towers &mdash; get busy when everyone is online, and latency and packet loss climb with them.</p>
-        </article>
-      </div>
-      <p class="callout"><b>Ambysto Steady can&rsquo;t make your provider faster.</b> It tells you which part of the path is failing, and fixes the parts that are yours to fix.</p>
-    </section>
-
-    <!-- ===== Features ===== -->
-    <section class="section" id="features">
-      <div class="section-head">
-        <p class="eyebrow">What it does</p>
-        <h2>Measure. Diagnose. Recover. Optimize.</h2>
-        <p class="lead">Runs quietly in the system tray. Everything is stored on your PC.</p>
-      </div>
-      <div class="cards">
-        <article class="card a-coral">
-          <p class="tag">Measure</p>
-          <h3>Continuous monitoring</h3>
-          <p>Pings your router and the Internet every second, plus TCP and HTTP probes every 10&nbsp;s &mdash; so a real outage is told apart from a provider that merely rate-limits ping. Keeps per-minute history for 24 hours, a week and more.</p>
-        </article>
-        <article class="card a-violet">
-          <p class="tag">Diagnose</p>
-          <h3>Finds the likely cause</h3>
-          <p>14 checks: driver, signal, channel interference, drop history, DNS, bufferbloat, Wi‑Fi&nbsp;7/MLO compatibility, a modem still broadcasting Wi‑Fi in bridge mode, antennas blocked by the case or desk, and more. Plain-language steps, with before/after results once you try them.</p>
-        </article>
-        <article class="card a-teal">
-          <p class="tag">Recover</p>
-          <h3>Watchdog for silent stalls</h3>
-          <p>Notices when Wi‑Fi reports &ldquo;connected&rdquo; but nothing flows, reconnects, then restarts the adapter if needed. Off by default, rate-limited, and it switches itself off if it isn&rsquo;t helping.</p>
-        </article>
-        <article class="card a-coral">
-          <p class="tag">Optimize</p>
-          <h3>Reversible tweaks</h3>
-          <p>Eleven on/off switches &mdash; adapter power saving, PCIe power management, TCP port reuse, IPv6 and more. The original value is saved first, checked afterwards, and rolled back on failure. The effect of each change is measured.</p>
-        </article>
-        <article class="card a-violet">
-          <p class="tag">Fail over</p>
-          <h3>Backup connection</h3>
-          <p>When your main path loses the Internet and another one works &mdash; wired Ethernet, a USB 4G dongle, your phone&rsquo;s hotspot &mdash; it can switch automatically and switch back when the main path is stable. Off by default.</p>
-        </article>
-        <article class="card a-teal">
-          <p class="tag">Know</p>
-          <h3>Notifications &amp; log</h3>
-          <p>A notification when an outage lasts 30&nbsp;seconds or more and when it ends. A full log of incidents, changes you made and everything the watchdog did.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- ===== Evidence ===== -->
-    <section class="section" id="evidence">
-      <div class="section-head">
-        <p class="eyebrow">Real data</p>
-        <h2>From 35% packet loss to 0.4%</h2>
-        <p class="lead">One home network, one PC. The Wi‑Fi showed four bars the whole time.</p>
-      </div>
-      <div class="compare">
-        <div class="compare-col">
-          <h3>Before</h3>
-          <p class="compare-sub">107 minutes, one afternoon</p>
-          <div class="meter" role="img" aria-label="Packet loss to the router: 34.9 percent"><i class="m-bad" style="--w:34.9%"></i></div>
-          <p class="big">34.9% <small>packet loss to the router</small></p>
-          <ul class="facts">
-            <li><b>64</b> connection losses</li>
-            <li><b>~42 min</b> offline out of 107</li>
-            <li>Windows logged <b>1</b> disconnect</li>
-          </ul>
-        </div>
-        <div class="compare-col">
-          <h3>After</h3>
-          <p class="compare-sub">9.6 hours, overnight</p>
-          <div class="meter" role="img" aria-label="Packet loss to the router: 0.39 percent"><i class="m-ok" style="--w:0.39%"></i></div>
-          <p class="big">0.39% <small>packet loss to the router</small></p>
-          <ul class="facts">
-            <li><b>1</b> connection loss</li>
-            <li><b>3 seconds</b> long</li>
-            <li>No driver crashes</li>
-          </ul>
-        </div>
-      </div>
-      <p class="note">What fixed it was not software: switching off the old modem&rsquo;s own Wi‑Fi, disabling a Wi‑Fi&nbsp;7 feature (MLO) the PC&rsquo;s card couldn&rsquo;t handle, and turning the PC so the card&rsquo;s antennas weren&rsquo;t hidden behind a metal desk frame. They were found by measuring &mdash; the kind of checks Ambysto Steady runs and the steps it suggests. This is a single case; your results will differ.</p>
-    </section>
-
-    <!-- ===== Safety ===== -->
-    <section class="section" id="safety">
-      <div class="why">
-        <div class="why-story">
-          <p class="eyebrow">Safety &amp; privacy</p>
-          <h2>Built to never make things worse</h2>
-          <p>Changing network settings should be reversible, so every change goes through the same steps: back up the original value, apply, verify, and roll back automatically if it didn&rsquo;t work. Uninstalling restores everything.</p>
-          <p>There is no account, no telemetry, no analytics and no advertising. The <a class="link" href="/privacy">privacy policy</a> lists every connection the app makes.</p>
-        </div>
-        <div class="why-grid">
-          <div class="why-item"><span class="num a-text-coral">Back up</span><p>Original values saved before any change, and restored when you switch a tweak off.</p></div>
-          <div class="why-item"><span class="num a-text-violet">Capped</span><p>The watchdog acts at most six times an hour and shuts itself off if three attempts in a row don&rsquo;t help.</p></div>
-          <div class="why-item"><span class="num a-text-teal">Local</span><p>The app talks to its own server on 127.0.0.1 with a per-session token. Nothing is reachable from other computers.</p></div>
-          <div class="why-item"><span class="num a-text-coral">Asks first</span><p>Anything needing Administrator rights runs separately and asks through the Windows UAC prompt every time.</p></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== FAQ ===== -->
-    <section class="section faq" id="faq">
-      <div class="section-head">
-        <p class="eyebrow">FAQ</p>
-        <h2>Questions people ask</h2>
-      </div>
-      <div class="faq-list">
-        <details><summary>Will it make my Internet faster?</summary><p>No. It can&rsquo;t increase what your provider delivers. It finds what stops you from getting that speed consistently &mdash; interference, a misbehaving driver, a settings conflict, slow DNS &mdash; and tells you when the problem is on your provider&rsquo;s side.</p></details>
-        <details><summary>Why does it ask for Administrator rights?</summary><p>Only to apply an optimization or restart the network adapter. Monitoring and diagnostics run without them, and every Administrator action asks through the Windows UAC prompt each time.</p></details>
-        <details><summary>Is it safe to change these settings?</summary><p>Every switch saves the original value first, verifies the result and rolls back on failure. You can restore everything in one go, and riskier tweaks are labelled experimental.</p></details>
-        <details><summary>Does it send my data anywhere?</summary><p>No. To measure your connection it contacts a few public services (your router, Cloudflare, Google DNS) and nothing else. Every connection is listed in the <a class="link" href="/privacy">privacy policy</a>.</p></details>
-        <details><summary>Why does Windows show a warning when I open it?</summary><p>Releases are not code-signed: it is a free project and a certificate is a paid service. Windows SmartScreen may therefore show &ldquo;unknown publisher&rdquo; on first launch &mdash; choose <b>More info</b>, then <b>Run anyway</b>. The release is built from the public source by an open workflow, and you can read or build the code yourself. See the <a class="link" href="/codesigningpolicy">code signing page</a>.</p></details>
-        <details><summary>Is it really free?</summary><p>Yes. The app is fully functional with no ads and is released under the GNU General Public License v3.0.</p></details>
-        <details><summary>What about Mac, iPhone and Android?</summary><p>Windows only today. Native apps for Apple platforms and Android are planned, with no date yet.</p></details>
-        <details><summary>Which languages does it speak?</summary><p>The app has nine interface languages, and English is the default. Some translations are machine-generated and still need review by native speakers. This website is English only for now.</p></details>
-      </div>
-    </section>
-
-    <!-- ===== Download ===== -->
-    <section class="section cta" id="download">
-      <div class="cta-box">
-        <div>
-          <p class="eyebrow">Get it</p>
-          <h2>Free for Windows</h2>
-          <p>Unzip and double-click. It offers to install for the current user &mdash; no Administrator rights needed &mdash; and starts with Windows. Uninstall from Apps &amp; features: it restores every optimization first.</p>
-          <div class="hero-cta">
-            <a class="btn" href="https://github.com/ambysto/steady/releases/latest">Download latest release <span>&rarr;</span></a>
-            <a class="btn btn-ghost" href="https://github.com/ambysto/steady">View source</a>
+    <!-- Path diagram -->
+    <section class="band" id="path">
+      <div class="wrap">
+        <div class="path-panel">
+          <p class="panel-label">Where it breaks</p>
+          <div class="path-wrap">
+          <div class="track" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <ol class="path" aria-label="Example diagnosis along the connection path">
+            <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><b>This PC</b><span class="hop-val">driver OK</span></li>
+            <li class="hop bad"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/></svg></span><b>Wi‑Fi link</b><span class="hop-val">35% loss</span></li>
+            <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 13V8M17 13V8M7 16.5h.01M11 16.5h.01"/></svg></span><b>Router</b><span class="hop-val">reachable</span></li>
+            <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 18V9l6-4 6 4v9M10 18v-5h4v5"/></svg></span><b>Provider</b><span class="hop-val">38 ms</span></li>
+            <li class="hop ok"><span class="hop-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span><b>Internet</b><span class="hop-val">DNS 12 ms</span></li>
+          </ol>
+          </div>
+          <p class="path-verdict"><span class="tag-bad">Likely cause</span> The PC&rsquo;s Wi‑Fi link, not your provider. Try: switch off the old modem&rsquo;s own Wi‑Fi, then measure again.</p>
+          <div class="path-cols">
+            <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><p><b>Measures every second.</b> Router and Internet pings, plus TCP and HTTP probes, so a real outage is told apart from a provider that rate-limits ping.</p></div>
+            <div><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><p><b>Finds the failing part.</b> Your PC, the Wi‑Fi link, the router or the provider. Plain-language steps cover the parts that are yours to fix.</p></div>
+            <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg><p><b>Recovers silent stalls.</b> When Wi‑Fi says &ldquo;connected&rdquo; but nothing flows, it reconnects, then restarts the adapter if needed.</p></div>
           </div>
         </div>
-        <ul class="req-list">
-          <li><b>Windows 10 or 11</b> (64-bit)</li>
-          <li><b>No Python needed</b> for the packaged build</li>
-          <li><b>Licence:</b> GPL-3.0</li>
-          <li class="warn"><b>Not code-signed.</b> Windows SmartScreen may warn on first launch: choose More info, then Run anyway. <a class="link" href="/codesigningpolicy">Details</a></li>
+        <p class="caption">Illustration based on the case below</p>
+      </div>
+    </section>
+
+    <!-- Problem -->
+    <section class="section" id="problem">
+      <div class="wrap">
+        <div class="head center">
+          <p class="eyebrow">The problem</p>
+          <h2>A fast speed test doesn&rsquo;t mean a stable connection.</h2>
+          <p class="lead">A speed test measures a short burst of throughput. Browsing, calls and games depend on something else: whether every packet arrives, on time.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card top-coral">
+            <p class="label">Wi‑Fi</p>
+            <h3>Signal is not flow</h3>
+            <p>Bars measure signal strength. A driver hang, interference or a crowded channel can stall your traffic while all four bars stay lit, and Windows often records nothing.</p>
+          </article>
+          <article class="card top-violet">
+            <p class="label">Your provider</p>
+            <h3>Fast at home, slow abroad</h3>
+            <p>Domestic speed can be excellent while some international routes are congested or shaped, or while your provider&rsquo;s DNS servers are slow. It is not always your equipment.</p>
+          </article>
+          <article class="card top-teal">
+            <p class="label">Time of day</p>
+            <h3>Evening peaks</h3>
+            <p>Shared networks like apartment Wi‑Fi and mobile towers get busy when everyone is online, and latency and packet loss climb with them.</p>
+          </article>
+        </div>
+        <p class="honest"><b>Ambysto Steady can&rsquo;t make your provider faster.</b> It tells you which part of the path is failing, and fixes the parts that are yours to fix.</p>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="section soft" id="features">
+      <div class="wrap">
+        <div class="split">
+          <div class="head">
+            <p class="eyebrow">What it does</p>
+            <h2>Measure. Diagnose. Recover. Optimize.</h2>
+            <p class="lead">It runs quietly in the system tray and keeps everything on your PC. Per-minute history covers the last 24 hours, the last week and more, so an evening drop is still there when you look the next morning.</p>
+          </div>
+          <div class="history" role="img" aria-label="Illustration: a week of daily outage minutes, worst in the evenings">
+            <div class="history-head"><span>Last 7 days</span><span>Minutes offline</span></div>
+            <ul class="bars">
+              <li style="--h:22%"><span>Mon</span></li>
+              <li style="--h:64%"><span>Tue</span></li>
+              <li style="--h:38%"><span>Wed</span></li>
+              <li style="--h:86%" class="hi"><span>Thu</span></li>
+              <li style="--h:30%"><span>Fri</span></li>
+              <li style="--h:12%"><span>Sat</span></li>
+              <li style="--h:6%"><span>Sun</span></li>
+            </ul>
+            <p class="history-foot">Sample data</p>
+          </div>
+        </div>
+        <div class="grid-3 features">
+          <article class="feature"><span class="ico i-teal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span><h3>Continuous monitoring</h3><p>Pings your router and the Internet every second, plus TCP and HTTP probes every 10&nbsp;s.</p></article>
+          <article class="feature"><span class="ico i-violet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><h3>14 diagnostic checks</h3><p>Driver, signal, channel interference, drop history, DNS, bufferbloat, Wi‑Fi&nbsp;7/MLO compatibility, a modem still broadcasting in bridge mode, blocked antennas and more, with before/after results.</p></article>
+          <article class="feature"><span class="ico i-coral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg></span><h3>Watchdog for silent stalls</h3><p>Reconnects, then restarts the adapter if needed. Off by default, rate-limited, and it switches itself off if it isn&rsquo;t helping.</p></article>
+          <article class="feature"><span class="ico i-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><h3>Reversible tweaks</h3><p>On/off switches for adapter power saving, PCIe power management, TCP port reuse, IPv6 and more. The original value is saved first and restored on failure; each effect is measured.</p></article>
+          <article class="feature"><span class="ico i-teal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></span><h3>Backup connection</h3><p>When the main path loses the Internet and another one works (Ethernet, a USB 4G dongle, your phone&rsquo;s hotspot), it can switch over and back. Off by default.</p></article>
+          <article class="feature"><span class="ico i-violet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4"/></svg></span><h3>Notifications &amp; log</h3><p>A notification when an outage lasts 30&nbsp;seconds or more and when it ends, and a full log of incidents, your changes and every watchdog action.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Evidence -->
+    <section class="section" id="evidence">
+      <div class="wrap">
+        <div class="head">
+          <p class="eyebrow">Real data</p>
+          <h2>From 35% packet loss to <span class="accent">0.4%</span>.</h2>
+          <p class="lead">One home network, one PC. The Wi‑Fi showed four bars the whole time.</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><p class="stat-num"><s>35%</s> <span data-from="35" data-to="0.4" data-dec="1" data-unit="%">0.4%</span></p><p>Packet loss to the router</p></div>
+          <div class="stat"><p class="stat-num"><s>64</s> <span data-from="64" data-to="1" data-dec="0">1</span></p><p>Connection losses</p></div>
+          <div class="stat"><p class="stat-num"><s>~42 min</s> <span data-from="42" data-to="3" data-dec="0" data-unit=" s">3 s</span></p><p>Time offline</p></div>
+          <div class="stat"><p class="stat-num"><span data-from="0" data-to="1" data-dec="0">1</span></p><p>Disconnect Windows logged before</p></div>
+        </div>
+        <div class="compare">
+          <div class="compare-row">
+            <span class="c-label">Before <small>107 min, one afternoon</small></span>
+            <span class="c-bar"><i class="b-bad" style="--w:35%"></i></span>
+            <span class="c-val">35%</span>
+          </div>
+          <div class="compare-row">
+            <span class="c-label">After <small>9.6 hours, overnight</small></span>
+            <span class="c-bar"><i class="b-ok" style="--w:0.6%"></i></span>
+            <span class="c-val">0.4%</span>
+          </div>
+        </div>
+        <p class="note">What fixed it was not software: switching off the old modem&rsquo;s own Wi‑Fi, disabling a Wi‑Fi&nbsp;7 feature (MLO) the PC&rsquo;s card couldn&rsquo;t handle, and turning the PC so the card&rsquo;s antennas weren&rsquo;t hidden behind a metal desk frame. They were found by measuring, with the kind of checks Ambysto Steady runs and the steps it suggests. This is a single case; your results will differ.</p>
+      </div>
+    </section>
+
+    <!-- Safety -->
+    <section class="section soft" id="safety">
+      <div class="wrap split">
+        <div class="head">
+          <p class="eyebrow">Safety &amp; privacy</p>
+          <h2>Built to never make things worse.</h2>
+          <p class="lead">Every change goes through the same steps: back up the original value, apply, verify, and roll back automatically if it didn&rsquo;t work. Uninstalling restores everything.</p>
+          <p>No account, no telemetry, no analytics, no advertising. The <a class="link" href="/privacy">privacy policy</a> lists every connection the app makes.</p>
+        </div>
+        <ul class="trust">
+          <li><span class="ico i-teal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4"/></svg></span><div><b>Backed up first</b><p>Original values are saved before any change and restored when you switch a tweak off.</p></div></li>
+          <li><span class="ico i-violet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><b>Capped</b><p>The watchdog acts at most six times an hour and stops if three attempts in a row don&rsquo;t help.</p></div></li>
+          <li><span class="ico i-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><div><b>Local only</b><p>The app talks to its own server on 127.0.0.1 with a per-session token. Nothing is reachable from other computers.</p></div></li>
+          <li><span class="ico i-coral"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/></svg></span><div><b>Asks first</b><p>Anything that needs Administrator rights runs separately and asks through the Windows UAC prompt every time.</p></div></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="faq">
+      <div class="wrap narrow">
+        <div class="head center">
+          <p class="eyebrow">FAQ</p>
+          <h2>Questions people ask.</h2>
+        </div>
+        <div class="faq">
+          <details><summary>Will it make my Internet faster?</summary><p>No. It can&rsquo;t increase what your provider delivers. It finds what stops you from getting that speed consistently, such as interference, a misbehaving driver, a settings conflict or slow DNS, and tells you when the problem is on your provider&rsquo;s side.</p></details>
+          <details><summary>Why does it ask for Administrator rights?</summary><p>To install for all users under Program Files, to apply an optimization, or to restart the network adapter. Monitoring and diagnostics run without them, and every Administrator action asks through the Windows UAC prompt.</p></details>
+          <details><summary>Is it safe to change these settings?</summary><p>Every switch saves the original value first, verifies the result and rolls back on failure. You can restore everything in one go, and riskier tweaks are labelled experimental.</p></details>
+          <details><summary>Does it send my data anywhere?</summary><p>No. To measure your connection it contacts a few public services (your router, Cloudflare, Google DNS) and nothing else. Every connection is listed in the <a class="link" href="/privacy">privacy policy</a>.</p></details>
+          <details><summary>Why does Windows show a warning when I open it?</summary><p>Releases are not code-signed: it is a free project and a certificate is a paid service. Windows SmartScreen may therefore show &ldquo;unknown publisher&rdquo; on first launch. Choose <b>More info</b>, then <b>Run anyway</b>. The release is built from the public source by an open workflow, and you can read or build the code yourself.</p></details>
+          <details><summary>Is it really free?</summary><p>Yes. The app is fully functional with no ads and is released under the GNU General Public License v3.0.</p></details>
+          <details><summary>What about Mac, iPhone and Android?</summary><p>Windows only today. Native apps for Apple platforms and Android are planned, with no date yet.</p></details>
+          <details><summary>Which languages does it speak?</summary><p>The app has nine interface languages, and English is the default. Some translations are machine-generated and still need review by native speakers. This website is English only for now.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- Download -->
+    <section class="cta" id="download">
+      <div class="wrap cta-grid">
+        <div>
+          <p class="eyebrow">Get it</p>
+          <h2>Get more from the connection <span class="accent">you already have.</span></h2>
+          <p class="lead">Unzip and double-click. It installs for all users of the PC with one Administrator approval and starts with Windows. Uninstall from Apps &amp; features: it restores every optimization first.</p>
+          <div class="cta-row">
+            <a class="btn" href="https://github.com/ambysto/steady/releases/latest">Download latest release <span aria-hidden="true">&rarr;</span></a>
+            <a class="btn btn-dark" href="https://github.com/ambysto/steady">View source</a>
+          </div>
+        </div>
+        <ul class="req">
+          <li><span>System</span><b>Windows 10 or 11, 64-bit</b></li>
+          <li><span>Runtime</span><b>None, no Python needed</b></li>
+          <li><span>Licence</span><b>GPL-3.0</b></li>
+          <li><span>Price</span><b>Free</b></li>
+          <li class="warn"><span>Note</span><b>Not code-signed. SmartScreen may warn on first launch: choose More info, then Run anyway.</b></li>
         </ul>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="24" height="24"><span>Ambysto <small>Steady</small></span></a>
-    <p><a href="/privacy">Privacy</a></p>
-    <p><a href="/codesigningpolicy">Code signing policy</a></p>
-    <p><a href="https://github.com/ambysto/steady">GitHub</a></p>
-    <p><a href="https://github.com/ambysto/steady/blob/main/LICENSE">GPL-3.0</a></p>
-    <p><a href="https://ambysto.com">ambysto.com</a></p>
-    <p class="copy">&copy; 2026 Ambysto &middot; <a href="mailto:contact@ambysto.com">contact@ambysto.com</a></p>
+    <div class="wrap footer-grid">
+      <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="26" height="26"><span>Ambysto <b>Steady</b></span></a>
+      <nav aria-label="Footer">
+        <a href="/privacy">Privacy</a>
+        <a href="https://github.com/ambysto/steady">GitHub</a>
+        <a href="https://github.com/ambysto/steady/blob/main/LICENSE">GPL-3.0</a>
+        <a href="https://ambysto.com">ambysto.com</a>
+      </nav>
+      <p class="copy">&copy; 2026 Ambysto &middot; <a href="mailto:contact@ambysto.com">contact@ambysto.com</a></p>
+    </div>
   </footer>
 
   <script src="/assets/js/steady.js" defer></script>

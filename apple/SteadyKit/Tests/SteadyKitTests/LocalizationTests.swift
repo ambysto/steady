@@ -56,7 +56,17 @@ struct LocalizationTests {
                                  "ui.live.measuring", "ui.live.no_reply", "ui.live.rtt", "ui.live.loss",
                                  "ui.live.jitter", "ui.diag.run", "ui.diag.running", "ui.diag.on_demand", "ui.diag.count.info",
                                  "ui.diag.bufferbloat_run", "ui.diag.bufferbloat_confirm", "ui.sheet.cancel",
-                                 "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload"]
+                                 "diag.bufferbloat.title", "diag.bufferbloat.download", "diag.bufferbloat.upload",
+                                 "ui.language.label", "ui.language.auto", "apple.ui.language.auto", "ui.language.hint",
+                                 // CheckCard
+                                 "ui.check.start", "ui.check.idle_title", "ui.check.idle_body", "apple.ui.check.idle_body",
+                                 "ui.check.running", "ui.check.found_title", "ui.check.found_body", "ui.check.clear_title",
+                                 "ui.check.clear_body", "ui.check.again", "ui.check.details", "ui.check.recent_note",
+                                 "ui.check.kind.you", "ui.check.kind.none", "apple.ui.check.kind.none", "ui.overview.loss",
+                                 "ui.check.stale", "time.hours", "time.hours_minutes", "time.minutes", "time.minutes_seconds", "time.seconds",
+                                 // WeekCard
+                                 "ui.value.window", "ui.week.measured", "ui.week.not_enough", "ui.week.offline_label", "ui.week.offline",
+                                 "ui.week.offline_none", "ui.week.note", "ui.week.open_history"]
         used.formUnion([CheckStatus.ok, .info, .warn, .bad].map { "ui.status." + $0.rawValue })
         for check in [PingQuality.evaluate(hour: [], recent: []), DNSBenchmark.evaluate([], inUse: [], roles: [:]),
                       WiFiSignal.evaluate(nil), VPNCheck.evaluate([]),
