@@ -26,15 +26,41 @@ html[data-mode="bar"] .mini, html:not([data-mode="bar"]) .minibar { display: non
 .minibar .icon.down { color: var(--accent); } .minibar .icon.up { color: var(--chart-internet); }
 .minibar .icon.ping { color: var(--ok); }
 .minibar canvas { flex: 1; min-width: 40px; height: 26px; }
-.optimize { position: relative; display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 var(--space-3);
-  border: 0; border-radius: var(--radius-control); background: var(--accent); color: var(--accent-text);
-  font-weight: var(--weight-medium); overflow: hidden; cursor: default; flex: none; }
-.optimize:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
-.optimize .icon { width: 13px; height: 13px; }
-.optimize.busy { background: var(--surface-pressed); color: var(--text); }
-.optimize.good { background: var(--ok-soft); color: var(--ok); }
-.optimize .progress { position: absolute; left: 0; bottom: 0; height: 2px; background: var(--accent); width: 0;
-  transition: width var(--duration) var(--ease-out); }
+/* Optimize: a 32 px ring around one icon. idle: bolt; busy: the ring fills with the check's progress
+   and a magnifier drifts in a small circle; fix: solid accent disc with the count; issues: warn ring
+   with the count; good: a green tick. Flat colours, no glow (macOS native). */
+.optimize { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: none;
+  border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: default; }
+.optimize:hover { background: var(--accent-soft); }
+.optimize .ring { position: absolute; inset: 0; width: 32px; height: 32px; transform: rotate(-90deg); fill: none; stroke-width: 1.75; }
+.optimize .ring .track { stroke: currentColor; }
+.optimize .ring .fill { stroke: currentColor; stroke-dasharray: 0 100; stroke-linecap: round; display: none;
+  transition: stroke-dasharray var(--duration) var(--ease-out); }
+.optimize .glyph { width: 15px; height: 15px; }
+.optimize .badge { position: absolute; top: -3px; right: -4px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
+  background: var(--bad); color: #fff; font-size: 10px; font-weight: var(--weight-semibold); line-height: 15px; text-align: center; }
+.optimize.busy { color: var(--accent); }
+.optimize.busy .ring .track { stroke: var(--surface-pressed); }
+.optimize.busy .ring .fill { display: inline; }
+.optimize.busy .glyph { animation: seek 1.6s ease-in-out infinite; }
+.optimize.fix { background: var(--accent); color: var(--accent-text); }
+.optimize.fix:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
+.optimize.fix .ring { display: none; }
+.optimize.issues { color: var(--warn); }
+.optimize.issues .badge { background: var(--warn); }
+.optimize.good { color: var(--ok); }
+/* The magnifier looks around: a small loop, not a spin. */
+@keyframes seek {
+  0% { transform: translate(-2px, -1px); } 25% { transform: translate(1.5px, -2px); }
+  50% { transform: translate(2px, 1px); } 75% { transform: translate(-1px, 2px); } 100% { transform: translate(-2px, -1px); }
+}
+/* It shows that the check is running, like a spinner, so it keeps moving when Windows asks for less
+   motion, only smaller and slower. */
+@keyframes seek-small {
+  0%, 100% { transform: translate(-1.5px, -.5px); } 25% { transform: translate(1px, -1.5px); }
+  50% { transform: translate(1.5px, .5px); } 75% { transform: translate(-.5px, 1.5px); }
+}
+@media (prefers-reduced-motion: reduce) { .optimize.busy .glyph { animation: seek-small 2.2s ease-in-out infinite; } }
 
 .mini { display: flex; flex-direction: column; height: 100vh; padding: 0 var(--space-3) var(--space-3); gap: var(--space-2); }
 

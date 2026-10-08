@@ -150,23 +150,29 @@ function renderBar() {
 
 // --- Optimize (the bar's button) ----------------------------------------------------------------
 
+const OPTIMIZE_GLYPH = { idle: "bolt", busy: "search", fix: "bolt", issues: "bolt", good: "check" };
+
 function renderOptimize() {
   const button = $("#optimize");
   if (optimize.state === "good" && Date.now() > optimize.goodUntil) optimize.state = "idle";
-  const summary = optimize.summary;
-  const p = optimize.progress;
-  const text = { idle: () => t("ui.mini.optimize"),
-                 busy: () => (p ? t("ui.mini.checking", { done: p.done, total: p.total }) : t("ui.mini.checking_start")),
-                 fix: () => t("ui.mini.fix", { count: summary.fixable }),
-                 issues: () => t("ui.mini.issues", { count: summary.count }),
-                 good: () => t("ui.mini.all_good") }[optimize.state]();
-  $("#optimize-text").textContent = text;
-  button.className = `optimize${optimize.state === "busy" ? " busy" : optimize.state === "good" ? " good" : ""}`;
-  button.disabled = optimize.state === "busy";
-  button.title = optimize.state === "fix" || optimize.state === "issues" ? t("ui.mini.fix_hint") : t("ui.mini.optimize_hint");
-  const bar = $("#optimize-progress");
-  bar.hidden = optimize.state !== "busy";
-  bar.style.width = p && p.total ? `${Math.round((100 * p.done) / p.total)}%` : "0";
+  const { state, summary, progress: p } = optimize;
+  // No text on the button: what it does or found goes in its label and tooltip.
+  const label = { idle: () => t("ui.mini.optimize"),
+                  busy: () => (p ? t("ui.mini.checking", { done: p.done, total: p.total }) : t("ui.mini.checking_start")),
+                  fix: () => t("ui.mini.fix", { count: summary.fixable }),
+                  issues: () => t("ui.mini.issues", { count: summary.count }),
+                  good: () => t("ui.mini.all_good") }[state]();
+  const hint = state === "fix" || state === "issues" ? t("ui.mini.fix_hint") : state === "idle" ? t("ui.mini.optimize_hint") : "";
+  button.className = `optimize ${state}`;
+  button.disabled = state === "busy";
+  button.setAttribute("aria-label", label);
+  button.title = hint ? `${label}\n${hint}` : label;
+  $("#optimize-glyph").firstElementChild.setAttribute("href", `#i-${OPTIMIZE_GLYPH[state]}`);
+  const percent = state === "busy" && p && p.total ? Math.round((100 * p.done) / p.total) : 0;
+  $("#optimize-ring").style.strokeDasharray = `${percent} 100`;
+  const count = state === "fix" ? summary.fixable : state === "issues" ? summary.count : null;
+  $("#optimize-badge").hidden = count === null;
+  $("#optimize-badge").textContent = count === null ? "" : String(count);
 }
 
 /** What the latest stored check found, if it is recent enough to act on. */
