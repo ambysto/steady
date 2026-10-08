@@ -886,6 +886,9 @@
   "apple.ui.language.auto": "Theo hệ thống",
   "apple.ui.check.idle_body": "Chạy {count} kiểm tra kết nối, router và DNS. Không thay đổi gì trên thiết bị.",
   "apple.ui.check.start": "Quét",
+  "apple.ui.mini.optimize_hint": "Kiểm tra kết nối. Kết quả mở trong cửa sổ chính. Không thay đổi gì trên Mac này.",
+  "apple.ui.mini.fix_hint": "Xem kết quả kiểm tra trong cửa sổ chính.",
+  "apple.ui.mini.close": "Đóng (mục Cửa sổ trong menu sẽ mở lại)",
   "apple.ui.check.kind.none": "Thiết bị này không sửa được",
 
   "ui.nav.history": "Lịch sử",

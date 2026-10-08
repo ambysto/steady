@@ -886,6 +886,9 @@
   "apple.ui.language.auto": "Igual que el sistema",
   "apple.ui.check.idle_body": "Ejecuta {count} comprobaciones de la conexión, el router y el DNS. No se cambia nada.",
   "apple.ui.check.start": "Analizar",
+  "apple.ui.mini.optimize_hint": "Revisa la conexión. El resultado se abre en la ventana principal. No se cambia nada en este Mac.",
+  "apple.ui.mini.fix_hint": "Ve en la ventana principal lo que encontró la revisión.",
+  "apple.ui.mini.close": "Cerrar (el menú Ventana lo vuelve a mostrar)",
   "apple.ui.check.kind.none": "Nada en este dispositivo lo arregla",
 
   "ui.nav.history": "Historial",

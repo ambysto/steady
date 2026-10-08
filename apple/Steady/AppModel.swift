@@ -44,6 +44,30 @@ final class AppModel {
     private(set) var checkRun: CheckRun?
     private var checkTask: Task<Void, Never>?
 
+    #if os(macOS)
+    /// The floating monitor (ADR-0022): a window of its own on top of the others. Closed by default,
+    /// and it starts as the bar each time it opens.
+    private(set) var floatingShown = false
+    var floatingExpanded = false {
+        didSet { floatingController?.setExpanded(floatingExpanded) }
+    }
+    var floatingLook = FloatingLook(rawValue: UserDefaults.standard.string(forKey: "floating.look") ?? "") ?? .glass {
+        didSet {
+            UserDefaults.standard.set(floatingLook.rawValue, forKey: "floating.look")
+            floatingController?.applyLook(floatingLook)
+        }
+    }
+    var floatingTheme = FloatingTheme(rawValue: UserDefaults.standard.string(forKey: "floating.theme") ?? "") ?? .system {
+        didSet { UserDefaults.standard.set(floatingTheme.rawValue, forKey: "floating.theme") }
+    }
+    /// Download and upload over the last two minutes, sampled while the monitor is open.
+    private(set) var throughput = Throughput()
+    /// The Mac's address on the path's interface and its DNS servers, refreshed every 10 s while open.
+    private(set) var localIPv4: String?
+    private(set) var dnsServers: [String] = []
+    private var floatingController: FloatingMonitorController?
+    #endif
+
     /// The checks the run goes through on this platform, in the order of docs/DIAGNOSTICS.md.
     /// Bufferbloat (#14) loads the line, so it stays on the Diagnostics tab.
     static var checkSteps: [CheckRun.Step] {
@@ -121,9 +145,60 @@ final class AppModel {
             group.addTask { await self.monitor.run() }
             #if os(macOS)
             group.addTask { await self.readSignal() }
+            group.addTask { await self.readThroughput() }
             #endif
         }
     }
+
+    #if os(macOS)
+    /// Opens the floating monitor (ADR-0022). Its view keeps the measuring going while it is shown.
+    func showFloatingMonitor() {
+        floatingShown = true
+        let controller = floatingController ?? FloatingMonitorController(model: self)
+        floatingController = controller
+        controller.show(expanded: floatingExpanded, look: floatingLook)
+    }
+
+    /// Closes it: its view goes, so the measuring it kept going stops with it.
+    func hideFloatingMonitor() {
+        floatingController?.hide()
+        floatingShown = false
+        floatingExpanded = false
+    }
+
+    func toggleFloatingMonitor() {
+        if floatingShown {
+            hideFloatingMonitor()
+        } else {
+            showFloatingMonitor()
+        }
+    }
+
+    /// Solid while the pointer is on the floating monitor, see-through otherwise for Low and High.
+    func floatingPointer(over: Bool) {
+        floatingController?.pointerOver(over)
+    }
+
+    /// Samples the download and upload once a second while the floating monitor is open, and the
+    /// Mac's address and DNS servers every 10 s. Nothing is read while it is closed.
+    private func readThroughput() async {
+        var lastFacts: ContinuousClock.Instant?
+        while !Task.isCancelled {
+            if floatingShown, let interface = path?.interfaces.first {
+                if let counters = Throughput.counters(of: interface) {
+                    throughput.add(ts: Date().timeIntervalSince1970, interface: interface,
+                                   rx: counters.rx, tx: counters.tx)
+                }
+                if lastFacts.map({ $0.duration(to: .now) >= .seconds(10) }) ?? true {
+                    lastFacts = .now
+                    localIPv4 = Throughput.ipv4(of: interface)
+                    dnsServers = DNSProbe.systemServers()
+                }
+            }
+            try? await Task.sleep(for: .seconds(1))
+        }
+    }
+    #endif
 
     func runDNS() {
         dnsTask?.cancel()

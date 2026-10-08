@@ -24,6 +24,15 @@ struct OverviewView: View {
             } footer: {
                 Text(text("ui.live.window_note"))
             }
+            #if os(macOS)
+            Section {
+                Button {
+                    model.toggleFloatingMonitor()
+                } label: {
+                    Label(text("ui.tray.mini"), systemImage: "rectangle.on.rectangle")
+                }
+            }
+            #endif
             if let path = model.path {
                 Section {
                     LabeledContent(text("ui.path.connection"), value: path.linkMessage.map { text($0) } ?? "—")
