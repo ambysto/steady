@@ -3,7 +3,7 @@
 
 import { get, post } from "../api.js";
 import { $, el, fill, icon, switchEl, toast } from "../dom.js";
-import { duration, language, t } from "../i18n.js";
+import { duration, language, number, t } from "../i18n.js";
 import { failoverKey, failoverRows } from "../widgets.js";
 
 const root = () => $("#screen-settings");
@@ -53,6 +53,35 @@ function languageSelect(ctx) {
   return select;
 }
 
+const SAMPLE_MB = 12;   // one throughput sample moves about this much (app/speedsample.py)
+const INTERVALS = [15, 30, 60, 120];
+
+function intervalSelect(ctx) {
+  const current = ctx.state?.settings?.speed?.interval_min ?? 30;
+  const select = el("select", { class: "select", "aria-label": t("ui.speed.interval") },
+    [...new Set([...INTERVALS, current])].sort((a, b) => a - b)
+      .map(m => el("option", { value: m }, t("ui.speed.every", { minutes: m }))));
+  select.value = String(current);
+  select.addEventListener("change", async () => {
+    select.disabled = true;
+    if (await save(ctx, { speed: { interval_min: Number(select.value) } })) draw(ctx);
+    select.disabled = false;
+  });
+  return select;
+}
+
+function planInput(ctx, key, label) {
+  const input = el("input", { class: "input narrow", type: "number", min: "0", max: "100000", step: "1",
+                              inputmode: "numeric", "aria-label": label, placeholder: label });
+  const value = ctx.state?.settings?.speed?.[key];
+  if (value) input.value = String(value);
+  input.addEventListener("change", async () => {
+    const mbps = Math.max(0, Math.min(100000, Number(input.value) || 0));
+    if (await save(ctx, { speed: { [key]: mbps } })) draw(ctx);
+  });
+  return input;
+}
+
 function themeControl(ctx) {
   const theme = currentTheme();
   return el("div", { class: "segmented" }, ["system", "light", "dark"].map(value =>
@@ -76,6 +105,15 @@ function draw(ctx) {
       row("bad", "bell", t("ui.settings.notify_outages"),
         t("ui.settings.notify_after", { duration: duration(ctx.state?.notify_after_s ?? 30) }),
         settingSwitch(ctx, "notify", "enabled", t("ui.settings.notify_outages")))),
+    el("div", { class: "section-title" }, t("ui.speed.title")),
+    el("div", { class: "group" },
+      row("accent", "gauge", t("ui.speed.enabled"),
+        t("ui.speed.enabled_hint", { mb: SAMPLE_MB, gb: number(SAMPLE_MB * (43200 / (ctx.state?.settings?.speed?.interval_min ?? 30)) / 1000, 0) }),
+        settingSwitch(ctx, "speed", "enabled", t("ui.speed.enabled"))),
+      row("", "sliders", t("ui.speed.interval"), null, intervalSelect(ctx)),
+      row("", "gauge", t("ui.speed.plan"), t("ui.speed.plan_hint"),
+        el("div", { class: "form-row" }, planInput(ctx, "plan_down_mbps", t("ui.speed.plan_down")),
+          planInput(ctx, "plan_up_mbps", t("ui.speed.plan_up"))))),
     el("div", { class: "section-title" }, t("ui.watchdog.title")),
     el("div", { class: "group" },
       row("accent", "shield", t("ui.settings.watchdog_enabled"),

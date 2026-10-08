@@ -21,9 +21,10 @@ from typing import Any, Iterable
 
 from . import i18n
 
-# v2: diagnostic_runs. v3: events.message_key/message_params (ADR-0006). Every statement in _SCHEMA is
-# IF NOT EXISTS, so upgrading re-runs it; columns added to existing tables are listed in _ADDED_COLUMNS.
-SCHEMA_VERSION = 3
+# v2: diagnostic_runs. v3: events.message_key/message_params (ADR-0006). v4: speed_samples, slowdowns
+# (ADR-0021). Every statement in _SCHEMA is IF NOT EXISTS, so upgrading re-runs it; columns added to
+# existing tables are listed in _ADDED_COLUMNS.
+SCHEMA_VERSION = 4
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS minute_stats (
@@ -70,20 +71,61 @@ CREATE TABLE IF NOT EXISTS diagnostic_runs (
     results TEXT    NOT NULL
 );
 CREATE INDEX IF NOT EXISTS diagnostic_runs_ts ON diagnostic_runs (ts);
+
+-- Throughput samples (ADR-0021). A sample that was not measured keeps its row, with the reason.
+CREATE TABLE IF NOT EXISTS speed_samples (
+    ts        INTEGER PRIMARY KEY,
+    network   TEXT,               -- gateway|ssid: a baseline belongs to one network
+    down_mbps REAL,
+    up_mbps   REAL,
+    skipped   TEXT,               -- why nothing was measured (reason code), else NULL
+    evidence  TEXT                -- JSON: what the monitor knew at that moment
+);
+
+-- Slow periods (ADR-0021). end_ts is NULL while the episode is still going.
+CREATE TABLE IF NOT EXISTS slowdowns (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    start_ts      INTEGER NOT NULL,
+    end_ts        INTEGER,
+    direction     TEXT    NOT NULL,   -- download | upload
+    network       TEXT,
+    baseline_mbps REAL    NOT NULL,
+    min_mbps      REAL    NOT NULL,
+    avg_mbps      REAL    NOT NULL,
+    samples       INTEGER NOT NULL,
+    verdict       TEXT    NOT NULL,   -- outside | local | unknown
+    evidence      TEXT                -- JSON: {"open": {...}, "close": {...}}
+);
+CREATE INDEX IF NOT EXISTS slowdowns_start ON slowdowns (start_ts);
 """
 
 _ADDED_COLUMNS = {"events": [("message_key", "TEXT"), ("message_params", "TEXT")]}   # v3
 
 LEVELS = ("info", "warn", "bad")
 
+# Kept for LONG_RETENTION_DAYS instead of the usual retention_days: they are what a report to the
+# provider is made of, and a quarterly report needs them for 90 days (ADR-0021). The monitor's own
+# start, stop and gaps are there so a report can say when nothing was being watched.
+LONG_EVENT_KINDS = ("internet_down", "router_down", "slowdown", "monitor_start", "monitor_stop", "monitor_gap")
+LONG_RETENTION_DAYS = 730
+
 
 def level_for_event(kind: str, message: str = "") -> str:
     """Default severity for an event kind (used when importing old logs)."""
     if kind in ("internet_down", "router_down"):
         return "bad"
+    if kind == "slowdown":
+        return "warn"
     if kind == "wifi_state" and "-> disconnected" in message:
         return "warn"
     return "info"
+
+
+def _json_or_none(text: str | None) -> Any:
+    try:
+        return json.loads(text) if text else None
+    except ValueError:
+        return None
 
 
 def _event_out(row: dict[str, Any]) -> dict[str, Any]:
@@ -228,6 +270,69 @@ class Storage:
         params.append(int(limit))
         return [_event_out(r) for r in self._rows(sql, params)]
 
+    # --- throughput samples and slowdowns (ADR-0021) --------------------------
+
+    def add_speed_sample(self, ts: int, *, network: str | None = None, down_mbps: float | None = None,
+                         up_mbps: float | None = None, skipped: str | None = None,
+                         evidence: dict[str, Any] | None = None) -> None:
+        with self._lock:
+            self._db.execute(
+                "INSERT OR REPLACE INTO speed_samples (ts, network, down_mbps, up_mbps, skipped, evidence) "
+                "VALUES (?,?,?,?,?,?)",
+                (int(ts), network, down_mbps, up_mbps, skipped,
+                 json.dumps(evidence, ensure_ascii=False) if evidence is not None else None))
+
+    def query_speed_samples(self, start: int, end: int, network: str | None = None) -> list[dict[str, Any]]:
+        """Rows with start <= ts < end, oldest first; `evidence` is decoded."""
+        sql, params = "SELECT * FROM speed_samples WHERE ts >= ? AND ts < ?", [int(start), int(end)]
+        if network is not None:
+            sql += " AND network = ?"
+            params.append(network)
+        rows = self._rows(sql + " ORDER BY ts", params)
+        for row in rows:
+            row["evidence"] = _json_or_none(row["evidence"])
+        return rows
+
+    def add_slowdown(self, start_ts: int, direction: str, baseline_mbps: float, mbps: float, *,
+                     network: str | None = None, verdict: str = "unknown",
+                     evidence: dict[str, Any] | None = None) -> int:
+        """Opens an episode (end_ts NULL) and returns its id."""
+        with self._lock:
+            cur = self._db.execute(
+                "INSERT INTO slowdowns (start_ts, direction, network, baseline_mbps, min_mbps, avg_mbps, samples, "
+                "verdict, evidence) VALUES (?,?,?,?,?,?,?,?,?)",
+                (int(start_ts), direction, network, baseline_mbps, mbps, mbps, 1, verdict,
+                 json.dumps(evidence, ensure_ascii=False) if evidence is not None else None))
+            return int(cur.lastrowid)
+
+    def update_slowdown(self, slowdown_id: int, *, end_ts: int | None, min_mbps: float, avg_mbps: float,
+                        samples: int, verdict: str, evidence: dict[str, Any] | None) -> None:
+        with self._lock:
+            self._db.execute(
+                "UPDATE slowdowns SET end_ts=?, min_mbps=?, avg_mbps=?, samples=?, verdict=?, evidence=? WHERE id=?",
+                (None if end_ts is None else int(end_ts), min_mbps, avg_mbps, samples, verdict,
+                 json.dumps(evidence, ensure_ascii=False) if evidence is not None else None, int(slowdown_id)))
+
+    def query_slowdowns(self, since: int | None = None, until: int | None = None) -> list[dict[str, Any]]:
+        """Episodes that overlap [since, until), oldest first; `evidence` is decoded."""
+        sql, params = "SELECT * FROM slowdowns WHERE 1=1", []
+        if until is not None:
+            sql += " AND start_ts < ?"
+            params.append(int(until))
+        if since is not None:
+            sql += " AND (end_ts IS NULL OR end_ts >= ?)"
+            params.append(int(since))
+        rows = self._rows(sql + " ORDER BY start_ts, id", params)
+        for row in rows:
+            row["evidence"] = _json_or_none(row["evidence"])
+        return rows
+
+    def close_open_slowdowns(self, end_ts: int) -> int:
+        """Closes episodes left open by a monitor that stopped, at `end_ts` (the last sample it saw)."""
+        with self._lock:
+            return self._db.execute("UPDATE slowdowns SET end_ts=? WHERE end_ts IS NULL",
+                                    (int(end_ts),)).rowcount
+
     # --- diagnostic runs ------------------------------------------------------
 
     def save_diagnostic_run(self, ts: int, worst: str, results: list[dict[str, Any]]) -> int:
@@ -256,13 +361,26 @@ class Storage:
 
     # --- maintenance ----------------------------------------------------------
 
-    def purge(self, retention_days: float, now: float | None = None) -> dict[str, int]:
-        """Delete everything older than retention_days. Returns rows deleted per table."""
-        cutoff = int((time.time() if now is None else now) - retention_days * 86400)
+    def purge(self, retention_days: float, now: float | None = None,
+              long_retention_days: float = LONG_RETENTION_DAYS) -> dict[str, int]:
+        """Delete everything older than retention_days, except what a report is made of (outage and
+        slowdown events, throughput samples, slowdowns), which is kept for long_retention_days.
+        Returns rows deleted per table."""
+        now = time.time() if now is None else now
+        cutoff = int(now - retention_days * 86400)
+        long_cutoff = int(now - max(long_retention_days, retention_days) * 86400)
+        keep = ",".join("?" * len(LONG_EVENT_KINDS))
         deleted = {}
         with self._lock:
-            for table in ("minute_stats", "wifi_stats", "events"):
+            for table in ("minute_stats", "wifi_stats"):
                 deleted[table] = self._db.execute(f"DELETE FROM {table} WHERE ts < ?", (cutoff,)).rowcount
+            deleted["events"] = self._db.execute(
+                f"DELETE FROM events WHERE (ts < ? AND kind NOT IN ({keep})) OR ts < ?",
+                (cutoff, *LONG_EVENT_KINDS, long_cutoff)).rowcount
+            deleted["speed_samples"] = self._db.execute(
+                "DELETE FROM speed_samples WHERE ts < ?", (long_cutoff,)).rowcount
+            deleted["slowdowns"] = self._db.execute(
+                "DELETE FROM slowdowns WHERE start_ts < ? AND end_ts IS NOT NULL", (long_cutoff,)).rowcount
         return deleted
 
     # --- import of the PowerShell logger's CSVs -------------------------------

@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Slowdown history and reports for your provider** ([ADR-0021](docs/adr/0021-slowdown-history-and-isp-reports.md)). A line can be throttled or congested while ping, loss and probes are fine (download 300 → 5 Mb/s, upload and latency untouched); the monitor could not see that. With "Record slowdowns" on (Settings; off by default; about 12 MB every 30 minutes, about 17 GB a month), the app measures download and upload now and then, learns the normal speed of each network (or uses the plan speed you enter), and records a slowdown when two measurements in a row fall under half of it, until one is back at 70%. Each slowdown keeps what was known at that moment (loss and delay to the router, Wi‑Fi link and signal, the other direction's speed, a VPN) and a verdict: outside the PC and its router link, a Wi‑Fi or router-link cause, or undetermined. A measurement is skipped, with the reason kept, during an outage, right after a route change and while this PC is moving other traffic. The Log has a "Slowdowns" filter and a speed section; "Create report" writes a week, month or quarter as a page to print or save as PDF, plus two CSVs, with a SHA-256 of the rows and no Wi‑Fi name, MAC or local address. Slowdowns, outages and their measurements are kept for 2 years (the rest still 30 days). Reports and the history beyond 30 days are meant for supporters; until the key check exists (its own ADR) `license.is_supporter()` is open to everyone. 98 new keys in all 7 catalogs; `GET /api/slowdowns`, `POST /api/report`, a `speed` section in `settings.json`, schema v4.
+
 ## [0.7.1] - 2026-10-07
 
 After a check, what it found opens in its own view: the problems to fix ticked on the left, each finding on the right, Back and Fix below. "Nothing to fix" shows a screen with a tick and what is left on Optimize. The sidebar no longer repeats the app name.

@@ -50,6 +50,11 @@
 | `installer.py`, `entry.py` | Packaged build `Ambysto Steady.exe` (PyInstaller, bundles Python): subcommands `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; install for all users under `Program Files` ([ADR-0019](adr/0019-per-machine-install.md): one UAC prompt for the all-users part, the monitor task and tray shortcut stay per user, an earlier per-user copy in `%LOCALAPPDATA%\Programs` is removed), uninstall first restores every tweak + metric. A packaged copy outside `Program Files` never runs elevated. Data of the packaged build lives in `%LOCALAPPDATA%\StableInternet\data` |
 | `impact.py` | Measures the effect of a change (tweak, manual step) using monitor data before/after — [ADR-0007](adr/0007-measured-impact.md) |
 | `suggestions.py` | Suggestions from the latest diagnostic run: tweaks + manual steps (rotate the antenna, turn off the modem's Wi‑Fi…), "I did this" |
+| `speedsample.py` | One throughput sample: ~10 MB down and ~2 MB up from the CDN, timed from the first byte; this PC's other traffic during it is read from the interface counters (`GetIfEntry`) — [ADR-0021](adr/0021-slowdown-history-and-isp-reports.md) |
+| `slowdown.py` | The rules, no I/O: baseline, the open/close state machine of a slowdown (50% / 70%, hysteresis) and the verdict `outside` / `local` / `unknown` from the evidence |
+| `speedwatch.py` | The schedule (off until `speed.enabled`, re-read every cycle, backs off when the server refuses), skipped samples with a reason, the slowdown history in storage and the `slowdown` event |
+| `report.py` | Week / month / quarter reports: the numbers from storage, a print-friendly HTML page, two CSVs, a SHA-256 of the rows |
+| `license.py` | `is_supporter()`: the one gate for the Pro features (history beyond 30 days, reports). A stub returning `True` until the key check has its own ADR |
 | `dnswatch.py` | Detects DNS being changed on the same network (read-only), warns via an event + toast; a change the app made itself (`dns_fastest`, ADR-0015) is only recorded |
 | `i18n.py`, `locales/*.json` | Translations (ADR-0006): `t(key, **params)`, `msg()` to store messages for later translation, `format_duration()`; English is the reference and fallback |
 
@@ -78,9 +83,9 @@ Incident classification:
 |---|---|
 | `settings.json` | User configuration (watchdog, ping interval, targets, `ui.language`…) |
 | `backup.json` | Before ADR-0018: original value of each tweak before it is applied. Now read once per machine by the first elevated process into `HKLM\SOFTWARE\Ambysto\Steady` (values `Backup`, the same JSON, and `Quarantine` for entries not imported yet; `LegacyImported` marks it done and stays after uninstalling); the file is left in place and no longer read. The tests still use it as the file backend (`STABLEINTERNET_BACKUP=file`) |
-| `metrics.db` | SQLite (WAL, `PRAGMA user_version` = schema version): `minute_stats(ts, target, ip, sent, lost, avg, max, jitter)`, `wifi_stats(ts, state, ssid, bssid, channel, signal, rssi, rx_mbps, tx_mbps)`, `events(id, ts, kind, level, message, duration, message_key, message_params)` (v3: events with text store a translation key + JSON parameters, the `message` column keeps the English version for reading the DB directly; the API returns text in the currently selected language). `ts` is Unix seconds UTC; statistics tables are keyed by the start of the minute. `*_down` events are written when the incident ends, so `ts` is the recovery time and `duration` tells when it started. When the monitor loses data for > 30 s (machine asleep/hung), the open incident is cut at the last tick before the gap (message contains "cut short by a monitoring gap") and a `monitor_gap` event records the length of the gap — time that could not be measured is never counted as an outage. `rx_mbps`/`tx_mbps`/`bssid` are needed for MLO and roaming diagnostics; `ip` because the router IP can change |
+| `metrics.db` | SQLite (WAL, `PRAGMA user_version` = schema version): `minute_stats(ts, target, ip, sent, lost, avg, max, jitter)`, `wifi_stats(ts, state, ssid, bssid, channel, signal, rssi, rx_mbps, tx_mbps)`, `events(id, ts, kind, level, message, duration, message_key, message_params)` (v3: events with text store a translation key + JSON parameters, the `message` column keeps the English version for reading the DB directly; the API returns text in the currently selected language). `ts` is Unix seconds UTC; statistics tables are keyed by the start of the minute. `*_down` events are written when the incident ends, so `ts` is the recovery time and `duration` tells when it started. When the monitor loses data for > 30 s (machine asleep/hung), the open incident is cut at the last tick before the gap (message contains "cut short by a monitoring gap") and a `monitor_gap` event records the length of the gap — time that could not be measured is never counted as an outage. `rx_mbps`/`tx_mbps`/`bssid` are needed for MLO and roaming diagnostics; `ip` because the router IP can change. `speed_samples(ts, network, down_mbps, up_mbps, skipped, evidence)` (v4: one row per scheduled sample; a sample that was not measured keeps its row with the reason: `outage`, `network_change`, `own_traffic`, `refused`, `error`) and `slowdowns(id, start_ts, end_ts, direction, network, baseline_mbps, min_mbps, avg_mbps, samples, verdict, evidence)` (`end_ts` NULL while going on; `evidence` is JSON `{open, close}`) |
 
-Raw ping samples are kept only in RAM (last 15 minutes); the DB stores per-minute statistics, kept for 30 days.
+Raw ping samples are kept only in RAM (last 15 minutes); the DB stores per-minute statistics, kept for 30 days. What a report is made of — `speed_samples`, `slowdowns` and the `internet_down`, `router_down`, `slowdown`, `monitor_start`, `monitor_stop` and `monitor_gap` events — is kept for 2 years ([ADR-0021](adr/0021-slowdown-history-and-isp-reports.md)). Reports are written to `%LOCALAPPDATA%\StableInternet\results\reports\`.
 
 ## UI (`web/`)
 
@@ -114,13 +119,15 @@ Text generated by the backend (diagnostics, events, tweaks) comes already transl
 | GET | `/api/live?window=300` | Latest ping samples (≤ 900s), Wi‑Fi state, ongoing incident |
 | GET | `/api/history?hours=24&bucket=1` | Per-minute statistics + Wi‑Fi + events (≤ 30 days); `bucket=N` aggregates N minutes (7-day chart) |
 | GET | `/api/events?limit=200` | Log |
+| GET | `/api/slowdowns[?days=30]` | Slowdown history: episodes (newest first), the ones still going on, the latest sample, the last 14 days of samples for a chart, the `speed` settings. Beyond 30 days is a supporter feature |
+| POST | `/api/report` | `{kind: week\|month\|quarter, date?: YYYY-MM-DD, provider?, public_ip?, open?}` → writes the HTML and CSVs of that period (any day in it) and opens the page; 402 when not a supporter. Returns the summary and the file paths |
 | GET | `/api/tweaks` | Tweak state from a 60s cache; re-reading runs in the background (~11s); `impact` for enabled tweaks |
 | POST | `/api/tweaks/{id}` | `{ "enable": true/false }` → job; via UAC when not Admin |
 | POST | `/api/diagnostics` | Run all diagnostics → job (one run at a time) |
 | GET | `/api/diagnostics/runs[/{id}]` | Saved diagnostic runs |
 | GET | `/api/jobs/{id}` | Job status/result |
 | POST | `/api/actions/{name}` | `reconnect`, `restart_adapter` (UAC), `flush_dns`, `renew_dhcp` → job |
-| POST | `/api/settings` | Only keys in `SETTINGS_SCHEMA` (`watchdog.*`, `notify.enabled`, `ui.language`), type-checked, value ranges / allowed lists |
+| POST | `/api/settings` | Only keys in `SETTINGS_SCHEMA` (`watchdog.*`, `notify.enabled`, `speed.*`, `ui.language`), type-checked, value ranges / allowed lists |
 
 The server runs inside the monitor process, **unelevated**, at `http://127.0.0.1:47613/` (change in `settings.json` → `server.port`); the actual location is written to `%LOCALAPPDATA%\StableInternet\server.json`. Every request must have the correct `Host`; every `/api/*` requires the `X-Token` header; write requests are rejected if cross-origin — see [SECURITY.md](SECURITY.md) and [ADR-0005](adr/0005-unelevated-server-uac-writes.md).
 

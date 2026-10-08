@@ -101,6 +101,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     # Windows toasts for outages and watchdog actions (app/notify.py). outage_after_s: how long an
     # outage must last before the first toast.
     "notify": {"enabled": True, "outage_after_s": 30},
+    # Throughput samples that find a line delivering a fraction of its speed while ping and probes are fine
+    # (app/speedwatch.py, ADR-0021). Off by default: about 12 MB every interval_min. plan_*_mbps: the speed the
+    # user pays for, 0 = unknown (the baseline is then learned from the samples).
+    "speed": {"enabled": False, "interval_min": 30, "plan_down_mbps": 0, "plan_up_mbps": 0},
 }
 
 

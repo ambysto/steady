@@ -9,7 +9,10 @@ personal data anywhere.**
 **Windows.** Measurements (latency, packet loss, Wi‑Fi signal, outages), diagnostics results,
 settings and logs are stored only in `%LOCALAPPDATA%\StableInternet`. The app's window talks to its
 own local server at `127.0.0.1`, which is not reachable from other computers and requires a
-per-session token. Uninstalling offers to delete this data. The original values of the settings an
+per-session token. Measurements are kept for 30 days; outages, slowdowns and the speed
+measurements behind them are kept for 2 years, so a report for your provider can cover a quarter.
+Reports you create are files in the same folder and are never sent anywhere by the app; you decide
+whether to send one, and it holds no Wi‑Fi name or local address. Uninstalling offers to delete this data. The original values of the settings an
 optimization changed are kept in the registry, under `HKLM\SOFTWARE\Ambysto\Steady`, so that only an
 Administrator can change them; uninstalling restores those settings and deletes them. One value,
 `LegacyImported`, stays in that key: it only records that an older version's backup was imported.
@@ -36,6 +39,7 @@ address.
 | Backup connection switching, only if you turn it on | TCP connection without data from each network adapter | `1.1.1.1:443`, `8.8.8.8:443` |
 | When you run diagnostics | DNS lookups of `google.com`, `cloudflare.com`, `microsoft.com`, `youtube.com`, `facebook.com` | The DNS servers your PC uses, your router, `1.1.1.1`, `8.8.8.8`, `9.9.9.9` (Quad9) |
 | When you start the load test and confirm it | Download and upload of test data (about 25 MB per request) | `speed.cloudflare.com` |
+| Only if you turn on "Record slowdowns", every 15 to 120 minutes (30 by default) | Download of about 10 MB and upload of about 2 MB of test data, about 17 GB a month at the default | `speed.cloudflare.com` |
 
 You can change the monitored targets in the settings file.
 

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from app import config, elevated, elevation, i18n
+from app import license as licensing
 from app.i18n import msg
 from app.server import Api, Jobs, Server
 from app.storage import Storage
@@ -90,11 +91,15 @@ class ServerTestCase(unittest.TestCase):
                        elevate=elevate, actions=self.actions,
                        run_diagnostics=lambda progress=None: {"worst": "ok", "results": []}, sync_jobs=True,
                        load_backup=lambda: self.backup, autostart_status=self._autostart,
-                       route=lambda: self.route)
+                       route=lambda: self.route, open_file=self._open_file)
         self.server = Server(self.api, 0)
         self.server.start()
         self.addCleanup(self.server.stop)
         self.host = f"127.0.0.1:{self.server.port}"
+
+    def _open_file(self, path):
+        self.opened_files = getattr(self, "opened_files", []) + [path]
+        return True
 
     def _autostart(self):
         self.autostart_calls = getattr(self, "autostart_calls", 0) + 1
@@ -313,7 +318,7 @@ class ReadApiTests(ServerTestCase):
 
     def test_state_carries_the_editable_settings(self):
         state = self.req("GET", "/api/state")[1]
-        self.assertEqual(set(state["settings"]), {"watchdog", "notify", "ui", "failover"})
+        self.assertEqual(set(state["settings"]), {"watchdog", "notify", "ui", "failover", "speed"})
         self.assertEqual(state["settings"]["ui"]["language"], "en")
         self.assertEqual(state["notify_after_s"], 30)
 
@@ -546,6 +551,17 @@ class WriteApiTests(ServerTestCase):
         for body in bad:
             self.assertEqual(self.req("POST", "/api/settings", body)[0], 400, body)
         self.assertEqual(self.settings, json.loads(json.dumps(config.DEFAULT_SETTINGS)))
+
+    def test_speed_settings(self):
+        for body in ({"speed": {"enabled": 1}}, {"speed": {"interval_min": 5}}, {"speed": {"interval_min": 1000}},
+                     {"speed": {"plan_down_mbps": -1}}, {"speed": {"plan_down_mbps": True}}, {"speed": {"nope": 1}}):
+            self.assertEqual(self.req("POST", "/api/settings", body)[0], 400, body)
+        self.assertFalse(self.settings["speed"]["enabled"])
+        body = {"speed": {"enabled": True, "interval_min": 60, "plan_down_mbps": 300, "plan_up_mbps": 120.5}}
+        status, payload, _ = self.req("POST", "/api/settings", body)
+        self.assertEqual(status, 200)
+        self.assertEqual(self.settings["speed"], body["speed"])
+        self.assertEqual(payload["settings"]["speed"]["interval_min"], 60)
 
     def test_language_setting(self):
         for value in ("klingon", "", 5, None, "../en"):
@@ -795,6 +811,83 @@ class ElevationTests(unittest.TestCase):
         self.assertIsNotNone(res.result, res.message)
         self.assertIn("Administrator", i18n.render(res.message, "en"))
         self.assertEqual(os.listdir(config.results_dir()), [])  # cleaned up
+
+
+
+class SlowdownApiTests(ServerTestCase):
+    def setUp(self):
+        super().setUp()
+        self.now = int(time.time())
+        self.storage.add_speed_sample(self.now - 3600, network="gw|net", down_mbps=300.0, up_mbps=120.0)
+        self.storage.add_speed_sample(self.now - 1800, network="gw|net", down_mbps=5.3, up_mbps=122.0)
+        sid = self.storage.add_slowdown(self.now - 3600, "download", 300.0, 5.3, network="gw|net", verdict="outside")
+        self.storage.update_slowdown(sid, end_ts=self.now - 600, min_mbps=5.0, avg_mbps=5.2, samples=3,
+                                     verdict="outside", evidence=None)
+        self.storage.add_slowdown(self.now - 300, "download", 300.0, 4.0, network="gw|net", verdict="outside")
+
+    def test_slowdowns_lists_episodes_newest_first_and_the_ones_still_going(self):
+        status, payload, _ = self.req("GET", "/api/slowdowns")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(payload["items"]), 2)
+        self.assertGreater(payload["items"][0]["start_ts"], payload["items"][1]["start_ts"])
+        self.assertEqual([a["end_ts"] for a in payload["active"]], [None])
+        self.assertEqual(payload["last_sample"]["down_mbps"], 5.3)
+        self.assertEqual(len(payload["samples"]), 2)
+        self.assertEqual(payload["settings"]["enabled"], False)
+        self.assertEqual((payload["days"], payload["max_days"], payload["supporter"]), (30, 730, True))
+
+    def test_the_history_beyond_30_days_is_the_supporters(self):
+        old = self.now - 100 * 86400
+        sid = self.storage.add_slowdown(old, "upload", 120.0, 3.0)
+        self.storage.update_slowdown(sid, end_ts=old + 600, min_mbps=3.0, avg_mbps=3.0, samples=2, verdict="outside",
+                                     evidence=None)
+        self.assertEqual(len(self.req("GET", "/api/slowdowns?days=365")[1]["items"]), 3)
+        with mock.patch.object(licensing, "is_supporter", return_value=False):
+            status, payload, _ = self.req("GET", "/api/slowdowns?days=365")
+        self.assertEqual((payload["days"], payload["max_days"], payload["supporter"]), (30, 30, False))
+        self.assertEqual(len(payload["items"]), 2)
+
+    def test_bad_days(self):
+        self.assertEqual(self.req("GET", "/api/slowdowns?days=abc")[0], 400)
+
+    def report(self, body=None, **kw):
+        return self.req("POST", "/api/report", {"kind": "month", **(body or {})}, **kw)
+
+    def test_a_report_is_written_beside_its_csvs_and_opened(self):
+        status, payload, _ = self.report({"provider": "Example ISP", "public_ip": "203.0.113.10"})
+        self.assertEqual(status, 200, payload)
+        self.assertTrue(payload["opened"])
+        for key in ("html", "csv", "samples_csv"):
+            self.assertTrue(os.path.isfile(payload["files"][key]), key)
+        page = open(payload["files"]["html"], encoding="utf-8").read()
+        self.assertIn("Example ISP", page)
+        self.assertIn(payload["summary"]["digest"], page)
+        self.assertNotIn("samples", payload["summary"])
+        self.assertEqual([str(p) for p in self.opened_files], [payload["files"]["html"]])
+        self.assertTrue(payload["files"]["html"].startswith(self.tmp.name))
+
+    def test_open_false_only_writes(self):
+        status, payload, _ = self.report({"open": False})
+        self.assertEqual((status, payload["opened"]), (200, False))
+        self.assertFalse(getattr(self, "opened_files", []))
+
+    def test_the_period_follows_kind_and_date(self):
+        status, payload, _ = self.report({"kind": "quarter", "date": "2026-05-10", "open": False})
+        self.assertEqual(payload["label"], "2026-Q2")
+        self.assertTrue(payload["files"]["html"].endswith("ambysto-steady-report-2026-Q2.html"))
+
+    def test_bad_requests(self):
+        for body in ({"kind": "year"}, {"date": "yesterday"}, {"date": 5}, {"provider": "<script>"},
+                     {"provider": "x" * 500}, {"public_ip": 5}):
+            self.assertEqual(self.report(body)[0], 400, body)
+
+    def test_reports_are_a_supporter_feature(self):
+        with mock.patch.object(licensing, "is_supporter", return_value=False):
+            self.assertEqual(self.report()[0], 402)
+        self.assertFalse(getattr(self, "opened_files", []))
+
+    def test_a_report_needs_the_token(self):
+        self.assertEqual(self.report(token=False)[0], 401)
 
 
 if __name__ == "__main__":

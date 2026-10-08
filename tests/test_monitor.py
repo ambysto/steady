@@ -321,6 +321,43 @@ class MonitorTests(unittest.TestCase):
         self.env.run(self.mon, 3)
         self.assertNotIn("monitor_gap", self.events())
 
+    # -- what the throughput samples are told (ADR-0021) --------------------------------
+
+    def test_speed_evidence_is_the_router_hop_of_the_last_minute(self):
+        self.env.run(self.mon, 30)
+        evidence = self.mon._speed_evidence()
+        self.assertEqual((evidence["router_loss_pct"], evidence["router_ms"]), (0.0, 2.0))
+        self.assertEqual((evidence["rx_mbps"], evidence["rssi"], evidence["vpn"]), (self.env.wifi.rx_mbps, -60, False))
+
+    def test_speed_evidence_counts_router_loss(self):
+        self.env.run(self.mon, 20)
+        self.env.run(self.mon, 20, **{"192.168.3.1": None})
+        self.assertEqual(self.mon._speed_evidence()["router_loss_pct"], 50.0)
+
+    def test_too_few_pings_is_no_loss_figure_rather_than_zero(self):
+        self.env.run(self.mon, 5)
+        self.assertIsNone(self.mon._speed_evidence()["router_loss_pct"])
+
+    def test_a_tunnel_is_noticed_from_the_route_of_internet_traffic(self):
+        self.env.run(self.mon, 25)
+        self.mon._path_fn = lambda: {"gateway": None, "interface_index": 99, "metric": 5}
+        self.assertTrue(self.mon._speed_evidence()["vpn"])
+
+    def test_no_sample_during_an_outage_or_right_after_the_route_moved(self):
+        self.assertIsNone(self.mon._speed_skip_reason())
+        self.env.run(self.mon, 5, **{"192.168.3.1": None, "1.1.1.1": None, "8.8.8.8": None})
+        self.assertEqual(self.mon._speed_skip_reason(), "outage")
+        self.env.run(self.mon, 5, **{"192.168.3.1": 2.0, "1.1.1.1": 40.0, "8.8.8.8": 50.0})
+        self.assertIsNone(self.mon._speed_skip_reason())
+        self.env.route = {"gateway": "10.0.0.1", "interface_index": 13, "metric": 25}
+        self.mon.poll_route()
+        self.assertEqual(self.mon._speed_skip_reason(), "network_change")
+        self.env.t += 121
+        self.assertIsNone(self.mon._speed_skip_reason())
+
+    def test_the_network_is_the_gateway_and_the_wifi_name(self):
+        self.assertEqual(self.mon._speed_network(), "192.168.3.1|Home")
+
     def test_snapshot_shows_open_outage_and_recent_samples(self):
         self.env.run(self.mon, 5, **{"192.168.3.1": None})
         snap = self.mon.snapshot(window_s=3)
