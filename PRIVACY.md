@@ -13,6 +13,10 @@ per-session token. Uninstalling offers to delete this data. The original values 
 optimization changed are kept in the registry, under `HKLM\SOFTWARE\Ambysto\Steady`, so that only an
 Administrator can change them; uninstalling restores those settings and deletes them. One value,
 `LegacyImported`, stays in that key: it only records that an older version's backup was imported.
+The floating monitor's "Glass" look reads the pixels of the screen area behind that small window,
+about once a second while it is open, to show them blurred as its background; they stay in the
+app's memory and are never saved or sent. While Glass is on, Windows leaves that window out of
+screenshots and screen sharing.
 
 **iPhone, iPad and Mac.** Per-minute measurements (latency, packet loss and jitter to each target
 below) are stored only in the app's own storage on the device, kept for 30 days and excluded from

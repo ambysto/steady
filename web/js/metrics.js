@@ -120,3 +120,11 @@ export function historySeries(rows, inetTargets) {
   }
   return { router, internet, loss };
 }
+
+/** Bits per second -> {unit: "kbps" | "mbps", value, decimals} for display (below 1 Mb/s in kb/s). */
+export function bitrate(bps) {
+  if (bps === null || bps === undefined || !Number.isFinite(bps)) return null;
+  if (bps < 1e6) return { unit: "kbps", value: bps / 1e3, decimals: 0 };
+  const mbps = bps / 1e6;
+  return { unit: "mbps", value: mbps, decimals: mbps < 10 ? 1 : 0 };
+}

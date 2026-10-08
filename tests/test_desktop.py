@@ -165,6 +165,207 @@ class ShellTests(unittest.TestCase):
         self.assertEqual(self.shell.title(), "Ambysto Steady · Đã kết nối")
 
 
+class Screen:
+    def __init__(self, x, y, width, height):
+        self.x, self.y, self.width, self.height = x, y, width, height
+
+
+class MiniWindowTests(unittest.TestCase):
+    """The floating monitor: remembered state, where it opens, what its page may call."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        os.environ["STABLEINTERNET_USERDIR"] = self.tmp.name
+        self.addCleanup(os.environ.pop, "STABLEINTERNET_USERDIR", None)
+        self.shell = desktop.Desktop(desktop.ServerLink(FakeServer()))
+        self.shell.mini = FakeWindow()
+
+    def saved(self):
+        return json.loads(Path(self.tmp.name, "mini.json").read_text(encoding="utf-8"))
+
+    DEFAULTS = {"open": False, "x": None, "y": None, "transparency": "glass", "seen_version": None, "mode": "bar"}
+
+    def test_state_defaults_and_bad_files(self):
+        self.assertEqual(desktop.load_mini_state(), self.DEFAULTS)
+        for text in ("not json", "[1]",
+                     '{"open": "yes", "x": true, "y": 1.5, "transparency": "frosted", "seen_version": 7, "mode": "huge"}'):
+            Path(self.tmp.name, "mini.json").write_text(text, encoding="utf-8")
+            self.assertEqual(desktop.load_mini_state(), self.DEFAULTS, text)
+        saved = {"open": True, "x": -300, "y": 40, "transparency": "high", "seen_version": "0.8.0", "mode": "full"}
+        desktop.save_mini_state(saved)
+        self.assertEqual(desktop.load_mini_state(), saved)
+
+    def test_a_new_version_opens_it_once(self):
+        state = desktop.load_mini_state()                  # first install: no mini.json yet
+        self.assertTrue(desktop.open_for_new_version(state, "0.8.0"))
+        self.assertEqual((state["open"], state["seen_version"]), (True, "0.8.0"))
+        state["open"] = False                              # the user closed it
+        self.assertFalse(desktop.open_for_new_version(state, "0.8.0"))
+        self.assertFalse(state["open"])
+        self.assertTrue(desktop.open_for_new_version(state, "0.8.1"))    # upgrade
+        self.assertTrue(state["open"])
+
+    def test_transparency_levels(self):
+        applied = []
+        self.shell.mini.native = "form"
+        with mock.patch.object(desktop, "set_form_opacity", lambda form, value: applied.append(value) or True):
+            self.assertEqual(self.shell.set_mini_transparency("high"), "high")
+            self.assertEqual(self.shell.set_mini_transparency("frosted"), "high")    # unknown level: ignored
+            self.shell.mini_hover(False)
+            self.shell.mini_hover(True)
+        self.assertEqual(applied, [1.0, desktop.TRANSPARENCY["high"], 1.0])          # solid under the pointer
+        self.assertEqual(self.saved()["transparency"], "high")
+        self.assertEqual(desktop.TRANSPARENCY["off"], 1.0)
+
+    def test_opens_bottom_right_or_where_it_was_left(self):
+        screens = [Screen(0, 0, 1920, 1080), Screen(-1280, 0, 1280, 1024)]
+        w, h = desktop.MINI_SIZE
+        default = (1920 - w - desktop.MINI_MARGIN[0], 1080 - h - desktop.MINI_MARGIN[1])
+        self.assertEqual(desktop.mini_position({"x": None, "y": None}, screens), default)
+        self.assertEqual(desktop.mini_position({"x": -900, "y": 300}, screens), (-900, 300))   # second monitor
+        self.assertEqual(desktop.mini_position({"x": 5000, "y": 300}, screens), default)       # monitor unplugged
+        self.assertEqual(desktop.mini_position({"x": 100, "y": 1070}, screens), default)       # only a sliver visible
+        self.assertEqual(desktop.mini_position({"x": 1, "y": 1}, []), (100, 100))
+
+    def test_toggle_shows_and_hides_and_remembers(self):
+        self.shell.toggle_mini()
+        self.assertEqual(self.shell.mini.calls[:1], ["show"])
+        self.assertTrue(self.saved()["open"])
+        self.shell._on_mini_moved(12, 34)
+        self.shell.toggle_mini()
+        self.assertIn("hide", self.shell.mini.calls)
+        self.assertEqual({k: self.saved()[k] for k in ("open", "x", "y")}, {"open": False, "x": 12, "y": 34})
+
+    def test_hiding_pauses_the_page(self):
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.show_mini()
+        self.shell.hide_mini()
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setActive(true)",
+                                   "window.steadyMini && window.steadyMini.setActive(false)"])
+
+    def test_closing_hides_unless_quitting(self):
+        self.shell.mini_state["open"] = True
+        self.assertFalse(self.shell._on_mini_closing())
+        self.assertFalse(self.saved()["open"])
+        self.shell.mini_state["open"] = True
+        self.shell.quit()
+        self.assertTrue(self.shell._on_mini_closing())
+        self.assertTrue(self.saved()["open"])           # quitting keeps it open for the next start
+        self.assertIn("destroy", self.shell.mini.calls)
+
+    def test_glass_leaves_the_window_out_of_captures_only_while_on(self):
+        calls, scripts = [], []
+        self.shell.mini.evaluate_js = scripts.append
+        exclude = lambda hwnd, on: calls.append((hwnd, on)) or True
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77), \
+                mock.patch.object(desktop, "exclude_from_capture", exclude), \
+                mock.patch.object(desktop, "set_form_opacity", lambda form, value: True):
+            self.shell.set_mini_transparency("glass")
+            self.shell.set_mini_transparency("off")
+        self.assertEqual(calls, [(77, True), (77, False)])
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
+
+    def test_no_glass_where_windows_cannot_leave_the_window_out_of_captures(self):
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state["open"] = True
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77), \
+                mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False):
+            self.shell.apply_glass()
+        self.assertFalse(self.shell.glass_on())           # the capture would show the window itself
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
+
+    def test_thermometer_outline(self):
+        (kind, bx0, by0, bx1, by1), (tube, tx0, ty0, tx1, ty1) = desktop.thermometer_parts(desktop.BAR_SIZE)
+        self.assertEqual((kind, tube), ("ellipse", "tube"))
+        self.assertEqual((bx0, by0, bx1 - bx0, by1 - by0), (0, 0, desktop.BULB + 1, desktop.BULB + 1))
+        self.assertEqual((tx0, ty1 - ty0, tx1), (desktop.TUBE[0], desktop.TUBE[1] + 1, desktop.BAR_SIZE[0] + 1))
+        self.assertEqual(ty0, (desktop.BAR_SIZE[1] - desktop.TUBE[1]) // 2)         # centred on the bulb
+        big = desktop.thermometer_parts(desktop.BAR_SIZE, 1.5)
+        self.assertEqual(big[0][3], round(desktop.BULB * 1.5) + 1)                  # follows the DPI
+
+    def test_backdrop_is_a_blurred_jpeg_sent_once_per_picture(self):
+        from PIL import Image
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        picture = Image.new("RGB", desktop.BAR_SIZE, (200, 120, 40))
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77), \
+                mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, *desktop.BAR_SIZE)), \
+                mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+            self.assertTrue(self.shell.update_backdrop())
+            self.assertFalse(self.shell.update_backdrop())      # nothing changed behind it: not sent again
+        self.assertEqual(len(scripts), 1)
+        url = r"'data:image/jpeg;base64,[A-Za-z0-9+/=]+'"
+        # on the bar: the blurred picture, and the sharp one for the sliver around its smooth edges
+        self.assertRegex(scripts[0], rf"^window\.steadyMini && window\.steadyMini\.setBackdrop\({url}, {url}\)$")
+        frost = desktop.frosted(picture)
+        self.assertEqual(frost[:2], bytes([0xFF, 0xD8]))          # a JPEG
+        self.assertEqual(Image.open(io.BytesIO(frost)).size,
+                         (desktop.BAR_SIZE[0] // desktop.GLASS_SCALE, desktop.BAR_SIZE[1] // desktop.GLASS_SCALE))
+
+    def test_bar_grows_away_from_the_screen_edge_it_is_near(self):
+        screens = [Screen(0, 0, 1920, 1080)]
+        bar, full = desktop.BAR_SIZE, desktop.MINI_SIZE
+        # bottom-right bar: the table opens up and to the left, its corner where the bar's was
+        x, y = 1920 - bar[0] - 16, 1080 - bar[1] - 64
+        self.assertEqual(desktop.resized_position(x, y, bar, full, screens), (x + bar[0] - full[0], y + bar[1] - full[1]))
+        # top-left bar: it opens down and to the right
+        self.assertEqual(desktop.resized_position(20, 20, bar, full, screens), (20, 20))
+        # and back: the bar returns to the corner the table came from
+        fx, fy = desktop.resized_position(x, y, bar, full, screens)
+        self.assertEqual(desktop.resized_position(fx, fy, full, bar, screens), (x, y))
+        # a bar in the upper half opens downward; collapsing brings it back up, not to the table's bottom
+        top = desktop.anchor_of(1500, 400, bar, screens)
+        tx, ty = desktop.resized_position(1500, 400, bar, full, screens, top)
+        self.assertEqual((tx, ty), (1500 + bar[0] - full[0], 400))      # wider: grows to the left (right half)
+        self.assertEqual(desktop.resized_position(tx, ty, full, bar, screens, top), (1500, 400))
+        # never off screen
+        self.assertEqual(desktop.resized_position(0, 1050, bar, full, screens)[1], 1080 - full[1])
+        self.assertEqual(desktop.resized_position(5, 5, bar, full, []), (5, 5))
+
+    def test_switching_between_bar_and_table(self):
+        moves = []
+        self.shell.mini.x, self.shell.mini.y = 1300, 970
+        self.shell.mini.move = lambda x, y: moves.append((x, y))
+        screens = [Screen(0, 0, 1920, 1080)]
+        with mock.patch.object(desktop, "fit_form", lambda form, size: True):
+            self.assertEqual(self.shell.set_mini_mode("full", screens), "full")
+            self.assertEqual(self.shell.set_mini_mode("full", screens), "full")      # already: nothing moves
+            self.assertEqual(self.shell.set_mini_mode("wide", screens), "full")      # unknown: ignored
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(self.saved()["mode"], "full")
+        self.assertEqual((self.saved()["x"], self.saved()["y"]), moves[0])
+
+    def test_fix_on_the_bar_opens_the_result_in_the_main_window(self):
+        self.shell.window = FakeWindow()
+        scripts = []
+        self.shell.window.evaluate_js = scripts.append
+        desktop.MiniBridge(self.shell).open_result()
+        self.assertEqual(scripts, ["window.steadyApp && window.steadyApp.openResult()"])
+        self.assertIn("show", self.shell.window.calls)
+
+    def test_what_the_pages_may_call(self):
+        bridge = desktop.MiniBridge(self.shell)
+        self.assertEqual([n for n in dir(bridge) if not n.startswith("_")],
+                         ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "set_mode", "set_transparency"])
+        self.assertEqual(bridge.get_mode(), "bar")
+        self.assertEqual(bridge.get_transparency(), "glass")
+        bridge.hide_mini()
+        self.assertIn("hide", self.shell.mini.calls)
+        main = desktop.MainBridge(self.shell)
+        self.assertEqual([n for n in dir(main) if not n.startswith("_")], ["open_mini"])
+        main.open_mini()
+        self.assertIn("show", self.shell.mini.calls)
+        self.assertTrue(self.saved()["open"])
+
+    def test_mini_page_follows_the_monitor(self):
+        self.assertIsNone(self.shell.mini_url())
+        self.shell.link.port = 47613
+        self.assertEqual(self.shell.mini_url(), "http://127.0.0.1:47613/mini.html")
+
+
 @unittest.skipUnless(sys.platform == "win32", "Windows named events")
 class SingleInstanceTests(unittest.TestCase):
     """A private event name: the real desktop app may be running on this machine."""

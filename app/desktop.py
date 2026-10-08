@@ -7,13 +7,21 @@ viewer. Closing the window hides it to the tray; "Quit" ends this process, never
     pythonw -m app.desktop --minimized   start in the tray only
     python  -m app.desktop --selftest    open, wait for the UI to load, print what it shows, quit
 
+The tray menu also toggles the floating monitor (web/mini.html): a frameless window that stays on
+top. By default it is a one-line bar (Optimize on the left, download/upload/ping); expanded it is
+the full table with the sweep chart, the apps holding connections and the connection's facts. Whether it is open, where it sits and how see-through it is are
+remembered in mini.json; a new version opens it once, so an install or upgrade shows it.
+
 Needs `pip install -r requirements.txt` (pywebview, pystray, Pillow). Nothing else in app/
 imports this module, so the monitor stays standard-library only (ADR-0001).
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import ctypes
+import hashlib
+import io
 import json
 import logging
 import re
@@ -25,7 +33,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
-from . import config
+from . import __version__, config
 
 log = logging.getLogger("stableinternet.desktop")
 
@@ -205,12 +213,322 @@ def set_window_icon(hwnd: int, ico: Path = APP_ICON) -> bool:
 MIN_SIZE = (420, 560)
 SELFTEST_SIZE = (600, 760)
 
+# --- the floating monitor ----------------------------------------------------------------------
+
+MINI_SIZE = (340, 500)          # expanded: the full table
+BAR_SIZE = (290, 32)            # collapsed: one line, as long as its numbers need
+# The bar is shaped like a thermometer: a round bulb (Optimize) and a lower tube (the numbers).
+BULB = 32                       # diameter of the cut, the bar's full height (web/mini.css draws 1.5 px inside)
+TUBE = (24, 24)                 # where the tube's cut starts (under the bulb's edge) and its height
+SIZES = {"full": MINI_SIZE, "bar": BAR_SIZE}
+MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear of the taskbar)
+MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
+DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND, DWMWCP_ROUND = 33, 1, 2
+DWMWA_NCRENDERING_POLICY, DWMNCRP_DISABLED, DWMNCRP_ENABLED = 2, 1, 2
+BACKGROUNDS = {"light": "#F5F5F7", "dark": "#1E1E1F"}     # --window of tokens.css
+# Window opacity per "transparency" level. Windows' own frosted backdrop (acrylic) does not reach
+# WebView2, which draws on its own child window, so "glass" is made here (ADR-0021): the screen
+# behind the window, blurred, becomes the page's background, and the window stays solid.
+TRANSPARENCY = {"off": 1.0, "glass": 1.0, "low": 0.9, "high": 0.78}
+DEFAULT_TRANSPARENCY = "glass"
+GLASS_EVERY_S = 1.0             # refresh of the frosted backdrop while nothing moves
+GLASS_MOVE_S = 0.12             # at most this often while the window is dragged
+GLASS_SCALE = 4                 # the capture is shrunk this much before blurring (cheaper, softer)
+WDA_NONE, WDA_EXCLUDEFROMCAPTURE = 0x0, 0x11
+
+
+def mini_file() -> Path:
+    return config.user_dir() / "mini.json"
+
+
+MINI_KEYS = ("open", "x", "y", "transparency", "seen_version", "mode")
+
+
+def load_mini_state() -> dict[str, Any]:
+    """{"open", "x", "y", "transparency", "seen_version"}; defaults when the file is missing or bad."""
+    state: dict[str, Any] = {"open": False, "x": None, "y": None, "transparency": DEFAULT_TRANSPARENCY,
+                             "seen_version": None, "mode": "bar"}
+    try:
+        saved = json.loads(mini_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return state
+    if isinstance(saved, dict):
+        state["open"] = saved.get("open") is True
+        for key in ("x", "y"):
+            if isinstance(saved.get(key), int) and not isinstance(saved.get(key), bool):
+                state[key] = saved[key]
+        if saved.get("transparency") in TRANSPARENCY:
+            state["transparency"] = saved["transparency"]
+        if isinstance(saved.get("seen_version"), str):
+            state["seen_version"] = saved["seen_version"]
+        if saved.get("mode") in SIZES:
+            state["mode"] = saved["mode"]
+    return state
+
+
+def open_for_new_version(state: dict[str, Any], version: str = __version__) -> bool:
+    """The first start of a version (an install or an upgrade) opens the floating window once."""
+    if state.get("seen_version") == version:
+        return False
+    state.update(seen_version=version, open=True)
+    return True
+
+
+def save_mini_state(state: dict[str, Any]) -> None:
+    try:
+        mini_file().write_text(json.dumps({k: state.get(k) for k in MINI_KEYS}), encoding="utf-8")
+    except OSError as exc:
+        log.warning("could not save the floating window state: %r", exc)
+
+
+def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, int] = MINI_SIZE) -> tuple[int, int]:
+    """Where the window opens: the saved spot if it is still on a screen (a monitor may have been
+    unplugged), else the bottom-right corner of the first screen."""
+    x, y = state.get("x"), state.get("y")
+    if x is not None and y is not None:
+        for scr in screens:
+            if (scr.x - size[0] + MINI_VISIBLE <= x <= scr.x + scr.width - MINI_VISIBLE
+                    and scr.y <= y <= scr.y + scr.height - MINI_VISIBLE):
+                return x, y
+    if not screens:
+        return 100, 100
+    scr = screens[0]
+    return (scr.x + scr.width - size[0] - MINI_MARGIN[0], scr.y + scr.height - size[1] - MINI_MARGIN[1])
+
+
+def screen_of(x: int, y: int, size: tuple[int, int], screens: list[Any]) -> Any:
+    """The screen holding the window's centre (the first one when none does)."""
+    cx, cy = x + size[0] / 2, y + size[1] / 2
+    for scr in screens:
+        if scr.x <= cx < scr.x + scr.width and scr.y <= cy < scr.y + scr.height:
+            return scr
+    return screens[0] if screens else None
+
+
+def anchor_of(x: int, y: int, size: tuple[int, int], screens: list[Any]) -> tuple[bool, bool]:
+    """(right, lower): the screen edges the window is nearer to, which it keeps when it changes size."""
+    scr = screen_of(x, y, size, screens)
+    if scr is None:
+        return False, False
+    return x + size[0] / 2 > scr.x + scr.width / 2, y + size[1] / 2 > scr.y + scr.height / 2
+
+
+def resized_position(x: int, y: int, old: tuple[int, int], new: tuple[int, int], screens: list[Any],
+                     anchor: tuple[bool, bool] | None = None) -> tuple[int, int]:
+    """Where the window goes when it changes size: it grows away from the screen edge it is near
+    (a bar at the bottom expands upward, one on the right expands leftward) and stays on screen.
+    Collapsing passes the anchor the expansion used, so the bar comes back to the same spot."""
+    scr = screen_of(x, y, old, screens)
+    if scr is None:
+        return x, y
+    right, lower = anchor if anchor is not None else anchor_of(x, y, old, screens)
+    nx = x + old[0] - new[0] if right else x
+    ny = y + old[1] - new[1] if lower else y
+    nx = min(max(nx, scr.x), scr.x + scr.width - new[0])
+    ny = min(max(ny, scr.y), scr.y + scr.height - new[1])
+    return int(nx), int(ny)
+
+
+# --- glass (ADR-0021) ------------------------------------------------------------------------
+
+def exclude_from_capture(hwnd: int, exclude: bool) -> bool:
+    """Leave the window out of screen captures, so a capture of its area shows what is behind it.
+    It is also left out of screenshots and screen sharing while that is on (Windows 10 2004+)."""
+    user32 = ctypes.windll.user32
+    user32.SetWindowDisplayAffinity.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
+    return bool(user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd), WDA_EXCLUDEFROMCAPTURE if exclude else WDA_NONE))
+
+
+def window_rect(hwnd: int) -> tuple[int, int, int, int]:
+    from ctypes import wintypes
+    rect = wintypes.RECT()
+    ctypes.windll.user32.GetWindowRect(ctypes.c_void_p(hwnd), ctypes.byref(rect))
+    return rect.left, rect.top, rect.right, rect.bottom
+
+
+class _BitmapInfoHeader(ctypes.Structure):
+    _fields_ = [("biSize", ctypes.c_uint32), ("biWidth", ctypes.c_int32), ("biHeight", ctypes.c_int32),
+                ("biPlanes", ctypes.c_uint16), ("biBitCount", ctypes.c_uint16), ("biCompression", ctypes.c_uint32),
+                ("biSizeImage", ctypes.c_uint32), ("biXPelsPerMeter", ctypes.c_int32),
+                ("biYPelsPerMeter", ctypes.c_int32), ("biClrUsed", ctypes.c_uint32), ("biClrImportant", ctypes.c_uint32)]
+
+
+def grab_screen(left: int, top: int, right: int, bottom: int) -> Any:
+    """Pixels of one screen area (GDI BitBlt): a few ms, where Pillow's ImageGrab copies every
+    screen first. None when the area is empty or a call fails."""
+    from PIL import Image
+    width, height = right - left, bottom - top
+    if width <= 0 or height <= 0:
+        return None
+    user32, gdi32 = ctypes.windll.user32, ctypes.windll.gdi32
+    user32.GetDC.restype = gdi32.CreateCompatibleDC.restype = ctypes.c_void_p
+    gdi32.CreateCompatibleBitmap.restype = gdi32.SelectObject.restype = ctypes.c_void_p
+    user32.GetDC.argtypes = [ctypes.c_void_p]
+    user32.ReleaseDC.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    gdi32.CreateCompatibleDC.argtypes = gdi32.DeleteDC.argtypes = gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
+    gdi32.CreateCompatibleBitmap.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int]
+    gdi32.SelectObject.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    gdi32.BitBlt.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                             ctypes.c_void_p, ctypes.c_int, ctypes.c_int, ctypes.c_uint32]
+    gdi32.GetDIBits.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_void_p,
+                                ctypes.c_void_p, ctypes.c_uint]
+    screen = user32.GetDC(None)
+    memory = gdi32.CreateCompatibleDC(screen)
+    bitmap = gdi32.CreateCompatibleBitmap(screen, width, height)
+    previous = gdi32.SelectObject(memory, bitmap)
+    try:
+        if not gdi32.BitBlt(memory, 0, 0, width, height, screen, left, top, 0x00CC0020):   # SRCCOPY
+            return None
+        header = _BitmapInfoHeader(ctypes.sizeof(_BitmapInfoHeader), width, -height, 1, 32, 0, 0, 0, 0, 0, 0)
+        pixels = ctypes.create_string_buffer(width * height * 4)
+        if not gdi32.GetDIBits(memory, bitmap, 0, height, pixels, ctypes.byref(header), 0):
+            return None
+        return Image.frombuffer("RGB", (width, height), pixels.raw, "raw", "BGRX", 0, 1)
+    finally:
+        gdi32.SelectObject(memory, previous)
+        gdi32.DeleteObject(bitmap)
+        gdi32.DeleteDC(memory)
+        user32.ReleaseDC(None, screen)
+
+
+def jpeg(image: Any, quality: int = 85) -> bytes:
+    out = io.BytesIO()
+    image.save(out, "JPEG", quality=quality)
+    return out.getvalue()
+
+
+def frosted(image: Any) -> bytes:
+    """What frosted glass shows: shrunk, blurred, a little more saturated (like Windows' acrylic)."""
+    from PIL import ImageEnhance, ImageFilter
+    small = image.resize((max(1, image.width // GLASS_SCALE), max(1, image.height // GLASS_SCALE)))
+    soft = ImageEnhance.Color(small.filter(ImageFilter.GaussianBlur(4))).enhance(1.35)
+    out = io.BytesIO()
+    soft.save(out, "JPEG", quality=75)
+    return out.getvalue()
+
+
+def thermometer_parts(size: tuple[int, int], scale: float = 1.0) -> list[tuple[str, int, int, int, int]]:
+    """The bar's outline in device pixels: an ellipse for the bulb, a round-ended rectangle for the
+    tube, vertically centred. (kind, left, top, right, bottom); GDI's right/bottom are exclusive."""
+    width, height = round(size[0] * scale), round(size[1] * scale)
+    bulb = round(BULB * scale)
+    tube_left, tube_height = round(TUBE[0] * scale), round(TUBE[1] * scale)
+    top = (height - tube_height) // 2
+    return [("ellipse", 0, (height - bulb) // 2, bulb + 1, (height - bulb) // 2 + bulb + 1),
+            ("tube", tube_left, top, width + 1, top + tube_height + 1)]
+
+
+def _dwm_int(hwnd: int, attribute: int, value: int) -> None:
+    data = ctypes.c_int(value)
+    ctypes.windll.dwmapi.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), attribute, ctypes.byref(data), ctypes.sizeof(data))
+
+
+def shape_window(hwnd: int, size: tuple[int, int] | None) -> bool:
+    """Cut the window to the thermometer outline (size given), or back to its rectangle (None).
+    DWM's own frame (the shadow pywebview asks for) and rounded corners draw over a window region,
+    so they are off while the window has the shape and back on without it."""
+    user32, gdi32 = ctypes.windll.user32, ctypes.windll.gdi32
+    user32.SetWindowRgn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    if size is None:
+        ok = bool(user32.SetWindowRgn(ctypes.c_void_p(hwnd), None, True))
+        _dwm_int(hwnd, DWMWA_NCRENDERING_POLICY, DWMNCRP_ENABLED)
+        _dwm_int(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
+        return ok
+    _dwm_int(hwnd, DWMWA_NCRENDERING_POLICY, DWMNCRP_DISABLED)
+    _dwm_int(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND)
+    for fn in (gdi32.CreateEllipticRgn, gdi32.CreateRoundRectRgn):
+        fn.restype = ctypes.c_void_p
+    gdi32.CombineRgn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
+    gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
+    user32.GetDpiForWindow.argtypes = [ctypes.c_void_p]
+    scale = (user32.GetDpiForWindow(ctypes.c_void_p(hwnd)) or 96) / 96
+    (_, bx0, by0, bx1, by1), (_, tx0, ty0, tx1, ty1) = thermometer_parts(size, scale)
+    bulb = gdi32.CreateEllipticRgn(bx0, by0, bx1, by1)
+    tube = gdi32.CreateRoundRectRgn(tx0, ty0, tx1, ty1, ty1 - ty0, ty1 - ty0)
+    gdi32.CombineRgn(bulb, bulb, tube, 2)          # RGN_OR
+    gdi32.DeleteObject(tube)
+    return bool(user32.SetWindowRgn(ctypes.c_void_p(hwnd), bulb, True))   # the window owns it now
+
+
+def set_form_opacity(form: Any, value: float) -> bool:
+    """Form.Opacity on the window's own UI thread (WinForms refuses it from another thread)."""
+    try:
+        from System import Action      # pythonnet, loaded by pywebview
+        form.Invoke(Action(lambda: setattr(form, "Opacity", float(value))))
+        return True
+    except Exception as exc:
+        log.debug("could not set the floating window's opacity: %r", exc)
+        return False
+
+
+def fit_form(form: Any, size: tuple[int, int]) -> bool:
+    """Exact window size in logical pixels. pywebview's resize() cannot go below the 100 px a
+    Windows form keeps by default, which a one-line bar needs, so the form's minimum goes first."""
+    try:
+        from System import Action      # pythonnet, loaded by pywebview
+        from System.Drawing import Size
+
+        def work() -> None:
+            scale = getattr(form, "DeviceDpi", 96) / 96
+            form.MinimumSize = Size(1, 1)
+            form.Size = Size(round(size[0] * scale), round(size[1] * scale))
+        form.Invoke(Action(work))
+        return True
+    except Exception as exc:
+        log.debug("could not size the floating window: %r", exc)
+        return False
+
+
+class MiniBridge:
+    """What mini.html may call through window.pywebview.api: hide itself, its own transparency,
+    nothing else. pywebview exposes every public attribute, so the shell stays private."""
+
+    def __init__(self, shell: "Desktop") -> None:
+        self._shell = shell
+
+    def hide_mini(self) -> None:
+        self._shell.hide_mini()
+
+    def get_transparency(self) -> str:
+        return self._shell.mini_state["transparency"]
+
+    def set_transparency(self, level: str) -> str:
+        return self._shell.set_mini_transparency(level)
+
+    def hover(self, inside: bool) -> None:
+        self._shell.mini_hover(bool(inside))
+
+    def get_mode(self) -> str:
+        return self._shell.mini_state["mode"]
+
+    def set_mode(self, mode: str) -> str:
+        return self._shell.set_mini_mode(mode)
+
+    def open_result(self) -> None:
+        self._shell.open_check_result()
+
+
+class MainBridge:
+    """What the main window's page may call: open the floating monitor."""
+
+    def __init__(self, shell: "Desktop") -> None:
+        self._shell = shell
+
+    def open_mini(self) -> None:
+        self._shell.show_mini()
+
 
 class Desktop:
     def __init__(self, link: ServerLink | None = None, minimized: bool = False) -> None:
         self.link = link or ServerLink()
         self.minimized = minimized
         self.window: Any = None
+        self.mini: Any = None
+        self.mini_state = load_mini_state()
+        self._glass_wake = threading.Event()
+        self._anchor: tuple[bool, bool] | None = None      # edges the bar kept when it expanded
+        self._glass_digest: str | None = None
+        self._glass_ok = False          # glass is on and the window is left out of captures
         self.icon: Any = None
         self.messages: dict[str, Any] = {}
         self.live: dict | None = None
@@ -261,10 +579,191 @@ class Desktop:
     def quit(self) -> None:
         self.quitting = True
         self.stop.set()
+        if self.mini is not None:
+            save_mini_state(self.mini_state)      # reopens where it was, if it was open
         if self.icon is not None:
             self.icon.stop()
+        for window in (self.mini, self.window):
+            if window is not None:
+                window.destroy()
+
+    # -- floating monitor -----------------------------------------------------------------
+    def mini_url(self) -> str | None:
+        return f"{self.link.base}/mini.html" if self.link.base else None
+
+    def _mini_active(self, active: bool) -> None:
+        """Pause the page's polling and drawing while hidden (it would keep running otherwise)."""
+        flag = "true" if active else "false"
+        try:
+            self.mini.evaluate_js(f"window.steadyMini && window.steadyMini.setActive({flag})")
+        except Exception as exc:
+            log.debug("floating window not ready: %r", exc)
+
+    def show_mini(self) -> None:
+        if self.mini is None:
+            return
+        self.mini.show()
+        self._fit_mini()
+        self.apply_mini_opacity()
+        self.apply_glass()
+        self._mini_active(True)
+        self.mini_state["open"] = True
+        save_mini_state(self.mini_state)
+
+    def hide_mini(self) -> None:
+        if self.mini is None:
+            return
+        self.mini.hide()
+        self._mini_active(False)
+        self.mini_state["open"] = False
+        save_mini_state(self.mini_state)
+
+    def toggle_mini(self) -> None:
+        if self.mini_state["open"]:
+            self.hide_mini()
+        else:
+            self.show_mini()
+
+    def apply_mini_opacity(self, hovered: bool = False) -> None:
+        """See-through at the chosen level; solid while the pointer is on it, to read it easily."""
+        if self.mini is None:
+            return
+        value = 1.0 if hovered else TRANSPARENCY[self.mini_state["transparency"]]
+        try:
+            set_form_opacity(self.mini.native, value)
+        except AttributeError:
+            pass                # not created yet
+
+    def set_mini_transparency(self, level: str) -> str:
+        if level in TRANSPARENCY:
+            self.mini_state["transparency"] = level
+            save_mini_state(self.mini_state)
+            self.apply_mini_opacity(hovered=True)      # the pointer is on the window while choosing
+            self.apply_glass()
+        return self.mini_state["transparency"]
+
+    # -- glass (ADR-0021) -----------------------------------------------------------------
+    def glass_on(self) -> bool:
+        return (self.mini is not None and bool(self.mini_state["open"]) and self.mini_state["transparency"] == "glass"
+                and self._glass_ok)
+
+    def _mini_hwnd(self) -> int | None:
+        try:
+            return int(self.mini.native.Handle.ToInt64())
+        except Exception:
+            return None                 # not created yet
+
+    def apply_glass(self) -> None:
+        """Glass on: the window leaves screen captures (so its own area shows what is behind it) and
+        the backdrop is refreshed. Off: captures include it again and the page drops the backdrop."""
+        hwnd = self._mini_hwnd()
+        if hwnd is None:
+            return
+        on = self.mini_state["transparency"] == "glass"
+        # Without the exclusion (before Windows 10 2004) the capture would show the window itself.
+        excluded = exclude_from_capture(hwnd, on)
+        self._glass_ok = on and excluded
+        if self._glass_ok:
+            self._glass_wake.set()
+        else:
+            self._glass_digest = None
+            self._run_js("window.steadyMini && window.steadyMini.setBackdrop(null)")
+
+    def _run_js(self, script: str) -> None:
+        try:
+            self.mini.evaluate_js(script)
+        except Exception as exc:
+            log.debug("floating window not ready: %r", exc)
+
+    def update_backdrop(self) -> bool:
+        """One frosted backdrop: capture what is behind the window, blur it, hand it to the page.
+        The pixels stay in this process; an unchanged picture is not sent again."""
+        hwnd = self._mini_hwnd()
+        if hwnd is None:
+            return False
+        image = grab_screen(*window_rect(hwnd))
+        if image is None:
+            return False
+        picture = frosted(image)
+        # The bar's smooth edges sit inside its cut; the sliver between shows this, unblurred.
+        sharp = jpeg(image) if self.mini_state["mode"] == "bar" else b""
+        digest = hashlib.sha1(picture + sharp).hexdigest()
+        if digest == self._glass_digest:
+            return False
+        self._glass_digest = digest
+        as_url = lambda data: "'data:image/jpeg;base64," + base64.b64encode(data).decode("ascii") + "'"
+        self._run_js(f"window.steadyMini && window.steadyMini.setBackdrop({as_url(picture)}, "
+                     f"{as_url(sharp) if sharp else 'null'})")
+        return True
+
+    def _glass_loop(self) -> None:
+        while not self.stop.is_set():
+            self._glass_wake.wait(GLASS_EVERY_S)
+            self._glass_wake.clear()
+            if self.glass_on() and not self.quitting:
+                try:
+                    self.update_backdrop()
+                except Exception as exc:        # never let the look stop the shell
+                    log.debug("glass backdrop failed: %r", exc)
+            self.stop.wait(GLASS_MOVE_S)
+
+    def mini_hover(self, inside: bool) -> None:
+        self.apply_mini_opacity(hovered=inside)
+
+    def set_mini_mode(self, mode: str, screens: list[Any] | None = None) -> str:
+        """One-line bar or full table: resize the window, growing away from the nearest screen edge."""
+        old = self.mini_state["mode"]
+        if mode not in SIZES or mode == old:
+            return old
+        self.mini_state["mode"] = mode
+        if self.mini is not None:
+            if screens is None:
+                import webview
+                screens = webview.screens
+            if mode == "full":
+                self._anchor = anchor_of(self.mini.x, self.mini.y, SIZES[old], screens)
+            x, y = resized_position(self.mini.x, self.mini.y, SIZES[old], SIZES[mode], screens, self._anchor)
+            self._fit_mini()
+            self.mini.move(x, y)
+            self.mini_state.update(x=x, y=y)
+            self._glass_wake.set()
+        save_mini_state(self.mini_state)
+        return mode
+
+    def open_check_result(self) -> None:
+        """"Fix N" on the bar: the main window shows what the check found and what Fix would turn on
+        (ADR-0020: the user sees the list and the Wi-Fi note before any UAC prompt)."""
+        self.show()
         if self.window is not None:
-            self.window.destroy()
+            try:
+                self.window.evaluate_js("window.steadyApp && window.steadyApp.openResult()")
+            except Exception as exc:
+                log.debug("main window not ready: %r", exc)
+
+    def _fit_mini(self) -> None:
+        mode = self.mini_state["mode"]
+        try:
+            fit_form(self.mini.native, SIZES[mode])
+        except AttributeError:
+            return              # not created yet
+        hwnd = self._mini_hwnd()
+        if hwnd is not None:
+            shape_window(hwnd, SIZES[mode] if mode == "bar" else None)     # the table keeps rounded corners
+
+    def _on_mini_moved(self, x: int, y: int) -> None:
+        self.mini_state.update(x=int(x), y=int(y))       # saved on hide and quit
+        self._glass_wake.set()                           # what is behind it changed
+
+    def _on_mini_closing(self) -> bool:
+        if self.quitting:
+            return True
+        self.hide_mini()       # Alt+F4 hides it like the close button
+        return False
+
+    def _on_mini_loaded(self) -> None:
+        self._mini_active(bool(self.mini_state["open"]))
+        self._glass_digest = None          # a new page has no backdrop yet
+        self._glass_wake.set()
 
     # -- tray -----------------------------------------------------------------------------
     def _reconnect(self) -> None:
@@ -278,6 +777,8 @@ class Desktop:
         menu = pystray.Menu(
             pystray.MenuItem(lambda _: self.title(), None, enabled=False),
             pystray.MenuItem(lambda _: self.text("ui.tray.open"), lambda: self.show(), default=True),
+            pystray.MenuItem(lambda _: self.text("ui.tray.mini"), lambda: self.toggle_mini(),
+                             checked=lambda _: bool(self.mini_state["open"])),
             pystray.MenuItem(lambda _: self.text("ui.action.reconnect"), lambda: self._reconnect()),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(lambda _: self.text("ui.tray.quit"), lambda: self.quit()),
@@ -306,6 +807,9 @@ class Desktop:
         if self.window is not None and self.reachable and (
                 not was or not (self.window.get_current_url() or "").startswith(self.link.base)):
             self.window.load_url(f"{self.link.base}/")    # the monitor came up (or moved to another port)
+        if self.mini is not None and self.reachable and (
+                not was or not (self.mini.get_current_url() or "").startswith(self.link.base)):
+            self.mini.load_url(self.mini_url())
 
     def _poll(self) -> None:
         while not self.stop.is_set():
@@ -320,18 +824,42 @@ class Desktop:
         html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline"))
         self.window = webview.create_window(self.text("app.name") if self.messages else "Ambysto Steady",
                                             url=url, html=html, width=1100, height=740, min_size=MIN_SIZE,
-                                            hidden=self.minimized and not selftest, background_color="#F5F5F7")
+                                            hidden=self.minimized and not selftest, background_color="#F5F5F7",
+                                            js_api=MainBridge(self))
         self.window.events.closing += self._on_closing
         self.window.events.shown += self.paint_title_bar
         result: dict[str, Any] = {}
         if selftest:
             return self._run_selftest(webview, result, screenshot)
+        if open_for_new_version(self.mini_state):
+            save_mini_state(self.mini_state)
+        self.create_mini(webview)
         self.build_tray().run_detached()
         threading.Thread(target=self._poll, name="desktop-poll", daemon=True).start()
+        threading.Thread(target=self._glass_loop, name="desktop-glass", daemon=True).start()
         threading.Thread(target=watch_show_requests, args=(self.show, self.stop), name="desktop-show", daemon=True).start()
         webview.start(private_mode=False, storage_path=str(config.user_dir() / "webview"))
         self.quit()
         return 0
+
+    def create_mini(self, webview: Any) -> None:
+        theme = system_theme()
+        size = SIZES[self.mini_state["mode"]]
+        x, y = mini_position(self.mini_state, webview.screens, size)
+        url = self.mini_url() if self.reachable else None
+        html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline")).replace(
+            "#f5f5f7", BACKGROUNDS[theme])
+        self.mini = webview.create_window(
+            self.text("ui.tray.mini") if self.messages else "Ambysto Steady", url=url, html=html,
+            width=size[0], height=size[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
+            on_top=True, hidden=not self.mini_state["open"], background_color=BACKGROUNDS[theme],
+            js_api=MiniBridge(self))
+        self.mini.events.closing += self._on_mini_closing
+        self.mini.events.moved += self._on_mini_moved
+        self.mini.events.shown += self._fit_mini
+        self.mini.events.shown += self.apply_mini_opacity
+        self.mini.events.shown += self.apply_glass
+        self.mini.events.loaded += self._on_mini_loaded
 
     def _run_selftest(self, webview: Any, result: dict, screenshot: str | None) -> int:
         def probe() -> None:

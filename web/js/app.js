@@ -49,6 +49,27 @@ function updateConnection() {
 }
 ctx.updateConnection = updateConnection;
 
+// Inside the desktop shell (app/desktop.py) the page can open the floating monitor; in a plain
+// browser tab those controls ([data-desktop-only]) stay hidden.
+ctx.openMini = () => window.pywebview?.api?.open_mini?.();
+function syncDesktopOnly() {
+  const available = Boolean(window.pywebview?.api?.open_mini);
+  document.querySelectorAll("[data-desktop-only]").forEach(node => { node.hidden = !available; });
+}
+window.addEventListener("pywebviewready", syncDesktopOnly);
+
+// "Fix N" on the floating bar (app/desktop.py open_check_result): show what the latest check found,
+// with what Fix would turn on, on the Overview. Nothing changes until the user presses Fix there.
+window.steadyApp = {
+  async openResult() {
+    if (ctx.screen !== "overview") {
+      history.replaceState(null, "", "#/overview");
+      await show("overview");
+    }
+    await overview.showResult(ctx);
+  },
+};
+
 let pollTimer;
 async function poll() {
   clearTimeout(pollTimer);
@@ -66,7 +87,7 @@ function show(name) {
   document.querySelectorAll(".nav-item[aria-current]").forEach(a => a.setAttribute("aria-current", "page"));
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === `screen-${name}`));
   $("#content").scrollTop = 0;
-  SCREENS[name].render(ctx).catch(err => console.error(err)).finally(poll);
+  return SCREENS[name].render(ctx).catch(err => console.error(err)).finally(() => { syncDesktopOnly(); poll(); });
 }
 
 async function rerenderAll() {
