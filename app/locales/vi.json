@@ -724,6 +724,9 @@
 
   "ui.diag.never": "Chưa chạy chẩn đoán lần nào",
   "ui.diag.bufferbloat_confirm": "Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB.",
+  "ui.diag.bufferbloat_run_metered": "Đo (khoảng 30 giây, tối đa 500 MB dữ liệu di động)",
+  "ui.diag.bufferbloat_confirm_metered": "Bạn đang dùng dữ liệu di động hoặc điểm phát cá nhân. Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây và dùng tối đa 500 MB dung lượng gói cước. Đường truyền nhanh hơn 200 Mbps sẽ được báo là đo chưa đầy đủ.",
+  "ui.diag.bufferbloat_constrained": "Không dùng được khi bật Chế độ dữ liệu thấp: phép đo dùng hàng trăm MB. Tắt Chế độ dữ liệu thấp để chạy.",
   "ui.diag.measure": "Đo",
 
   "ui.common.on": "Bật",
@@ -862,6 +865,7 @@
   "apple.diag.physical_link.advice_improved": "Nếu bạn vừa dời Mac/router hoặc đổi cấu hình, theo dõi thêm vài giờ để xác nhận.",
   "apple.ui.language.auto": "Theo hệ thống",
   "apple.ui.check.idle_body": "Chạy {count} kiểm tra kết nối, router và DNS. Không thay đổi gì trên thiết bị.",
+  "apple.ui.check.start": "Quét",
   "apple.ui.check.kind.none": "Thiết bị này không sửa được",
 
   "ui.nav.history": "Lịch sử",

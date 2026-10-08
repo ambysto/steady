@@ -726,6 +726,9 @@
 
   "ui.diag.never": "No diagnostics have run yet",
   "ui.diag.bufferbloat_confirm": "This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB.",
+  "ui.diag.bufferbloat_run_metered": "Measure (about 30 s, up to 500 MB of mobile data)",
+  "ui.diag.bufferbloat_confirm_metered": "You are on mobile data or a personal hotspot. This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds and uses at most 500 MB of your data plan. A line faster than 200 Mbps reads as incomplete.",
+  "ui.diag.bufferbloat_constrained": "Not available in Low Data Mode: the measurement uses hundreds of MB. Turn Low Data Mode off to run it.",
   "ui.diag.measure": "Measure",
 
   "ui.common.on": "On",
@@ -864,6 +867,7 @@
   "apple.diag.physical_link.advice_improved": "If you just moved the Mac or the router, or changed a setting, watch a few more hours to confirm.",
   "apple.ui.language.auto": "Same as system",
   "apple.ui.check.idle_body": "Runs {count} checks on your connection, the router and DNS. Nothing is changed.",
+  "apple.ui.check.start": "Scan",
   "apple.ui.check.kind.none": "Nothing on this device fixes this",
 
   "ui.nav.history": "History",
