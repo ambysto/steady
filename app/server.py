@@ -44,6 +44,7 @@ SECURITY_HEADERS = {
                                 "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
                                 "base-uri 'none'; form-action 'none'"),
 }
+PAGES = {"/": "index.html", "/index.html": "index.html", "/mini.html": "mini.html"}   # get the token
 TWEAK_ID = re.compile(r"^[a-z0-9_]{1,64}$")
 ACTIONS = ("reconnect", "restart_adapter", "flush_dns", "renew_dhcp")
 
@@ -154,6 +155,7 @@ class Api:
                  route: Callable[[], dict | None] = winutil.default_route_native,
                  measure_tweak: Callable[[str], dict | None] | None = None,
                  network_id: Callable[[], str | None] | None = None,
+                 traffic: Any = None,
                  sync_jobs: bool = False) -> None:
         self.monitor, self.storage, self.failover = monitor, storage, failover
         self._load, self._save, self._is_admin, self._clock = load_settings, save_settings, is_admin, clock
@@ -166,6 +168,7 @@ class Api:
         self._run_bufferbloat = run_bufferbloat or self._default_bufferbloat
         self._measure_tweak = measure_tweak or self._default_measure_tweak
         self._network_id = network_id or self._default_network_id
+        self._traffic = traffic      # app.traffic.Traffic, made on the first GET /api/traffic
         self.jobs = Jobs(clock)
         self._sync = sync_jobs
         self._settings_lock = threading.Lock()
@@ -181,6 +184,7 @@ class Api:
             ("GET", re.compile(r"^/api/i18n$"), self.translations),
             ("GET", re.compile(r"^/api/autostart$"), self.autostart),
             ("GET", re.compile(r"^/api/live$"), self.live),
+            ("GET", re.compile(r"^/api/traffic$"), self.traffic),
             ("GET", re.compile(r"^/api/history$"), self.history),
             ("GET", re.compile(r"^/api/events$"), self.events),
             ("GET", re.compile(r"^/api/tweaks$"), self.tweaks),
@@ -320,6 +324,15 @@ class Api:
 
     def live(self, query: dict, **_: Any) -> dict:
         return self.monitor.snapshot(window_s=self._int(query, "window", 300, 1, 900))
+
+    def traffic(self, **_: Any) -> dict:
+        """Throughput of the Internet path, apps with connections, the connection's basic facts
+        (the floating window, read-only). The sampler runs only while this is being asked for."""
+        with self._settings_lock:     # two first requests at once must not start two samplers
+            if self._traffic is None:
+                from .traffic import Traffic
+                self._traffic = Traffic(clock=self._clock)
+        return self._traffic.snapshot()
 
     def history(self, query: dict, **_: Any) -> dict:
         """Minute stats, Wi-Fi stats and events. ?bucket=N (minutes) merges rows into N-minute
@@ -828,10 +841,10 @@ class _Handler(BaseHTTPRequestHandler):
             return _BAD
 
     def _static(self, path: str) -> None:
-        if path in ("/", "/index.html"):
-            index = WEB_ROOT / "index.html"
+        page = PAGES.get(path)
+        if page is not None:
             try:
-                html = index.read_text(encoding="utf-8")
+                html = (WEB_ROOT / page).read_text(encoding="utf-8")
             except OSError:
                 return self._error(404, "UI not installed")
             # The token is handed only to pages served by us, behind the Host check.

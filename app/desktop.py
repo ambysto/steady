@@ -7,6 +7,10 @@ viewer. Closing the window hides it to the tray; "Quit" ends this process, never
     pythonw -m app.desktop --minimized   start in the tray only
     python  -m app.desktop --selftest    open, wait for the UI to load, print what it shows, quit
 
+The tray menu also toggles the floating monitor (web/mini.html): a small frameless window that
+stays on top with download/upload/ping on a sweep chart, the apps holding connections and the
+connection's basic facts. Whether it is open and where it sits is remembered in mini.json.
+
 Needs `pip install -r requirements.txt` (pywebview, pystray, Pillow). Nothing else in app/
 imports this module, so the monitor stays standard-library only (ADR-0001).
 """
@@ -205,12 +209,81 @@ def set_window_icon(hwnd: int, ico: Path = APP_ICON) -> bool:
 MIN_SIZE = (420, 560)
 SELFTEST_SIZE = (600, 760)
 
+# --- the floating monitor ----------------------------------------------------------------------
+
+MINI_SIZE = (340, 500)
+MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear of the taskbar)
+MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
+DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND = 33, 2
+BACKGROUNDS = {"light": "#F5F5F7", "dark": "#1E1E1F"}     # --window of tokens.css
+
+
+def mini_file() -> Path:
+    return config.user_dir() / "mini.json"
+
+
+def load_mini_state() -> dict[str, Any]:
+    """{"open": bool, "x": int | None, "y": int | None}; defaults when the file is missing or bad."""
+    state: dict[str, Any] = {"open": False, "x": None, "y": None}
+    try:
+        saved = json.loads(mini_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return state
+    if isinstance(saved, dict):
+        state["open"] = saved.get("open") is True
+        for key in ("x", "y"):
+            if isinstance(saved.get(key), int) and not isinstance(saved.get(key), bool):
+                state[key] = saved[key]
+    return state
+
+
+def save_mini_state(state: dict[str, Any]) -> None:
+    try:
+        mini_file().write_text(json.dumps({k: state.get(k) for k in ("open", "x", "y")}), encoding="utf-8")
+    except OSError as exc:
+        log.warning("could not save the floating window state: %r", exc)
+
+
+def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, int] = MINI_SIZE) -> tuple[int, int]:
+    """Where the window opens: the saved spot if it is still on a screen (a monitor may have been
+    unplugged), else the bottom-right corner of the first screen."""
+    x, y = state.get("x"), state.get("y")
+    if x is not None and y is not None:
+        for scr in screens:
+            if (scr.x - size[0] + MINI_VISIBLE <= x <= scr.x + scr.width - MINI_VISIBLE
+                    and scr.y <= y <= scr.y + scr.height - MINI_VISIBLE):
+                return x, y
+    if not screens:
+        return 100, 100
+    scr = screens[0]
+    return (scr.x + scr.width - size[0] - MINI_MARGIN[0], scr.y + scr.height - size[1] - MINI_MARGIN[1])
+
+
+def round_corners(hwnd: int) -> bool:
+    """Windows 11 rounds a frameless window's corners only when asked; older versions ignore it."""
+    pref = ctypes.c_uint32(DWMWCP_ROUND)
+    return ctypes.windll.dwmapi.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), DWMWA_WINDOW_CORNER_PREFERENCE,
+                                                      ctypes.byref(pref), ctypes.sizeof(pref)) == 0
+
+
+class MiniBridge:
+    """What mini.html may call through window.pywebview.api: hiding itself, nothing else.
+    pywebview exposes every public attribute, so the callback stays private."""
+
+    def __init__(self, hide: Callable[[], None]) -> None:
+        self._hide = hide
+
+    def hide_mini(self) -> None:
+        self._hide()
+
 
 class Desktop:
     def __init__(self, link: ServerLink | None = None, minimized: bool = False) -> None:
         self.link = link or ServerLink()
         self.minimized = minimized
         self.window: Any = None
+        self.mini: Any = None
+        self.mini_state = load_mini_state()
         self.icon: Any = None
         self.messages: dict[str, Any] = {}
         self.live: dict | None = None
@@ -261,10 +334,66 @@ class Desktop:
     def quit(self) -> None:
         self.quitting = True
         self.stop.set()
+        if self.mini is not None:
+            save_mini_state(self.mini_state)      # reopens where it was, if it was open
         if self.icon is not None:
             self.icon.stop()
-        if self.window is not None:
-            self.window.destroy()
+        for window in (self.mini, self.window):
+            if window is not None:
+                window.destroy()
+
+    # -- floating monitor -----------------------------------------------------------------
+    def mini_url(self) -> str | None:
+        return f"{self.link.base}/mini.html" if self.link.base else None
+
+    def _mini_active(self, active: bool) -> None:
+        """Pause the page's polling and drawing while hidden (it would keep running otherwise)."""
+        flag = "true" if active else "false"
+        try:
+            self.mini.evaluate_js(f"window.steadyMini && window.steadyMini.setActive({flag})")
+        except Exception as exc:
+            log.debug("floating window not ready: %r", exc)
+
+    def show_mini(self) -> None:
+        if self.mini is None:
+            return
+        self.mini.show()
+        self._round_mini()
+        self._mini_active(True)
+        self.mini_state["open"] = True
+        save_mini_state(self.mini_state)
+
+    def hide_mini(self) -> None:
+        if self.mini is None:
+            return
+        self.mini.hide()
+        self._mini_active(False)
+        self.mini_state["open"] = False
+        save_mini_state(self.mini_state)
+
+    def toggle_mini(self) -> None:
+        if self.mini_state["open"]:
+            self.hide_mini()
+        else:
+            self.show_mini()
+
+    def _round_mini(self) -> None:
+        try:
+            round_corners(int(self.mini.native.Handle.ToInt64()))
+        except Exception:
+            pass                # not shown yet
+
+    def _on_mini_moved(self, x: int, y: int) -> None:
+        self.mini_state.update(x=int(x), y=int(y))       # saved on hide and quit
+
+    def _on_mini_closing(self) -> bool:
+        if self.quitting:
+            return True
+        self.hide_mini()       # Alt+F4 hides it like the close button
+        return False
+
+    def _on_mini_loaded(self) -> None:
+        self._mini_active(bool(self.mini_state["open"]))
 
     # -- tray -----------------------------------------------------------------------------
     def _reconnect(self) -> None:
@@ -278,6 +407,8 @@ class Desktop:
         menu = pystray.Menu(
             pystray.MenuItem(lambda _: self.title(), None, enabled=False),
             pystray.MenuItem(lambda _: self.text("ui.tray.open"), lambda: self.show(), default=True),
+            pystray.MenuItem(lambda _: self.text("ui.tray.mini"), lambda: self.toggle_mini(),
+                             checked=lambda _: bool(self.mini_state["open"])),
             pystray.MenuItem(lambda _: self.text("ui.action.reconnect"), lambda: self._reconnect()),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(lambda _: self.text("ui.tray.quit"), lambda: self.quit()),
@@ -306,6 +437,9 @@ class Desktop:
         if self.window is not None and self.reachable and (
                 not was or not (self.window.get_current_url() or "").startswith(self.link.base)):
             self.window.load_url(f"{self.link.base}/")    # the monitor came up (or moved to another port)
+        if self.mini is not None and self.reachable and (
+                not was or not (self.mini.get_current_url() or "").startswith(self.link.base)):
+            self.mini.load_url(self.mini_url())
 
     def _poll(self) -> None:
         while not self.stop.is_set():
@@ -326,12 +460,29 @@ class Desktop:
         result: dict[str, Any] = {}
         if selftest:
             return self._run_selftest(webview, result, screenshot)
+        self.create_mini(webview)
         self.build_tray().run_detached()
         threading.Thread(target=self._poll, name="desktop-poll", daemon=True).start()
         threading.Thread(target=watch_show_requests, args=(self.show, self.stop), name="desktop-show", daemon=True).start()
         webview.start(private_mode=False, storage_path=str(config.user_dir() / "webview"))
         self.quit()
         return 0
+
+    def create_mini(self, webview: Any) -> None:
+        theme = system_theme()
+        x, y = mini_position(self.mini_state, webview.screens)
+        url = self.mini_url() if self.reachable else None
+        html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline")).replace(
+            "#f5f5f7", BACKGROUNDS[theme])
+        self.mini = webview.create_window(
+            self.text("ui.tray.mini") if self.messages else "Ambysto Steady", url=url, html=html,
+            width=MINI_SIZE[0], height=MINI_SIZE[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
+            on_top=True, hidden=not self.mini_state["open"], background_color=BACKGROUNDS[theme],
+            js_api=MiniBridge(self.hide_mini))
+        self.mini.events.closing += self._on_mini_closing
+        self.mini.events.moved += self._on_mini_moved
+        self.mini.events.shown += self._round_mini
+        self.mini.events.loaded += self._on_mini_loaded
 
     def _run_selftest(self, webview: Any, result: dict, screenshot: str | None) -> int:
         def probe() -> None:

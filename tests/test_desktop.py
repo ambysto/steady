@@ -165,6 +165,83 @@ class ShellTests(unittest.TestCase):
         self.assertEqual(self.shell.title(), "Ambysto Steady · Đã kết nối")
 
 
+class Screen:
+    def __init__(self, x, y, width, height):
+        self.x, self.y, self.width, self.height = x, y, width, height
+
+
+class MiniWindowTests(unittest.TestCase):
+    """The floating monitor: remembered state, where it opens, what its page may call."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        os.environ["STABLEINTERNET_USERDIR"] = self.tmp.name
+        self.addCleanup(os.environ.pop, "STABLEINTERNET_USERDIR", None)
+        self.shell = desktop.Desktop(desktop.ServerLink(FakeServer()))
+        self.shell.mini = FakeWindow()
+
+    def saved(self):
+        return json.loads(Path(self.tmp.name, "mini.json").read_text(encoding="utf-8"))
+
+    def test_state_defaults_and_bad_files(self):
+        self.assertEqual(desktop.load_mini_state(), {"open": False, "x": None, "y": None})
+        for text in ("not json", "[1]", '{"open": "yes", "x": true, "y": 1.5}'):
+            Path(self.tmp.name, "mini.json").write_text(text, encoding="utf-8")
+            self.assertEqual(desktop.load_mini_state(), {"open": False, "x": None, "y": None}, text)
+        desktop.save_mini_state({"open": True, "x": -300, "y": 40})
+        self.assertEqual(desktop.load_mini_state(), {"open": True, "x": -300, "y": 40})
+
+    def test_opens_bottom_right_or_where_it_was_left(self):
+        screens = [Screen(0, 0, 1920, 1080), Screen(-1280, 0, 1280, 1024)]
+        w, h = desktop.MINI_SIZE
+        default = (1920 - w - desktop.MINI_MARGIN[0], 1080 - h - desktop.MINI_MARGIN[1])
+        self.assertEqual(desktop.mini_position({"x": None, "y": None}, screens), default)
+        self.assertEqual(desktop.mini_position({"x": -900, "y": 300}, screens), (-900, 300))   # second monitor
+        self.assertEqual(desktop.mini_position({"x": 5000, "y": 300}, screens), default)       # monitor unplugged
+        self.assertEqual(desktop.mini_position({"x": 100, "y": 1070}, screens), default)       # only a sliver visible
+        self.assertEqual(desktop.mini_position({"x": 1, "y": 1}, []), (100, 100))
+
+    def test_toggle_shows_and_hides_and_remembers(self):
+        self.shell.toggle_mini()
+        self.assertEqual(self.shell.mini.calls[:1], ["show"])
+        self.assertTrue(self.saved()["open"])
+        self.shell._on_mini_moved(12, 34)
+        self.shell.toggle_mini()
+        self.assertIn("hide", self.shell.mini.calls)
+        self.assertEqual(self.saved(), {"open": False, "x": 12, "y": 34})
+
+    def test_hiding_pauses_the_page(self):
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.show_mini()
+        self.shell.hide_mini()
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setActive(true)",
+                                   "window.steadyMini && window.steadyMini.setActive(false)"])
+
+    def test_closing_hides_unless_quitting(self):
+        self.shell.mini_state["open"] = True
+        self.assertFalse(self.shell._on_mini_closing())
+        self.assertFalse(self.saved()["open"])
+        self.shell.mini_state["open"] = True
+        self.shell.quit()
+        self.assertTrue(self.shell._on_mini_closing())
+        self.assertTrue(self.saved()["open"])           # quitting keeps it open for the next start
+        self.assertIn("destroy", self.shell.mini.calls)
+
+    def test_the_page_can_only_hide_the_window(self):
+        hidden = []
+        bridge = desktop.MiniBridge(lambda: hidden.append(1))
+        self.assertEqual([n for n in dir(bridge) if not n.startswith("_")], ["hide_mini"])
+        bridge.hide_mini()
+        self.assertEqual(hidden, [1])
+
+    def test_mini_page_follows_the_monitor(self):
+        self.assertIsNone(self.shell.mini_url())
+        self.shell.link.port = 47613
+        self.assertEqual(self.shell.mini_url(), "http://127.0.0.1:47613/mini.html")
+
+
 @unittest.skipUnless(sys.platform == "win32", "Windows named events")
 class SingleInstanceTests(unittest.TestCase):
     """A private event name: the real desktop app may be running on this machine."""
