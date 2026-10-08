@@ -8,6 +8,8 @@ public enum WiFiSignal {
         public var state: String
         public var ssid: String?
         public var channel: Int?
+        /// "2.4 GHz", "5 GHz" or "6 GHz", as netsh names it; nil when unknown.
+        public var band: String?
         public var radioType: String
         /// Signal quality in percent, as Windows reports it.
         public var signal: Int?
@@ -15,11 +17,12 @@ public enum WiFiSignal {
         public var rxMbps: Int?
         public var txMbps: Int?
 
-        public init(state: String, ssid: String? = nil, channel: Int? = nil, radioType: String = "",
+        public init(state: String, ssid: String? = nil, channel: Int? = nil, band: String? = nil, radioType: String = "",
                     signal: Int? = nil, rssi: Int? = nil, rxMbps: Int? = nil, txMbps: Int? = nil) {
             self.state = state
             self.ssid = ssid
             self.channel = channel
+            self.band = band
             self.radioType = radioType
             self.signal = signal
             self.rssi = rssi
@@ -28,7 +31,7 @@ public enum WiFiSignal {
         }
 
         enum CodingKeys: String, CodingKey {
-            case state, ssid, channel, signal, rssi
+            case state, ssid, channel, band, signal, rssi
             case radioType = "radio_type", rxMbps = "rx_mbps", txMbps = "tx_mbps"
         }
 
