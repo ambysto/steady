@@ -238,13 +238,15 @@ struct FloatingFigures {
                 let dBm = wifi.rssi.map { " · \($0) dBm" } ?? ""
                 rows.append(Fact(id: "signal", label: text("ui.overview.signal"), value: "\(signal)%\(dBm)"))
             }
-            if let channel = wifi.channel {
-                rows.append(Fact(id: "channel", label: text("ui.mini.net.band"),
-                                 value: text("ui.mini.net.channel", ["channel": .number(Double(channel))])))
+            let band = [wifi.band, wifi.channel.map { text("ui.mini.net.channel", ["channel": .number(Double($0))]) }]
+                .compactMap { $0 }.joined(separator: " · ")
+            if !band.isEmpty {
+                rows.append(Fact(id: "channel", label: text("ui.mini.net.band"), value: band))
             }
+            // CoreWLAN reports only the transmit rate, so the receive side is left out, not shown as "—".
             if let transmit = wifi.txMbps {
                 rows.append(Fact(id: "link", label: text("ui.overview.link_rate"),
-                                 value: text("ui.mini.net.link", ["down": .text("—"), "up": .text("\(transmit)")])))
+                                 value: "↑ " + text("ui.mini.unit.mbps", ["value": .text("\(transmit)")])))
             }
         }
         rows.append(Fact(id: "ip", label: text("ui.mini.net.local_ip"), value: model.localIPv4 ?? "—"))
