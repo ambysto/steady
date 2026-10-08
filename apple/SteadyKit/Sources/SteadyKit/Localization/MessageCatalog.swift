@@ -221,7 +221,6 @@ public enum MessageCatalog {
         "ui.check.kind.none",
         "ui.check.start",
         "ui.language.auto",
-        "ui.mini.apps.unavailable",
         "ui.mini.close",
         "ui.mini.fix_hint",
         "ui.mini.optimize_hint",

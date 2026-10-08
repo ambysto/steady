@@ -888,7 +888,6 @@
   "apple.ui.language.auto": "Same as system",
   "apple.ui.check.idle_body": "Runs {count} checks on your connection, the router and DNS. Nothing is changed.",
   "apple.ui.check.start": "Scan",
-  "apple.ui.mini.apps.unavailable": "macOS does not let Steady see which apps have connections open, so this list is not available on the Mac.",
   "apple.ui.mini.optimize_hint": "Check the connection. The result opens in the main window. Nothing on this Mac is changed.",
   "apple.ui.mini.fix_hint": "See what the check found, in the main window.",
   "apple.ui.mini.close": "Close (the Window menu brings it back)",

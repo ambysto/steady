@@ -670,53 +670,6 @@
         }
       }
     },
-    "apple.ui.mini.apps.unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS erlaubt Steady nicht zu sehen, welche Apps Verbindungen offen haben. Deshalb gibt es diese Liste auf dem Mac nicht."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS does not let Steady see which apps have connections open, so this list is not available on the Mac."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS no deja que Steady vea qué apps tienen conexiones abiertas, así que esta lista no está disponible en el Mac."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS ne permet pas à Steady de voir quelles apps ont des connexions ouvertes, cette liste n’est donc pas disponible sur le Mac."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O macOS não permite que o Steady veja quais apps têm conexões abertas, por isso esta lista não está disponível no Mac."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS không cho Steady biết ứng dụng nào đang có kết nối mở, nên danh sách này không có trên Mac."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS 不允许 Steady 查看哪些 App 有打开的连接，因此 Mac 上没有此列表。"
-          }
-        }
-      }
-    },
     "apple.ui.mini.close" : {
       "extractionState" : "manual",
       "localizations" : {

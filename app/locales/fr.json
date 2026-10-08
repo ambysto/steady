@@ -886,7 +886,6 @@
   "apple.ui.language.auto": "Identique au système",
   "apple.ui.check.idle_body": "Lance {count} vérifications sur la connexion, le routeur et le DNS. Rien n'est modifié.",
   "apple.ui.check.start": "Analyser",
-  "apple.ui.mini.apps.unavailable": "macOS ne permet pas à Steady de voir quelles apps ont des connexions ouvertes, cette liste n’est donc pas disponible sur le Mac.",
   "apple.ui.mini.optimize_hint": "Vérifie la connexion. Le résultat s’ouvre dans la fenêtre principale. Rien n’est modifié sur ce Mac.",
   "apple.ui.mini.fix_hint": "Voir ce que la vérification a trouvé, dans la fenêtre principale.",
   "apple.ui.mini.close": "Fermer (le menu Fenêtre le rouvre)",

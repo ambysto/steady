@@ -4,18 +4,14 @@ import SteadyKit
 import SwiftUI
 
 /// The table the bar opens into: download, upload and ping on one chart, the connection's facts,
-/// and the appearance options. The Apps tab explains why it is empty on the Mac (see ADR-0022).
+/// and the appearance options. No Apps tab: a sandboxed Mac app cannot see which apps hold
+/// connections, so the list is left out rather than shown empty (see ADR-0022).
 struct FloatingTable: View {
     @Environment(AppModel.self) private var model
     @Environment(\.localizer) private var text
 
     @State private var metric = FloatingMetric.download
-    @State private var tab = Tab.apps
     @State private var showsOptions = false
-
-    private enum Tab: CaseIterable {
-        case apps, network
-    }
 
     var body: some View {
         let figures = FloatingFigures(model: model, text: text)
@@ -26,13 +22,7 @@ struct FloatingTable: View {
             }
             tiles(figures)
             chart(figures)
-            Picker("", selection: $tab) {
-                Text(text("ui.mini.tab.apps")).tag(Tab.apps)
-                Text(text("ui.mini.tab.network")).tag(Tab.network)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            panel(figures)
+            facts(figures)
         }
         .padding(12)
         .frame(width: FloatingMonitorController.tableSize.width, height: FloatingMonitorController.tableSize.height)
@@ -167,35 +157,26 @@ struct FloatingTable: View {
         }
     }
 
-    /// The Apps tab on the Mac: the list is not available to a sandboxed app, so it says so.
-    private func panel(_ figures: FloatingFigures) -> some View {
+    /// The connection's facts (the Windows Network tab).
+    private func facts(_ figures: FloatingFigures) -> some View {
         ScrollView {
-            switch tab {
-            case .apps:
-                Text(text("ui.mini.apps.unavailable"))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-            case .network:
-                VStack(spacing: 0) {
-                    ForEach(figures.facts) { fact in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text(fact.label)
-                                .foregroundStyle(.secondary)
-                                .fixedSize()
-                            Spacer(minLength: 8)
-                            Text(fact.value)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                                .textSelection(.enabled)
-                        }
-                        .font(.footnote)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        if fact.id != figures.facts.last?.id {
-                            Divider()
-                        }
+            VStack(spacing: 0) {
+                ForEach(figures.facts) { fact in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(fact.label)
+                            .foregroundStyle(.secondary)
+                            .fixedSize()
+                        Spacer(minLength: 8)
+                        Text(fact.value)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                    }
+                    .font(.footnote)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    if fact.id != figures.facts.last?.id {
+                        Divider()
                     }
                 }
             }

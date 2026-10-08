@@ -67,7 +67,7 @@ While the app has a window open, whichever tab is shown, `LiveMonitor` measures 
 
 ## Floating monitor (Mac)
 
-Window menu > Floating monitor (⌥⌘M), or the Overview: a non-activating panel on top of the other windows ([ADR-0022](../docs/adr/0022-mac-floating-monitor.md)). It is `Steady/FloatingMonitor/`: `FloatingMonitorController` (the `NSPanel`: position, size, the glass level, hiding it), `FloatingMonitorView` (the bar, the figures), `FloatingTable`, `FloatingScanButton` and `FloatingChart`. The logic it draws from is in `SteadyKit`: `Sweep` (the port of `web/js/ecg.js`), `SweepSeries` (the series) and `Throughput` (the interface byte counters). Its measuring is `AppModel.run()`, so it stops when the panel is hidden. The Apps tab is empty on purpose: a sandboxed app cannot see other apps' connections.
+Window menu > Floating monitor (⌥⌘M), or the Overview: a non-activating panel on top of the other windows ([ADR-0022](../docs/adr/0022-mac-floating-monitor.md)). It is `Steady/FloatingMonitor/`: `FloatingMonitorController` (the `NSPanel`: position, size, the glass level, hiding it), `FloatingMonitorView` (the bar, the figures), `FloatingTable`, `FloatingScanButton` and `FloatingChart`. The logic it draws from is in `SteadyKit`: `Sweep` (the port of `web/js/ecg.js`), `SweepSeries` (the series) and `Throughput` (the interface byte counters). Its measuring is `AppModel.run()`, so it stops when the panel is hidden. There is no Apps list on purpose: a sandboxed app cannot see other apps' connections.
 
 ## Check my connection
 
