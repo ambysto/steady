@@ -184,14 +184,15 @@ class MiniWindowTests(unittest.TestCase):
     def saved(self):
         return json.loads(Path(self.tmp.name, "mini.json").read_text(encoding="utf-8"))
 
-    DEFAULTS = {"open": False, "x": None, "y": None, "transparency": "low", "seen_version": None}
+    DEFAULTS = {"open": False, "x": None, "y": None, "transparency": "low", "seen_version": None, "mode": "bar"}
 
     def test_state_defaults_and_bad_files(self):
         self.assertEqual(desktop.load_mini_state(), self.DEFAULTS)
-        for text in ("not json", "[1]", '{"open": "yes", "x": true, "y": 1.5, "transparency": "glass", "seen_version": 7}'):
+        for text in ("not json", "[1]",
+                     '{"open": "yes", "x": true, "y": 1.5, "transparency": "glass", "seen_version": 7, "mode": "huge"}'):
             Path(self.tmp.name, "mini.json").write_text(text, encoding="utf-8")
             self.assertEqual(desktop.load_mini_state(), self.DEFAULTS, text)
-        saved = {"open": True, "x": -300, "y": 40, "transparency": "high", "seen_version": "0.8.0"}
+        saved = {"open": True, "x": -300, "y": 40, "transparency": "high", "seen_version": "0.8.0", "mode": "full"}
         desktop.save_mini_state(saved)
         self.assertEqual(desktop.load_mini_state(), saved)
 
@@ -254,10 +255,47 @@ class MiniWindowTests(unittest.TestCase):
         self.assertTrue(self.saved()["open"])           # quitting keeps it open for the next start
         self.assertIn("destroy", self.shell.mini.calls)
 
+    def test_bar_grows_away_from_the_screen_edge_it_is_near(self):
+        screens = [Screen(0, 0, 1920, 1080)]
+        bar, full = desktop.BAR_SIZE, desktop.MINI_SIZE
+        # bottom-right bar: the table opens up and to the left, its corner where the bar's was
+        x, y = 1920 - bar[0] - 16, 1080 - bar[1] - 64
+        self.assertEqual(desktop.resized_position(x, y, bar, full, screens), (x + bar[0] - full[0], y + bar[1] - full[1]))
+        # top-left bar: it opens down and to the right
+        self.assertEqual(desktop.resized_position(20, 20, bar, full, screens), (20, 20))
+        # and back: the bar returns to the corner the table came from
+        fx, fy = desktop.resized_position(x, y, bar, full, screens)
+        self.assertEqual(desktop.resized_position(fx, fy, full, bar, screens), (x, y))
+        # never off screen
+        self.assertEqual(desktop.resized_position(0, 1050, bar, full, screens)[1], 1080 - full[1])
+        self.assertEqual(desktop.resized_position(5, 5, bar, full, []), (5, 5))
+
+    def test_switching_between_bar_and_table(self):
+        moves = []
+        self.shell.mini.x, self.shell.mini.y = 1300, 970
+        self.shell.mini.move = lambda x, y: moves.append((x, y))
+        screens = [Screen(0, 0, 1920, 1080)]
+        with mock.patch.object(desktop, "fit_form", lambda form, size: True):
+            self.assertEqual(self.shell.set_mini_mode("full", screens), "full")
+            self.assertEqual(self.shell.set_mini_mode("full", screens), "full")      # already: nothing moves
+            self.assertEqual(self.shell.set_mini_mode("wide", screens), "full")      # unknown: ignored
+        self.assertEqual(len(moves), 1)
+        self.assertEqual(self.saved()["mode"], "full")
+        self.assertEqual((self.saved()["x"], self.saved()["y"]), moves[0])
+
+    def test_fix_on_the_bar_opens_the_result_in_the_main_window(self):
+        self.shell.window = FakeWindow()
+        scripts = []
+        self.shell.window.evaluate_js = scripts.append
+        desktop.MiniBridge(self.shell).open_result()
+        self.assertEqual(scripts, ["window.steadyApp && window.steadyApp.openResult()"])
+        self.assertIn("show", self.shell.window.calls)
+
     def test_what_the_pages_may_call(self):
         bridge = desktop.MiniBridge(self.shell)
         self.assertEqual([n for n in dir(bridge) if not n.startswith("_")],
-                         ["get_transparency", "hide_mini", "hover", "set_transparency"])
+                         ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "set_mode", "set_transparency"])
+        self.assertEqual(bridge.get_mode(), "bar")
         self.assertEqual(bridge.get_transparency(), "low")
         bridge.hide_mini()
         self.assertIn("hide", self.shell.mini.calls)

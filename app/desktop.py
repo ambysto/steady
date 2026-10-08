@@ -7,9 +7,9 @@ viewer. Closing the window hides it to the tray; "Quit" ends this process, never
     pythonw -m app.desktop --minimized   start in the tray only
     python  -m app.desktop --selftest    open, wait for the UI to load, print what it shows, quit
 
-The tray menu also toggles the floating monitor (web/mini.html): a small frameless window that
-stays on top with download/upload/ping on a sweep chart, the apps holding connections and the
-connection's basic facts. Whether it is open, where it sits and how see-through it is are
+The tray menu also toggles the floating monitor (web/mini.html): a frameless window that stays on
+top. By default it is a one-line bar (Optimize on the left, download/upload/ping); expanded it is
+the full table with the sweep chart, the apps holding connections and the connection's facts. Whether it is open, where it sits and how see-through it is are
 remembered in mini.json; a new version opens it once, so an install or upgrade shows it.
 
 Needs `pip install -r requirements.txt` (pywebview, pystray, Pillow). Nothing else in app/
@@ -212,7 +212,9 @@ SELFTEST_SIZE = (600, 760)
 
 # --- the floating monitor ----------------------------------------------------------------------
 
-MINI_SIZE = (340, 500)
+MINI_SIZE = (340, 500)          # expanded: the full table
+BAR_SIZE = (540, 46)            # collapsed: one line
+SIZES = {"full": MINI_SIZE, "bar": BAR_SIZE}
 MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear of the taskbar)
 MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
 DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND = 33, 2
@@ -227,13 +229,13 @@ def mini_file() -> Path:
     return config.user_dir() / "mini.json"
 
 
-MINI_KEYS = ("open", "x", "y", "transparency", "seen_version")
+MINI_KEYS = ("open", "x", "y", "transparency", "seen_version", "mode")
 
 
 def load_mini_state() -> dict[str, Any]:
     """{"open", "x", "y", "transparency", "seen_version"}; defaults when the file is missing or bad."""
     state: dict[str, Any] = {"open": False, "x": None, "y": None, "transparency": DEFAULT_TRANSPARENCY,
-                             "seen_version": None}
+                             "seen_version": None, "mode": "bar"}
     try:
         saved = json.loads(mini_file().read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -247,6 +249,8 @@ def load_mini_state() -> dict[str, Any]:
             state["transparency"] = saved["transparency"]
         if isinstance(saved.get("seen_version"), str):
             state["seen_version"] = saved["seen_version"]
+        if saved.get("mode") in SIZES:
+            state["mode"] = saved["mode"]
     return state
 
 
@@ -280,6 +284,30 @@ def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, in
     return (scr.x + scr.width - size[0] - MINI_MARGIN[0], scr.y + scr.height - size[1] - MINI_MARGIN[1])
 
 
+def screen_of(x: int, y: int, size: tuple[int, int], screens: list[Any]) -> Any:
+    """The screen holding the window's centre (the first one when none does)."""
+    cx, cy = x + size[0] / 2, y + size[1] / 2
+    for scr in screens:
+        if scr.x <= cx < scr.x + scr.width and scr.y <= cy < scr.y + scr.height:
+            return scr
+    return screens[0] if screens else None
+
+
+def resized_position(x: int, y: int, old: tuple[int, int], new: tuple[int, int], screens: list[Any]) -> tuple[int, int]:
+    """Where the window goes when it changes size: it grows away from the screen edge it is near
+    (a bar at the bottom expands upward, one on the right expands leftward) and stays on screen."""
+    scr = screen_of(x, y, old, screens)
+    if scr is None:
+        return x, y
+    right = x + old[0] / 2 > scr.x + scr.width / 2
+    lower = y + old[1] / 2 > scr.y + scr.height / 2
+    nx = x + old[0] - new[0] if right else x
+    ny = y + old[1] - new[1] if lower else y
+    nx = min(max(nx, scr.x), scr.x + scr.width - new[0])
+    ny = min(max(ny, scr.y), scr.y + scr.height - new[1])
+    return int(nx), int(ny)
+
+
 def round_corners(hwnd: int) -> bool:
     """Windows 11 rounds a frameless window's corners only when asked; older versions ignore it."""
     pref = ctypes.c_uint32(DWMWCP_ROUND)
@@ -295,6 +323,24 @@ def set_form_opacity(form: Any, value: float) -> bool:
         return True
     except Exception as exc:
         log.debug("could not set the floating window's opacity: %r", exc)
+        return False
+
+
+def fit_form(form: Any, size: tuple[int, int]) -> bool:
+    """Exact window size in logical pixels. pywebview's resize() cannot go below the 100 px a
+    Windows form keeps by default, which a one-line bar needs, so the form's minimum goes first."""
+    try:
+        from System import Action      # pythonnet, loaded by pywebview
+        from System.Drawing import Size
+
+        def work() -> None:
+            scale = getattr(form, "DeviceDpi", 96) / 96
+            form.MinimumSize = Size(1, 1)
+            form.Size = Size(round(size[0] * scale), round(size[1] * scale))
+        form.Invoke(Action(work))
+        return True
+    except Exception as exc:
+        log.debug("could not size the floating window: %r", exc)
         return False
 
 
@@ -316,6 +362,15 @@ class MiniBridge:
 
     def hover(self, inside: bool) -> None:
         self._shell.mini_hover(bool(inside))
+
+    def get_mode(self) -> str:
+        return self._shell.mini_state["mode"]
+
+    def set_mode(self, mode: str) -> str:
+        return self._shell.set_mini_mode(mode)
+
+    def open_result(self) -> None:
+        self._shell.open_check_result()
 
 
 class MainBridge:
@@ -409,6 +464,7 @@ class Desktop:
         if self.mini is None:
             return
         self.mini.show()
+        self._fit_mini()
         self._round_mini()
         self.apply_mini_opacity()
         self._mini_active(True)
@@ -448,6 +504,39 @@ class Desktop:
 
     def mini_hover(self, inside: bool) -> None:
         self.apply_mini_opacity(hovered=inside)
+
+    def set_mini_mode(self, mode: str, screens: list[Any] | None = None) -> str:
+        """One-line bar or full table: resize the window, growing away from the nearest screen edge."""
+        old = self.mini_state["mode"]
+        if mode not in SIZES or mode == old:
+            return old
+        self.mini_state["mode"] = mode
+        if self.mini is not None:
+            if screens is None:
+                import webview
+                screens = webview.screens
+            x, y = resized_position(self.mini.x, self.mini.y, SIZES[old], SIZES[mode], screens)
+            self._fit_mini()
+            self.mini.move(x, y)
+            self.mini_state.update(x=x, y=y)
+        save_mini_state(self.mini_state)
+        return mode
+
+    def open_check_result(self) -> None:
+        """"Fix N" on the bar: the main window shows what the check found and what Fix would turn on
+        (ADR-0020: the user sees the list and the Wi-Fi note before any UAC prompt)."""
+        self.show()
+        if self.window is not None:
+            try:
+                self.window.evaluate_js("window.steadyApp && window.steadyApp.openResult()")
+            except Exception as exc:
+                log.debug("main window not ready: %r", exc)
+
+    def _fit_mini(self) -> None:
+        try:
+            fit_form(self.mini.native, SIZES[self.mini_state["mode"]])
+        except AttributeError:
+            pass                # not created yet
 
     def _round_mini(self) -> None:
         try:
@@ -545,17 +634,19 @@ class Desktop:
 
     def create_mini(self, webview: Any) -> None:
         theme = system_theme()
-        x, y = mini_position(self.mini_state, webview.screens)
+        size = SIZES[self.mini_state["mode"]]
+        x, y = mini_position(self.mini_state, webview.screens, size)
         url = self.mini_url() if self.reachable else None
         html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline")).replace(
             "#f5f5f7", BACKGROUNDS[theme])
         self.mini = webview.create_window(
             self.text("ui.tray.mini") if self.messages else "Ambysto Steady", url=url, html=html,
-            width=MINI_SIZE[0], height=MINI_SIZE[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
+            width=size[0], height=size[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
             on_top=True, hidden=not self.mini_state["open"], background_color=BACKGROUNDS[theme],
             js_api=MiniBridge(self))
         self.mini.events.closing += self._on_mini_closing
         self.mini.events.moved += self._on_mini_moved
+        self.mini.events.shown += self._fit_mini
         self.mini.events.shown += self._round_mini
         self.mini.events.shown += self.apply_mini_opacity
         self.mini.events.loaded += self._on_mini_loaded

@@ -1,10 +1,13 @@
-// The floating monitor: three metrics (download, upload, ping) on a sweep chart, the apps that
-// hold connections, and the connection's basic facts. Read-only; nothing here changes the machine.
+// The floating monitor, in two forms. The one-line bar (default): Optimize on the left, then
+// download, upload, ping and a small sweep of the ping. Expanded: the three metrics on a sweep chart,
+// the apps that hold connections, and the connection's basic facts.
+// Optimize only runs the regular check (read-only). When it finds what the app can fix, "Fix N"
+// opens the result in the main window, which lists the changes and asks before any (ADR-0020).
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
 // Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
 // shell how see-through the window is (window.pywebview.api, kept in mini.json).
 
-import { get, onReachability } from "./api.js";
+import { get, onReachability, runJob } from "./api.js";
 import { $, el, fill } from "./dom.js";
 import { drawSweep, MBPS_STEPS, MS_STEPS, niceScale } from "./ecg.js";
 import { bitrate, liveNumbers, liveTicks, lossVerdict, probesOk } from "./metrics.js";
@@ -15,8 +18,13 @@ const STATE_EVERY_MS = 30000;
 const DELAY_S = 1.2;          // the pen runs this far behind the newest sample, so it can draw toward it
 const LIVE_WINDOW_S = 70;
 const STATS_WINDOW_S = 60;    // loss and jitter on the Network tab
+const CHECK_EVERY_MS = 30000; // the latest check's summary, for the Optimize button
+const CHECK_FRESH_S = 3 * 3600;   // like the Overview: an older result may no longer hold
+const GOOD_SHOWN_MS = 8000;   // "All good" after a check, then back to "Optimize"
 
-const view = { metric: "down", tab: "apps", active: true };
+const view = { metric: "down", tab: "apps", active: true, mode: "bar" };
+// idle | busy | fix | issues | good. summary: GET /api/suggestions -> check (fresh runs only)
+const optimize = { state: "idle", summary: null, progress: null, goodUntil: 0, loadedAt: 0 };
 const data = { traffic: null, live: null, state: null, offset: 0, reachable: true };
 let pollTimer = null;
 let frame = null;
@@ -80,12 +88,18 @@ const COLOURS = { down: "--accent", up: "--chart-internet", ping: "--ok" };
 function draw() {
   frame = null;
   if (!view.active) return;
+  const now = Date.now() / 1000 + data.offset - DELAY_S;
+  if (view.mode === "bar") {
+    const ping = series("ping");
+    drawSweep($("#bar-sweep"), ping, now, { max: niceScale(ping.map(p => p[1]), MS_STEPS), colour: "--ok", grid: false });
+    frame = requestAnimationFrame(draw);
+    return;
+  }
   const points = series(view.metric);
   const isPing = view.metric === "ping";
   const values = points.map(p => p[1]).filter(v => v !== null).map(v => (isPing ? v : v / 1e6));
   const max = niceScale(values, isPing ? MS_STEPS : MBPS_STEPS);
   const scaled = isPing ? points : points.map(([ts, v]) => [ts, v === null ? null : v / 1e6]);
-  const now = Date.now() / 1000 + data.offset - DELAY_S;
   drawSweep($("#sweep"), scaled, now, { max, colour: COLOURS[view.metric] });
   $("#scale").textContent = isPing ? msText(max) : rateText(max * 1e6);
   frame = requestAnimationFrame(draw);
@@ -102,19 +116,95 @@ function latest(points) {
   return null;
 }
 
-function renderTiles() {
-  $("#value-down").textContent = data.traffic?.interface ? rateText(latest(series("down"))) : "—";
-  $("#value-up").textContent = data.traffic?.interface ? rateText(latest(series("up"))) : "—";
+/** The three numbers both forms show: download, upload, ping. */
+function figures() {
+  const iface = data.traffic?.interface;
   // One lost ping is common (ISPs rate-limit ICMP): "Lost" only after two in a row.
   const ping = series("ping");
   const lostInARow = ping.length >= 2 && ping.slice(-2).every(p => p[1] === null);
-  $("#value-ping").textContent = lostInARow ? t("ui.mini.lost") : msText(latest(ping));
+  return { down: iface ? rateText(latest(series("down"))) : "—", up: iface ? rateText(latest(series("up"))) : "—",
+           ping: lostInARow ? t("ui.mini.lost") : msText(latest(ping)) };
+}
+
+function renderTiles() {
+  const f = figures();
+  $("#value-down").textContent = f.down;
+  $("#value-up").textContent = f.up;
+  $("#value-ping").textContent = f.ping;
+}
+
+function stateLevel() {
+  const outages = data.live?.outages || {};
+  return !data.reachable || !data.live ? "info" : outages.router || outages.internet ? "bad" : "";
+}
+
+function renderBar() {
+  const f = figures();
+  $("#bar-down").textContent = f.down;
+  $("#bar-up").textContent = f.up;
+  $("#bar-ping").textContent = f.ping;
+  $("#bar-dot").className = `dot ${stateLevel()}`;
+  $("#bar-dot").title = $("#state-text").textContent;
+  renderOptimize();
+}
+
+// --- Optimize (the bar's button) ----------------------------------------------------------------
+
+function renderOptimize() {
+  const button = $("#optimize");
+  if (optimize.state === "good" && Date.now() > optimize.goodUntil) optimize.state = "idle";
+  const summary = optimize.summary;
+  const p = optimize.progress;
+  const text = { idle: () => t("ui.mini.optimize"),
+                 busy: () => (p ? t("ui.mini.checking", { done: p.done, total: p.total }) : t("ui.mini.checking_start")),
+                 fix: () => t("ui.mini.fix", { count: summary.fixable }),
+                 issues: () => t("ui.mini.issues", { count: summary.count }),
+                 good: () => t("ui.mini.all_good") }[optimize.state]();
+  $("#optimize-text").textContent = text;
+  button.className = `optimize${optimize.state === "busy" ? " busy" : optimize.state === "good" ? " good" : ""}`;
+  button.disabled = optimize.state === "busy";
+  button.title = optimize.state === "fix" || optimize.state === "issues" ? t("ui.mini.fix_hint") : t("ui.mini.optimize_hint");
+  const bar = $("#optimize-progress");
+  bar.hidden = optimize.state !== "busy";
+  bar.style.width = p && p.total ? `${Math.round((100 * p.done) / p.total)}%` : "0";
+}
+
+/** What the latest stored check found, if it is recent enough to act on. */
+async function loadCheck() {
+  const suggestions = await get("/api/suggestions");
+  optimize.loadedAt = Date.now();
+  const run = suggestions.run;
+  const fresh = run && Date.now() / 1000 + data.offset - run.ts < CHECK_FRESH_S;
+  optimize.summary = fresh ? suggestions.check : null;
+  if (optimize.state === "busy" || optimize.state === "good") return;
+  const summary = optimize.summary;
+  optimize.state = summary?.fixable ? "fix" : summary?.count ? "issues" : "idle";
+}
+
+async function runOptimize() {
+  if (optimize.state === "fix" || optimize.state === "issues") {
+    // The main window lists what was found and what Fix turns on; nothing changes before Fix there.
+    window.pywebview?.api?.open_result?.();
+    return;
+  }
+  Object.assign(optimize, { state: "busy", progress: null });
+  renderOptimize();
+  try {
+    await runJob("/api/diagnostics", {}, { interval: 500, timeout: 180000,
+      onProgress: progress => { if (progress) { optimize.progress = progress; renderOptimize(); } } });
+    optimize.state = "idle";
+    await loadCheck();
+    if (!optimize.summary?.count) Object.assign(optimize, { state: "good", goodUntil: Date.now() + GOOD_SHOWN_MS });
+  } catch {
+    optimize.state = "idle";
+  }
+  optimize.progress = null;
+  renderOptimize();
 }
 
 function renderHeader() {
   const outages = data.live?.outages || {};
-  const level = !data.reachable || !data.live ? "info" : outages.router || outages.internet ? "bad" : "";
-  $("#state-dot").className = `dot ${level}`;
+  $("#state-dot").className = `dot ${stateLevel()}`;
   $("#state-text").textContent = !data.reachable ? t("ui.error.offline")
     : outages.router ? t("ui.state.router_down") : outages.internet ? t("ui.state.internet_down")
     : data.live ? t("ui.state.online") : "";
@@ -203,6 +293,10 @@ function renderNetwork() {
 
 function render() {
   renderHeader();
+  if (view.mode === "bar") {
+    renderBar();
+    return;
+  }
   renderTiles();
   if (view.tab === "apps") renderApps();
   else renderNetwork();
@@ -223,6 +317,7 @@ async function poll() {
     data.live = live;
     if (state) { data.state = state; lastState = Date.now(); }
     data.offset = traffic.ts - Date.now() / 1000;
+    if (Date.now() - optimize.loadedAt > CHECK_EVERY_MS && optimize.state !== "busy") await loadCheck();
   } catch { /* the header says the monitor is offline */ }
   render();
   if (view.active) pollTimer = setTimeout(poll, POLL_MS);
@@ -248,6 +343,15 @@ function select(metric) {
   $("#sweep").setAttribute("aria-label", t(`ui.mini.${{ down: "download", up: "upload", ping: "ping" }[metric]}`));
 }
 
+/** "bar" or "full": the page's layout; inside the desktop shell the window resizes to match. */
+async function setMode(mode, { tellShell = true } = {}) {
+  const api = window.pywebview?.api;
+  if (tellShell && api?.set_mode) mode = await api.set_mode(mode);
+  view.mode = mode;
+  document.documentElement.dataset.mode = mode;
+  render();
+}
+
 function showTab(tab) {
   view.tab = tab;
   document.querySelectorAll(".switcher button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
@@ -262,7 +366,12 @@ async function start() {
   try { await loadLanguage(); } catch { data.reachable = false; }
   translateStatic();
   document.title = t("app.name");
-  $("#close").title = t("ui.mini.close");
+  $("#close").title = $("#bar-close").title = t("ui.mini.close");
+  $("#expand").title = t("ui.mini.expand");
+  $("#collapse").title = t("ui.mini.collapse");
+  $("#expand").addEventListener("click", () => setMode("full"));
+  $("#collapse").addEventListener("click", () => setMode("bar"));
+  $("#optimize").addEventListener("click", runOptimize);
   $("#appearance").title = t("ui.mini.appearance");
   $("#appearance").addEventListener("click", () => {
     const open = $("#options").hidden;
@@ -277,8 +386,11 @@ async function start() {
   const bridge = async () => {
     const api = window.pywebview?.api;
     if (!api?.hide_mini) return;
-    $("#close").hidden = false;
-    $("#close").addEventListener("click", () => api.hide_mini());
+    for (const id of ["#close", "#bar-close"]) {
+      $(id).hidden = false;
+      $(id).addEventListener("click", () => api.hide_mini());
+    }
+    await setMode(await api.get_mode(), { tellShell: false });
     // Solid while the pointer is on the window, see-through otherwise.
     document.documentElement.addEventListener("mouseenter", () => api.hover(true));
     document.documentElement.addEventListener("mouseleave", () => api.hover(false));
@@ -291,6 +403,7 @@ async function start() {
   else window.addEventListener("pywebviewready", bridge, { once: true });
   window.addEventListener("storage", e => { if (e.key === "mini-theme") applyTheme(); });   // set from Settings
   select(view.metric);
+  document.documentElement.dataset.mode = view.mode;
   render();
   setActive(true);
 }

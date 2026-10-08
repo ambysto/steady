@@ -363,6 +363,13 @@ function openResult(ctx) {
   root().scrollIntoView?.({ block: "start" });
 }
 
+/** The result view for the latest stored run, when it found problems (the floating bar's "Fix N"). */
+export async function showResult(ctx) {
+  await loadSuggestions(ctx);
+  if (suggestions?.check?.count && !check.running && !fix.phase) openResult(ctx);
+  else drawCheck(ctx);
+}
+
 function closeResult(ctx) {
   result.open = false;
   drawCheck(ctx);

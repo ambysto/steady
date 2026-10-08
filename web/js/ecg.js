@@ -69,7 +69,7 @@ function cssVar(name, fallback) {
 }
 
 /** Paint a layout on a canvas sized by CSS; colour is a CSS variable name such as "--accent". */
-export function drawSweep(canvas, points, now, { max, colour, sweepS = SWEEP_S, gridEveryS = 10 }) {
+export function drawSweep(canvas, points, now, { max, colour, sweepS = SWEEP_S, gridEveryS = 10, grid = true }) {
   const ratio = window.devicePixelRatio || 1;
   const width = canvas.clientWidth, height = canvas.clientHeight;
   if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
@@ -80,18 +80,20 @@ export function drawSweep(canvas, points, now, { max, colour, sweepS = SWEEP_S, 
   g.setTransform(ratio, 0, 0, ratio, 0, 0);
   g.clearRect(0, 0, width, height);
 
-  g.strokeStyle = cssVar("--separator", "rgba(0,0,0,.09)");
-  g.lineWidth = 1;
-  g.beginPath();
-  for (const frac of [0.25, 0.5, 0.75]) {
-    const y = Math.round(height - frac * (height - PAD_TOP)) + 0.5;
-    g.moveTo(0, y); g.lineTo(width, y);
+  if (grid) {
+    g.strokeStyle = cssVar("--separator", "rgba(0,0,0,.09)");
+    g.lineWidth = 1;
+    g.beginPath();
+    for (const frac of [0.25, 0.5, 0.75]) {
+      const y = Math.round(height - frac * (height - PAD_TOP)) + 0.5;
+      g.moveTo(0, y); g.lineTo(width, y);
+    }
+    for (let s = gridEveryS; s < sweepS; s += gridEveryS) {
+      const x = Math.round((s / sweepS) * width) + 0.5;
+      g.moveTo(x, PAD_TOP); g.lineTo(x, height);
+    }
+    g.stroke();
   }
-  for (let s = gridEveryS; s < sweepS; s += gridEveryS) {
-    const x = Math.round((s / sweepS) * width) + 0.5;
-    g.moveTo(x, PAD_TOP); g.lineTo(x, height);
-  }
-  g.stroke();
 
   const layout = sweepLayout(points, now, { width, height, max, sweepS });
   const stroke = cssVar(colour, "#007aff");

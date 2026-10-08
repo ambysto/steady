@@ -9,14 +9,30 @@
 <link rel="stylesheet" href="mini.css">
 </head>
 <body>
-<!-- The floating monitor (app/desktop.py opens it frameless, always on top). Read-only: speed of
-     the Internet path, ping, apps with open connections, the connection's basic facts. Rendered
-     by js/mini.js; text from app/locales. Same CSP as index.html: no inline script. -->
+<!-- The floating monitor (app/desktop.py opens it frameless, always on top). Two forms of one
+     page: a one-line bar (html[data-mode=bar]: Optimize, download, upload, ping) and the full table
+     (speed of the Internet path, ping, apps with open connections, the connection's basic facts).
+     Rendered by js/mini.js; text from app/locales. Same CSP as index.html: no inline script. -->
+<div class="minibar pywebview-drag-region">
+  <button class="optimize" id="optimize">
+    <svg class="icon"><use href="#i-bolt"/></svg><span id="optimize-text" data-t="ui.mini.optimize">Optimize</span>
+    <span class="progress" id="optimize-progress" hidden></span>
+  </button>
+  <span class="dot info" id="bar-dot"></span>
+  <span class="stat"><svg class="icon down"><use href="#i-down"/></svg><span id="bar-down">—</span></span>
+  <span class="stat"><svg class="icon up"><use href="#i-up"/></svg><span id="bar-up">—</span></span>
+  <span class="stat"><svg class="icon ping"><use href="#i-pulse"/></svg><span id="bar-ping">—</span></span>
+  <canvas id="bar-sweep" aria-hidden="true"></canvas>
+  <button class="close" id="expand"><svg class="icon"><use href="#i-expand"/></svg></button>
+  <button class="close" id="bar-close" hidden><svg class="icon"><use href="#i-x"/></svg></button>
+</div>
+
 <div class="mini">
   <header class="bar pywebview-drag-region">
     <span class="dot info" id="state-dot"></span>
     <span class="name pywebview-drag-region" data-t="app.name">Ambysto Steady</span>
     <span class="state pywebview-drag-region" id="state-text"></span>
+    <button class="close" id="collapse"><svg class="icon"><use href="#i-collapse"/></svg></button>
     <button class="close" id="appearance" aria-expanded="false" aria-controls="options"><svg class="icon"><use href="#i-sun"/></svg></button>
     <button class="close" id="close" hidden><svg class="icon"><use href="#i-x"/></svg></button>
   </header>
@@ -82,6 +98,9 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v15M6 13l6 6 6-6"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
+  <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7"/></symbol>
   <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h5l2-5 4 10 2-5h7"/></symbol>
 </svg>
 
