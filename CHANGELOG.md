@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Apple app: floating monitor on the Mac** ([ADR-0022](docs/adr/0022-mac-floating-monitor.md)). "Floating monitor" in the Window menu (⌥⌘M) and on the Overview opens a small window that stays on top of other windows, can be dragged anywhere and opens where it was left. It starts as the one-line bar, Scan and the state, download, upload and ping, and its arrow opens the table: the three numbers as tiles, the heart-monitor chart and the connection's facts (adapter, Wi‑Fi signal and channel, router, DNS servers, Internet ping, packet loss and jitter). The look is Glass by default: the screen behind it, blurred by the system, and the window is left out of screenshots and screen sharing while Glass is on; Off, Low and High are solid, or fade while the pointer is elsewhere. Appearance follows the system or is light or dark. Measuring goes on only while it is open. The Apps tab says that macOS does not show which apps hold connections, and Scan shows its result in the main window, where nothing is changed.
+
 ## [0.8.0] - 2026-10-08
 
 A floating monitor stays on top of other windows: download, upload and ping on a heart-monitor style chart, the apps holding connections, and the basics of the connection. The Apple app's check button says "Scan", and its bufferbloat check measures faster lines and uses less data on mobile data.

@@ -25,3 +25,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0019](0019-per-machine-install.md) | Install for all users under Program Files; elevated code only runs from there | Accepted |
 | [0020](0020-check-fix-result-flow.md) | One "Check → Fix → Result" flow on the Overview, and a value card from the log | Accepted |
 | [0021](0021-floating-monitor-glass.md) | The floating monitor's glass look comes from a blurred capture of what is behind it | Accepted |
+| [0022](0022-mac-floating-monitor.md) | The Mac's floating monitor is a non-activating panel that reads the measurements the app already makes | Accepted |

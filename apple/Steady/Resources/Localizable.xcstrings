@@ -670,6 +670,194 @@
         }
       }
     },
+    "apple.ui.mini.apps.unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS erlaubt Steady nicht zu sehen, welche Apps Verbindungen offen haben. Deshalb gibt es diese Liste auf dem Mac nicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS does not let Steady see which apps have connections open, so this list is not available on the Mac."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS no deja que Steady vea qué apps tienen conexiones abiertas, así que esta lista no está disponible en el Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS ne permet pas à Steady de voir quelles apps ont des connexions ouvertes, cette liste n’est donc pas disponible sur le Mac."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O macOS não permite que o Steady veja quais apps têm conexões abertas, por isso esta lista não está disponível no Mac."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS không cho Steady biết ứng dụng nào đang có kết nối mở, nên danh sách này không có trên Mac."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS 不允许 Steady 查看哪些 App 有打开的连接，因此 Mac 上没有此列表。"
+          }
+        }
+      }
+    },
+    "apple.ui.mini.close" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schließen (das Menü Fenster holt es zurück)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close (the Window menu brings it back)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cerrar (el menú Ventana lo vuelve a mostrar)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fermer (le menu Fenêtre le rouvre)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fechar (o menu Janela o traz de volta)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đóng (mục Cửa sổ trong menu sẽ mở lại)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关闭（可从“窗口”菜单重新打开）"
+          }
+        }
+      }
+    },
+    "apple.ui.mini.fix_hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Hauptfenster sehen, was die Prüfung gefunden hat."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See what the check found, in the main window."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ve en la ventana principal lo que encontró la revisión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voir ce que la vérification a trouvé, dans la fenêtre principale."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Veja o que a verificação encontrou, na janela principal."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xem kết quả kiểm tra trong cửa sổ chính."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在主窗口中查看检查结果。"
+          }
+        }
+      }
+    },
+    "apple.ui.mini.optimize_hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verbindung prüfen. Das Ergebnis öffnet sich im Hauptfenster. Auf diesem Mac wird nichts geändert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check the connection. The result opens in the main window. Nothing on this Mac is changed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revisa la conexión. El resultado se abre en la ventana principal. No se cambia nada en este Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifie la connexion. Le résultat s’ouvre dans la fenêtre principale. Rien n’est modifié sur ce Mac."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verifica a conexão. O resultado abre na janela principal. Nada neste Mac é alterado."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểm tra kết nối. Kết quả mở trong cửa sổ chính. Không thay đổi gì trên Mac này."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查连接。结果会在主窗口中打开。此 Mac 上不会更改任何内容。"
+          }
+        }
+      }
+    },
     "diag.ago.days" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -886,6 +886,10 @@
   "apple.ui.language.auto": "跟随系统",
   "apple.ui.check.idle_body": "对连接、路由器和 DNS 运行 {count} 项检查。不会做任何更改。",
   "apple.ui.check.start": "扫描",
+  "apple.ui.mini.apps.unavailable": "macOS 不允许 Steady 查看哪些 App 有打开的连接，因此 Mac 上没有此列表。",
+  "apple.ui.mini.optimize_hint": "检查连接。结果会在主窗口中打开。此 Mac 上不会更改任何内容。",
+  "apple.ui.mini.fix_hint": "在主窗口中查看检查结果。",
+  "apple.ui.mini.close": "关闭（可从“窗口”菜单重新打开）",
   "apple.ui.check.kind.none": "此设备上无法修复",
 
   "ui.nav.history": "历史",
