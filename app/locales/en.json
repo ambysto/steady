@@ -833,6 +833,7 @@
   "apple.diag.physical_link.advice_improved": "If you just moved the Mac or the router, or changed a setting, watch a few more hours to confirm.",
   "apple.ui.language.auto": "Same as system",
   "apple.ui.check.idle_body": "Runs {count} checks on your connection, the router and DNS. Nothing is changed.",
+  "apple.ui.check.start": "Scan",
   "apple.ui.check.kind.none": "Nothing on this device fixes this",
 
   "ui.nav.history": "History",

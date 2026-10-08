@@ -204,6 +204,7 @@ public enum MessageCatalog {
         "diag.signal.advice",
         "ui.check.idle_body",
         "ui.check.kind.none",
+        "ui.check.start",
         "ui.language.auto",
     ]
 }

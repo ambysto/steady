@@ -831,6 +831,7 @@
   "apple.diag.physical_link.advice_improved": "Se você acabou de mover o Mac ou o roteador, ou mudou alguma configuração, observe mais algumas horas para confirmar.",
   "apple.ui.language.auto": "Igual ao sistema",
   "apple.ui.check.idle_body": "Executa {count} verificações na conexão, no roteador e no DNS. Nada é alterado.",
+  "apple.ui.check.start": "Verificar",
   "apple.ui.check.kind.none": "Nada neste dispositivo corrige isso",
 
   "ui.nav.history": "Histórico",

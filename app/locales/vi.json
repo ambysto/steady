@@ -831,6 +831,7 @@
   "apple.diag.physical_link.advice_improved": "Nếu bạn vừa dời Mac/router hoặc đổi cấu hình, theo dõi thêm vài giờ để xác nhận.",
   "apple.ui.language.auto": "Theo hệ thống",
   "apple.ui.check.idle_body": "Chạy {count} kiểm tra kết nối, router và DNS. Không thay đổi gì trên thiết bị.",
+  "apple.ui.check.start": "Quét",
   "apple.ui.check.kind.none": "Thiết bị này không sửa được",
 
   "ui.nav.history": "Lịch sử",

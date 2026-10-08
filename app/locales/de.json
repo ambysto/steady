@@ -831,6 +831,7 @@
   "apple.diag.physical_link.advice_improved": "Wenn gerade der Mac oder der Router umgestellt oder eine Einstellung geändert wurde, noch einige Stunden beobachten, um es zu bestätigen.",
   "apple.ui.language.auto": "Wie das System",
   "apple.ui.check.idle_body": "Führt {count} Prüfungen für Verbindung, Router und DNS aus. Es wird nichts geändert.",
+  "apple.ui.check.start": "Scannen",
   "apple.ui.check.kind.none": "Auf diesem Gerät nicht behebbar",
 
   "ui.nav.history": "Verlauf",
