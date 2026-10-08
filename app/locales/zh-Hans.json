@@ -643,6 +643,8 @@
   "ui.mini.theme.system": "自动",
   "ui.mini.transparency": "透明度",
   "ui.mini.transparency.off": "关",
+  "ui.mini.transparency.glass": "毛玻璃",
+  "ui.mini.transparency.glass_hint": "毛玻璃：将后方屏幕模糊显示。开启时，此窗口不会出现在截图和屏幕共享中。",
   "ui.mini.transparency.low": "低",
   "ui.mini.transparency.high": "高",
   "ui.mini.optimize": "优化",

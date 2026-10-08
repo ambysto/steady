@@ -89,12 +89,7 @@ function draw() {
   frame = null;
   if (!view.active) return;
   const now = Date.now() / 1000 + data.offset - DELAY_S;
-  if (view.mode === "bar") {
-    const ping = series("ping");
-    drawSweep($("#bar-sweep"), ping, now, { max: niceScale(ping.map(p => p[1]), MS_STEPS), colour: "--ok", grid: false });
-    frame = requestAnimationFrame(draw);
-    return;
-  }
+  if (view.mode === "bar") return;       // the bar has no chart; setMode("full") starts drawing again
   const points = series(view.metric);
   const isPing = view.metric === "ping";
   const values = points.map(p => p[1]).filter(v => v !== null).map(v => (isPing ? v : v / 1e6));
@@ -150,7 +145,7 @@ function renderBar() {
 
 // --- Optimize (the bar's button) ----------------------------------------------------------------
 
-const OPTIMIZE_GLYPH = { idle: "bolt", busy: "search", fix: "bolt", issues: "bolt", good: "check" };
+const OPTIMIZE_GLYPH = { idle: "bolt", busy: "search", fix: "bolt", issues: "alert", good: "check" };
 
 function renderOptimize() {
   const button = $("#optimize");
@@ -170,9 +165,11 @@ function renderOptimize() {
   $("#optimize-glyph").firstElementChild.setAttribute("href", `#i-${OPTIMIZE_GLYPH[state]}`);
   const percent = state === "busy" && p && p.total ? Math.round((100 * p.done) / p.total) : 0;
   $("#optimize-ring").style.strokeDasharray = `${percent} 100`;
+  // A result shows its count inside the bulb, in place of the icon.
   const count = state === "fix" ? summary.fixable : state === "issues" ? summary.count : null;
-  $("#optimize-badge").hidden = count === null;
-  $("#optimize-badge").textContent = count === null ? "" : String(count);
+  $("#optimize-count").hidden = count === null;
+  $("#optimize-glyph").style.display = count === null ? "" : "none";
+  $("#optimize-count").textContent = count === null ? "" : String(count);
 }
 
 /** What the latest stored check found, if it is recent enough to act on. */
@@ -356,6 +353,7 @@ async function setMode(mode, { tellShell = true } = {}) {
   view.mode = mode;
   document.documentElement.dataset.mode = mode;
   render();
+  startDrawing();
 }
 
 function showTab(tab) {
@@ -372,13 +370,14 @@ async function start() {
   try { await loadLanguage(); } catch { data.reachable = false; }
   translateStatic();
   document.title = t("app.name");
-  $("#close").title = $("#bar-close").title = t("ui.mini.close");
+  $("#close").title = t("ui.mini.close");
   $("#expand").title = t("ui.mini.expand");
   $("#collapse").title = t("ui.mini.collapse");
   $("#expand").addEventListener("click", () => setMode("full"));
   $("#collapse").addEventListener("click", () => setMode("bar"));
   $("#optimize").addEventListener("click", runOptimize);
   $("#appearance").title = t("ui.mini.appearance");
+  $("#transparency-choice [data-level=glass]").title = t("ui.mini.transparency.glass_hint");
   $("#appearance").addEventListener("click", () => {
     const open = $("#options").hidden;
     $("#options").hidden = !open;
@@ -392,10 +391,8 @@ async function start() {
   const bridge = async () => {
     const api = window.pywebview?.api;
     if (!api?.hide_mini) return;
-    for (const id of ["#close", "#bar-close"]) {
-      $(id).hidden = false;
-      $(id).addEventListener("click", () => api.hide_mini());
-    }
+    $("#close").hidden = false;
+    $("#close").addEventListener("click", () => api.hide_mini());
     await setMode(await api.get_mode(), { tellShell: false });
     // Solid while the pointer is on the window, see-through otherwise.
     document.documentElement.addEventListener("mouseenter", () => api.hover(true));
@@ -414,5 +411,17 @@ async function start() {
   setActive(true);
 }
 
-window.steadyMini = { setActive };
+/** Glass (ADR-0021): a blurred picture of what is behind the window, or null to drop it. */
+function setBackdrop(url) {
+  const root = document.documentElement;
+  if (url && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(url)) {
+    root.style.setProperty("--backdrop", `url("${url}")`);
+    root.dataset.glass = "";
+  } else {
+    root.style.removeProperty("--backdrop");
+    delete root.dataset.glass;
+  }
+}
+
+window.steadyMini = { setActive, setBackdrop };
 start();

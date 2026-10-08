@@ -184,12 +184,12 @@ class MiniWindowTests(unittest.TestCase):
     def saved(self):
         return json.loads(Path(self.tmp.name, "mini.json").read_text(encoding="utf-8"))
 
-    DEFAULTS = {"open": False, "x": None, "y": None, "transparency": "low", "seen_version": None, "mode": "bar"}
+    DEFAULTS = {"open": False, "x": None, "y": None, "transparency": "glass", "seen_version": None, "mode": "bar"}
 
     def test_state_defaults_and_bad_files(self):
         self.assertEqual(desktop.load_mini_state(), self.DEFAULTS)
         for text in ("not json", "[1]",
-                     '{"open": "yes", "x": true, "y": 1.5, "transparency": "glass", "seen_version": 7, "mode": "huge"}'):
+                     '{"open": "yes", "x": true, "y": 1.5, "transparency": "frosted", "seen_version": 7, "mode": "huge"}'):
             Path(self.tmp.name, "mini.json").write_text(text, encoding="utf-8")
             self.assertEqual(desktop.load_mini_state(), self.DEFAULTS, text)
         saved = {"open": True, "x": -300, "y": 40, "transparency": "high", "seen_version": "0.8.0", "mode": "full"}
@@ -211,7 +211,7 @@ class MiniWindowTests(unittest.TestCase):
         self.shell.mini.native = "form"
         with mock.patch.object(desktop, "set_form_opacity", lambda form, value: applied.append(value) or True):
             self.assertEqual(self.shell.set_mini_transparency("high"), "high")
-            self.assertEqual(self.shell.set_mini_transparency("glass"), "high")      # unknown level: ignored
+            self.assertEqual(self.shell.set_mini_transparency("frosted"), "high")    # unknown level: ignored
             self.shell.mini_hover(False)
             self.shell.mini_hover(True)
         self.assertEqual(applied, [1.0, desktop.TRANSPARENCY["high"], 1.0])          # solid under the pointer
@@ -255,6 +255,47 @@ class MiniWindowTests(unittest.TestCase):
         self.assertTrue(self.saved()["open"])           # quitting keeps it open for the next start
         self.assertIn("destroy", self.shell.mini.calls)
 
+    def test_glass_leaves_the_window_out_of_captures_only_while_on(self):
+        calls, scripts = [], []
+        self.shell.mini.evaluate_js = scripts.append
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: calls.append((hwnd, on)) or True),                 mock.patch.object(desktop, "set_form_opacity", lambda form, value: True):
+            self.shell.set_mini_transparency("glass")
+            self.shell.set_mini_transparency("off")
+        self.assertEqual(calls, [(77, True), (77, False)])
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
+
+    def test_no_glass_where_windows_cannot_leave_the_window_out_of_captures(self):
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state["open"] = True
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False):
+            self.shell.apply_glass()
+        self.assertFalse(self.shell.glass_on())           # the capture would show the window itself
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
+
+    def test_thermometer_outline(self):
+        (kind, bx0, by0, bx1, by1), (tube, tx0, ty0, tx1, ty1) = desktop.thermometer_parts(desktop.BAR_SIZE)
+        self.assertEqual((kind, tube), ("ellipse", "tube"))
+        self.assertEqual((bx0, by0, bx1 - bx0, by1 - by0), (0, 0, desktop.BULB + 1, desktop.BULB + 1))
+        self.assertEqual((tx0, ty1 - ty0, tx1), (desktop.TUBE[0], desktop.TUBE[1] + 1, desktop.BAR_SIZE[0] + 1))
+        self.assertEqual(ty0, (desktop.BAR_SIZE[1] - desktop.TUBE[1]) // 2)         # centred on the bulb
+        big = desktop.thermometer_parts(desktop.BAR_SIZE, 1.5)
+        self.assertEqual(big[0][3], round(desktop.BULB * 1.5) + 1)                  # follows the DPI
+
+    def test_backdrop_is_a_blurred_jpeg_sent_once_per_picture(self):
+        from PIL import Image
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        picture = Image.new("RGB", (340, 36), (200, 120, 40))
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, 340, 36)),                 mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+            self.assertTrue(self.shell.update_backdrop())
+            self.assertFalse(self.shell.update_backdrop())      # nothing changed behind it: not sent again
+        self.assertEqual(len(scripts), 1)
+        self.assertRegex(scripts[0], r"^window\.steadyMini && window\.steadyMini\.setBackdrop\('data:image/jpeg;base64,[A-Za-z0-9+/=]+'\)$")
+        jpeg = desktop.frosted(picture)
+        self.assertEqual(jpeg[:2], bytes([0xFF, 0xD8]))          # a JPEG
+        self.assertEqual(Image.open(__import__("io").BytesIO(jpeg)).size, (340 // desktop.GLASS_SCALE, 36 // desktop.GLASS_SCALE))
+
     def test_bar_grows_away_from_the_screen_edge_it_is_near(self):
         screens = [Screen(0, 0, 1920, 1080)]
         bar, full = desktop.BAR_SIZE, desktop.MINI_SIZE
@@ -266,6 +307,11 @@ class MiniWindowTests(unittest.TestCase):
         # and back: the bar returns to the corner the table came from
         fx, fy = desktop.resized_position(x, y, bar, full, screens)
         self.assertEqual(desktop.resized_position(fx, fy, full, bar, screens), (x, y))
+        # a bar in the upper half opens downward; collapsing brings it back up, not to the table's bottom
+        top = desktop.anchor_of(1500, 400, bar, screens)
+        tx, ty = desktop.resized_position(1500, 400, bar, full, screens, top)
+        self.assertEqual((tx, ty), (1500, 400))
+        self.assertEqual(desktop.resized_position(tx, ty, full, bar, screens, top), (1500, 400))
         # never off screen
         self.assertEqual(desktop.resized_position(0, 1050, bar, full, screens)[1], 1080 - full[1])
         self.assertEqual(desktop.resized_position(5, 5, bar, full, []), (5, 5))
@@ -296,7 +342,7 @@ class MiniWindowTests(unittest.TestCase):
         self.assertEqual([n for n in dir(bridge) if not n.startswith("_")],
                          ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "set_mode", "set_transparency"])
         self.assertEqual(bridge.get_mode(), "bar")
-        self.assertEqual(bridge.get_transparency(), "low")
+        self.assertEqual(bridge.get_transparency(), "glass")
         bridge.hide_mini()
         self.assertIn("hide", self.shell.mini.calls)
         main = desktop.MainBridge(self.shell)

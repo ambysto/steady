@@ -22935,6 +22935,100 @@
         }
       }
     },
+    "ui.mini.transparency.glass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glas"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glass"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cristal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verre"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidro"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kính"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毛玻璃"
+          }
+        }
+      }
+    },
+    "ui.mini.transparency.glass_hint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Milchglas: der Bildschirm dahinter, unscharf. Solange es an ist, fehlt dieses Fenster in Screenshots und bei der Bildschirmfreigabe."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frosted glass: the screen behind, blurred. While it is on, this window is left out of screenshots and screen sharing."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cristal esmerilado: la pantalla de detrás, difuminada. Mientras está activo, esta ventana no aparece en capturas ni al compartir pantalla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verre dépoli : l’écran derrière, flouté. Tant qu’il est actif, cette fenêtre n’apparaît ni dans les captures d’écran ni dans le partage d’écran."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidro fosco: a tela de trás, desfocada. Enquanto estiver ativo, esta janela não aparece em capturas nem no compartilhamento de tela."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kính mờ: màn hình phía sau được làm mờ. Khi bật, cửa sổ này không xuất hiện trong ảnh chụp màn hình và khi chia sẻ màn hình."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毛玻璃：将后方屏幕模糊显示。开启时，此窗口不会出现在截图和屏幕共享中。"
+          }
+        }
+      }
+    },
     "ui.mini.transparency.high" : {
       "extractionState" : "manual",
       "localizations" : {

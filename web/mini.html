@@ -14,20 +14,20 @@
      (speed of the Internet path, ping, apps with open connections, the connection's basic facts).
      Rendered by js/mini.js; text from app/locales. Same CSP as index.html: no inline script. -->
 <div class="minibar pywebview-drag-region">
-  <!-- Optimize: an icon in a ring. The ring fills with the check's progress; the text is in title/aria-label. -->
+  <div class="tube pywebview-drag-region">
+    <span class="dot info" id="bar-dot"></span>
+    <span class="stat"><svg class="icon down"><use href="#i-down"/></svg><span id="bar-down">—</span></span>
+    <span class="stat"><svg class="icon up"><use href="#i-up"/></svg><span id="bar-up">—</span></span>
+    <span class="stat"><svg class="icon ping"><use href="#i-pulse"/></svg><span id="bar-ping">—</span></span>
+    <button class="arrow" id="expand"><svg class="icon"><use href="#i-arrow-right"/></svg></button>
+  </div>
+  <!-- Optimize, the bulb: an icon in a ring that fills with the check's progress; text in title/aria-label. -->
   <button class="optimize" id="optimize" aria-label="Optimize">
-    <svg class="ring" viewBox="0 0 32 32" aria-hidden="true"><circle class="track" cx="16" cy="16" r="14.25"/>
-      <circle class="fill" id="optimize-ring" cx="16" cy="16" r="14.25" pathLength="100"/></svg>
+    <svg class="ring" viewBox="0 0 32 32" aria-hidden="true"><circle class="track" cx="16" cy="16" r="14.75"/>
+      <circle class="fill" id="optimize-ring" cx="16" cy="16" r="14.75" pathLength="100"/></svg>
     <svg class="icon glyph" id="optimize-glyph" aria-hidden="true"><use href="#i-bolt"/></svg>
-    <span class="badge" id="optimize-badge" hidden></span>
+    <span class="count" id="optimize-count" hidden></span>
   </button>
-  <span class="dot info" id="bar-dot"></span>
-  <span class="stat"><svg class="icon down"><use href="#i-down"/></svg><span id="bar-down">—</span></span>
-  <span class="stat"><svg class="icon up"><use href="#i-up"/></svg><span id="bar-up">—</span></span>
-  <span class="stat"><svg class="icon ping"><use href="#i-pulse"/></svg><span id="bar-ping">—</span></span>
-  <canvas id="bar-sweep" aria-hidden="true"></canvas>
-  <button class="close" id="expand"><svg class="icon"><use href="#i-expand"/></svg></button>
-  <button class="close" id="bar-close" hidden><svg class="icon"><use href="#i-x"/></svg></button>
 </div>
 
 <div class="mini">
@@ -35,7 +35,7 @@
     <span class="dot info" id="state-dot"></span>
     <span class="name pywebview-drag-region" data-t="app.name">Ambysto Steady</span>
     <span class="state pywebview-drag-region" id="state-text"></span>
-    <button class="close" id="collapse"><svg class="icon"><use href="#i-collapse"/></svg></button>
+    <button class="arrow" id="collapse"><svg class="icon"><use href="#i-arrow-left"/></svg></button>
     <button class="close" id="appearance" aria-expanded="false" aria-controls="options"><svg class="icon"><use href="#i-sun"/></svg></button>
     <button class="close" id="close" hidden><svg class="icon"><use href="#i-x"/></svg></button>
   </header>
@@ -53,6 +53,7 @@
       <span class="label" data-t="ui.mini.transparency">Transparency</span>
       <div class="segmented" id="transparency-choice">
         <button data-level="off" data-t="ui.mini.transparency.off">Off</button>
+        <button data-level="glass" data-t="ui.mini.transparency.glass">Glass</button>
         <button data-level="low" data-t="ui.mini.transparency.low">Low</button>
         <button data-level="high" data-t="ui.mini.transparency.high">High</button>
       </div>
@@ -103,9 +104,10 @@
   <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 20V5M6 11l6-6 6 6"/></symbol>
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5l-4.5-4.5"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></symbol>
   <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
-  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
-  <symbol id="i-collapse" viewBox="0 0 24 24"><path d="M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
   <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h5l2-5 4 10 2-5h7"/></symbol>
 </svg>
 

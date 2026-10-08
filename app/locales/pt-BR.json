@@ -643,6 +643,8 @@
   "ui.mini.theme.system": "Auto",
   "ui.mini.transparency": "Transparência",
   "ui.mini.transparency.off": "Não",
+  "ui.mini.transparency.glass": "Vidro",
+  "ui.mini.transparency.glass_hint": "Vidro fosco: a tela de trás, desfocada. Enquanto estiver ativo, esta janela não aparece em capturas nem no compartilhamento de tela.",
   "ui.mini.transparency.low": "Baixa",
   "ui.mini.transparency.high": "Alta",
   "ui.mini.optimize": "Otimizar",

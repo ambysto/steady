@@ -643,6 +643,8 @@
   "ui.mini.theme.system": "Auto",
   "ui.mini.transparency": "Transparence",
   "ui.mini.transparency.off": "Non",
+  "ui.mini.transparency.glass": "Verre",
+  "ui.mini.transparency.glass_hint": "Verre dépoli : l’écran derrière, flouté. Tant qu’il est actif, cette fenêtre n’apparaît ni dans les captures d’écran ni dans le partage d’écran.",
   "ui.mini.transparency.low": "Faible",
   "ui.mini.transparency.high": "Forte",
   "ui.mini.optimize": "Optimiser",

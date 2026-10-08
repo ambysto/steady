@@ -15,39 +15,68 @@ button { font: inherit; color: inherit; }
 svg.icon { width: 14px; height: 14px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8;
   stroke-linecap: round; stroke-linejoin: round; }
 
+/* --- glass (ADR-0021): app/desktop.py hands the page a blurred capture of what is behind the window --- */
+html[data-glass] body {
+  background: linear-gradient(color-mix(in srgb, var(--window) 58%, transparent), color-mix(in srgb, var(--window) 58%, transparent)),
+    var(--backdrop) center / 100% 100% no-repeat, var(--window);
+}
+html[data-glass] .tile, html[data-glass] .scope, html[data-glass] .list, html[data-glass] .options {
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+}
+html[data-glass] .segmented { background: color-mix(in srgb, var(--surface-pressed) 70%, transparent); }
+
 /* --- the one-line bar (default) and the full table: one of them shows --- */
 html[data-mode="bar"] .mini, html:not([data-mode="bar"]) .minibar { display: none !important; }
 
-.minibar { display: flex; align-items: center; gap: var(--space-2); height: 100vh; padding: 0 var(--space-2) 0 var(--space-2);
-  white-space: nowrap; }
-.minibar .stat { display: inline-flex; align-items: center; gap: 3px; min-width: 74px; font-variant-numeric: tabular-nums;
+/* A thermometer (app/desktop.py cuts the window to this outline): a 32 px bulb (Optimize) with a
+   ring, and a 22 px tube under its edge carrying the numbers and the arrow. The 1 px outlines hide
+   the cut's stair-stepped edge. */
+html[data-mode="bar"] body { background: none; }
+.minibar { position: relative; height: 100vh; white-space: nowrap; font-size: var(--text-caption); }
+.minibar .tube { position: absolute; left: 26px; right: 0; top: 50%; height: 22px; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 8px; padding: 0 2px 0 12px; border-radius: 11px;
+  background: var(--window); box-shadow: inset 0 0 0 1px var(--border); }
+.minibar .optimize { position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  background: color-mix(in srgb, var(--accent) 10%, var(--window)); }
+.minibar .optimize:hover { background: color-mix(in srgb, var(--accent) 20%, var(--window)); }
+html[data-glass] .minibar .tube, html[data-glass] .minibar .optimize:not(.fix) {
+  background: linear-gradient(color-mix(in srgb, var(--window) 58%, transparent), color-mix(in srgb, var(--window) 58%, transparent)),
+    var(--backdrop) left center / 340px 32px no-repeat;
+}
+html[data-glass] .minibar .tube { background-position: -26px center, -26px center; }
+.minibar .stat { display: inline-flex; align-items: center; gap: 2px; flex: 1; min-width: 0; font-variant-numeric: tabular-nums;
   font-weight: var(--weight-medium); }
-.minibar .stat .icon { width: 12px; height: 12px; }
+.minibar .stat .icon { width: 11px; height: 11px; }
+.minibar .dot { width: 6px; height: 6px; }
 .minibar .icon.down { color: var(--accent); } .minibar .icon.up { color: var(--chart-internet); }
 .minibar .icon.ping { color: var(--ok); }
-.minibar canvas { flex: 1; min-width: 40px; height: 26px; }
+.arrow { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; flex: none; border: 0; border-radius: 50%;
+  background: var(--accent); color: var(--accent-text); cursor: default; }
+.arrow:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
+.arrow .icon { width: 13px; height: 13px; stroke-width: 2.2; }
+.bar .arrow { width: 24px; height: 24px; }
+.tube .arrow { width: 18px; height: 18px; }
+.tube .arrow .icon { width: 11px; height: 11px; }
 /* Optimize: a 32 px ring around one icon. idle: bolt; busy: the ring fills with the check's progress
    and a magnifier drifts in a small circle; fix: solid accent disc with the count; issues: warn ring
    with the count; good: a green tick. Flat colours, no glow (macOS native). */
 .optimize { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: none;
   border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: default; }
 .optimize:hover { background: var(--accent-soft); }
-.optimize .ring { position: absolute; inset: 0; width: 32px; height: 32px; transform: rotate(-90deg); fill: none; stroke-width: 1.75; }
+.optimize .ring { position: absolute; inset: 0; width: 32px; height: 32px; transform: rotate(-90deg); fill: none; stroke-width: 2.5; }
 .optimize .ring .track { stroke: currentColor; }
 .optimize .ring .fill { stroke: currentColor; stroke-dasharray: 0 100; stroke-linecap: round; display: none;
   transition: stroke-dasharray var(--duration) var(--ease-out); }
 .optimize .glyph { width: 15px; height: 15px; }
-.optimize .badge { position: absolute; top: -3px; right: -4px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 8px;
-  background: var(--bad); color: #fff; font-size: 10px; font-weight: var(--weight-semibold); line-height: 15px; text-align: center; }
+.optimize .count { font-size: var(--text-body); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
 .optimize.busy { color: var(--accent); }
 .optimize.busy .ring .track { stroke: var(--surface-pressed); }
 .optimize.busy .ring .fill { display: inline; }
 .optimize.busy .glyph { animation: seek 1.6s ease-in-out infinite; }
 .optimize.fix { background: var(--accent); color: var(--accent-text); }
 .optimize.fix:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
-.optimize.fix .ring { display: none; }
+.optimize.fix .ring .track { stroke: var(--accent); }
 .optimize.issues { color: var(--warn); }
-.optimize.issues .badge { background: var(--warn); }
 .optimize.good { color: var(--ok); }
 /* The magnifier looks around: a small loop, not a spin. */
 @keyframes seek {

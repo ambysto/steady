@@ -643,6 +643,8 @@
   "ui.mini.theme.system": "Auto",
   "ui.mini.transparency": "Transparenz",
   "ui.mini.transparency.off": "Aus",
+  "ui.mini.transparency.glass": "Glas",
+  "ui.mini.transparency.glass_hint": "Milchglas: der Bildschirm dahinter, unscharf. Solange es an ist, fehlt dieses Fenster in Screenshots und bei der Bildschirmfreigabe.",
   "ui.mini.transparency.low": "Gering",
   "ui.mini.transparency.high": "Stark",
   "ui.mini.optimize": "Optimieren",

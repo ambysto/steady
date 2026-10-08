@@ -643,6 +643,8 @@
   "ui.mini.theme.system": "Auto",
   "ui.mini.transparency": "Transparencia",
   "ui.mini.transparency.off": "No",
+  "ui.mini.transparency.glass": "Cristal",
+  "ui.mini.transparency.glass_hint": "Cristal esmerilado: la pantalla de detrás, difuminada. Mientras está activo, esta ventana no aparece en capturas ni al compartir pantalla.",
   "ui.mini.transparency.low": "Baja",
   "ui.mini.transparency.high": "Alta",
   "ui.mini.optimize": "Optimizar",

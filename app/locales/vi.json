@@ -643,6 +643,8 @@
   "ui.mini.theme.system": "Tự động",
   "ui.mini.transparency": "Độ trong suốt",
   "ui.mini.transparency.off": "Tắt",
+  "ui.mini.transparency.glass": "Kính",
+  "ui.mini.transparency.glass_hint": "Kính mờ: màn hình phía sau được làm mờ. Khi bật, cửa sổ này không xuất hiện trong ảnh chụp màn hình và khi chia sẻ màn hình.",
   "ui.mini.transparency.low": "Vừa",
   "ui.mini.transparency.high": "Nhiều",
   "ui.mini.optimize": "Tối ưu",

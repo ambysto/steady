@@ -645,6 +645,8 @@
   "ui.mini.theme.system": "Auto",
   "ui.mini.transparency": "Transparency",
   "ui.mini.transparency.off": "Off",
+  "ui.mini.transparency.glass": "Glass",
+  "ui.mini.transparency.glass_hint": "Frosted glass: the screen behind, blurred. While it is on, this window is left out of screenshots and screen sharing.",
   "ui.mini.transparency.low": "Low",
   "ui.mini.transparency.high": "High",
   "ui.mini.optimize": "Optimize",
