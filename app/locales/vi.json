@@ -996,6 +996,7 @@
   "ui.speed.title": "Đo tốc độ",
   "ui.speed.start": "Đo tốc độ",
   "ui.speed.again": "Đo lại",
+  "ui.speed.confirm_run": "Đo",
   "ui.speed.idle_body": "Tốc độ tải xuống, tải lên và ping, đo với speed.cloudflare.com trong khoảng 30 giây. Cùng lần đo đó cũng đo độ trễ khi mạng bận (Chẩn đoán).",
   "ui.speed.running.idle": "Đang đo ping…",
   "ui.speed.running.download": "Đang đo tải xuống…",

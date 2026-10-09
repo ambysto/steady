@@ -10,8 +10,9 @@ struct SpeedTestCard: View {
     @Environment(AppModel.self) private var model
     @Environment(\.localizer) private var text
     @Environment(\.locale) private var locale
-    /// Owned by the Overview, which also asks when the floating bar hands the question over.
-    @Binding var confirming: Bool
+    /// Asked on the card's own button, so the iPad popover points at it. The floating bar's handover
+    /// is asked by the Overview instead (`speedTestQuestion`).
+    @State private var confirming = false
 
     var body: some View {
         Section {
@@ -57,6 +58,7 @@ struct SpeedTestCard: View {
                 Button(text(model.speedResult == nil ? "ui.speed.start" : "ui.speed.again"), action: start)
                     .buttonStyle(.borderedProminent)
                     .disabled(!model.canRunSpeedTest(at: now))
+                    .speedTestConfirmation(isPresented: $confirming, title: text("ui.speed.title"))
             }
         }
     }
@@ -237,9 +239,10 @@ struct SpeedTestCard: View {
 }
 
 extension View {
-    /// The speed test's question on the Overview, also when the floating bar hands it over: the bar
-    /// is a panel that never takes the keyboard, so it opens this window instead. Watched here, not on
-    /// the card, because a Form loads its rows lazily and the card may not exist yet.
+    /// The speed test's question when the Mac's floating bar hands it over: the bar is a panel that
+    /// never takes the keyboard, so it opens this window instead. Watched on the Overview's Form, not
+    /// on the card, because a Form loads its rows lazily and the card may not exist yet. The card's
+    /// own button asks for itself.
     func speedTestQuestion(isPresented: Binding<Bool>, model: AppModel, title: String) -> some View {
         speedTestConfirmation(isPresented: isPresented, title: title)
             .onChange(of: model.speedConfirmRequested, initial: true) { _, requested in
