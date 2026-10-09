@@ -78,6 +78,26 @@ struct BufferbloatLoadTests {
         #expect(outcome.error == "HTTP 500")
     }
 
+    @Test func theMeterReportsALiveRateAndStopsWhenCancelled() async {
+        let load = LoadGenerator(upload: false, downloadURL: URL(string: "https://fast.test/__down")!,
+                                 configuration: StubServer.configuration)
+        let readings = Readings()
+        let started = ContinuousClock.now
+        let loadTask = Task { await load.run(seconds: 5) }
+        let meterTask = Task { await BufferbloatTest.meter(load, since: started) { await readings.add($0) } }
+        try? await Task.sleep(for: .milliseconds(1200))
+        meterTask.cancel()
+        load.stop()
+        _ = await loadTask.value
+        let atRamp = await meterTask.value
+        let count = await readings.values.count
+        #expect(count >= 4)
+        #expect(await readings.values.contains { ($0 ?? 0) > 0 })
+        #expect(atRamp == nil)   // cancelled before the 2 s ramp ended
+        try? await Task.sleep(for: .milliseconds(600))
+        #expect(await readings.values.count == count)   // nothing after the cancel
+    }
+
     @Test func theLoadStopsAtItsByteLimit() async {
         let clock = ContinuousClock()
         let started = clock.now
@@ -89,6 +109,14 @@ struct BufferbloatLoadTests {
         #expect(clock.now - started < .seconds(4))   // stopped early, not at the deadline
         let phase = BufferbloatTest.phase(rtts: rtts, outcome: outcome, elapsed: 1, maxBytes: 300_000)
         #expect(phase.capped == true)
+    }
+}
+
+actor Readings {
+    var values: [Double?] = []
+
+    func add(_ value: Double?) {
+        values.append(value)
     }
 }
 

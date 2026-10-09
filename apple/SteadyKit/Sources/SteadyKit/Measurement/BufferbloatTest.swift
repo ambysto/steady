@@ -3,10 +3,36 @@ import Synchronization
 
 /// Measures check #14 like app/bufferbloat.py: pings while idle, then while downloading, then
 /// while uploading. Generates real traffic (about 250 MB per 100 Mbps of line speed, at most 2 GB),
-/// so it runs only when the user asks.
+/// so it runs only when the user asks. The same run is the speed test (ADR-0023, `SpeedTest`).
 public enum BufferbloatTest {
     public enum Stage: Sendable {
         case idle, download, upload
+    }
+
+    /// Where a run is: the phase, and while loading the rate over the last second.
+    public struct Progress: Equatable, Sendable {
+        public var stage: Stage
+        public var liveMbps: Double?
+
+        public init(stage: Stage, liveMbps: Double? = nil) {
+            self.stage = stage
+            self.liveMbps = liveMbps
+        }
+    }
+
+    /// What a run measured: check #14's measurement, and each direction's rate after the ramp
+    /// (the speed test's figure; `Phase.mbps` stays the whole phase's average, as on Windows).
+    public struct Run: Equatable, Sendable {
+        public var measurement: Bufferbloat.Measurement
+        public var downloadSteadyMbps: Double?
+        public var uploadSteadyMbps: Double?
+
+        public init(measurement: Bufferbloat.Measurement, downloadSteadyMbps: Double? = nil,
+                    uploadSteadyMbps: Double? = nil) {
+            self.measurement = measurement
+            self.downloadSteadyMbps = downloadSteadyMbps
+            self.uploadSteadyMbps = uploadSteadyMbps
+        }
     }
 
     static let downloadURL = URL(string: "https://speed.cloudflare.com/__down?bytes=25000000")!
@@ -14,6 +40,7 @@ public enum BufferbloatTest {
     static let idleSeconds = 4.0, loadSeconds = 10.0, interval = 0.2
     static let rampSeconds = 2.0   // samples taken while the line is still picking up speed are dropped
     static let connections = 4
+    static let meterInterval = 0.25   // how often the live rate is read while a direction loads
     /// Each direction runs for `loadSeconds` and stops early only here (MAX_BYTES in app/bufferbloat.py,
     /// 800 Mbps over 10 s); a phase that reaches it is marked `capped`, as the line may be faster.
     public static let maxBytes: Int64 = 1_000_000_000
@@ -32,21 +59,25 @@ public enum BufferbloatTest {
     /// - Parameters:
     ///   - router: IPv4 address of the router, pinged alongside the Internet when known.
     ///   - maxBytes: the limit for each direction, from `byteLimit(expensive:constrained:)`.
-    ///   - stage: called as each phase starts.
+    ///   - progress: called as each phase starts, then with the live rate every `meterInterval`.
     public static func run(router: String?, maxBytes: Int64 = maxBytes,
-                           stage: @escaping @Sendable (Stage) async -> Void = { _ in }) async
-        -> Bufferbloat.Measurement {
+                           progress: @escaping @Sendable (Progress) async -> Void = { _ in }) async -> Run {
         var targets: [(label: String, address: String)] = []
         if let router { targets.append(("router", router)) }
         targets.append(("internet", "1.1.1.1"))
 
-        await stage(.idle)
+        await progress(Progress(stage: .idle))
         let idle = Bufferbloat.Phase(rtts: await sample(targets, seconds: idleSeconds).samples)
-        await stage(.download)
-        let download = await loaded(targets, upload: false, maxBytes: maxBytes)
-        await stage(.upload)
-        let upload = await loaded(targets, upload: true, maxBytes: maxBytes)
-        return Bufferbloat.Measurement(idle: idle, download: download, upload: upload)
+        await progress(Progress(stage: .download))
+        let download = await loaded(targets, upload: false, maxBytes: maxBytes) {
+            await progress(Progress(stage: .download, liveMbps: $0))
+        }
+        await progress(Progress(stage: .upload))
+        let upload = await loaded(targets, upload: true, maxBytes: maxBytes) {
+            await progress(Progress(stage: .upload, liveMbps: $0))
+        }
+        return Run(measurement: Bufferbloat.Measurement(idle: idle, download: download.phase, upload: upload.phase),
+                   downloadSteadyMbps: download.steadyMbps, uploadSteadyMbps: upload.steadyMbps)
     }
 
     /// Pings every target once per `interval` for `seconds`, the targets in parallel. `starts` holds
@@ -86,21 +117,54 @@ public enum BufferbloatTest {
         return samples.map { Bufferbloat.Samples(label: $0.label, samples: Array($0.samples.dropFirst(keep))) }
     }
 
-    static func loaded(_ targets: [(label: String, address: String)], upload: Bool,
-                       maxBytes: Int64) async -> Bufferbloat.Phase {
+    static func loaded(_ targets: [(label: String, address: String)], upload: Bool, maxBytes: Int64,
+                       live: @escaping @Sendable (Double?) async -> Void) async
+        -> (phase: Bufferbloat.Phase, steadyMbps: Double?) {
         let load = LoadGenerator(upload: upload, maxBytes: maxBytes)
         let clock = ContinuousClock()
         let started = clock.now
-        let loadTask = Task { await load.run(seconds: loadSeconds) }
+        // When the load ended: before the pings do when it stops at its byte limit.
+        let loadTask = Task { (await load.run(seconds: loadSeconds), (clock.now - started).inMilliseconds / 1000) }
+        let meterTask = Task { await meter(load, since: started, live: live) }
         let (samples, starts) = await withTaskCancellationHandler {
             await sample(targets, seconds: loadSeconds, since: started)
         } onCancel: {
             load.stop()   // leaving the screen must not leave up to 1 GB of transfers running
+            meterTask.cancel()
         }
         load.stop()
-        let outcome = await loadTask.value
+        let (outcome, loadEnded) = await loadTask.value
+        meterTask.cancel()
+        let atRamp = await meterTask.value
         let elapsed = max((clock.now - started).inMilliseconds / 1000, 1e-6)
-        return phase(rtts: droppingRamp(samples, starts: starts), outcome: outcome, elapsed: elapsed, maxBytes: maxBytes)
+        return (phase(rtts: droppingRamp(samples, starts: starts), outcome: outcome, elapsed: elapsed, maxBytes: maxBytes),
+                steadyMbps(atRamp: atRamp, bytes: outcome.bytes, seconds: loadEnded))
+    }
+
+    /// Reads the load's byte total every `meterInterval` until cancelled, reports the rate over the
+    /// last second, and returns the first reading taken once the ramp was over.
+    static func meter(_ load: LoadGenerator, since started: ContinuousClock.Instant,
+                      live: @Sendable (Double?) async -> Void) async -> (seconds: Double, bytes: Int64)? {
+        let clock = ContinuousClock()
+        var rate = LiveRate()
+        var atRamp: (seconds: Double, bytes: Int64)?
+        while !Task.isCancelled {
+            let seconds = (clock.now - started).inMilliseconds / 1000
+            let bytes = load.bytes
+            if atRamp == nil, seconds >= rampSeconds {
+                atRamp = (seconds, bytes)
+            }
+            await live(rate.add(seconds: seconds, bytes: bytes))
+            try? await Task.sleep(for: .seconds(meterInterval))
+        }
+        return atRamp
+    }
+
+    /// The rate after the ramp: what moved between the ramp's reading and the end of the load, over
+    /// that time. Nil when the load ended within half a second of the ramp (too short to trust).
+    static func steadyMbps(atRamp: (seconds: Double, bytes: Int64)?, bytes: Int64, seconds: Double) -> Double? {
+        guard let atRamp, seconds - atRamp.seconds >= 0.5, bytes > atRamp.bytes else { return nil }
+        return Double(bytes - atRamp.bytes) * 8 / (seconds - atRamp.seconds) / 1e6
     }
 
     /// The phase a load produced, as `loaded` in app/bufferbloat.py `measure` builds it.
@@ -218,6 +282,11 @@ final class LoadGenerator: Sendable {
         state.withLock { state in
             if !state.stopped { state.errors.append(message) }
         }
+    }
+
+    /// Bytes moved so far, read while the load runs (the live rate).
+    var bytes: Int64 {
+        state.withLock { $0.bytes }
     }
 
     var isStopped: Bool {
