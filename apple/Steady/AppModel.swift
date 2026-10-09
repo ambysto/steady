@@ -132,6 +132,8 @@ final class AppModel {
         #endif
         isStoreScreenshots = false
         monitor = LiveMonitor(store: Self.history)
+        // Check #14 comes back with the speed test it was measured by (one run, two results).
+        bufferbloat = speedResult?.measurement.map(Bufferbloat.evaluate)
     }
 
     /// Called by each window for as long as it is open; measures while at least one is.

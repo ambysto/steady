@@ -7,6 +7,7 @@ struct DiagnosticsView: View {
     @State private var confirmingBufferbloat = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(\.localizer) private var text
+    @Environment(\.locale) private var locale
 
     var body: some View {
         Form {
@@ -81,15 +82,24 @@ struct DiagnosticsView: View {
                     .foregroundStyle(.secondary)
             }
         } else if let bufferbloat = model.bufferbloat {
-            CheckResultView(result: bufferbloat, text: text) {
-                Button {
-                    start()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
+            VStack(alignment: .leading, spacing: 6) {
+                CheckResultView(result: bufferbloat, text: text) {
+                    Button {
+                        start()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(!canRunBufferbloat)
+                    .accessibilityLabel(text(runKey))
                 }
-                .buttonStyle(.borderless)
-                .disabled(!canRunBufferbloat)
-                .accessibilityLabel(text(runKey))
+                // The result is kept across launches with the speed test's, so it says when.
+                if let measuredAt = model.speedResult?.measuredAt {
+                    Text(text("ui.speed.measured", ["time": .text(measuredAt.formatted(
+                        Date.FormatStyle(date: .abbreviated, time: .shortened, locale: locale)))]))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
         } else {
             VStack(alignment: .leading, spacing: 8) {

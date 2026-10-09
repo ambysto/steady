@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 - **Apple app: the speed test's question on an iPad.** The popover pointed at Scan, because the question hung on the whole Overview; the card's button now asks for itself and the popover points at it (the Mac floating bar's handover still asks from the Overview). Its button cut its label in the middle ("Measure (about 30 s, u…"); it now reads "Measure" and the message above it still says how much data the test uses. 1 new key in all 7 catalogs (`ui.speed.confirm_run`).
+- **Apple app: a direction's speed no longer jumps when the test ends.** Once download had finished, the card showed the mean of the live readings (e.g. 677 Mbps) until the result replaced it with the steady rate (706). The run now reports each direction's figure as it ends, the same one the result shows.
+- **Apple app: the Bufferbloat result comes back after a relaunch.** Only the speed test's result was kept, so Diagnostics asked to measure again while the Overview still showed the same run. The saved result now keeps the run's check #14 measurement; the Diagnostics card is rebuilt from it at launch and says when it was measured.
 
 ## [0.8.0] - 2026-10-08
 
