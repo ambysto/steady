@@ -1,5 +1,5 @@
 ---
-status: verified   # draft → approved → planned → building → verified → shipped (PR #n)
+status: shipped (PR #70)   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test on macOS, iOS and iPadOS
 
