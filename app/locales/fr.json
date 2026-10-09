@@ -1002,8 +1002,6 @@
   "ui.speed.running.upload": "Mesure du débit montant…",
   "ui.speed.download": "Descendant",
   "ui.speed.upload": "Montant",
-  "ui.speed.ping_idle": "Ping",
-  "ui.speed.ping_loaded": "Ping en charge",
   "ui.speed.at_least": "au moins {value}",
   "ui.speed.measured": "Mesuré {time}",
   "ui.speed.refused": "Le serveur de test limite les tests depuis cette adresse. Réessayez dans {minutes} min environ.",
@@ -1011,5 +1009,11 @@
   "ui.speed.failed": "Mesure impossible. Vérifiez la connexion à speed.cloudflare.com et réessayez.",
   "ui.speed.mini.hint": "Test de débit : descendant, montant et ping en 30 secondes environ.",
   "ui.speed.mini.result": "Descendant {download} · Montant {upload} · Ping {ping}",
-  "ui.speed.mini.open": "Cliquez pour voir le résultat dans la fenêtre principale."
+  "ui.speed.mini.open": "Cliquez pour voir le résultat dans la fenêtre principale.",
+  "ui.speed.latency": "Latence",
+  "ui.speed.jitter": "Gigue",
+  "ui.speed.loss": "Perte de paquets",
+  "ui.speed.server": "Serveur {code}",
+  "ui.speed.unit.mbps": "Mbit/s",
+  "ui.speed.unit.ms": "ms"
 }

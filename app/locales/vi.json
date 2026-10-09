@@ -1002,8 +1002,6 @@
   "ui.speed.running.upload": "Đang đo tải lên…",
   "ui.speed.download": "Tải xuống",
   "ui.speed.upload": "Tải lên",
-  "ui.speed.ping_idle": "Ping",
-  "ui.speed.ping_loaded": "Ping khi mạng bận",
   "ui.speed.at_least": "ít nhất {value}",
   "ui.speed.measured": "Đo lúc {time}",
   "ui.speed.refused": "Máy chủ đo đang giới hạn số lần đo từ địa chỉ này. Thử lại sau khoảng {minutes} phút.",
@@ -1011,5 +1009,11 @@
   "ui.speed.failed": "Không đo được. Kiểm tra kết nối tới speed.cloudflare.com rồi thử lại.",
   "ui.speed.mini.hint": "Đo tốc độ: tải xuống, tải lên và ping trong khoảng 30 giây.",
   "ui.speed.mini.result": "Tải xuống {download} · Tải lên {upload} · Ping {ping}",
-  "ui.speed.mini.open": "Bấm để xem kết quả ở cửa sổ chính."
+  "ui.speed.mini.open": "Bấm để xem kết quả ở cửa sổ chính.",
+  "ui.speed.latency": "Độ trễ",
+  "ui.speed.jitter": "Jitter",
+  "ui.speed.loss": "Mất gói",
+  "ui.speed.server": "Máy chủ {code}",
+  "ui.speed.unit.mbps": "Mbps",
+  "ui.speed.unit.ms": "ms"
 }

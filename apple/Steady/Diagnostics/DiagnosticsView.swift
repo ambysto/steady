@@ -73,7 +73,7 @@ struct DiagnosticsView: View {
     /// speed, at most 2 GB (docs/DIAGNOSTICS.md); 500 MB on a metered path, nothing in Low Data Mode.
     /// It is the speed test's run (ADR-0023), so starting either one shows here.
     @ViewBuilder private var bufferbloatCard: some View {
-        if let stage = model.speedProgress?.stage {
+        if let stage = model.speedLive?.stage {
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
                 Text(progress(stage))

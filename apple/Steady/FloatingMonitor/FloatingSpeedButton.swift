@@ -25,7 +25,7 @@ struct FloatingSpeedButton: View {
     }
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: model.speedRunning ? 0.25 : 1)) { context in
+        TimelineView(.periodic(from: .now, by: 1)) { context in
             let mode = mode(at: context.date)
             Button {
                 tap(mode, now: context.date)
@@ -67,8 +67,7 @@ struct FloatingSpeedButton: View {
 
     private func mode(at date: Date) -> Mode {
         if model.speedRunning {
-            let elapsed = model.speedStartedAt.map { date.timeIntervalSince($0) } ?? 0
-            return .busy(fraction: min(max(elapsed / BufferbloatTest.duration, 0.03), 0.97))
+            return .busy(fraction: min(max(model.speedLive?.fraction ?? 0, 0.03), 0.97))
         }
         guard let result = model.speedResult else { return .idle }
         if model.speedBlockedUntil(at: date) != nil { return .problem }
@@ -84,7 +83,7 @@ struct FloatingSpeedButton: View {
         case .busy: return text(runningKey)
         case .done, .problem:
             guard let result = model.speedResult else { return text("ui.speed.mini.hint") }
-            let ping = result.idlePingMs.map { Units.milliseconds($0, text) } ?? "—"
+            let ping = result.idle?.medianMs.map { Units.milliseconds($0, text) } ?? "—"
             let line = text("ui.speed.mini.result", ["download": .text(Units.rate(result.downloadMbps, text)),
                                                      "upload": .text(Units.rate(result.uploadMbps, text)),
                                                      "ping": .text(ping)])
@@ -93,7 +92,7 @@ struct FloatingSpeedButton: View {
     }
 
     private var runningKey: String {
-        switch model.speedProgress?.stage ?? .idle {
+        switch model.speedLive?.stage ?? .idle {
         case .idle: "ui.speed.running.idle"
         case .download: "ui.speed.running.download"
         case .upload: "ui.speed.running.upload"

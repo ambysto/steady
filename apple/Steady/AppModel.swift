@@ -29,10 +29,9 @@ final class AppModel {
     private(set) var dns: CheckResult?
     private(set) var dnsRunning = false
     private(set) var bufferbloat: CheckResult?
-    /// The speed test (ADR-0023), which is check #14's run: where it is with its live rate, and the
-    /// latest result, kept across launches.
-    private(set) var speedProgress: BufferbloatTest.Progress?
-    private(set) var speedStartedAt: Date?
+    /// The speed test (ADR-0023), which is check #14's run: the run as it goes, and the latest
+    /// result, kept across launches.
+    private(set) var speedLive: SpeedTest.Live?
     private(set) var speedResult: SpeedTest.Result? = AppModel.savedSpeedResult()
     /// Set by the floating bar when the test needs a confirmation: the main window's Overview asks.
     var speedConfirmRequested = false
@@ -244,17 +243,15 @@ final class AppModel {
         }
         guard !isStoreScreenshots, canRunSpeedTest(), let limit = speedLimit else { return }
         speedTask = Task {
-            speedProgress = BufferbloatTest.Progress(stage: .idle)
-            speedStartedAt = .now
-            let run = await BufferbloatTest.run(router: path?.routerIPv4, maxBytes: limit) { progress in
-                await MainActor.run { self.speedProgress = progress }
+            speedLive = SpeedTest.Live()
+            let run = await BufferbloatTest.run(router: path?.routerIPv4, maxBytes: limit) { event in
+                await MainActor.run { self.speedLive?.apply(event) }
             }
             bufferbloat = Bufferbloat.evaluate(run.measurement)
             let result = SpeedTest.result(from: run, at: .now)
             speedResult = result
             UserDefaults.standard.set(try? JSONEncoder().encode(result), forKey: Self.speedResultKey)
-            speedProgress = nil
-            speedStartedAt = nil
+            speedLive = nil
             speedTask = nil
         }
     }

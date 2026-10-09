@@ -1002,8 +1002,6 @@
   "ui.speed.running.upload": "正在测量上传…",
   "ui.speed.download": "下载",
   "ui.speed.upload": "上传",
-  "ui.speed.ping_idle": "延迟",
-  "ui.speed.ping_loaded": "负载下延迟",
   "ui.speed.at_least": "至少 {value}",
   "ui.speed.measured": "测量于 {time}",
   "ui.speed.refused": "测试服务器正在限制来自此地址的测试。请约 {minutes} 分钟后再试。",
@@ -1011,5 +1009,11 @@
   "ui.speed.failed": "无法测量。请检查与 speed.cloudflare.com 的连接后重试。",
   "ui.speed.mini.hint": "测速：约 30 秒内测量下载、上传和延迟。",
   "ui.speed.mini.result": "下载 {download} · 上传 {upload} · 延迟 {ping}",
-  "ui.speed.mini.open": "点击在主窗口中查看结果。"
+  "ui.speed.mini.open": "点击在主窗口中查看结果。",
+  "ui.speed.latency": "延迟",
+  "ui.speed.jitter": "抖动",
+  "ui.speed.loss": "丢包",
+  "ui.speed.server": "服务器 {code}",
+  "ui.speed.unit.mbps": "Mbps",
+  "ui.speed.unit.ms": "毫秒"
 }

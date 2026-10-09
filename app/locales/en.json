@@ -1004,8 +1004,6 @@
   "ui.speed.running.upload": "Measuring upload…",
   "ui.speed.download": "Download",
   "ui.speed.upload": "Upload",
-  "ui.speed.ping_idle": "Ping",
-  "ui.speed.ping_loaded": "Ping under load",
   "ui.speed.at_least": "at least {value}",
   "ui.speed.measured": "Measured {time}",
   "ui.speed.refused": "The test server is limiting tests from this address. Try again in about {minutes} min.",
@@ -1013,5 +1011,11 @@
   "ui.speed.failed": "Could not measure. Check the connection to speed.cloudflare.com and try again.",
   "ui.speed.mini.hint": "Speed test: download, upload and ping in about 30 seconds.",
   "ui.speed.mini.result": "Download {download} · Upload {upload} · Ping {ping}",
-  "ui.speed.mini.open": "Click to see the result in the main window."
+  "ui.speed.mini.open": "Click to see the result in the main window.",
+  "ui.speed.latency": "Latency",
+  "ui.speed.jitter": "Jitter",
+  "ui.speed.loss": "Packet loss",
+  "ui.speed.server": "Server {code}",
+  "ui.speed.unit.mbps": "Mbps",
+  "ui.speed.unit.ms": "ms"
 }

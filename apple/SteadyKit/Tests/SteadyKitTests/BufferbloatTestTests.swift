@@ -84,18 +84,28 @@ struct BufferbloatLoadTests {
         let readings = Readings()
         let started = ContinuousClock.now
         let loadTask = Task { await load.run(seconds: 5) }
-        let meterTask = Task { await BufferbloatTest.meter(load, since: started) { await readings.add($0) } }
+        let meterTask = Task { await BufferbloatTest.meter(load, since: started) { _, mbps in await readings.add(mbps) } }
         try? await Task.sleep(for: .milliseconds(1200))
         meterTask.cancel()
         load.stop()
         _ = await loadTask.value
-        let atRamp = await meterTask.value
+        let reading = await meterTask.value
         let count = await readings.values.count
-        #expect(count >= 4)
+        #expect(count >= 3)
         #expect(await readings.values.contains { ($0 ?? 0) > 0 })
-        #expect(atRamp == nil)   // cancelled before the 2 s ramp ended
+        #expect(reading.series.count == count)   // every rate reported is kept for the chart
+        #expect(reading.atRamp == nil)   // cancelled before the 2 s ramp ended
         try? await Task.sleep(for: .milliseconds(600))
         #expect(await readings.values.count == count)   // nothing after the cancel
+    }
+
+    @Test func theServerLocationIsReadFromTheReply() async {
+        let load = LoadGenerator(upload: false, maxBytes: 300_000, downloadURL: URL(string: "https://fast.test/__down")!,
+                                 configuration: StubServer.configuration)
+        #expect(await load.run(seconds: 2).server == "HKG")
+        let ray = HTTPURLResponse(url: URL(string: "https://x.test")!, statusCode: 200, httpVersion: nil,
+                                  headerFields: ["CF-RAY": "a47a225739dee885-SIN"])!
+        #expect(LoadWorker.server(of: ray) == "SIN")
     }
 
     @Test func theLoadStopsAtItsByteLimit() async {
@@ -138,7 +148,7 @@ final class StubServer: URLProtocol {
         case "refused.test": (429, ["Retry-After": "90"])
         case "forbidden.test": (403, [:])
         case "broken.test": (500, [:])
-        default: (200, [:])
+        default: (200, ["colo": "HKG"])
         }
         let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

@@ -149,6 +149,7 @@ public enum MessageCatalog {
         "ui.speed.measured": [MessageArgument("time", nil)],
         "ui.speed.mini.result": [MessageArgument("download", nil), MessageArgument("upload", nil), MessageArgument("ping", nil)],
         "ui.speed.refused": [MessageArgument("minutes", nil)],
+        "ui.speed.server": [MessageArgument("code", nil)],
         "ui.state.internet_down_detail": [MessageArgument("duration", nil)],
         "ui.state.router_down_detail": [MessageArgument("duration", nil)],
         "ui.suggest.because": [MessageArgument("reason", nil)],
