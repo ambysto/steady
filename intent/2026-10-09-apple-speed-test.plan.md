@@ -13,6 +13,38 @@ steady rate after the ramp, as Speedtest-style apps report it. `Bufferbloat.Phas
 both `speedResult` and `bufferbloat`. Three places start it: the Overview card, the Diagnostics card
 and the floating bar's new button.
 
+## Change 2026-10-09: speed.cloudflare.com-like layout (intent decision 4)
+
+- **Engine.** The progress callback becomes `BufferbloatTest.Event`, with three kinds:
+  - `stage`
+  - `rate(stage, seconds, mbps)`, every 0.25 s
+  - `ping(stage, seconds, ms?)`, each round's Internet reply
+
+  `sample` reports each round. `meter` also returns the rate series. `LoadWorker` reads the `colo`
+  response header into the generator. `Run` gains the two series and `server`.
+- **`SpeedTest.Live`** (new, pure). It applies events and gives the live figures: the current rate,
+  each phase's latency median, jitter and loss, and the elapsed fraction. `SpeedTest.Result` gains:
+  - each direction's series (downsampled to ≤ 48 points)
+  - latency and jitter for idle, ↓ and ↑
+  - `lossPercent`
+  - `server`
+
+  New fields are optional, so a result saved before still decodes. `loadedPingMs` goes, replaced by
+  ↓/↑. Shared statistics (`median`, `jitter`, `loss`) live in one place and are tested.
+- **Views.** `SpeedTestCard` is rewritten with:
+  - `SpeedChart` (Swift Charts area + line, Catmull-Rom, no axes)
+  - a latency column
+  - `SpeedProgressBar` (24 one-second segments coloured by phase)
+
+  Wide (`ViewThatFits`, ≥ ~600 pt) it is three columns. Narrow (iPhone) it is Download | Upload with
+  their charts, then Latency, Jitter and Loss in a row. `AppModel.speedProgress` becomes
+  `speedLive: SpeedTest.Live?`. The Diagnostics card reads its stage.
+- **Strings.** Add `ui.speed.latency`, `ui.speed.jitter`, `ui.speed.loss`, `ui.speed.server`
+  (`{code}`), `ui.speed.unit.mbps`, `ui.speed.unit.ms`. Drop `ui.speed.ping_idle` and
+  `ui.speed.ping_loaded`.
+- **Proof 5** compares with the interface counters (a scratch harness, not committed), not with a
+  browser.
+
 ## Files, in order
 
 ### 1. Engine (`apple/SteadyKit`)
@@ -113,8 +145,8 @@ Times reuse `diag.ago.*`.
    not stretch the 2×2 grid oddly).
 5. Manual run on the Mac (sandboxed ad-hoc build, see memory notes). The user presses the buttons; the
    terminal cannot click.
-   - From the Overview: a live number while it runs, then 4 figures, compared with
-     speed.cloudflare.com in a browser (±15 %).
+   - From the Overview: the live charts and figures while it runs, then the final layout. The
+     figures are within 5 % of the interface counters over the same phases (scratch harness).
    - The Diagnostics Bufferbloat card shows a result from the same run.
    - Relaunch: the result is still there.
    - Floating bar: the button is next to Scan, runs it, shows the download figure, and a click opens

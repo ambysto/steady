@@ -13,18 +13,29 @@ the test runs.
 
 1. A **Speed test** button on the **Overview** (macOS, iOS and iPadOS) and on the Mac's **floating bar**,
    right next to the Scan bulb.
-2. While it runs: the phase (ping → download → upload) and a **live Mbit/s figure** that updates at
-   least 4 times a second.
-3. When it ends: four figures — **Download**, **Upload** (Mbit/s), **Ping idle** and **Ping under load**
-   (ms) — plus when it was measured.
+2. While it runs, a layout like speed.cloudflare.com's top section (decision 4):
+   - **Download** and **Upload**, each a large figure over a live area chart of the rate. The figure
+     updates at least 4 times a second.
+   - **Latency** (idle, ↓ during download, ↑ during upload), **Jitter** (same three) and
+     **Packet loss**, which fill in as the pings come back.
+   - A segmented progress bar for ping → download → upload, with the phase named.
+3. When it ends, the same layout with the final figures, the charts, the test server's location code
+   (e.g. HKG) and when it was measured.
 4. The same run also sets the **Bufferbloat result** (check #14) on the Diagnostics tab; starting the
    test from either place runs the same single measurement, never two.
 5. Every failure mode the engine already knows reads as a clear state, not a wrong number: server
    refused (HTTP 429/403, "try again in about N min" with the button disabled until then), no
    connection, load too weak, hit the byte limit (shown as "at least N Mbit/s").
-6. Success is measured by: `swift test` green with new tests for the live rate and the speed figures;
-   `xcodebuild` green for macOS and iOS (iPhone and iPad); a real run on the Mac shows figures within ±15 % of
-   speed.cloudflare.com in a browser on the same line, and the floating bar button works.
+6. Success is measured by:
+   - `swift test` green, with new tests for the live rate and the speed figures.
+   - `xcodebuild` green for macOS and iOS (iPhone and iPad).
+   - A real run on the Mac whose figures are within 5 % of the interface's own byte counters over the
+     same phases.
+   - The floating bar button works.
+
+   Speed.cloudflare.com in a browser is not the yardstick. It reports the 90th percentile of single
+   requests on one connection, which reads lower on fast lines. On 2026-10-09 it read 595/356 while
+   the interface counters read 743/711 and this test 716/690, all to the same HKG server.
 
 **Constraints**
 
@@ -43,8 +54,9 @@ the test runs.
 
 - Windows (`app/`, `web/`) — a later session.
 - History of past speed tests, charts of them, sharing a result image.
-- Choosing a server, multi-server tests, jitter / packet-loss figures beyond what check #14 measures.
-- A needle gauge animation; a large live number is enough for this round.
+- Choosing a server, multi-server tests.
+- speed.cloudflare.com's Network Quality Score, its per-size request box plots and its server map:
+  the run is a sustained 4-connection load, not a ladder of request sizes.
 - Changing the test's duration or connection count.
 
 **Decisions** (open questions settled 2026-10-09)
@@ -54,5 +66,9 @@ the test runs.
    counters already do) and the new button's ring follows the phase. When it ends, the button shows
    the download figure; a click opens the main window's Overview at the result.
 3. The latest result persists across launches (`UserDefaults`), shown with when it was measured.
+4. (2026-10-09, after the first real run) The card looks like speed.cloudflare.com's top section,
+   with the app's own colours: download blue and upload purple, as on the floating monitor. Jitter is
+   the mean absolute difference between consecutive replies. Packet loss is the share of Internet
+   pings lost over idle and the loaded phases after the ramp.
 
 **Open questions** — none.
