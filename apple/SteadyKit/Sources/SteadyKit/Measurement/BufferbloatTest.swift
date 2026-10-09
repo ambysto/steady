@@ -38,6 +38,8 @@ public enum BufferbloatTest {
     static let downloadURL = URL(string: "https://speed.cloudflare.com/__down?bytes=25000000")!
     static let uploadURL = URL(string: "https://speed.cloudflare.com/__up")!
     static let idleSeconds = 4.0, loadSeconds = 10.0, interval = 0.2
+    /// How long a run takes when nothing stops it early: idle, then each direction.
+    public static var duration: Double { idleSeconds + 2 * loadSeconds }
     static let rampSeconds = 2.0   // samples taken while the line is still picking up speed are dropped
     static let connections = 4
     static let meterInterval = 0.25   // how often the live rate is read while a direction loads

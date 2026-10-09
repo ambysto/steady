@@ -36,7 +36,7 @@ enum FloatingTheme: String, CaseIterable {
 /// Hiding it releases its SwiftUI tree, which ends the measuring that tree started.
 @MainActor
 final class FloatingMonitorController: NSObject, NSWindowDelegate {
-    static let barSize = NSSize(width: 300, height: 36)
+    static let barSize = NSSize(width: 330, height: 36)
     static let tableSize = NSSize(width: 340, height: 470)
     /// Where the panel opens the first time: this far from the screen's top-right corner.
     private static let margin: CGFloat = 16
