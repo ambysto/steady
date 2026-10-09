@@ -1,5 +1,5 @@
 ---
-status: shipped (PR #70)   # draft → approved → planned → building → verified → shipped (PR #n)
+status: shipped (PR #70, fixes in PR #71)   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test on macOS, iOS and iPadOS
 
@@ -84,6 +84,27 @@ the test runs.
   floating bar showed 742.
 - Screenshots of the result on the Mac, iPhone 17 and iPad Pro 11" (iOS 27 simulator).
 - An independent review found no blockers. Its findings are fixed; see the plan's review section.
-- Not checked: the live view during a run on iPhone/iPad, because the simulator cannot be clicked
-  from the terminal.
+- Live view during a run on iPhone 17 and iPad Pro 11" (iOS 27 simulator, driven from the app's
+  simulator panel), one run each:
+  - the download and upload figures update as it runs and the charts draw
+  - latency, jitter and packet loss fill in, with ↓/↑ not cut
+  - the 24 segments turn green, blue, then purple under the right phase label
+  - the result shows the four groups, the charts and "Measured … · Server HKG"
+  - Diagnostics shows the Bufferbloat result from the same run
+  - the result is still there after a relaunch
+
+  The iPhone is two columns with latency below, the iPad three columns.
+- That check found four faults, fixed in PR #71:
+  - on an iPad the confirmation popover pointed at Scan
+  - its button cut "Measure (about 30 s, u…"
+  - a finished direction's figure jumped when the result arrived (677 → 706 Mbit/s)
+  - the Bufferbloat result was lost on relaunch while the speed test's was kept
+
+  After the fixes: `swift test` 133 pass. On the iPad the popover points at "Test again" and reads
+  "Measure". On the iPhone the download figure held at 667 Mbit/s from the end of its phase to the
+  result, and Bufferbloat came back after a relaunch with when it was measured.
+- Not checked:
+  - the two-tier layout in an iPad Split View or Slide Over: an iPad 11" window in portrait does not
+    go below about 714 pt, and the layout changes under 560 pt
+  - the Mac floating bar's handover of the question after PR #71 (unchanged code path)
 
