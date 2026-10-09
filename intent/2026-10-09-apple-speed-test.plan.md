@@ -36,7 +36,7 @@ and the floating bar's new button.
   - a latency column
   - `SpeedProgressBar` (24 one-second segments coloured by phase)
 
-  Wide (`ViewThatFits`, ≥ ~600 pt) it is three columns. Narrow (iPhone) it is Download | Upload with
+  It is three columns where they fit (`ViewThatFits`, at least 560 pt, so a Mac or an iPad). Narrow (iPhone) it is Download | Upload with
   their charts, then Latency, Jitter and Loss in a row. `AppModel.speedProgress` becomes
   `speedLive: SpeedTest.Live?`. The Diagnostics card reads its stage.
 - **Strings.** Add `ui.speed.latency`, `ui.speed.jitter`, `ui.speed.loss`, `ui.speed.server`
@@ -44,6 +44,18 @@ and the floating bar's new button.
   `ui.speed.ping_loaded`.
 - **Proof 5** compares with the interface counters (a scratch harness, not committed), not with a
   browser.
+
+## Change 2026-10-09: independent review
+
+- The meter stops when the load ends (byte limit or refusal). Before, it went on reading a frozen
+  total, and the live figure and the chart fell to zero.
+- A direction under 1 Mbit/s has no figure, as in check #14. The card notes a missing direction.
+- The floating bar's question is watched on the Overview's Form, not on the lazily loaded card.
+  `takeSpeedConfirmRequest()` hands it to one window only.
+- The meter reads on a fixed 0.25 s beat.
+- The Diagnostics card redraws every 15 s and says why it is disabled after a refusal from an
+  earlier launch.
+- The floating tooltip shows the countdown.
 
 ## Files, in order
 
@@ -73,11 +85,17 @@ and the floating bar's new button.
 
 ### 2. Strings (`app/locales/*.json`, all 7, then `python3 scripts/locales_to_xcstrings.py`)
 
-New keys under `ui.speed.*`: `title`, `start`, `running.ping|download|upload`, `download`, `upload`,
-`ping_idle`, `ping_loaded`, `at_least` (`{value}`), `measured` (`{ago}`), `refused` (`{minutes}`),
-`refused_later`, `failed`, `unavailable_low_data`, `mini.hint`, `mini.blocked`, `confirm.title`.
-The confirmation body reuses `ui.diag.bufferbloat_confirm[_metered]`. Units reuse `ui.mini.unit.*`.
-Times reuse `diag.ago.*`.
+Keys under `ui.speed.*`, 23 in all:
+- `title`, `start`, `again`, `idle_body`
+- `running.idle|download|upload`
+- `download`, `upload`, `latency`, `jitter`, `loss`
+- `unit.mbps`, `unit.ms`
+- `at_least` (`{value}`), `measured` (`{time}`), `server` (`{code}`)
+- `refused` (`{minutes}`), `refused_later`, `failed`
+- `mini.hint`, `mini.result`, `mini.open`
+
+The confirmation reuses `ui.diag.bufferbloat_confirm[_metered]` and `ui.diag.bufferbloat_run[_metered]`.
+Low Data Mode reuses `ui.diag.bufferbloat_constrained`. The floating bar's rate reuses `ui.mini.unit.*`.
 
 ### 3. App (`apple/Steady`)
 

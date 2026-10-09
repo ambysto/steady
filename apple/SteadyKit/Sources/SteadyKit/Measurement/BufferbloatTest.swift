@@ -131,18 +131,25 @@ public enum BufferbloatTest {
         return samples.map { Bufferbloat.Samples(label: $0.label, samples: Array($0.samples.dropFirst(keep))) }
     }
 
+    /// - Parameter generator: for tests (a stub server); nil = the real test server.
     static func loaded(_ targets: [(label: String, address: String)], stage: Stage, maxBytes: Int64,
+                       generator: LoadGenerator? = nil,
                        events: @escaping @Sendable (Event) async -> Void) async
         -> (phase: Bufferbloat.Phase, steadyMbps: Double?, series: [SpeedTest.Point], server: String?) {
-        let load = LoadGenerator(upload: stage == .upload, maxBytes: maxBytes)
+        let load = generator ?? LoadGenerator(upload: stage == .upload, maxBytes: maxBytes)
         let clock = ContinuousClock()
         let started = clock.now
-        // When the load ended: before the pings do when it stops at its byte limit.
-        let loadTask = Task { (await load.run(seconds: loadSeconds), (clock.now - started).inMilliseconds / 1000) }
         let meterTask = Task {
             await meter(load, since: started) { seconds, mbps in
                 await events(.rate(stage, seconds: seconds, mbps: mbps))
             }
+        }
+        // When the load ended: before the pings do when it stops at its byte limit or is refused. The
+        // meter stops with it, or its frozen total would read as a rate falling to zero.
+        let loadTask = Task {
+            let outcome = await load.run(seconds: loadSeconds)
+            meterTask.cancel()
+            return (outcome, (clock.now - started).inMilliseconds / 1000)
         }
         let (samples, starts) = await withTaskCancellationHandler {
             await sample(targets, seconds: loadSeconds, since: started) { seconds, ms in
@@ -171,6 +178,7 @@ public enum BufferbloatTest {
         var rate = LiveRate()
         var atRamp: (seconds: Double, bytes: Int64)?
         var series: [SpeedTest.Point] = []
+        var tick = 0
         while !Task.isCancelled {
             let seconds = (clock.now - started).inMilliseconds / 1000
             let bytes = load.bytes
@@ -181,7 +189,9 @@ public enum BufferbloatTest {
                 series.append(SpeedTest.Point(seconds: seconds, mbps: mbps))
                 await live(seconds, mbps)
             }
-            try? await Task.sleep(for: .seconds(meterInterval))
+            // On a fixed beat from the start, so a slow report does not stretch the interval.
+            tick += 1
+            try? await Task.sleep(until: started + .seconds(Double(tick) * meterInterval), clock: clock)
         }
         return (atRamp, series)
     }

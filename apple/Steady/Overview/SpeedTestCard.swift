@@ -10,10 +10,8 @@ struct SpeedTestCard: View {
     @Environment(AppModel.self) private var model
     @Environment(\.localizer) private var text
     @Environment(\.locale) private var locale
-    #if os(iOS)
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    #endif
-    @State private var confirming = false
+    /// Owned by the Overview, which also asks when the floating bar hands the question over.
+    @Binding var confirming: Bool
 
     var body: some View {
         Section {
@@ -21,23 +19,7 @@ struct SpeedTestCard: View {
             TimelineView(.periodic(from: .now, by: 15)) { context in
                 content(now: context.date)
             }
-            .speedTestConfirmation(isPresented: $confirming, title: text("ui.speed.title"))
-            // The floating bar cannot ask itself: it opens this window and the question is asked here.
-            .onChange(of: model.speedConfirmRequested, initial: true) { _, requested in
-                guard requested else { return }
-                model.speedConfirmRequested = false
-                confirming = true
-            }
         }
-    }
-
-    /// Three columns side by side on a Mac or an iPad; on an iPhone the latency figures go below.
-    private var wide: Bool {
-        #if os(iOS)
-        sizeClass == .regular
-        #else
-        true
-        #endif
     }
 
     private func content(now: Date) -> some View {
@@ -79,23 +61,24 @@ struct SpeedTestCard: View {
         }
     }
 
-    @ViewBuilder
+    /// Three columns side by side where they fit (a Mac or an iPad); otherwise, as on an iPhone or a
+    /// narrow window, the latency figures go below.
     private func figures(_ shown: Shown) -> some View {
-        if wide {
+        ViewThatFits(in: .horizontal) {
             HStack(alignment: .top, spacing: 24) {
-                direction(.download, shown)
-                direction(.upload, shown)
-                latencyColumn(shown)
+                direction(.download, shown, wide: true)
+                direction(.upload, shown, wide: true)
+                latencyColumn(shown, wide: true)
                     .frame(width: 150, alignment: .leading)
             }
-        } else {
+            .frame(minWidth: 560)
             VStack(alignment: .leading, spacing: 18) {
                 HStack(alignment: .top, spacing: 16) {
-                    direction(.download, shown)
-                    direction(.upload, shown)
+                    direction(.download, shown, wide: false)
+                    direction(.upload, shown, wide: false)
                 }
                 HStack(alignment: .top, spacing: 12) {
-                    latencyFigures(shown)
+                    latencyFigures(shown, wide: false)
                 }
             }
         }
@@ -103,7 +86,7 @@ struct SpeedTestCard: View {
 
     // MARK: Download and upload
 
-    private func direction(_ stage: SpeedTest.Stage, _ shown: Shown) -> some View {
+    private func direction(_ stage: SpeedTest.Stage, _ shown: Shown, wide: Bool) -> some View {
         let upload = stage == .upload
         let mbps = upload ? shown.upload : shown.download
         let capped = upload ? shown.uploadCapped : shown.downloadCapped
@@ -142,24 +125,24 @@ struct SpeedTestCard: View {
 
     // MARK: Latency, jitter, loss
 
-    private func latencyColumn(_ shown: Shown) -> some View {
+    private func latencyColumn(_ shown: Shown, wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            latencyFigures(shown)
+            latencyFigures(shown, wide: wide)
         }
     }
 
     @ViewBuilder
-    private func latencyFigures(_ shown: Shown) -> some View {
+    private func latencyFigures(_ shown: Shown, wide: Bool) -> some View {
         metric("ui.speed.latency", value: shown.idle?.medianMs, unit: text("ui.speed.unit.ms"),
-               directions: (shown.duringDownload?.medianMs, shown.duringUpload?.medianMs))
+               directions: (shown.duringDownload?.medianMs, shown.duringUpload?.medianMs), wide: wide)
         metric("ui.speed.jitter", value: shown.idle?.jitterMs, unit: text("ui.speed.unit.ms"),
-               directions: (shown.duringDownload?.jitterMs, shown.duringUpload?.jitterMs))
-        metric("ui.speed.loss", value: shown.lossPercent, unit: "%", directions: nil)
+               directions: (shown.duringDownload?.jitterMs, shown.duringUpload?.jitterMs), wide: wide)
+        metric("ui.speed.loss", value: shown.lossPercent, unit: "%", directions: nil, wide: wide)
     }
 
     /// A figure while idle, with the same figure during download (↓) and upload (↑) under it.
     private func metric(_ title: String, value: Double?, unit: String,
-                        directions: (down: Double?, up: Double?)?) -> some View {
+                        directions: (down: Double?, up: Double?)?, wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text(title))
                 .font(.subheadline.weight(.semibold))
@@ -229,7 +212,8 @@ struct SpeedTestCard: View {
             let minutes = max(1, (until.timeIntervalSince(now) / 60).rounded(.up))
             return text("ui.speed.refused", ["minutes": .number(minutes)])
         }
-        return result.hasFigures ? nil : text("ui.speed.failed")
+        // A direction without a figure that was not refused: it failed or stayed under 1 Mbit/s.
+        return result.isComplete ? nil : text("ui.speed.failed")
     }
 
     private func running(_ stage: SpeedTest.Stage) -> String {
@@ -246,6 +230,20 @@ struct SpeedTestCard: View {
         } else {
             model.runSpeedTest()
         }
+    }
+}
+
+extension View {
+    /// The speed test's question on the Overview, also when the floating bar hands it over: the bar
+    /// is a panel that never takes the keyboard, so it opens this window instead. Watched here, not on
+    /// the card, because a Form loads its rows lazily and the card may not exist yet.
+    func speedTestQuestion(isPresented: Binding<Bool>, model: AppModel, title: String) -> some View {
+        speedTestConfirmation(isPresented: isPresented, title: title)
+            .onChange(of: model.speedConfirmRequested, initial: true) { _, requested in
+                if requested, model.takeSpeedConfirmRequest() {
+                    isPresented.wrappedValue = true
+                }
+            }
     }
 }
 

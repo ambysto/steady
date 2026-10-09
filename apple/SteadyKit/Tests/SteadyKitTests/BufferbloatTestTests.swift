@@ -99,6 +99,27 @@ struct BufferbloatLoadTests {
         #expect(await readings.values.count == count)   // nothing after the cancel
     }
 
+    @Test func theMeterStopsWhenTheLoadEndsEarly() async {
+        // The byte limit is reached at once; the pings would go on for the phase's 10 s.
+        let events = Readings()
+        let clock = ContinuousClock()
+        let started = clock.now
+        let load = LoadGenerator(upload: false, maxBytes: 300_000, downloadURL: URL(string: "https://fast.test/__down")!,
+                                 configuration: StubServer.configuration)
+        let task = Task {
+            // No ping targets: only the load and its meter run.
+            await BufferbloatTest.loaded([], stage: .download, maxBytes: 300_000, generator: load) { event in
+                if case .rate(_, _, let mbps) = event { await events.add(mbps) }
+            }
+        }
+        try? await Task.sleep(for: .milliseconds(1500))
+        let count = await events.values.count
+        task.cancel()
+        _ = await task.value
+        #expect(count <= 2)   // no stream of zeros after the load stopped
+        #expect(clock.now - started < .seconds(5))
+    }
+
     @Test func theServerLocationIsReadFromTheReply() async {
         let load = LoadGenerator(upload: false, maxBytes: 300_000, downloadURL: URL(string: "https://fast.test/__down")!,
                                  configuration: StubServer.configuration)

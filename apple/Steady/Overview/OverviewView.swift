@@ -6,6 +6,7 @@ import SwiftUI
 struct OverviewView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.localizer) private var text
+    @State private var confirmingSpeed = false
 
     var body: some View {
         Form {
@@ -13,7 +14,7 @@ struct OverviewView: View {
                 PathStatusView(path: model.path, text: text)
             }
             CheckCard()
-            SpeedTestCard()
+            SpeedTestCard(confirming: $confirmingSpeed)
             WeekCard()
             Section {
                 ForEach(model.monitor.targets) { target in
@@ -52,6 +53,7 @@ struct OverviewView: View {
             }
         }
         .formStyle(.grouped)
+        .speedTestQuestion(isPresented: $confirmingSpeed, model: model, title: text("ui.speed.title"))
         .navigationTitle(text("ui.nav.overview"))
     }
 

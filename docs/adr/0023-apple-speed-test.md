@@ -20,17 +20,23 @@ per-address limit (HTTP 429/403) sooner.
    direction's steady rate. `SpeedTest.result(from:at:)` turns a run into the four figures. The Overview's
    Speed test card, the Diagnostics Bufferbloat card and the Mac's floating bar all start the same
    `AppModel.runSpeedTest()`, and a second start while one runs does nothing.
-2. **Live rate.** While a direction loads, the run reads the load's byte total every 0.25 s and
-   reports the rate over about the last second (`LiveRate`), through a `Progress` callback that
-   also carries the phase.
+2. **Live view.** The run reports `BufferbloatTest.Event`s: each phase's start; the rate over about the
+   last second (`LiveRate`), read from the load's byte total on a fixed 0.25 s beat until the load
+   ends; and each ping round's Internet reply. `SpeedTest.Live` turns them into what the card shows
+   while it runs, laid out like speed.cloudflare.com's top section: download and upload as large
+   figures over their rate charts, latency, jitter and packet loss, and a segmented progress bar.
+   The test server's location is read from the replies (`colo`, else the end of `CF-RAY`).
 3. **The speed figure is the rate after the ramp.** It is the bytes moved between the first
    reading after the 2 s ramp and the end of the load, over that time, as speed test apps leave out
    TCP's ramp-up. `Phase.mbps` keeps the whole phase's average, so check #14, its 28 shared vectors
    and Windows are unchanged. When the load ends before the ramp does (a very fast line reaching the
    byte limit), the figure falls back to the phase average. A direction that reached the byte limit
-   reads "at least N". A refused direction has no figure, and the run keeps until when the server
-   asked to wait. Ping is the median to the Internet while idle. Ping under load is the worse
-   direction's median after the ramp.
+   reads "at least N". A refused direction has no figure, nor does one under 1 Mbit/s (check #14
+   calls it a load too weak to fill the line). The result keeps until when the server asked to
+   wait. Latency is the median Internet ping while idle, and during each direction after the ramp.
+   Jitter is the mean absolute difference between consecutive replies, as speed.cloudflare.com
+   reports it. Packet loss is the share of Internet pings lost while idle and while loading, after
+   the ramp.
 4. **Confirmation.** On Wi‑Fi or Ethernet the app asks the first time and remembers the answer
    (`speedtest.confirmed`). On a metered path it asks every time. Low Data Mode still disables the
    run. The floating bar is a non-activating panel and cannot take the keyboard, so when a question
@@ -46,6 +52,12 @@ per-address limit (HTTP 429/403) sooner.
    - When done, it shows the download figure until the result goes stale (`CheckFlow.isStale`), and
      a click opens the Overview.
    - The bar grows from 300 to 330 pt wide to fit it.
+
+7. **Not the browser's figures.** speed.cloudflare.com in a browser reports the 90th percentile of
+   single requests on one connection, which reads lower on a fast line. On 2026-10-09, on the same
+   line and the same server (HKG), it read 595/356 Mbit/s. This test read 716/690 Mbit/s and the
+   interface's own byte counters 743/711 over the same phases. The counters also count TCP/IP
+   headers. The interface counters are the yardstick for this test.
 
 ## Consequences
 

@@ -75,6 +75,8 @@ public enum SpeedTest {
 
         /// At least one direction was measured.
         public var hasFigures: Bool { downloadMbps != nil || uploadMbps != nil }
+        /// Both directions were measured.
+        public var isComplete: Bool { downloadMbps != nil && uploadMbps != nil }
     }
 
     /// The target whose pings are the figures (the router's are check #14's alone).
@@ -105,9 +107,10 @@ public enum SpeedTest {
     }
 
     /// The direction's speed: the rate after the ramp, or the whole phase's when the load ended
-    /// before the ramp did (a very fast line hitting the byte limit). Nil when refused or nothing moved.
+    /// before the ramp did (a very fast line hitting the byte limit). Nil when refused, or when the
+    /// load stayed under `Bufferbloat.minMbps` (it did not load the line, as check #14 says too).
     static func figure(_ phase: Bufferbloat.Phase, steady: Double?) -> Double? {
-        guard phase.refused == nil, let average = phase.mbps, average > 0 else { return nil }
+        guard phase.refused == nil, let average = phase.mbps, average >= Bufferbloat.minMbps else { return nil }
         return steady ?? average
     }
 

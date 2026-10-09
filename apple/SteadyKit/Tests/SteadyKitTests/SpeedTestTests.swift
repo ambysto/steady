@@ -106,6 +106,18 @@ struct SpeedTestTests {
         #expect(result.refusedStatus == nil)
     }
 
+    @Test func aLoadUnderOneMbpsHasNoFigure() {
+        let run = BufferbloatTest.Run(measurement: .init(idle: phase([10]), download: phase([20], mbps: 0.4),
+                                                         upload: phase([20], mbps: 30)),
+                                      downloadSteadyMbps: 0.5, uploadSteadyMbps: 31)
+        let result = SpeedTest.result(from: run, at: date)
+        #expect(result.downloadMbps == nil)
+        #expect(result.duringDownload == nil)
+        #expect(result.uploadMbps == 31)
+        #expect(result.hasFigures)
+        #expect(!result.isComplete)
+    }
+
     @Test func aLongSeriesIsThinnedKeepingItsEnds() {
         let series = (0..<200).map { SpeedTest.Point(seconds: Double($0) / 20, mbps: Double($0)) }
         let thinned = SpeedTest.thinned(series)

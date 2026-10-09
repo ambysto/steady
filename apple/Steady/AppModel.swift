@@ -36,6 +36,13 @@ final class AppModel {
     /// Set by the floating bar when the test needs a confirmation: the main window's Overview asks.
     var speedConfirmRequested = false
 
+    /// Hands the floating bar's request to one Overview: true only for the first that asks, so two
+    /// open windows do not both put the question.
+    func takeSpeedConfirmRequest() -> Bool {
+        defer { speedConfirmRequested = false }
+        return speedConfirmRequested
+    }
+
     /// Only the latest DNS run may show its result: the router can change while one is running.
     private var dnsRun = 0
     private var dnsTask: Task<Void, Never>?

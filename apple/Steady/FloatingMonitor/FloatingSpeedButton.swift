@@ -38,7 +38,8 @@ struct FloatingSpeedButton: View {
             }
             .buttonStyle(.plain)
             .help(tooltip(mode, now: context.date))
-            .accessibilityLabel(text("ui.speed.start"))
+            .accessibilityLabel(text("ui.speed.title"))
+            .accessibilityValue(tooltip(mode, now: context.date))
         }
     }
 
@@ -83,6 +84,10 @@ struct FloatingSpeedButton: View {
         case .busy: return text(runningKey)
         case .done, .problem:
             guard let result = model.speedResult else { return text("ui.speed.mini.hint") }
+            if let until = model.speedBlockedUntil(at: now) {
+                let minutes = max(1, (until.timeIntervalSince(now) / 60).rounded(.up))
+                return "\(text("ui.speed.refused", ["minutes": .number(minutes)]))\n\(text("ui.speed.mini.open"))"
+            }
             let ping = result.idle?.medianMs.map { Units.milliseconds($0, text) } ?? "—"
             let line = text("ui.speed.mini.result", ["download": .text(Units.rate(result.downloadMbps, text)),
                                                      "upload": .text(Units.rate(result.uploadMbps, text)),

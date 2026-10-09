@@ -46,7 +46,8 @@ struct DiagnosticsView: View {
                 }
             }
             Section {
-                bufferbloatCard
+                // Redrawn every 15 s, so the button comes back when the test server's wait is over.
+                TimelineView(.periodic(from: .now, by: 15)) { _ in bufferbloatCard }
                     .speedTestConfirmation(isPresented: $confirmingBufferbloat, title: text("diag.bufferbloat.title"))
             }
         }
@@ -106,6 +107,11 @@ struct DiagnosticsView: View {
                 .disabled(!canRunBufferbloat)
                 if model.speedLimit == nil {
                     Text(text("ui.diag.bufferbloat_constrained"))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else if let until = model.speedBlockedUntil() {
+                    // A refusal from an earlier launch: the check's own result is gone, the wait is not.
+                    Text(text("ui.speed.refused", ["minutes": .number(max(1, (until.timeIntervalSinceNow / 60).rounded(.up)))]))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
