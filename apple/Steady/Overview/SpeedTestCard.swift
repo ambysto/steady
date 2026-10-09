@@ -158,8 +158,9 @@ struct SpeedTestCard: View {
             .minimumScaleFactor(0.7)
             if let directions {
                 HStack(spacing: 10) {
-                    directional("arrow.down", directions.down, tint: .blue, unit: unit)
-                    directional("arrow.up", directions.up, tint: .purple, unit: unit)
+                    // On a narrow card the unit is left to the figure above, so the two fit side by side.
+                    directional("arrow.down", directions.down, tint: .blue, unit: wide ? unit : nil)
+                    directional("arrow.up", directions.up, tint: .purple, unit: wide ? unit : nil)
                 }
                 .font(.footnote.weight(.medium))
                 .lineLimit(1)
@@ -170,13 +171,15 @@ struct SpeedTestCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func directional(_ icon: String, _ value: Double?, tint: Color, unit: String) -> some View {
+    private func directional(_ icon: String, _ value: Double?, tint: Color, unit: String?) -> some View {
         HStack(spacing: 2) {
             Image(systemName: icon)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(tint)
-            Text(value.map { number($0) + " " + unit } ?? "—")
+            Text(value.map { number($0) + (unit.map { " " + $0 } ?? "") } ?? "—")
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
     }
 

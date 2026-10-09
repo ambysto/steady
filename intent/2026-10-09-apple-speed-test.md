@@ -1,5 +1,5 @@
 ---
-status: building   # draft → approved → planned → building → verified → shipped (PR #n)
+status: verified   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test on macOS, iOS and iPadOS
 
@@ -72,3 +72,18 @@ the test runs.
    pings lost over idle and the loaded phases after the ramp.
 
 **Open questions** — none.
+
+**Verification** (2026-10-09)
+
+- `swift test`: 131 pass.
+- `locales_to_xcstrings.py --check`: up to date.
+- `xcodebuild`: macOS and iOS succeed.
+- Real run on the Mac to HKG: 716/690 Mbit/s against the interface counters' 743/711 over the same
+  phases. That is within 5 % once the counters' TCP/IP headers are allowed for.
+- A second run from the Overview read 742/684 Mbit/s, latency 23.5 ms (↓ 58.1, ↑ 38.4), and the
+  floating bar showed 742.
+- Screenshots of the result on the Mac, iPhone 17 and iPad Pro 11" (iOS 27 simulator).
+- An independent review found no blockers. Its findings are fixed; see the plan's review section.
+- Not checked: the live view during a run on iPhone/iPad, because the simulator cannot be clicked
+  from the terminal.
+
