@@ -1,7 +1,7 @@
 ---
-status: approved   # draft → approved → planned → building → verified → shipped (PR #n)
+status: building   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
-# Speed test on macOS and iOS
+# Speed test on macOS, iOS and iPadOS
 
 **Problem** — People want to know "how fast is my line right now", the way Speedtest-style apps show it:
 one button, a live number while it runs, then download, upload and ping. The Apple app already moves
@@ -11,7 +11,7 @@ the test runs.
 
 **Outcome** — one measurement, two results:
 
-1. A **Speed test** button on the **Overview** (macOS and iOS) and on the Mac's **floating bar**,
+1. A **Speed test** button on the **Overview** (macOS, iOS and iPadOS) and on the Mac's **floating bar**,
    right next to the Scan bulb.
 2. While it runs: the phase (ping → download → upload) and a **live Mbit/s figure** that updates at
    least 4 times a second.
@@ -23,7 +23,7 @@ the test runs.
    refused (HTTP 429/403, "try again in about N min" with the button disabled until then), no
    connection, load too weak, hit the byte limit (shown as "at least N Mbit/s").
 6. Success is measured by: `swift test` green with new tests for the live rate and the speed figures;
-   `xcodebuild` green for macOS and iOS; a real run on the Mac shows figures within ±15 % of
+   `xcodebuild` green for macOS and iOS (iPhone and iPad); a real run on the Mac shows figures within ±15 % of
    speed.cloudflare.com in a browser on the same line, and the floating bar button works.
 
 **Constraints**
