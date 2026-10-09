@@ -27,7 +27,7 @@ struct FloatingMonitorView: View {
 }
 
 /// The one-line bar, drawn like a thermometer: the Scan bulb on the left, then the tube with the
-/// state, download, upload and ping, and an arrow that opens the table.
+/// state, the speed test, download, upload and ping, and an arrow that opens the table.
 struct FloatingBar: View {
     @Environment(AppModel.self) private var model
     @Environment(\.localizer) private var text
@@ -48,6 +48,7 @@ struct FloatingBar: View {
                 .fill(figures.stateColor)
                 .frame(width: 6, height: 6)
                 .help(figures.stateText)
+            FloatingSpeedButton()
             stat("arrow.down", figures.down, FloatingColor.download)
             stat("arrow.up", figures.up, FloatingColor.upload)
             stat("waveform.path.ecg", figures.ping, FloatingColor.ping)
@@ -169,12 +170,12 @@ struct FloatingFigures {
         pingSeries = SweepSeries.ping(model.monitor.timedSamples, targets: LiveMonitor.internetTargets.map(\.id))
     }
 
-    var down: String { Self.rate(SweepSeries.latest(downSeries), text) }
-    var up: String { Self.rate(SweepSeries.latest(upSeries), text) }
+    var down: String { Units.rate(SweepSeries.latest(downSeries), text) }
+    var up: String { Units.rate(SweepSeries.latest(upSeries), text) }
 
     var ping: String {
         if SweepSeries.lostInARow(pingSeries) { return text("ui.mini.lost") }
-        return SweepSeries.latest(pingSeries).map { Self.milliseconds($0, text) } ?? "—"
+        return SweepSeries.latest(pingSeries).map { Units.milliseconds($0, text) } ?? "—"
     }
 
     /// The chart's trace for a metric: Mbit/s for the two rates, milliseconds for ping.
@@ -193,7 +194,7 @@ struct FloatingFigures {
     }
 
     func scale(_ ceiling: Double, of metric: FloatingMetric) -> String {
-        metric == .ping ? Self.milliseconds(ceiling, text) : Self.rate(ceiling, text)
+        metric == .ping ? Units.milliseconds(ceiling, text) : Units.rate(ceiling, text)
     }
 
     /// Where the chart's pen is at `date`: a little behind the newest reading, as on Windows.
@@ -251,7 +252,7 @@ struct FloatingFigures {
         }
         rows.append(Fact(id: "ip", label: text("ui.mini.net.local_ip"), value: model.localIPv4 ?? "—"))
         let routerPing = SweepSeries.latest((model.monitor.timedSamples[LiveMonitor.router] ?? [])
-            .map { Sweep.Sample(ts: $0.ts, value: $0.rttMs) }).map { " · " + Self.milliseconds($0, text) } ?? ""
+            .map { Sweep.Sample(ts: $0.ts, value: $0.rttMs) }).map { " · " + Units.milliseconds($0, text) } ?? ""
         rows.append(Fact(id: "router", label: text("ui.overview.router"),
                          value: (path?.routerIPv4 ?? "—") + routerPing))
         rows.append(Fact(id: "dns", label: text("ui.mini.net.dns"),
@@ -259,30 +260,11 @@ struct FloatingFigures {
         rows.append(Fact(id: "internet", label: text("ui.overview.internet"), value: ping))
         if let internet = LiveMonitor.internetTargets.first.map({ model.monitor.stats(for: $0) }), !internet.isEmpty {
             rows.append(Fact(id: "loss", label: text("ui.overview.loss"),
-                             value: "\(Self.number(internet.lossPercent, decimals: 1, text))%"))
+                             value: "\(Units.number(internet.lossPercent, decimals: 1, text))%"))
             rows.append(Fact(id: "jitter", label: text("ui.overview.jitter"),
-                             value: internet.jitter.map { Self.milliseconds($0, text) } ?? "—"))
+                             value: internet.jitter.map { Units.milliseconds($0, text) } ?? "—"))
         }
         return rows
-    }
-
-    // --- formatting, in the language chosen in Settings
-
-    static func number(_ value: Double, decimals: Int, _ text: Localizer) -> String {
-        value.formatted(.number.precision(.fractionLength(decimals)).locale(text.locale))
-    }
-
-    /// Mbit/s above one, kbit/s below, as the Windows monitor shows them.
-    static func rate(_ mbps: Double?, _ text: Localizer) -> String {
-        guard let mbps else { return "—" }
-        if mbps >= 1 {
-            return text("ui.mini.unit.mbps", ["value": .text(number(mbps, decimals: mbps < 10 ? 1 : 0, text))])
-        }
-        return text("ui.mini.unit.kbps", ["value": .text(number(mbps * 1000, decimals: 0, text))])
-    }
-
-    static func milliseconds(_ ms: Double, _ text: Localizer) -> String {
-        text("ui.mini.unit.ms", ["value": .text(number(ms, decimals: ms < 10 ? 1 : 0, text))])
     }
 }
 #endif

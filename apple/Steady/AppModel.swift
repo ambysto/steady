@@ -29,13 +29,25 @@ final class AppModel {
     private(set) var dns: CheckResult?
     private(set) var dnsRunning = false
     private(set) var bufferbloat: CheckResult?
-    private(set) var bufferbloatStage: BufferbloatTest.Stage?
+    /// The speed test (ADR-0023), which is check #14's run: the run as it goes, and the latest
+    /// result, kept across launches.
+    private(set) var speedLive: SpeedTest.Live?
+    private(set) var speedResult: SpeedTest.Result? = AppModel.savedSpeedResult()
+    /// Set by the floating bar when the test needs a confirmation: the main window's Overview asks.
+    var speedConfirmRequested = false
+
+    /// Hands the floating bar's request to one Overview: true only for the first that asks, so two
+    /// open windows do not both put the question.
+    func takeSpeedConfirmRequest() -> Bool {
+        defer { speedConfirmRequested = false }
+        return speedConfirmRequested
+    }
 
     /// Only the latest DNS run may show its result: the router can change while one is running.
     private var dnsRun = 0
     private var dnsTask: Task<Void, Never>?
     private var dnsTrigger: String?
-    private var bufferbloatTask: Task<Void, Never>?
+    private var speedTask: Task<Void, Never>?
     /// The Mac and the iPad may open several windows: measuring goes on while any of them is open.
     private var windows = 0
     private var measuring: Task<Void, Never>?
@@ -69,7 +81,7 @@ final class AppModel {
     #endif
 
     /// The checks the run goes through on this platform, in the order of docs/DIAGNOSTICS.md.
-    /// Bufferbloat (#14) loads the line, so it stays on the Diagnostics tab.
+    /// Bufferbloat (#14) loads the line, so it is not part of the run: the speed test measures it.
     static var checkSteps: [CheckRun.Step] {
         #if os(macOS)
         [.init(id: 2, key: "signal"), .init(id: 3, key: "interference"), .init(id: 5, key: "ping"),
@@ -205,25 +217,58 @@ final class AppModel {
         dnsTask = Task { await measureDNS() }
     }
 
-    /// The byte limit check #14 would use on the current path; nil in Low Data Mode.
-    var bufferbloatLimit: Int64? {
+    /// The byte limit the speed test (check #14) would use on the current path; nil in Low Data Mode.
+    var speedLimit: Int64? {
         BufferbloatTest.byteLimit(expensive: path?.isExpensive ?? false, constrained: path?.isConstrained ?? false)
     }
 
-    /// The current path is metered (mobile data, a personal hotspot): check #14 uses a lower limit.
-    var bufferbloatMetered: Bool { path?.isExpensive ?? false }
+    /// The current path is metered (mobile data, a personal hotspot): the test uses a lower limit.
+    var speedMetered: Bool { path?.isExpensive ?? false }
 
-    func runBufferbloat() {
-        guard bufferbloatTask == nil, let limit = bufferbloatLimit else { return }
-        bufferbloatTask = Task {
-            bufferbloatStage = .idle
-            let measurement = await BufferbloatTest.run(router: path?.routerIPv4, maxBytes: limit) { stage in
-                await MainActor.run { self.bufferbloatStage = stage }
-            }
-            bufferbloat = Bufferbloat.evaluate(measurement)
-            bufferbloatStage = nil
-            bufferbloatTask = nil
+    var speedRunning: Bool { speedTask != nil }
+
+    /// Ask first: every time on a metered path, otherwise until the user has said yes once.
+    var speedNeedsConfirmation: Bool {
+        SpeedTest.needsConfirmation(metered: speedMetered,
+                                    confirmedBefore: UserDefaults.standard.bool(forKey: Self.speedConfirmedKey))
+    }
+
+    /// Until when the test server asked not to be loaded again, if that is still ahead of `date`.
+    func speedBlockedUntil(at date: Date = .now) -> Date? {
+        speedResult?.retryUntil.flatMap { $0 > date ? $0 : nil }
+    }
+
+    func canRunSpeedTest(at date: Date = .now) -> Bool {
+        isConnected && speedLimit != nil && !speedRunning && speedBlockedUntil(at: date) == nil
+    }
+
+    /// Runs the speed test, which also gives check #14's result. `confirmed`: the user has just said
+    /// yes to the confirmation, so an unmetered path does not ask again.
+    func runSpeedTest(confirmed: Bool = false) {
+        if confirmed && !speedMetered {
+            UserDefaults.standard.set(true, forKey: Self.speedConfirmedKey)
         }
+        guard !isStoreScreenshots, canRunSpeedTest(), let limit = speedLimit else { return }
+        speedTask = Task {
+            speedLive = SpeedTest.Live()
+            let run = await BufferbloatTest.run(router: path?.routerIPv4, maxBytes: limit) { event in
+                await MainActor.run { self.speedLive?.apply(event) }
+            }
+            bufferbloat = Bufferbloat.evaluate(run.measurement)
+            let result = SpeedTest.result(from: run, at: .now)
+            speedResult = result
+            UserDefaults.standard.set(try? JSONEncoder().encode(result), forKey: Self.speedResultKey)
+            speedLive = nil
+            speedTask = nil
+        }
+    }
+
+    private static let speedResultKey = "speedtest.last"
+    private static let speedConfirmedKey = "speedtest.confirmed"
+
+    /// The latest result from an earlier launch; nil when there is none or it no longer decodes.
+    private static func savedSpeedResult() -> SpeedTest.Result? {
+        UserDefaults.standard.data(forKey: speedResultKey).flatMap { try? JSONDecoder().decode(SpeedTest.Result.self, from: $0) }
     }
 
     /// Runs the checks one after another and records each as it really starts and finishes: no
