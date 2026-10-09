@@ -22,8 +22,9 @@ per-address limit (HTTP 429/403) sooner.
    `AppModel.runSpeedTest()`, and a second start while one runs does nothing.
 2. **Live view.** The run reports `BufferbloatTest.Event`s: each phase's start; the rate over about the
    last second (`LiveRate`), read from the load's byte total on a fixed 0.25 s beat until the load
-   ends; and each ping round's Internet reply. `SpeedTest.Live` turns them into what the card shows
-   while it runs, laid out like speed.cloudflare.com's top section: download and upload as large
+   ends; each ping round's Internet reply; and, when a direction ends, its figure as the result will
+   show it (`SpeedTest.figure`), so the figure does not change when the run ends. `SpeedTest.Live`
+   turns them into what the card shows while it runs, laid out like speed.cloudflare.com's top section: download and upload as large
    figures over their rate charts, latency, jitter and packet loss, and a segmented progress bar.
    The test server's location is read from the replies (`colo`, else the end of `CF-RAY`).
 3. **The speed figure is the rate after the ramp.** It is the bytes moved between the first
@@ -43,7 +44,10 @@ per-address limit (HTTP 429/403) sooner.
    is due it opens the main window's Overview, which asks.
 5. **The latest result persists** as JSON in `UserDefaults` (`speedtest.last`). One that no longer
    decodes is ignored. While the server's wait lasts, the buttons are disabled and the card counts
-   down.
+   down. The result also keeps the run's check #14 measurement, and at launch `Bufferbloat.evaluate`
+   turns it back into the Diagnostics result, which then says when it was measured: the two results
+   of one run come back together. A result saved before that has no measurement and brings back
+   only the speed test.
 6. **On the floating bar** the button sits in the tube right after the state dot, next to the Scan
    bulb.
    - Idle, it shows a gauge.

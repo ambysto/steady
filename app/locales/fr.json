@@ -996,6 +996,7 @@
   "ui.speed.title": "Test de débit",
   "ui.speed.start": "Tester le débit",
   "ui.speed.again": "Tester à nouveau",
+  "ui.speed.confirm_run": "Mesurer",
   "ui.speed.idle_body": "Débit descendant, débit montant et ping, mesurés avec speed.cloudflare.com en 30 secondes environ. La même mesure évalue aussi la latence en charge (Diagnostic).",
   "ui.speed.running.idle": "Mesure du ping…",
   "ui.speed.running.download": "Mesure du débit descendant…",

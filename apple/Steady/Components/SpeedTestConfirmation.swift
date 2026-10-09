@@ -18,7 +18,8 @@ private struct SpeedTestConfirmation: ViewModifier {
 
     func body(content: Content) -> some View {
         content.confirmationDialog(title, isPresented: $isPresented, titleVisibility: .visible) {
-            Button(text(model.speedMetered ? "ui.diag.bufferbloat_run_metered" : "ui.diag.bufferbloat_run")) {
+            // A short label: an iPad popover cuts a long one, and the message already says how much data.
+            Button(text("ui.speed.confirm_run")) {
                 model.runSpeedTest(confirmed: true)
             }
             Button(text("ui.sheet.cancel"), role: .cancel) {}

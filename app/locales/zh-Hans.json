@@ -996,6 +996,7 @@
   "ui.speed.title": "测速",
   "ui.speed.start": "开始测速",
   "ui.speed.again": "重新测速",
+  "ui.speed.confirm_run": "测量",
   "ui.speed.idle_body": "使用 speed.cloudflare.com 测量下载、上传和延迟，约需 30 秒。同一次测量也会测出负载下的延迟（诊断）。",
   "ui.speed.running.idle": "正在测量延迟…",
   "ui.speed.running.download": "正在测量下载…",

@@ -51,12 +51,15 @@ public enum SpeedTest {
         /// HTTP status when the test server refused a direction, and until when it asked to wait.
         public var refusedStatus: Int?
         public var retryUntil: Date?
+        /// The run's check #14 measurement, so the Bufferbloat result comes back with the speed test's
+        /// after a relaunch. Nil in a result saved before it was kept.
+        public var measurement: Bufferbloat.Measurement?
 
         public init(measuredAt: Date, downloadMbps: Double? = nil, uploadMbps: Double? = nil,
                     downloadCapped: Bool = false, uploadCapped: Bool = false, idle: Latency? = nil,
                     duringDownload: Latency? = nil, duringUpload: Latency? = nil, lossPercent: Double? = nil,
                     downloadSeries: [Point]? = nil, uploadSeries: [Point]? = nil, server: String? = nil,
-                    refusedStatus: Int? = nil, retryUntil: Date? = nil) {
+                    refusedStatus: Int? = nil, retryUntil: Date? = nil, measurement: Bufferbloat.Measurement? = nil) {
             self.measuredAt = measuredAt
             self.downloadMbps = downloadMbps
             self.uploadMbps = uploadMbps
@@ -71,6 +74,7 @@ public enum SpeedTest {
             self.server = server
             self.refusedStatus = refusedStatus
             self.retryUntil = retryUntil
+            self.measurement = measurement
         }
 
         /// At least one direction was measured.
@@ -103,7 +107,8 @@ public enum SpeedTest {
                       downloadSeries: download == nil ? nil : thinned(run.downloadSeries),
                       uploadSeries: upload == nil ? nil : thinned(run.uploadSeries),
                       server: run.server,
-                      refusedStatus: refusals.first?.refused, retryUntil: wait.map { date.addingTimeInterval($0) })
+                      refusedStatus: refusals.first?.refused, retryUntil: wait.map { date.addingTimeInterval($0) },
+                      measurement: measurement)
     }
 
     /// The direction's speed: the rate after the ramp, or the whole phase's when the load ended
@@ -159,6 +164,8 @@ extension SpeedTest {
         public private(set) var downloadSeries: [Point] = []
         public private(set) var uploadSeries: [Point] = []
         private var pings: [Stage: [Reply]] = [:]
+        /// Each ended direction's figure, as the result will show it (nil: it has none).
+        private var figures: [Stage: Double?] = [:]
 
         private struct Reply: Equatable, Sendable {
             let seconds: Double
@@ -182,12 +189,16 @@ extension SpeedTest {
             case .ping(let phase, let at, let ms):
                 if phase == stage { seconds = max(seconds, at) }
                 pings[phase, default: []].append(Reply(seconds: at, ms: ms))
+            case .figure(let phase, let mbps):
+                figures[phase] = .some(mbps)   // kept when nil: the direction ended without a figure
             }
         }
 
-        /// A direction's figure: the latest rate while it loads, the mean after the ramp once it has
-        /// ended (close to the result's steady rate, which arrives with the result), nil before.
+        /// A direction's figure: the latest rate while it loads, the result's figure once it has
+        /// ended (so it does not change when the result arrives), nil before. Without that figure,
+        /// the mean of the rates read after the ramp.
         public func mbps(_ direction: Stage) -> Double? {
+            if let figure = figures[direction] { return figure }
             let series = direction == .upload ? uploadSeries : downloadSeries
             if direction == stage { return series.last?.mbps }
             let steady = series.filter { $0.seconds >= BufferbloatTest.rampSeconds }.map(\.mbps)

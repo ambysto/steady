@@ -14,7 +14,7 @@ struct OverviewView: View {
                 PathStatusView(path: model.path, text: text)
             }
             CheckCard()
-            SpeedTestCard(confirming: $confirmingSpeed)
+            SpeedTestCard()
             WeekCard()
             Section {
                 ForEach(model.monitor.targets) { target in

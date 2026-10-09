@@ -5,7 +5,7 @@ import Foundation
 /// spec/diagnosis/bufferbloat.json holds the cases both implementations must agree on.
 public enum Bufferbloat {
     /// Ping samples to one target during a phase, in measuring order; nil = lost.
-    public struct Samples: Equatable, Sendable, Decodable {
+    public struct Samples: Equatable, Sendable, Codable {
         public var label: String
         public var samples: [Double?]
 
@@ -16,7 +16,7 @@ public enum Bufferbloat {
     }
 
     /// One phase of the measurement (app/bufferbloat.py Phase).
-    public struct Phase: Equatable, Sendable, Decodable {
+    public struct Phase: Equatable, Sendable, Codable {
         /// Per target, in the order the targets were given ("router" before "internet").
         public var rtts: [Samples]
         /// Load reached; nil while idle.
@@ -46,7 +46,7 @@ public enum Bufferbloat {
         }
     }
 
-    public struct Measurement: Equatable, Sendable, Decodable {
+    public struct Measurement: Equatable, Sendable, Codable {
         public var idle: Phase
         public var download: Phase
         public var upload: Phase

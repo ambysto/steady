@@ -996,6 +996,7 @@
   "ui.speed.title": "Test de velocidad",
   "ui.speed.start": "Medir velocidad",
   "ui.speed.again": "Medir de nuevo",
+  "ui.speed.confirm_run": "Medir",
   "ui.speed.idle_body": "Descarga, subida y ping, medidos con speed.cloudflare.com en unos 30 segundos. La misma prueba mide también la latencia bajo carga (Diagnóstico).",
   "ui.speed.running.idle": "Midiendo el ping…",
   "ui.speed.running.download": "Midiendo la descarga…",

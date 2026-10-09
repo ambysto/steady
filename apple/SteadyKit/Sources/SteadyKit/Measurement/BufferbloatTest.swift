@@ -17,6 +17,8 @@ public enum BufferbloatTest {
         case rate(Stage, seconds: Double, mbps: Double)
         /// One round's reply from the Internet target; nil when it was lost.
         case ping(Stage, seconds: Double, ms: Double?)
+        /// A direction has ended: its figure, as the result will show it (`SpeedTest.figure`).
+        case figure(Stage, mbps: Double?)
     }
 
     /// What a run measured: check #14's measurement, and each direction's rate after the ramp
@@ -82,8 +84,10 @@ public enum BufferbloatTest {
         }.samples)
         await events(.stage(.download))
         let download = await loaded(targets, stage: .download, maxBytes: maxBytes, events: events)
+        await events(.figure(.download, mbps: SpeedTest.figure(download.phase, steady: download.steadyMbps)))
         await events(.stage(.upload))
         let upload = await loaded(targets, stage: .upload, maxBytes: maxBytes, events: events)
+        await events(.figure(.upload, mbps: SpeedTest.figure(upload.phase, steady: upload.steadyMbps)))
         return Run(measurement: Bufferbloat.Measurement(idle: idle, download: download.phase, upload: upload.phase),
                    downloadSteadyMbps: download.steadyMbps, uploadSteadyMbps: upload.steadyMbps,
                    downloadSeries: download.series, uploadSeries: upload.series,

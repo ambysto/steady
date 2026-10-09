@@ -136,11 +136,23 @@ struct SpeedTestTests {
         #expect((try? JSONDecoder().decode(SpeedTest.Result.self, from: Data("{\"old\":1}".utf8))) == nil)
     }
 
+    @Test func theBufferbloatResultComesBackWithTheSpeedTest() throws {
+        let measurement = Bufferbloat.Measurement(idle: phase(Array(repeating: 20, count: 20)),
+                                                  download: phase(Array(repeating: 90, count: 40), mbps: 700),
+                                                  upload: phase([30, nil] + Array(repeating: 25, count: 38), mbps: 650))
+        let run = BufferbloatTest.Run(measurement: measurement, downloadSteadyMbps: 706, uploadSteadyMbps: 702)
+        let saved = try JSONEncoder().encode(SpeedTest.result(from: run, at: date))
+        let restored = try JSONDecoder().decode(SpeedTest.Result.self, from: saved)
+        #expect(restored.measurement == measurement)
+        #expect(restored.measurement.map(Bufferbloat.evaluate) == Bufferbloat.evaluate(measurement))
+    }
+
     @Test func aResultSavedBeforeTheChartsStillDecodes() throws {
         let saved = #"{"measuredAt":800000000,"downloadMbps":763,"uploadMbps":705,"downloadCapped":false,"uploadCapped":false,"idlePingMs":23,"loadedPingMs":68}"#
         let result = try JSONDecoder().decode(SpeedTest.Result.self, from: Data(saved.utf8))
         #expect(result.downloadMbps == 763)
         #expect(result.downloadSeries == nil)
+        #expect(result.measurement == nil)
     }
 
     @Test func confirmationIsAskedOnceExceptOnAMeteredPath() {
@@ -177,5 +189,18 @@ struct SpeedTestLiveTests {
         #expect(live.mbps(.download) == 600)   // ended: the mean after the ramp
         #expect(live.mbps(.upload) == nil)
         #expect(live.downloadSeries.count == 3)
+    }
+
+    @Test func anEndedDirectionShowsTheResultsFigure() {
+        var live = SpeedTest.Live()
+        live.apply(.stage(.download))
+        live.apply(.rate(.download, seconds: 3, mbps: 650))
+        live.apply(.rate(.download, seconds: 9, mbps: 700))
+        live.apply(.figure(.download, mbps: 706))
+        live.apply(.stage(.upload))
+        #expect(live.mbps(.download) == 706)   // not the rates' mean, so nothing changes when the result comes
+        live.apply(.rate(.upload, seconds: 3, mbps: 0.4))
+        live.apply(.figure(.upload, mbps: nil))   // under 1 Mbit/s: the result has no figure either
+        #expect(live.mbps(.upload) == nil)
     }
 }

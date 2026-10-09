@@ -998,6 +998,7 @@
   "ui.speed.title": "Speed test",
   "ui.speed.start": "Test speed",
   "ui.speed.again": "Test again",
+  "ui.speed.confirm_run": "Measure",
   "ui.speed.idle_body": "Download, upload and ping, measured with speed.cloudflare.com in about 30 seconds. The same run also measures latency under load (Diagnostics).",
   "ui.speed.running.idle": "Measuring ping…",
   "ui.speed.running.download": "Measuring download…",
