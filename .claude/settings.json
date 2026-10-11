@@ -1,0 +1,53 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(swift build:*)",
+      "Bash(swift test:*)",
+      "Bash(/opt/homebrew/bin/python3.12 -m unittest:*)",
+      "Bash(python3.12 -m unittest:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch --show-current)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh auth status)",
+      "Bash(gh api user --jq .login)"
+    ],
+    "deny": [
+      "Bash(sudo:*)",
+      "Bash(kill -9:*)",
+      "Bash(kill -KILL:*)",
+      "Bash(pkill:*)",
+      "Bash(killall:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(rm -rf $HOME:*)",
+      "Bash(rm -rf /Users:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --tags:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Bash(gh auth switch:*)",
+      "Bash(networksetup:*)",
+      "Bash(pmset:*)",
+      "Bash(tccutil:*)",
+      "Bash(csrutil:*)",
+      "Bash(diskutil erase:*)",
+      "Bash(xcrun altool:*)",
+      "Bash(xcrun notarytool:*)",
+      "Bash(xcrun simctl delete:*)",
+      "Bash(xcrun simctl erase:*)",
+      "Bash(apple/scripts/release.sh:*)",
+      "Bash(./apple/scripts/release.sh:*)",
+      "Bash(bash apple/scripts/release.sh:*)",
+      "Bash(xcodebuild -exportArchive:*)",
+      "Bash(xcodebuild:* -exportArchive:*)"
+    ]
+  }
+}
