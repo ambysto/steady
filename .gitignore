@@ -14,7 +14,9 @@ dist/
 build/
 
 # Local tool settings (machine paths)
-.claude/
+.claude/*
+!.claude/settings.json
+CLAUDE.local.md
 
 # Editors / OS
 .vscode/
