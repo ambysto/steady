@@ -47,7 +47,7 @@
       "Bash(./apple/scripts/release.sh:*)",
       "Bash(bash apple/scripts/release.sh:*)",
       "Bash(xcodebuild -exportArchive:*)",
-      "Bash(xcodebuild:* -exportArchive:*)"
+      "Bash(xcodebuild * -exportArchive *)"
     ]
   }
 }
