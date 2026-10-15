@@ -423,11 +423,26 @@ function setBackdrop(url, sharp = null) {
     if (sharp && JPEG_URL.test(sharp)) root.style.setProperty("--behind", `url("${sharp}")`);
     else root.style.removeProperty("--behind");
     root.dataset.glass = "";
+    delete root.dataset.rim;
   } else {
     for (const name of ["--backdrop", "--behind", "--bar-w"]) root.style.removeProperty(name);
     delete root.dataset.glass;
   }
 }
 
-window.steadyMini = { setActive, setBackdrop };
+/** The solid levels (Off, Low, High) on the bar: the screen behind the window, unblurred, for the
+ *  sliver between its smooth shapes and its cut (the shell refreshes it now and then), or null. */
+function setRim(sharp) {
+  const root = document.documentElement;
+  if (root.dataset.glass !== undefined) return;
+  if (sharp && JPEG_URL.test(sharp)) {
+    root.style.setProperty("--behind", `url("${sharp}")`);
+    root.dataset.rim = "";
+  } else {
+    root.style.removeProperty("--behind");
+    delete root.dataset.rim;
+  }
+}
+
+window.steadyMini = { setActive, setBackdrop, setRim };
 start();

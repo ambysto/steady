@@ -28,3 +28,22 @@ The floating monitor (`web/mini.html`, opened by `app/desktop.py`) should look l
 - The cost is one small capture and blur per second (about 15 to 30 ms of one core for the bar or the table), only while the window is open with Glass.
 - `PRIVACY.md` states that the app reads the pixels behind this window, only to draw it, and keeps them in memory.
 - If pywebview ever hosts WebView2 in a way DWM backdrops reach (visual hosting), the Windows acrylic can replace this without changing the page: it only needs to stop receiving the backdrop.
+
+## Amendment (2026-10-15): the bar's rim in the solid levels
+
+The one-line bar is cut to its thermometer outline with a window region, which has no soft edge.
+With Glass the shapes are drawn 1.5 px inside the cut and the sliver between shows the unblurred
+capture, so the edge blends into the screen. In Off, Low and High the shapes filled the cut, and the
+region's stair-stepped outline showed against the desktop (the owner saw it on the bulb's ring and
+the tube's ends).
+
+1. **The solid levels get the same rim.** `grab_behind` leaves the window out of captures for one
+   composed frame (`SetWindowDisplayAffinity`, then `DwmFlush`), copies its area and puts it back in
+   captures at once. The page gets that picture unblurred (`setRim`), shows it in the sliver and
+   draws the shapes inside it, as with Glass. Without a picture (before Windows 10 2004, or before the
+   first one arrives) the shapes fill the cut as before.
+2. **Rarely.** Only for the bar, when it is shown, moved, resized or switched to a solid level, and
+   at most every 10 s otherwise; an unchanged picture is not sent again.
+3. **Consequences.** On its own screen the window never disappears; a screen recording or screen
+   sharing can miss the bar for that one frame. What scrolls behind the bar shows in its 1.5 px rim
+   up to 10 s late. `PRIVACY.md` says that the solid levels also read the pixels behind the bar.
