@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **Speed test on Windows** ([ADR-0024](docs/adr/0024-windows-speed-test.md), as the Apple app has had since 0.8.1). A "Speed test" card on the Overview is laid out like speed.cloudflare.com: download and upload as large figures over live rate charts, latency and jitter while idle and during each direction, packet loss, and a segmented bar for ping, download and upload while it runs. The result keeps the charts, the test server's location (e.g. HKG) and when it was measured, and comes back after a restart. It is check #14's run: the Diagnostics Bufferbloat card starts the same measurement, shows its result from the same run (also after a restart, with when it was measured), and the line is loaded once. The figures are the rate after the 2 s ramp over 4 connections, as on Apple; a direction that hit the 1 GB limit reads "at least", one under 1 Mbit/s or refused has no figure. On Wi‑Fi or Ethernet it runs without a question; on mobile data (a mobile broadband adapter) it asks every time and each direction stops at 250 MB, and the server refuses a run there without that yes. When the test server refuses (HTTP 429/403) the card says when to try again and the buttons wait. On the floating bar a gauge after the state dot starts it, fills a ring while it runs, then shows the download figure for 3 hours; a click opens the result on the Overview, which also asks the question on mobile data. The bar is 330 px wide (was 290). The speed test's texts no longer name the test server (also in the Apple app, which shares them). New `GET`/`POST /api/speedtest` (`app/speedtest.py`); no new network endpoint.
+
+### Removed
+- `ui.diag.measure` from all 7 catalogs: the Bufferbloat card's question is now the speed test's (`ui.speed.confirm_run`).
+
 ## [0.8.1] - 2026-10-09
 
 Apple app only; Windows stays at 0.8.0. The Mac gets a floating monitor, and the Mac, iPhone and iPad get a speed test on the Overview that shows download, upload, latency, jitter and packet loss as it runs. The Apple app's version now follows this changelog (it was 0.1.0).

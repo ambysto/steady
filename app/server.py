@@ -76,6 +76,9 @@ def _jsonable(value: Any) -> Any:
 
 # --- background jobs --------------------------------------------------------------------
 
+# Check #14 kept from a speed test adds its suggestions (router SQM) for this long.
+BUFFERBLOAT_SUGGEST_S = 7 * 86400
+
 class Jobs:
     """Slow work (diagnostics ~8 s, tweak reads ~11 s, UAC waits) runs off the request thread.
     `single` makes a second submit of the same key return the running job instead of a new one."""
@@ -148,7 +151,9 @@ class Api:
                  elevate: Callable[[str, str], Any] | None = None,
                  actions: Any = None,
                  run_diagnostics: Callable[..., dict] | None = None,
-                 run_bufferbloat: Callable[[], dict] | None = None,
+                 run_speedtest: Callable[[Callable[[dict], None]], dict] | None = None,
+                 speedtest_store: Any = None,
+                 on_cellular: Callable[[], bool] | None = None,
                  clock: Callable[[], float] = time.time,
                  load_backup: Callable[[], dict] = config.load_backup,
                  autostart_status: Callable[[], Any] | None = None,
@@ -165,7 +170,7 @@ class Api:
         self._elevate = elevate or self._default_elevate
         self._actions = actions
         self._run_diagnostics = run_diagnostics or self._default_diagnostics
-        self._run_bufferbloat = run_bufferbloat or self._default_bufferbloat
+        self._run_speedtest = run_speedtest or self._default_speedtest
         self._measure_tweak = measure_tweak or self._default_measure_tweak
         self._network_id = network_id or self._default_network_id
         self._traffic = traffic      # app.traffic.Traffic, made on the first GET /api/traffic
@@ -176,7 +181,15 @@ class Api:
         # see about half the bandwidth, and a measured tweak would derive half the cap it should.
         self._line_lock = threading.Lock()
         self._tweak_cache: dict[str, Any] = {"states": None, "refreshed_at": None}
-        self._last_bufferbloat: list[dict] = []   # on-demand results are not saved as runs
+        # Check #14 is not saved as a run; its latest result comes from the speed test that measured it
+        # (ADR-0024), which is kept in the data folder, so it is there again after a restart.
+        if speedtest_store is None:
+            from . import speedtest
+            speedtest_store = speedtest.default_store()
+        self._speed_store = speedtest_store
+        self._on_cellular = on_cellular or self._default_on_cellular
+        self._speed_job: str | None = None
+        self._last_bufferbloat, self._last_bufferbloat_ts = self._saved_bufferbloat()
         self._autostart_status = autostart_status or self._default_autostart_status
         self._autostart_cache: tuple[float, dict] | None = None
         self._routes: list[tuple[str, re.Pattern, Callable]] = [
@@ -199,6 +212,8 @@ class Api:
             ("POST", re.compile(r"^/api/tweaks/(?P<tweak_id>[^/]+)$"), self.set_tweak),
             ("POST", re.compile(r"^/api/diagnostics$"), self.start_diagnostics),
             ("POST", re.compile(r"^/api/diagnostics/bufferbloat$"), self.start_bufferbloat),
+            ("GET", re.compile(r"^/api/speedtest$"), self.speedtest),
+            ("POST", re.compile(r"^/api/speedtest$"), self.start_speedtest),
             ("GET", re.compile(r"^/api/diagnostics/runs$"), self.diagnostic_runs),
             ("GET", re.compile(r"^/api/diagnostics/runs/(?P<run_id>\d{1,12})$"), self.diagnostic_run),
             ("GET", re.compile(r"^/api/jobs/(?P<job_id>[0-9a-f]{32})$"), self.job),
@@ -279,12 +294,64 @@ class Api:
         return {"run_id": run_id, "ts": report.ts, "worst": report.worst,
                 "results": [r.to_dict() for r in report.results]}
 
-    def _default_bufferbloat(self) -> dict:
-        from . import diagnostics
-        report = diagnostics.run_all(diagnostics.Context(self.storage), only={14})
-        results = [r.to_dict() for r in report.results]
-        self._last_bufferbloat = results
-        return {"ts": report.ts, "worst": report.worst, "results": results}
+    def _default_speedtest(self, progress: Callable[[dict], None]) -> dict:
+        """Check #14's run with the live view as the job's progress; returns the speed test's result and
+        check #14's, which the caller keeps (ADR-0024)."""
+        from . import bufferbloat, diagnostics, speedtest
+        limit = bufferbloat.METERED_MAX_BYTES if self._on_cellular() else bufferbloat.MAX_BYTES
+        live = speedtest.Live()
+        measured: list[Any] = []
+
+        sent = [0.0]
+
+        def on_event(event: tuple) -> None:
+            live.apply(event)
+            # Phase changes at once, the rest at most 5 times a second (rates and pings both: a refused
+            # or failed load has no rates, and its pings still move the bar).
+            now = time.monotonic()
+            if event[0] in ("stage", "ended") or now - sent[0] >= 0.2:
+                sent[0] = now
+                progress(live.snapshot())
+
+        def load() -> Any:
+            targets = {"internet": "1.1.1.1"}
+            gateway = ctx.get("gateway")
+            if gateway:
+                targets = {"router": gateway, **targets}
+            down, up = bufferbloat.real_loads(limit)
+            measured.append(bufferbloat.measure(bufferbloat.real_ping(), targets, down, up, max_bytes=limit,
+                                                events=on_event))
+            return measured[-1]
+
+        ctx = diagnostics.Context(self.storage, loaders={"bufferbloat": load})
+        progress(live.snapshot())
+        report = diagnostics.run_all(ctx, only={14})
+        check = [r.to_dict() for r in report.results]
+        speed = speedtest.result(measured[0], self._clock()) if measured else None
+        return {"ts": report.ts, "worst": report.worst, "results": check, "speed": speed,
+                "measurement": measured[0] if measured else None}
+
+    @staticmethod
+    def _default_on_cellular() -> bool:
+        """Whether the Internet route leaves by a mobile broadband adapter (WWAN). Unknown reads as no."""
+        try:
+            from . import traffic
+            route = winutil.internet_route_native("1.1.1.1")
+            row = traffic.interface_row(route["interface_index"]) if route else None
+            return bool(row) and row["kind"] == "cellular"
+        except Exception:
+            return False
+
+    def _saved_bufferbloat(self) -> tuple[list[dict], float | None]:
+        """Check #14's result kept with the latest speed test, and when it was measured."""
+        try:
+            data = self._speed_store.load()
+        except Exception:
+            return [], None
+        check, ts = data.get("check"), data.get("check_ts")
+        if not (isinstance(check, list) and all(isinstance(c, dict) for c in check)):
+            return [], None
+        return check, ts if isinstance(ts, (int, float)) else None
 
     def _actions_obj(self) -> Any:
         if self._actions is None:
@@ -378,7 +445,8 @@ class Api:
         out = suggestions.build(self.storage, self._clock(), tweak_states, meta)
         from .diagnostics import CHECKS
         out["checks_total"] = len(CHECKS)   # "Runs N checks", before the first run
-        if self._last_bufferbloat:
+        ts = self._last_bufferbloat_ts
+        if self._last_bufferbloat and ts is not None and self._clock() - ts < BUFFERBLOAT_SUGGEST_S:
             extra = suggestions.suggest(self._last_bufferbloat, tweak_states, suggestions.done_steps(self.storage, self._clock()), meta)
             known = {(i["kind"], i["id"]) for i in out["items"]}
             out["items"] = sorted(out["items"] + [i for i in extra if (i["kind"], i["id"]) not in known],
@@ -487,11 +555,55 @@ class Api:
                                 progress=True)
 
     def start_bufferbloat(self, **_: Any) -> dict:
-        """Generates real traffic (~30 s), so only on explicit request; the result is not stored as a run."""
-        def work() -> dict:
+        """Check #14 is the speed test's run (ADR-0024): the same job, never a second load."""
+        return self.start_speedtest(body={})
+
+    def speedtest(self, **_: Any) -> dict:
+        """The latest speed test (kept across restarts), whether starting one asks first (on mobile data), the
+        check #14 result of the same run, and the running job, if any."""
+        from . import speedtest
+        last, _m = self._speed_store.last()
+        job = self.jobs.get(self._speed_job) if self._speed_job else None
+        return {"last": last, "ask": speedtest.needs_confirmation(self._on_cellular()),
+                "bufferbloat": self._last_bufferbloat[0] if self._last_bufferbloat else None,
+                "bufferbloat_ts": self._last_bufferbloat_ts,
+                "job": job["id"] if job and job["status"] == "running" else None, "now": self._clock()}
+
+    def start_speedtest(self, body: Any = None, **_: Any) -> dict:
+        """Generates real traffic (~30 s, up to ~2 GB; 500 MB on mobile data), so only on explicit request.
+        On mobile data every run needs {"confirmed": true} (409 without it). While the test server's wait
+        from the last run lasts, it refuses (409). {"join": true} only follows the
+        run going now and never starts one (409 when none is): a page that saw a run elsewhere must not
+        start a new one because it ended in the meantime."""
+        from . import speedtest
+        if isinstance(body, dict) and body.get("join") is True:
+            job = self.jobs.get(self._speed_job) if self._speed_job else None
+            if job is None or job["status"] != "running":
+                raise ApiError(409, "no speed test is running")
+            return job
+        confirmed = isinstance(body, dict) and body.get("confirmed") is True
+        if speedtest.needs_confirmation(self._on_cellular()) and not confirmed:
+            raise ApiError(409, "confirmation needed")
+        last, _m = self._speed_store.last()
+        if last and (last.get("retry_until") or 0) > self._clock():
+            raise ApiError(409, "the test server asked to wait")
+
+        def work(progress: Callable[[dict], None]) -> dict:
             with self._line_lock:
-                return self._run_bufferbloat()
-        return self.jobs.submit("bufferbloat", work, single="bufferbloat", sync=self._sync)
+                out = self._run_speedtest(progress)
+            measurement = out.pop("measurement", None)
+            self._last_bufferbloat = out.get("results") or []
+            self._last_bufferbloat_ts = out.get("ts") or self._clock()
+            if out.get("speed") is not None and measurement is not None:
+                try:
+                    self._speed_store.save(out["speed"], measurement, self._last_bufferbloat,
+                                           self._last_bufferbloat_ts)
+                except OSError as exc:   # the run stands; only keeping it across a restart failed
+                    log.warning("could not keep the speed test result: %r", exc)
+            return out
+        job = self.jobs.submit("speedtest", work, single="speedtest", sync=self._sync, progress=True)
+        self._speed_job = job["id"]
+        return job
 
     def set_tweak(self, tweak_id: str, body: Any, **_: Any) -> dict:
         tweak_id = unquote(tweak_id)

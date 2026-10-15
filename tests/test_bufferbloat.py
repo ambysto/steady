@@ -418,8 +418,10 @@ class ServerRouteTests(unittest.TestCase):
         from app.server import Api, ApiError
         from app.storage import Storage
         with Storage() as db:
-            api = Api(monitor=None, storage=db, run_bufferbloat=lambda: {"worst": "ok", "results": []},
-                      sync_jobs=True)
+            api = Api(monitor=None, storage=db, run_speedtest=lambda progress: {"worst": "ok", "results": []},
+                      on_cellular=lambda: False, sync_jobs=True)
+            status, job = api.handle("POST", "/api/speedtest", {}, {})
+            self.assertEqual((status, job["status"], job["result"]["worst"]), (200, "done", "ok"))
             status, job = api.handle("POST", "/api/diagnostics/bufferbloat", {}, {})
             self.assertEqual((status, job["status"], job["result"]["worst"]), (200, "done", "ok"))
             with self.assertRaises(ApiError) as cm:

@@ -60,6 +60,21 @@ html:not([data-glass]) .minibar .optimize .ring { width: 32px; height: 32px; }
 .minibar .dot { width: 6px; height: 6px; margin-right: 2px; }
 .minibar .icon.down { color: #6cb4ff; } .minibar .icon.up { color: #c99bff; } .minibar .icon.ping { color: #5fd68a; }
 .minibar .optimize.issues { color: #ffb340; } .minibar .optimize.good { color: #5fd68a; }
+/* The speed test in the tube: a gauge in a ring; the ring fills while it runs; then the download figure. */
+.minibar .speed { position: relative; display: grid; place-items: center; width: 34px; height: 18px; padding: 0; flex: none;
+  border: 0; border-radius: 9px; background: none; color: #6cb4ff; cursor: default; }
+.minibar .speed:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
+.minibar .speed:disabled { opacity: .45; }
+.minibar .speed .ring { position: absolute; left: 8px; top: 0; width: 18px; height: 18px; transform: rotate(-90deg);
+  fill: none; stroke-width: 1.5; }
+.minibar .speed .ring .track { stroke: rgba(255, 255, 255, .22); }
+.minibar .speed .ring .fill { stroke: currentColor; stroke-dasharray: 0 100; stroke-linecap: round; display: none;
+  transition: stroke-dasharray var(--duration) linear; }
+.minibar .speed.running .ring .fill { display: inline; }
+.minibar .speed .glyph { width: 11px; height: 11px; stroke-width: 2.2; }
+.minibar .speed .figure { font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+.minibar .speed.done .ring, .minibar .speed.done .glyph { display: none; }
+.minibar .speed.problem { color: #ffb340; }
 .minibar .optimize.busy .ring .track { stroke: rgba(255, 255, 255, .14); }
 .arrow { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; flex: none; border: 0; border-radius: 50%;
   background: var(--accent); color: var(--accent-text); cursor: default; }

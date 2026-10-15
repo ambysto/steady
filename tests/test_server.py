@@ -645,9 +645,10 @@ class MeasuredTweakApiTests(ServerTestCase):
             seen.append(self.api._line_lock.locked())
             return self.measurements.pop(0) if self.measurements else None
         self.api._measure_tweak = measure
-        self.api._run_bufferbloat = lambda: seen.append(self.api._line_lock.locked()) or {"results": []}
+        self.api._run_speedtest = lambda progress: seen.append(self.api._line_lock.locked()) or {"results": []}
         self.req("POST", "/api/tweaks/upload_shaping", {"enable": True})
-        self.req("POST", "/api/diagnostics/bufferbloat", {})
+        self.api._on_cellular = lambda: False
+        self.req("POST", "/api/speedtest", {})
         self.assertEqual(seen, [True, True, True])       # before, after, and check #14: each holds the lock
 
     def test_an_enabled_limit_without_its_measurement_is_flagged(self):
