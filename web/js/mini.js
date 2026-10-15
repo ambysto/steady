@@ -3,6 +3,8 @@
 // the apps that hold connections, and the connection's basic facts.
 // Optimize only runs the regular check (read-only). When it finds what the app can fix, "Fix N"
 // opens the result in the main window, which lists the changes and asks before any (ADR-0020).
+// The speed test (ADR-0024) runs from the bar once the user has said yes in the main window; a
+// result opens there too.
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
 // Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
 // shell how see-through the window is (window.pywebview.api, kept in mini.json).
@@ -21,11 +23,14 @@ const STATS_WINDOW_S = 60;    // loss and jitter on the Network tab
 const CHECK_EVERY_MS = 30000; // the latest check's summary, for the Optimize button
 const CHECK_FRESH_S = 3 * 3600;   // like the Overview: an older result may no longer hold
 const GOOD_SHOWN_MS = 8000;   // "All good" after a check, then back to "Optimize"
+const SPEED_EVERY_MS = 30000; // the latest speed test, for its button
 
 const view = { metric: "down", tab: "apps", active: true, mode: "bar" };
 // idle | busy | fix | issues | good. summary: GET /api/suggestions -> check (fresh runs only)
 const optimize = { state: "idle", summary: null, progress: null, goodUntil: 0, loadedAt: 0 };
 const data = { traffic: null, live: null, state: null, offset: 0, reachable: true };
+// GET /api/speedtest; running while a job is followed, live = its progress (app/speedtest.py Live)
+const speedTest = { last: null, confirmed: false, running: false, live: null, loadedAt: 0, now: 0, nowAt: 0, givenUp: null };
 let pollTimer = null;
 let frame = null;
 
@@ -141,6 +146,7 @@ function renderBar() {
   $("#bar-dot").className = `dot ${stateLevel()}`;
   $("#bar-dot").title = $("#state-text").textContent;
   renderOptimize();
+  renderSpeed();
 }
 
 // --- Optimize (the bar's button) ----------------------------------------------------------------
@@ -203,6 +209,80 @@ async function runOptimize() {
   }
   optimize.progress = null;
   renderOptimize();
+}
+
+// --- the speed test (the button in the tube) -----------------------------------------------------
+
+const speedNow = () => speedTest.now ? speedTest.now + (Date.now() - speedTest.nowAt) / 1000 : Date.now() / 1000;
+const mbps = v => v === null || v === undefined ? "—" : `${number(v, v < 10 ? 1 : 0)} ${t("ui.speed.unit.mbps")}`;
+const ms = v => v === null || v === undefined ? "—" : `${number(v, v < 100 && Math.round(v) !== v ? 1 : 0)} ${t("ui.speed.unit.ms")}`;
+
+/** running | done (the download figure) | problem (a recent run without one) | idle (the gauge). */
+function speedState() {
+  const last = speedTest.last;
+  if (speedTest.running) return "running";
+  if (!last || speedNow() - last.measured_at >= CHECK_FRESH_S) return "idle";
+  if (last.download_mbps !== null && last.download_mbps !== undefined) return "done";
+  return last.refused_status ? "idle" : "problem";   // refused: the gauge, with the wait while it lasts
+}
+
+function speedWait() {
+  const until = speedTest.last?.retry_until;
+  return until ? Math.max(0, until - speedNow()) : 0;
+}
+
+function renderSpeed() {
+  const button = $("#speed");
+  const { last, live } = speedTest;
+  const state = speedState();
+  const wait = state === "idle" ? speedWait() : 0;
+  button.className = `speed ${state}`;
+  button.disabled = state === "running" || wait > 0;
+  $("#speed-ring").style.strokeDasharray = `${Math.round(100 * (live?.fraction || 0))} 100`;
+  $("#speed-figure").hidden = state !== "done";
+  $("#speed-figure").textContent = state === "done" ? number(last.download_mbps, last.download_mbps < 10 ? 1 : 0) : "";
+  $("#speed-glyph").setAttribute("href", state === "problem" ? "#i-alert" : "#i-gauge");
+  const label = state === "running" ? t(`ui.speed.running.${live?.stage || "idle"}`)
+    : state === "done" ? `${t("ui.speed.mini.result", { download: mbps(last.download_mbps), upload: mbps(last.upload_mbps),
+                                                       ping: ms(last.idle?.median_ms) })}\n${t("ui.speed.mini.open")}`
+    : wait > 0 ? t("ui.speed.refused", { minutes: Math.max(1, Math.ceil(wait / 60)) })
+    : state === "problem" ? `${t("ui.speed.failed")}\n${t("ui.speed.mini.open")}`
+    : t("ui.speed.mini.hint");
+  button.title = label;
+  button.setAttribute("aria-label", label);
+}
+
+async function loadSpeed() {
+  const got = await get("/api/speedtest");
+  Object.assign(speedTest, { last: got.last, confirmed: got.confirmed, loadedAt: Date.now(), now: got.now, nowAt: Date.now() });
+  // Started in the main window: follow it, never start one (join), unless the bar gave up on it.
+  if (got.job && !speedTest.running && got.job !== speedTest.givenUp) followSpeed(got.job);
+}
+
+async function followSpeed(jobId = null) {
+  Object.assign(speedTest, { running: true, live: null });
+  renderSpeed();
+  try {
+    await runJob("/api/speedtest", jobId ? { join: true } : {}, { interval: 500, timeout: 300000,
+      onProgress: live => { if (live) { speedTest.live = live; renderSpeed(); } } });
+  } catch (err) {   // the button goes back to the gauge; the main window says why
+    if (jobId && err?.status === 0) speedTest.givenUp = jobId;
+  }
+  Object.assign(speedTest, { running: false, live: null });
+  await loadSpeed().catch(() => {});
+  renderSpeed();
+}
+
+function runSpeed() {
+  const state = speedState();
+  if (state === "running") return;
+  // A result, or the first question, is shown in the main window: the bar has no room to explain
+  // how much data the test uses.
+  if (state === "done" || state === "problem" || !speedTest.confirmed) {
+    window.pywebview?.api?.open_speed?.(state === "idle");
+    return;
+  }
+  followSpeed();
 }
 
 function renderHeader() {
@@ -321,6 +401,7 @@ async function poll() {
     if (state) { data.state = state; lastState = Date.now(); }
     data.offset = traffic.ts - Date.now() / 1000;
     if (Date.now() - optimize.loadedAt > CHECK_EVERY_MS && optimize.state !== "busy") await loadCheck();
+    if (Date.now() - speedTest.loadedAt > SPEED_EVERY_MS && !speedTest.running) await loadSpeed();
   } catch { /* the header says the monitor is offline */ }
   render();
   if (view.active) pollTimer = setTimeout(poll, POLL_MS);
@@ -376,6 +457,7 @@ async function start() {
   $("#expand").addEventListener("click", () => setMode("full"));
   $("#collapse").addEventListener("click", () => setMode("bar"));
   $("#optimize").addEventListener("click", runOptimize);
+  $("#speed").addEventListener("click", runSpeed);
   $("#appearance").title = t("ui.mini.appearance");
   $("#transparency-choice [data-level=glass]").title = t("ui.mini.transparency.glass_hint");
   $("#appearance").addEventListener("click", () => {

@@ -346,10 +346,21 @@ class MiniWindowTests(unittest.TestCase):
         self.assertEqual(scripts, ["window.steadyApp && window.steadyApp.openResult()"])
         self.assertIn("show", self.shell.window.calls)
 
+    def test_the_speed_button_on_the_bar_opens_the_overview_and_asks_only_when_told(self):
+        self.shell.window = FakeWindow()
+        scripts = []
+        self.shell.window.evaluate_js = scripts.append
+        desktop.MiniBridge(self.shell).open_speed(True)
+        desktop.MiniBridge(self.shell).open_speed(0)
+        self.assertEqual(scripts, ["window.steadyApp && window.steadyApp.openSpeed(true)",
+                                   "window.steadyApp && window.steadyApp.openSpeed(false)"])
+        self.assertIn("show", self.shell.window.calls)
+
     def test_what_the_pages_may_call(self):
         bridge = desktop.MiniBridge(self.shell)
         self.assertEqual([n for n in dir(bridge) if not n.startswith("_")],
-                         ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "set_mode", "set_transparency"])
+                         ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "open_speed", "set_mode",
+                          "set_transparency"])
         self.assertEqual(bridge.get_mode(), "bar")
         self.assertEqual(bridge.get_transparency(), "glass")
         bridge.hide_mini()

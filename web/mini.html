@@ -10,12 +10,19 @@
 </head>
 <body>
 <!-- The floating monitor (app/desktop.py opens it frameless, always on top). Two forms of one
-     page: a one-line bar (html[data-mode=bar]: Optimize, download, upload, ping) and the full table
+     page: a one-line bar (html[data-mode=bar]: Optimize, the speed test, download, upload, ping) and the full table
      (speed of the Internet path, ping, apps with open connections, the connection's basic facts).
      Rendered by js/mini.js; text from app/locales. Same CSP as index.html: no inline script. -->
 <div class="minibar pywebview-drag-region">
   <div class="tube pywebview-drag-region">
     <span class="dot info" id="bar-dot"></span>
+    <!-- The speed test (ADR-0024): a gauge, a ring while it runs, then the download figure. -->
+    <button class="speed" id="speed" aria-label="Speed test">
+      <svg class="ring" viewBox="0 0 18 18" aria-hidden="true"><circle class="track" cx="9" cy="9" r="7.75"/>
+        <circle class="fill" id="speed-ring" cx="9" cy="9" r="7.75" pathLength="100"/></svg>
+      <svg class="icon glyph" aria-hidden="true"><use id="speed-glyph" href="#i-gauge"/></svg>
+      <span class="figure" id="speed-figure" hidden></span>
+    </button>
     <span class="stat"><svg class="icon down"><use href="#i-down"/></svg><span id="bar-down">—</span></span>
     <span class="stat"><svg class="icon up"><use href="#i-up"/></svg><span id="bar-up">—</span></span>
     <span class="stat"><svg class="icon ping"><use href="#i-pulse"/></svg><span id="bar-ping">—</span></span>
@@ -109,6 +116,7 @@
   <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
   <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
   <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h5l2-5 4 10 2-5h7"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-6"/></symbol>
 </svg>
 
 <script type="module" src="js/mini.js"></script>

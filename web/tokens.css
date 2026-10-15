@@ -74,6 +74,8 @@
   --shadow-control: 0 1px 2px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .08);
   --chart-router: #007aff;
   --chart-internet: #af52de;
+  --speed-down: #007aff;       /* the speed test: download blue, upload purple, as on the floating monitor */
+  --speed-up: #af52de;
 
   color-scheme: light;
 }
@@ -108,6 +110,8 @@
     --shadow-control: 0 1px 2px rgba(0, 0, 0, .4), 0 0 0 .5px rgba(255, 255, 255, .1);
     --chart-router: #0a84ff;
     --chart-internet: #bf5af2;
+    --speed-down: #0a84ff;
+    --speed-up: #bf5af2;
     color-scheme: dark;
   }
 }
@@ -141,6 +145,8 @@
   --shadow-control: 0 1px 2px rgba(0, 0, 0, .4), 0 0 0 .5px rgba(255, 255, 255, .1);
   --chart-router: #0a84ff;
   --chart-internet: #bf5af2;
+  --speed-down: #0a84ff;
+  --speed-up: #bf5af2;
   color-scheme: dark;
 }
 

@@ -216,7 +216,7 @@ SELFTEST_SIZE = (600, 760)
 # --- the floating monitor ----------------------------------------------------------------------
 
 MINI_SIZE = (340, 500)          # expanded: the full table
-BAR_SIZE = (290, 32)            # collapsed: one line, as long as its numbers need
+BAR_SIZE = (330, 32)            # collapsed: one line, as long as its numbers and the speed test need
 # The bar is shaped like a thermometer: a round bulb (Optimize) and a lower tube (the numbers).
 BULB = 32                       # diameter of the cut, the bar's full height (web/mini.css draws 1.5 px inside)
 TUBE = (24, 24)                 # where the tube's cut starts (under the bulb's edge) and its height
@@ -507,6 +507,9 @@ class MiniBridge:
     def open_result(self) -> None:
         self._shell.open_check_result()
 
+    def open_speed(self, ask: bool) -> None:
+        self._shell.open_speed_result(bool(ask))
+
 
 class MainBridge:
     """What the main window's page may call: open the floating monitor."""
@@ -737,6 +740,16 @@ class Desktop:
         if self.window is not None:
             try:
                 self.window.evaluate_js("window.steadyApp && window.steadyApp.openResult()")
+            except Exception as exc:
+                log.debug("main window not ready: %r", exc)
+
+    def open_speed_result(self, ask: bool) -> None:
+        """The bar's speed test: the main window shows the result, or asks the question first (the bar
+        has no room for it, and the user reads what the test uses before it moves any data)."""
+        self.show()
+        if self.window is not None:
+            try:
+                self.window.evaluate_js(f"window.steadyApp && window.steadyApp.openSpeed({'true' if ask else 'false'})")
             except Exception as exc:
                 log.debug("main window not ready: %r", exc)
 
