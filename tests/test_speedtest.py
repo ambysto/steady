@@ -113,9 +113,9 @@ class FigureTests(unittest.TestCase):
         self.assertEqual((len(thin), thin[0], thin[-1]), (st.MAX_POINTS, series[0], series[-1]))
         self.assertEqual(st.thinned(series[:10]), series[:10])
 
-    def test_confirmation_is_asked_once(self):
-        self.assertTrue(st.needs_confirmation(False))
-        self.assertFalse(st.needs_confirmation(True))
+    def test_only_mobile_data_asks(self):
+        self.assertTrue(st.needs_confirmation(True))
+        self.assertFalse(st.needs_confirmation(False))
 
 
 class LiveTests(unittest.TestCase):
@@ -178,14 +178,9 @@ class StoreTests(unittest.TestCase):
         self.assertEqual(evaluate_bufferbloat(restored), evaluate_bufferbloat(m))
         self.assertEqual(self.store.load()["check"], check)
 
-    def test_confirmation_is_remembered(self):
-        self.assertFalse(self.store.confirmed)
-        self.store.confirm()
-        self.assertTrue(st.Store(self.store.path).confirmed)
-
     def test_a_file_that_no_longer_decodes_is_ignored(self):
         self.store.path.write_text("{not json", encoding="utf-8")
-        self.assertEqual((self.store.last(), self.store.confirmed), ((None, None), False))
+        self.assertEqual(self.store.last(), (None, None))
         self.store.path.write_text('{"last": {"old": 1}, "measurement": {"idle": 3}}', encoding="utf-8")
         self.assertEqual(self.store.last(), (None, None))
         self.store.path.write_text('{"last": {"measured_at": 5}, "measurement": {"idle": 3}}', encoding="utf-8")
@@ -234,6 +229,14 @@ class EngineEventTests(unittest.TestCase):
         # the meter stopped with the load (1.5 s), before the pings ended (2.0 s)
         self.assertLess(max(s for s, _ in m.download.series), 1.8)
 
+    def test_the_loads_stop_at_the_limit_they_are_given(self):
+        from unittest import mock
+        seen = []
+        with mock.patch.object(bb, "http_download", lambda *a, **k: seen.append(k["max_bytes"]) or 0),                 mock.patch.object(bb, "http_upload", lambda *a, **k: seen.append(k["max_bytes"]) or 0):
+            for load in bb.real_loads(bb.METERED_MAX_BYTES) + bb.real_loads():
+                load(1, threading.Event())
+        self.assertEqual(seen, [250_000_000, 250_000_000, bb.MAX_BYTES, bb.MAX_BYTES])
+
     def test_without_events_the_loads_are_called_as_before(self):
         m = bb.measure(lambda a: 10.0, {"internet": "1.1.1.1"}, lambda s, e: 1_000_000, lambda s, e: 1_000_000,
                        idle_s=0.1, load_s=0.2, interval=0.1)
@@ -251,6 +254,7 @@ class ApiTests(unittest.TestCase):
         self.store = st.Store(Path(tmp.name) / "speedtest.json")
         self.now = [AT]
         self.runs = 0
+        self.cellular = [False]
         m = bb.Measurement(phase([20.0] * 20, name="idle"), phase([90.0] * 40, mbps=700, steady=706, name="download"),
                            phase([25.0] * 40, mbps=650, steady=702, name="upload"), "HKG")
         self.measurement = m
@@ -261,30 +265,38 @@ class ApiTests(unittest.TestCase):
             return {"ts": int(self.now[0]), "worst": "bad", "results": [evaluate_bufferbloat(m).to_dict()],
                     "speed": st.result(m, self.now[0]), "measurement": m}
         self.make = lambda: Api(monitor=None, storage=self.db, run_speedtest=run, speedtest_store=self.store,
-                                clock=lambda: self.now[0], sync_jobs=True)
+                                clock=lambda: self.now[0], on_cellular=lambda: self.cellular[0], sync_jobs=True)
         self.api = self.make()
 
-    def test_nothing_runs_before_the_user_says_yes_once(self):
+    def test_on_wifi_or_ethernet_it_runs_without_asking(self):
+        _, got = self.api.handle("GET", "/api/speedtest", {}, None)
+        self.assertFalse(got["ask"])
+        _, job = self.api.handle("POST", "/api/speedtest", {}, {})
+        self.assertEqual((job["status"], job["result"]["speed"]["download_mbps"], self.runs), ("done", 706, 1))
+        self.assertNotIn("measurement", job["result"])
+
+    def test_on_mobile_data_every_run_needs_a_yes(self):
         from app.server import ApiError
+        self.cellular[0] = True
+        _, got = self.api.handle("GET", "/api/speedtest", {}, None)
+        self.assertTrue(got["ask"])
         with self.assertRaises(ApiError) as cm:
             self.api.handle("POST", "/api/speedtest", {}, {})
         self.assertEqual((cm.exception.status, self.runs), (409, 0))
-        _, job = self.api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
-        self.assertEqual((job["status"], job["result"]["speed"]["download_mbps"], self.runs), ("done", 706, 1))
-        self.assertNotIn("measurement", job["result"])
-        _, job = self.api.handle("POST", "/api/speedtest", {}, {})     # remembered
-        self.assertEqual(self.runs, 2)
+        self.api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
+        with self.assertRaises(ApiError):              # not remembered: the next run asks again
+            self.api.handle("POST", "/api/speedtest", {}, {})
+        self.assertEqual(self.runs, 1)
 
     def test_the_result_and_check_14_come_back_after_a_restart(self):
         self.api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
         _, got = self.make().handle("GET", "/api/speedtest", {}, None)
-        self.assertEqual((got["last"]["download_mbps"], got["last"]["server"], got["confirmed"]), (706, "HKG", True))
+        self.assertEqual((got["last"]["download_mbps"], got["last"]["server"], got["ask"]), (706, "HKG", False))
         self.assertEqual(got["bufferbloat"]["id"], 14)
         self.assertIsInstance(got["bufferbloat"]["summary"], str)      # rendered for the UI
         self.assertIsNone(got["job"])
 
     def test_check_14_starts_the_same_run(self):
-        self.store.confirm()
         _, job = self.api.handle("POST", "/api/diagnostics/bufferbloat", {}, {})
         self.assertEqual((job["kind"], job["result"]["results"][0]["id"], self.runs), ("speedtest", 14, 1))
 
@@ -292,7 +304,6 @@ class ApiTests(unittest.TestCase):
         from app.server import ApiError
         refused = bb.Measurement(phase([10.0]), phase([None], mbps=0, refused=429, retry_after_s=600),
                                  phase([None], mbps=0, refused=429, retry_after_s=600))
-        self.store.confirm()
         self.store.save(st.result(refused, AT), refused, [])
         with self.assertRaises(ApiError) as cm:
             self.api.handle("POST", "/api/speedtest", {}, {})
@@ -303,7 +314,6 @@ class ApiTests(unittest.TestCase):
 
     def test_join_follows_a_running_test_and_never_starts_one(self):
         from app.server import ApiError
-        self.store.confirm()
         with self.assertRaises(ApiError) as cm:
             self.api.handle("POST", "/api/speedtest", {}, {"join": True})
         self.assertEqual((cm.exception.status, self.runs), (409, 0))
@@ -313,7 +323,6 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.runs, 1)
 
     def test_a_result_that_cannot_be_kept_still_ends_the_run(self):
-        self.store.confirm()
 
         def broken(*a, **k):
             raise PermissionError("held by another reader")

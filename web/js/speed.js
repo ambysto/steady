@@ -12,7 +12,7 @@ const PHASE_SEGMENTS = { idle: [0, 4], download: [4, 14], upload: [14, 24] };
 const LOAD_S = 10;
 
 /** Shared by every card on the page: the latest result, the run in progress, and who to redraw. */
-export const speed = { last: null, confirmed: false, bufferbloat: null, bufferbloatTs: null, live: null, running: false,
+export const speed = { last: null, ask: false, bufferbloat: null, bufferbloatTs: null, live: null, running: false,
                         now: 0, given_up: null };
 const listeners = new Set();
 
@@ -27,7 +27,7 @@ const changed = () => listeners.forEach(fn => { try { fn(); } catch (err) { cons
 /** Reads the latest result; when a run started elsewhere (the floating bar) is going, follows it. */
 export async function loadSpeed() {
   const got = await get("/api/speedtest");
-  Object.assign(speed, { last: got.last, confirmed: got.confirmed, bufferbloat: got.bufferbloat,
+  Object.assign(speed, { last: got.last, ask: got.ask, bufferbloat: got.bufferbloat,
                          bufferbloatTs: got.bufferbloat_ts, now: got.now, nowAt: Date.now() });
   // Join a run started elsewhere (the floating bar), unless this page already gave up waiting on it.
   if (got.job && !speed.running && got.job !== speed.given_up) follow({ join: true }, got.job);
@@ -44,12 +44,12 @@ export function waitLeft() {
 
 export const canRun = () => !speed.running && waitLeft() === 0;
 
-/** Asks the first time (the answer is remembered by the server), then runs and follows the job. */
+/** On mobile data asks every time (the server refuses without the yes); otherwise runs at once. */
 export async function runSpeedTest() {
   if (!canRun()) return false;
   let body = {};
-  if (!speed.confirmed) {
-    const ok = await confirmSheet({ title: t("ui.speed.title"), body: t("ui.diag.bufferbloat_confirm"),
+  if (speed.ask) {
+    const ok = await confirmSheet({ title: t("ui.speed.title"), body: t("ui.diag.bufferbloat_confirm_metered"),
                                     confirm: t("ui.speed.confirm_run"), cancel: t("ui.sheet.cancel"),
                                     symbol: "gauge", tile: "accent" });
     if (!ok) return false;
@@ -67,7 +67,6 @@ async function follow(body = {}, jobId = null) {
     // The line lock can hold a run back behind a measured tweak, hence the long wait.
     const result = await runJob("/api/speedtest", body, { interval: 250, timeout: 300000,
       onProgress: live => { if (live) { speed.live = live; changed(); } } });
-    speed.confirmed = true;
     if (result.speed) speed.last = result.speed;
     else toast(t("ui.speed.failed"), { bad: true });   // check #14 could not run: nothing was measured
     speed.bufferbloat = result.results?.[0] || speed.bufferbloat;

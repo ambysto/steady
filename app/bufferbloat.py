@@ -31,6 +31,9 @@ PING_TIMEOUT_MS = 900  # a ping lost under load waited at least this long
 # (It was 100 MB until 2026-10-07: every phase then read 80 Mbps on a line that uploads ~230.)
 MAX_BYTES = 1_000_000_000
 LOAD_S = 10.0
+# On mobile data each direction stops at this instead (500 MB in all), so a line above 200 Mbps reads
+# as capped: the result is then incomplete, never a false ok (as on Apple).
+METERED_MAX_BYTES = 250_000_000
 # The most a load phase can report: it stops at MAX_BYTES, so a faster line reads as this.
 LOAD_CEILING_MBPS = MAX_BYTES * 8 / LOAD_S / 1e6
 CHUNK = 64 * 1024
@@ -420,9 +423,9 @@ def upload_summary(m: Measurement, label: str = "internet") -> dict[str, float |
             "loss_pct": round(100.0 * (len(loaded) - len(got)) / len(loaded), 1)}
 
 
-def real_loads() -> tuple[Load, Load]:
-    return (lambda s, stop, meter=None: http_download(DOWN_URL, s, stop, meter=meter),
-            lambda s, stop, meter=None: http_upload(UP_URL, s, stop, meter=meter))
+def real_loads(max_bytes: int = MAX_BYTES) -> tuple[Load, Load]:
+    return (lambda s, stop, meter=None: http_download(DOWN_URL, s, stop, max_bytes=max_bytes, meter=meter),
+            lambda s, stop, meter=None: http_upload(UP_URL, s, stop, max_bytes=max_bytes, meter=meter))
 
 
 def real_ping() -> Ping:

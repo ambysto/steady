@@ -68,9 +68,9 @@ def figure(phase: Phase) -> float | None:
     return phase.steady_mbps if phase.steady_mbps is not None else phase.mbps
 
 
-def needs_confirmation(confirmed_before: bool) -> bool:
-    """Windows treats every connection as unmetered for now (intent decision 2): ask the first time only."""
-    return not confirmed_before
+def needs_confirmation(cellular: bool) -> bool:
+    """Ask only on mobile data, every time (intent decision 3): on Wi-Fi or Ethernet the test runs at once."""
+    return cellular
 
 
 # --- the result -----------------------------------------------------------------------------------
@@ -201,8 +201,8 @@ def measurement_from_dict(d: dict[str, Any]) -> Measurement:
 
 
 class Store:
-    """`speedtest.json` in the data folder: whether the user confirmed once, and the latest result with
-    the run's check #14 measurement. A file that does not decode reads as empty."""
+    """`speedtest.json` in the data folder: the latest result with the run's check #14 measurement. A file
+    that does not decode reads as empty."""
 
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -224,16 +224,6 @@ class Store:
         tmp = self.path.with_suffix(".tmp")
         tmp.write_text(json.dumps(data), encoding="utf-8")
         tmp.replace(self.path)
-
-    @property
-    def confirmed(self) -> bool:
-        return bool(self.load().get("confirmed"))
-
-    def confirm(self) -> None:
-        with self._lock:
-            data = self._read()
-            if not data.get("confirmed"):
-                self._save({**data, "confirmed": True})
 
     def last(self) -> tuple[dict[str, Any] | None, Measurement | None]:
         """The latest result and its measurement; either is None when missing or no longer decodes."""

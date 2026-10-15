@@ -3,7 +3,7 @@
 // the apps that hold connections, and the connection's basic facts.
 // Optimize only runs the regular check (read-only). When it finds what the app can fix, "Fix N"
 // opens the result in the main window, which lists the changes and asks before any (ADR-0020).
-// The speed test (ADR-0024) runs from the bar once the user has said yes in the main window; a
+// The speed test (ADR-0024) runs from the bar; on mobile data the main window asks first, and a
 // result opens there too.
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
 // Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
@@ -30,7 +30,7 @@ const view = { metric: "down", tab: "apps", active: true, mode: "bar" };
 const optimize = { state: "idle", summary: null, progress: null, goodUntil: 0, loadedAt: 0 };
 const data = { traffic: null, live: null, state: null, offset: 0, reachable: true };
 // GET /api/speedtest; running while a job is followed, live = its progress (app/speedtest.py Live)
-const speedTest = { last: null, confirmed: false, running: false, live: null, loadedAt: 0, now: 0, nowAt: 0, givenUp: null };
+const speedTest = { last: null, ask: false, running: false, live: null, loadedAt: 0, now: 0, nowAt: 0, givenUp: null };
 let pollTimer = null;
 let frame = null;
 
@@ -254,7 +254,7 @@ function renderSpeed() {
 
 async function loadSpeed() {
   const got = await get("/api/speedtest");
-  Object.assign(speedTest, { last: got.last, confirmed: got.confirmed, loadedAt: Date.now(), now: got.now, nowAt: Date.now() });
+  Object.assign(speedTest, { last: got.last, ask: got.ask, loadedAt: Date.now(), now: got.now, nowAt: Date.now() });
   // Started in the main window: follow it, never start one (join), unless the bar gave up on it.
   if (got.job && !speedTest.running && got.job !== speedTest.givenUp) followSpeed(got.job);
 }
@@ -276,9 +276,9 @@ async function followSpeed(jobId = null) {
 function runSpeed() {
   const state = speedState();
   if (state === "running") return;
-  // A result, or the first question, is shown in the main window: the bar has no room to explain
-  // how much data the test uses.
-  if (state === "done" || state === "problem" || !speedTest.confirmed) {
+  // A result, or the question on mobile data, is shown in the main window: the bar has no room to
+  // explain how much data the test uses.
+  if (state === "done" || state === "problem" || speedTest.ask) {
     window.pywebview?.api?.open_speed?.(state === "idle");
     return;
   }

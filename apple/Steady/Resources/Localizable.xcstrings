@@ -17388,43 +17388,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB."
+            "value" : "Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit heruntergeladen und hochgeladen: etwa 250 MB pro 100 Mbps Leitungsgeschwindigkeit, höchstens 2 GB."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB."
+            "value" : "This downloads and uploads at full speed for about 30 seconds: about 250 MB per 100 Mbps of line speed, at most 2 GB."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esto descarga y sube desde speed.cloudflare.com a toda velocidad durante unos 30 segundos: unos 250 MB por cada 100 Mbps de velocidad de la línea, como máximo 2 GB."
+            "value" : "Esto descarga y sube a toda velocidad durante unos 30 segundos: unos 250 MB por cada 100 Mbps de velocidad de la línea, como máximo 2 GB."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes : environ 250 Mo par tranche de 100 Mbps de débit, 2 Go au maximum."
+            "value" : "Cela télécharge et envoie à pleine vitesse pendant environ 30 secondes : environ 250 Mo par tranche de 100 Mbps de débit, 2 Go au maximum."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos: cerca de 250 MB a cada 100 Mbps de velocidade da linha, no máximo 2 GB."
+            "value" : "Isto faz download e upload em velocidade máxima por cerca de 30 segundos: cerca de 250 MB a cada 100 Mbps de velocidade da linha, no máximo 2 GB."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB."
+            "value" : "Thao tác này tải xuống và tải lên với tốc độ tối đa trong khoảng 30 giây: khoảng 250 MB cho mỗi 100 Mbps tốc độ đường truyền, tối đa 2 GB."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。"
+            "value" : "这将在约 30 秒内全速下载和上传：每 100 Mbps 线路速度约 250 MB，最多 2 GB。"
           }
         }
       }
@@ -17435,43 +17435,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du nutzt mobile Daten oder einen persönlichen Hotspot. Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit von speed.cloudflare.com heruntergeladen und hochgeladen; es werden höchstens 500 MB deines Datenvolumens verbraucht. Eine Leitung schneller als 200 Mbps wird als unvollständig gemessen angezeigt."
+            "value" : "Du nutzt mobile Daten oder einen persönlichen Hotspot. Dabei wird etwa 30 Sekunden lang mit voller Geschwindigkeit heruntergeladen und hochgeladen; es werden höchstens 500 MB deines Datenvolumens verbraucht. Eine Leitung schneller als 200 Mbps wird als unvollständig gemessen angezeigt."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You are on mobile data or a personal hotspot. This downloads and uploads from speed.cloudflare.com at full speed for about 30 seconds and uses at most 500 MB of your data plan. A line faster than 200 Mbps reads as incomplete."
+            "value" : "You are on mobile data or a personal hotspot. This downloads and uploads at full speed for about 30 seconds and uses at most 500 MB of your data plan. A line faster than 200 Mbps reads as incomplete."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estás usando datos móviles o un punto de acceso personal. Esto descarga y sube desde speed.cloudflare.com a toda velocidad durante unos 30 segundos y usa como máximo 500 MB de tu plan de datos. Una línea de más de 200 Mbps se indica como medición incompleta."
+            "value" : "Estás usando datos móviles o un punto de acceso personal. Esto descarga y sube a toda velocidad durante unos 30 segundos y usa como máximo 500 MB de tu plan de datos. Una línea de más de 200 Mbps se indica como medición incompleta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vous utilisez les données mobiles ou un partage de connexion. Cela télécharge et envoie depuis speed.cloudflare.com à pleine vitesse pendant environ 30 secondes et utilise au plus 500 Mo de votre forfait. Une ligne plus rapide que 200 Mbps est indiquée comme mesure incomplète."
+            "value" : "Vous utilisez les données mobiles ou un partage de connexion. Cela télécharge et envoie à pleine vitesse pendant environ 30 secondes et utilise au plus 500 Mo de votre forfait. Une ligne plus rapide que 200 Mbps est indiquée comme mesure incomplète."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Você está usando dados móveis ou um acesso pessoal. Isto faz download e upload de speed.cloudflare.com em velocidade máxima por cerca de 30 segundos e usa no máximo 500 MB do seu plano de dados. Uma linha mais rápida que 200 Mbps aparece como medição incompleta."
+            "value" : "Você está usando dados móveis ou um acesso pessoal. Isto faz download e upload em velocidade máxima por cerca de 30 segundos e usa no máximo 500 MB do seu plano de dados. Uma linha mais rápida que 200 Mbps aparece como medição incompleta."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bạn đang dùng dữ liệu di động hoặc điểm phát cá nhân. Thao tác này tải xuống và tải lên với tốc độ tối đa từ speed.cloudflare.com trong khoảng 30 giây và dùng tối đa 500 MB dung lượng gói cước. Đường truyền nhanh hơn 200 Mbps sẽ được báo là đo chưa đầy đủ."
+            "value" : "Bạn đang dùng dữ liệu di động hoặc điểm phát cá nhân. Thao tác này tải xuống và tải lên với tốc độ tối đa trong khoảng 30 giây và dùng tối đa 500 MB dung lượng gói cước. Đường truyền nhanh hơn 200 Mbps sẽ được báo là đo chưa đầy đủ."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你正在使用移动数据或个人热点。这将在约 30 秒内以全速从 speed.cloudflare.com 下载和上传，最多使用 500 MB 套餐流量。快于 200 Mbps 的线路将显示为测量不完整。"
+            "value" : "你正在使用移动数据或个人热点。这将在约 30 秒内全速下载和上传，最多使用 500 MB 套餐流量。快于 200 Mbps 的线路将显示为测量不完整。"
           }
         }
       }
@@ -29335,43 +29335,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Messung nicht möglich. Prüfe die Verbindung zu speed.cloudflare.com und versuche es erneut."
+            "value" : "Messung nicht möglich. Prüfe die Verbindung und versuche es erneut."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Could not measure. Check the connection to speed.cloudflare.com and try again."
+            "value" : "Could not measure. Check the connection and try again."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No se pudo medir. Comprueba la conexión con speed.cloudflare.com y vuelve a intentarlo."
+            "value" : "No se pudo medir. Comprueba la conexión y vuelve a intentarlo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mesure impossible. Vérifiez la connexion à speed.cloudflare.com et réessayez."
+            "value" : "Mesure impossible. Vérifiez la connexion et réessayez."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Não foi possível medir. Verifique a conexão com speed.cloudflare.com e tente de novo."
+            "value" : "Não foi possível medir. Verifique a conexão e tente de novo."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Không đo được. Kiểm tra kết nối tới speed.cloudflare.com rồi thử lại."
+            "value" : "Không đo được. Kiểm tra kết nối rồi thử lại."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法测量。请检查与 speed.cloudflare.com 的连接后重试。"
+            "value" : "无法测量。请检查网络连接后重试。"
           }
         }
       }
@@ -29382,43 +29382,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download, Upload und Ping, gemessen mit speed.cloudflare.com in etwa 30 Sekunden. Derselbe Lauf misst auch die Latenz unter Last (Diagnose)."
+            "value" : "Download, Upload und Ping in etwa 30 Sekunden. Derselbe Lauf misst auch die Latenz unter Last (Diagnose)."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download, upload and ping, measured with speed.cloudflare.com in about 30 seconds. The same run also measures latency under load (Diagnostics)."
+            "value" : "Download, upload and ping in about 30 seconds. The same run also measures latency under load (Diagnostics)."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descarga, subida y ping, medidos con speed.cloudflare.com en unos 30 segundos. La misma prueba mide también la latencia bajo carga (Diagnóstico)."
+            "value" : "Descarga, subida y ping en unos 30 segundos. La misma prueba mide también la latencia bajo carga (Diagnóstico)."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Débit descendant, débit montant et ping, mesurés avec speed.cloudflare.com en 30 secondes environ. La même mesure évalue aussi la latence en charge (Diagnostic)."
+            "value" : "Débit descendant, débit montant et ping en 30 secondes environ. La même mesure évalue aussi la latence en charge (Diagnostic)."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Download, upload e ping, medidos com speed.cloudflare.com em cerca de 30 segundos. O mesmo teste mede também a latência sob carga (Diagnóstico)."
+            "value" : "Download, upload e ping em cerca de 30 segundos. O mesmo teste mede também a latência sob carga (Diagnóstico)."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tốc độ tải xuống, tải lên và ping, đo với speed.cloudflare.com trong khoảng 30 giây. Cùng lần đo đó cũng đo độ trễ khi mạng bận (Chẩn đoán)."
+            "value" : "Tốc độ tải xuống, tải lên và ping trong khoảng 30 giây. Cùng lần đo đó cũng đo độ trễ khi mạng bận (Chẩn đoán)."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 speed.cloudflare.com 测量下载、上传和延迟，约需 30 秒。同一次测量也会测出负载下的延迟（诊断）。"
+            "value" : "测量下载、上传和延迟，约需 30 秒。同一次测量也会测出负载下的延迟（诊断）。"
           }
         }
       }

@@ -63,6 +63,11 @@ with the feature gap.
 2. No metered detection on Windows for now: the connection is treated as unmetered, so the app asks
    only the first time and each direction keeps check #14's 1 GB limit.
 
+3. (2026-10-15, after the owner tried it) The texts do not name the test server. On Wi-Fi or
+   Ethernet the test runs without a question; only on mobile data (a mobile broadband adapter) does it
+   ask, every time, with the mobile-data text and a 250 MB limit per direction, as on Apple. This
+   replaces decision 2's "ask the first time".
+
 **Open questions** — none.
 
 **Verification** (2026-10-15)

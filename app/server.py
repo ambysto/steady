@@ -153,6 +153,7 @@ class Api:
                  run_diagnostics: Callable[..., dict] | None = None,
                  run_speedtest: Callable[[Callable[[dict], None]], dict] | None = None,
                  speedtest_store: Any = None,
+                 on_cellular: Callable[[], bool] | None = None,
                  clock: Callable[[], float] = time.time,
                  load_backup: Callable[[], dict] = config.load_backup,
                  autostart_status: Callable[[], Any] | None = None,
@@ -186,6 +187,7 @@ class Api:
             from . import speedtest
             speedtest_store = speedtest.default_store()
         self._speed_store = speedtest_store
+        self._on_cellular = on_cellular or self._default_on_cellular
         self._speed_job: str | None = None
         self._last_bufferbloat, self._last_bufferbloat_ts = self._saved_bufferbloat()
         self._autostart_status = autostart_status or self._default_autostart_status
@@ -296,6 +298,7 @@ class Api:
         """Check #14's run with the live view as the job's progress; returns the speed test's result and
         check #14's, which the caller keeps (ADR-0024)."""
         from . import bufferbloat, diagnostics, speedtest
+        limit = bufferbloat.METERED_MAX_BYTES if self._on_cellular() else bufferbloat.MAX_BYTES
         live = speedtest.Live()
         measured: list[Any] = []
 
@@ -315,8 +318,9 @@ class Api:
             gateway = ctx.get("gateway")
             if gateway:
                 targets = {"router": gateway, **targets}
-            down, up = bufferbloat.real_loads()
-            measured.append(bufferbloat.measure(bufferbloat.real_ping(), targets, down, up, events=on_event))
+            down, up = bufferbloat.real_loads(limit)
+            measured.append(bufferbloat.measure(bufferbloat.real_ping(), targets, down, up, max_bytes=limit,
+                                                events=on_event))
             return measured[-1]
 
         ctx = diagnostics.Context(self.storage, loaders={"bufferbloat": load})
@@ -326,6 +330,17 @@ class Api:
         speed = speedtest.result(measured[0], self._clock()) if measured else None
         return {"ts": report.ts, "worst": report.worst, "results": check, "speed": speed,
                 "measurement": measured[0] if measured else None}
+
+    @staticmethod
+    def _default_on_cellular() -> bool:
+        """Whether the Internet route leaves by a mobile broadband adapter (WWAN). Unknown reads as no."""
+        try:
+            from . import traffic
+            route = winutil.internet_route_native("1.1.1.1")
+            row = traffic.interface_row(route["interface_index"]) if route else None
+            return bool(row) and row["kind"] == "cellular"
+        except Exception:
+            return False
 
     def _saved_bufferbloat(self) -> tuple[list[dict], float | None]:
         """Check #14's result kept with the latest speed test, and when it was measured."""
@@ -544,19 +559,20 @@ class Api:
         return self.start_speedtest(body={})
 
     def speedtest(self, **_: Any) -> dict:
-        """The latest speed test (kept across restarts), whether the user has confirmed it once, the
+        """The latest speed test (kept across restarts), whether starting one asks first (on mobile data), the
         check #14 result of the same run, and the running job, if any."""
+        from . import speedtest
         last, _m = self._speed_store.last()
         job = self.jobs.get(self._speed_job) if self._speed_job else None
-        return {"last": last, "confirmed": self._speed_store.confirmed,
+        return {"last": last, "ask": speedtest.needs_confirmation(self._on_cellular()),
                 "bufferbloat": self._last_bufferbloat[0] if self._last_bufferbloat else None,
                 "bufferbloat_ts": self._last_bufferbloat_ts,
                 "job": job["id"] if job and job["status"] == "running" else None, "now": self._clock()}
 
     def start_speedtest(self, body: Any = None, **_: Any) -> dict:
-        """Generates real traffic (~30 s, up to ~2 GB), so only on explicit request: {"confirmed": true}
-        records the user's first yes; without it nothing runs until they have said yes once. While the
-        test server's wait from the last run lasts, it refuses (409). {"join": true} only follows the
+        """Generates real traffic (~30 s, up to ~2 GB; 500 MB on mobile data), so only on explicit request.
+        On mobile data every run needs {"confirmed": true} (409 without it). While the test server's wait
+        from the last run lasts, it refuses (409). {"join": true} only follows the
         run going now and never starts one (409 when none is): a page that saw a run elsewhere must not
         start a new one because it ended in the meantime."""
         from . import speedtest
@@ -565,9 +581,8 @@ class Api:
             if job is None or job["status"] != "running":
                 raise ApiError(409, "no speed test is running")
             return job
-        if isinstance(body, dict) and body.get("confirmed") is True:
-            self._speed_store.confirm()
-        if speedtest.needs_confirmation(self._speed_store.confirmed):
+        confirmed = isinstance(body, dict) and body.get("confirmed") is True
+        if speedtest.needs_confirmation(self._on_cellular()) and not confirmed:
             raise ApiError(409, "confirmation needed")
         last, _m = self._speed_store.last()
         if last and (last.get("retry_until") or 0) > self._clock():

@@ -419,8 +419,8 @@ class ServerRouteTests(unittest.TestCase):
         from app.storage import Storage
         with Storage() as db:
             api = Api(monitor=None, storage=db, run_speedtest=lambda progress: {"worst": "ok", "results": []},
-                      sync_jobs=True)
-            status, job = api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
+                      on_cellular=lambda: False, sync_jobs=True)
+            status, job = api.handle("POST", "/api/speedtest", {}, {})
             self.assertEqual((status, job["status"], job["result"]["worst"]), (200, "done", "ok"))
             status, job = api.handle("POST", "/api/diagnostics/bufferbloat", {}, {})
             self.assertEqual((status, job["status"], job["result"]["worst"]), (200, "done", "ok"))

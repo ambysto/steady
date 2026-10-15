@@ -34,18 +34,20 @@ per-address limit sooner.
    `{"join": true}`, which never starts one, so a run that ended in the meantime is not repeated. Its
    progress is `Live.snapshot()`, sent on each phase change and at most 5 times a second, and polled
    4 times a second by the page.
-4. **Confirmation on the server.** The first run needs `{"confirmed": true}`, which is remembered;
-   without it the server answers 409, so no page can start traffic the user has not agreed to. While
-   the test server's `Retry-After` from the last run lasts, it answers 409 too. Windows has no metered
-   detection yet (intent decision 2): every connection is treated as unmetered, so the question comes
-   once and each direction keeps check #14's 1 GB limit.
+4. **A question only on mobile data** (intent decision 3, which replaces decision 2). On Wi-Fi or
+   Ethernet the test runs at once. When the Internet route leaves by a mobile broadband adapter
+   (interface type WWAN), every run asks, with the mobile-data text, and each direction stops at
+   250 MB (500 MB in all, as on Apple, so a line above 200 Mbit/s reads as incomplete). The server
+   enforces it: on mobile data a run without `{"confirmed": true}` is refused (409), so no page can
+   start traffic the user has not agreed to. While the test server's `Retry-After` from the last run
+   lasts, it answers 409 too. The texts do not name the test server; `PRIVACY.md` does.
 5. **The latest result persists** in `speedtest.json` in the data folder: the figures, the run's
    measurement, and check #14's result as stored messages (ADR-0006). The server reads it at start,
    so the Diagnostics Bufferbloat card and its suggestions come back with the speed test's, with
    when they were measured. A file that does not decode is ignored.
 6. **On the floating bar** a gauge sits in the tube right after the state dot. Running, a ring fills
    with the run's progress. Done, it shows the download figure until it goes stale (3 h, like the
-   check); a click opens the result on the Overview. Before the first yes, a click opens the Overview,
+   check); a click opens the result on the Overview. On mobile data a click opens the Overview,
    which asks: the bar has no room to say how much data the test uses. The bar is 330 px wide (was
    290).
 
@@ -54,7 +56,8 @@ per-address limit sooner.
 - ✅ Windows and Apple read one run the same way, and the line is loaded once for both results.
 - ✅ The live rate, the steady figure, the live view and the saved result are tested without a
   network (`tests/test_speedtest.py`).
-- ⚠️ After the first yes the buttons run straight away, so repeated runs reach the server's limit
+- ⚠️ Off mobile data the buttons run straight away, so repeated runs reach the server's limit
   sooner; the card and the bar then say when to try again.
-- ⚠️ On a metered connection (a phone's hotspot) the test can use up to 2 GB; reading Windows'
-  connection cost is a later piece of work.
+- ⚠️ A phone's hotspot over Wi-Fi, or a USB tether, looks like Wi-Fi or Ethernet to Windows: the test
+  runs there without asking and can use up to 2 GB. Reading Windows' connection cost is a later
+  piece of work.
