@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
+Windows gets the speed test the Apple app has: download, upload, latency, jitter and packet loss on the Overview and the floating bar, from the same run as the bufferbloat check, without a question on Wi‑Fi or Ethernet. The app icon follows the Ambysto brand's v3 logo, and the floating bar's rounded edges are smooth in every look.
+
 ### Added
 - **Speed test on Windows** ([ADR-0024](docs/adr/0024-windows-speed-test.md), as the Apple app has had since 0.8.1). A "Speed test" card on the Overview is laid out like speed.cloudflare.com: download and upload as large figures over live rate charts, latency and jitter while idle and during each direction, packet loss, and a segmented bar for ping, download and upload while it runs. The result keeps the charts, the test server's location (e.g. HKG) and when it was measured, and comes back after a restart. It is check #14's run: the Diagnostics Bufferbloat card starts the same measurement, shows its result from the same run (also after a restart, with when it was measured), and the line is loaded once. The figures are the rate after the 2 s ramp over 4 connections, as on Apple; a direction that hit the 1 GB limit reads "at least", one under 1 Mbit/s or refused has no figure. On Wi‑Fi or Ethernet it runs without a question; on mobile data (a mobile broadband adapter) it asks every time and each direction stops at 250 MB, and the server refuses a run there without that yes. When the test server refuses (HTTP 429/403) the card says when to try again and the buttons wait. On the floating bar a gauge after the state dot starts it, fills a ring while it runs, then shows the download figure for 3 hours; a click opens the result on the Overview, which also asks the question on mobile data. The bar is 330 px wide (was 290). The speed test's texts no longer name the test server (also in the Apple app, which shares them). New `GET`/`POST /api/speedtest` (`app/speedtest.py`); no new network endpoint.
 
