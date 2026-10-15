@@ -341,13 +341,15 @@ def exclude_from_capture(hwnd: int, exclude: bool) -> bool:
 
 
 def grab_behind(hwnd: int) -> Any:
-    """What is behind a window that captures normally include: it leaves captures for one composed
-    frame (DwmFlush), the area is copied, and it is back in captures at once. On its own screen the
-    window never disappears; a screen recording can miss it for that frame. None when Windows cannot
-    leave it out (before Windows 10 2004), since the capture would then show the window itself."""
+    """What is behind a window that captures normally include: it leaves captures until the change is
+    composed (two DwmFlush: one frame may already have started), the area is copied, and it is back in
+    captures at once. On its own screen the window never disappears; a screen recording can miss it
+    for a frame or two. None when Windows cannot leave it out (before Windows 10 2004), since the
+    capture would then show the window itself."""
     if not exclude_from_capture(hwnd, True):
         return None
     try:
+        ctypes.windll.dwmapi.DwmFlush()
         ctypes.windll.dwmapi.DwmFlush()
         return grab_screen(*window_rect(hwnd))
     finally:
@@ -545,6 +547,10 @@ class Desktop:
         self._glass_digest: str | None = None
         self._glass_ok = False          # glass is on and the window is left out of captures
         self._rim_digest: str | None = None
+        # One look change or capture at a time: a rim capture puts the window back in captures, which
+        # must not land after Glass has taken it out, and a picture must not reach the page after the
+        # look it was made for has changed.
+        self._look_lock = threading.RLock()
         self._rim_at = 0.0              # monotonic time of the last rim capture
         self.icon: Any = None
         self.messages: dict[str, Any] = {}
@@ -676,16 +682,17 @@ class Desktop:
         hwnd = self._mini_hwnd()
         if hwnd is None:
             return
-        on = self.mini_state["transparency"] == "glass"
-        # Without the exclusion (before Windows 10 2004) the capture would show the window itself.
-        excluded = exclude_from_capture(hwnd, on)
-        self._glass_ok = on and excluded
-        if self._glass_ok:
-            self._rim_digest = None
-            self._run_js("window.steadyMini && window.steadyMini.setRim(null)")
-        else:
-            self._glass_digest = None
-            self._run_js("window.steadyMini && window.steadyMini.setBackdrop(null)")
+        with self._look_lock:
+            on = self.mini_state["transparency"] == "glass"
+            # Without the exclusion (before Windows 10 2004) the capture would show the window itself.
+            excluded = exclude_from_capture(hwnd, on)
+            self._glass_ok = on and excluded
+            # Shown again or another look: the next picture is sent even if the screen has not changed.
+            self._glass_digest = self._rim_digest = None
+            if self._glass_ok:
+                self._run_js("window.steadyMini && window.steadyMini.setRim(null)")
+            else:
+                self._run_js("window.steadyMini && window.steadyMini.setBackdrop(null)")
         self._glass_wake.set()          # the rim (solid levels) or the backdrop (Glass) follows
 
     def _run_js(self, script: str) -> None:
@@ -744,11 +751,12 @@ class Desktop:
             woken = self._glass_wake.wait(GLASS_EVERY_S)
             self._glass_wake.clear()
             try:
-                if self.glass_on() and not self.quitting:
-                    self.update_backdrop()
-                # The rim leaves captures for a frame, so only when something changed or now and then.
-                elif self.rim_on() and not self.quitting and (woken or time.monotonic() - self._rim_at >= RIM_EVERY_S):
-                    self.update_rim()
+                with self._look_lock:
+                    if self.glass_on() and not self.quitting:
+                        self.update_backdrop()
+                    # The rim leaves captures for a frame or two, so only when something changed or now and then.
+                    elif self.rim_on() and not self.quitting and (woken or time.monotonic() - self._rim_at >= RIM_EVERY_S):
+                        self.update_rim()
             except Exception as exc:        # never let the look stop the shell
                 log.debug("floating window backdrop failed: %r", exc)
             self.stop.wait(GLASS_MOVE_S)

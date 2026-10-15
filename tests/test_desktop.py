@@ -286,6 +286,19 @@ class MiniWindowTests(unittest.TestCase):
             self.shell.mini_state.update(state)
             self.assertFalse(self.shell.rim_on())
 
+    def test_another_solid_level_sends_the_rim_again_even_if_nothing_changed_behind(self):
+        from PIL import Image
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state.update(open=True, mode="bar", transparency="off")
+        picture = Image.new("RGB", desktop.BAR_SIZE, (200, 120, 40))
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: True),                 mock.patch.object(desktop.ctypes, "windll", mock.MagicMock()),                 mock.patch.object(desktop, "set_form_opacity", lambda form, value: True),                 mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, *desktop.BAR_SIZE)),                 mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+            self.assertTrue(self.shell.update_rim())
+            self.shell.set_mini_transparency("low")              # the page dropped nothing, but a new look
+            self.assertTrue(self.shell.update_rim())             # sends the same picture again
+        rims = [s for s in scripts if "setRim('data:" in s]
+        self.assertEqual(len(rims), 2)
+
     def test_no_rim_where_windows_cannot_leave_the_window_out_of_captures(self):
         with mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False),                 mock.patch.object(desktop, "grab_screen", lambda *box: self.fail("captured the window itself")):
             self.assertIsNone(desktop.grab_behind(77))

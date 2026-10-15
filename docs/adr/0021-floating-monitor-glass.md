@@ -37,13 +37,16 @@ capture, so the edge blends into the screen. In Off, Low and High the shapes fil
 region's stair-stepped outline showed against the desktop (the owner saw it on the bulb's ring and
 the tube's ends).
 
-1. **The solid levels get the same rim.** `grab_behind` leaves the window out of captures for one
-   composed frame (`SetWindowDisplayAffinity`, then `DwmFlush`), copies its area and puts it back in
-   captures at once. The page gets that picture unblurred (`setRim`), shows it in the sliver and
+1. **The solid levels get the same rim.** `grab_behind` leaves the window out of captures until
+   that is composed (`SetWindowDisplayAffinity`, then `DwmFlush` twice, since a frame may already
+   have started), copies its area and puts it back in captures at once. The page gets that picture unblurred (`setRim`), shows it in the sliver and
    draws the shapes inside it, as with Glass. Without a picture (before Windows 10 2004, or before the
    first one arrives) the shapes fill the cut as before.
-2. **Rarely.** Only for the bar, when it is shown, moved, resized or switched to a solid level, and
-   at most every 10 s otherwise; an unchanged picture is not sent again.
+2. **Rarely.** Only for the bar: when it is shown, moved (several times a second while it is
+   dragged), resized or switched to a solid level, and every 10 s otherwise; an unchanged picture is
+   not sent again, except after it was shown again or its look changed. One lock serialises a look
+   change and a capture, so a rim capture cannot put the window back in captures after Glass took
+   it out, and no picture reaches the page after its look changed.
 3. **Consequences.** On its own screen the window never disappears; a screen recording or screen
-   sharing can miss the bar for that one frame. What scrolls behind the bar shows in its 1.5 px rim
+   sharing can miss the bar for a frame or two each time. What scrolls behind the bar shows in its 1.5 px rim
    up to 10 s late. `PRIVACY.md` says that the solid levels also read the pixels behind the bar.
