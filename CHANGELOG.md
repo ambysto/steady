@@ -20,7 +20,7 @@ Windows gets the speed test the Apple app has: download, upload, latency, jitter
 - `ui.diag.measure` from all 7 catalogs: the Bufferbloat card's question is now the speed test's (`ui.speed.confirm_run`).
 
 ### Fixed
-- **The floating bar's rounded edges are smooth in every look.** With Off, Low or High the bulb's ring and the tube's ends showed stair steps, because the window is cut to its outline with a window region, which has no soft edge. Now the bar is drawn just inside the cut, as with Glass, and the thin sliver around it shows what is behind the window: the app copies that area when the bar is shown or moved and at most every 10 seconds, leaving the window out of screen captures for that one frame ([ADR-0021](docs/adr/0021-floating-monitor-glass.md), amended; `PRIVACY.md` says so).
+- **The floating bar's rounded edges are smooth in every look.** With Off, Low or High the bulb's ring and the tube's ends showed stair steps, because the window is cut to its outline with a window region, which has no soft edge. Now the bar is drawn just inside the cut, as with Glass, and the thin sliver around it shows what is behind the window: the app copies that area when the bar is shown, moved or its look changes, and every 10 seconds otherwise, leaving the window out of screen captures for a frame or two each time ([ADR-0021](docs/adr/0021-floating-monitor-glass.md), amended; `PRIVACY.md` says so).
 
 ## [0.8.1] - 2026-10-09
 

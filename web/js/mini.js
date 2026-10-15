@@ -511,7 +511,7 @@ function setBackdrop(url, sharp = null) {
     else root.style.removeProperty("--behind");
     root.dataset.glass = "";
     delete root.dataset.rim;
-  } else {
+  } else if (root.dataset.glass !== undefined) {   // a solid level keeps its rim (setRim)
     for (const name of ["--backdrop", "--behind", "--bar-w"]) root.style.removeProperty(name);
     delete root.dataset.glass;
   }
