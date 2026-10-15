@@ -1,5 +1,5 @@
 ---
-status: building   # draft → approved → planned → building → verified → shipped (PR #n)
+status: verified   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test on Windows
 
@@ -76,4 +76,18 @@ with the feature gap.
   Bufferbloat card from the same run with when it was measured, the floating bar's download figure
   and its tooltip, and a refused upload (warning with "try again in about 10 min", buttons disabled).
 - An independent review found no blockers; its findings are fixed (see the plan).
-- Not yet done: a real run compared with the interface byte counters (needs the owner's go-ahead).
+- Two real runs on the dev PC (2026-10-15, owner's go-ahead), through the server's own runner, to
+  HKG over 2.4 GHz Wi-Fi (transmit rate 86 Mbit/s), with the interface byte counters and Windows' TCP
+  statistics read over the same 2-10 s of each direction:
+  - Run 2: download 58.9 Mbit/s against the counters' 62.1 (-5.1 %, no TCP retransmissions: the
+    counters also count TCP/IP headers); upload 58.6 against 66.6 (-11.9 %), with 8.8 % of the TCP
+    segments sent being retransmissions, which the counters count and the test does not. Allowing for
+    both, the upload agrees within about 1 %.
+  - Run 1, on a worse moment (25 % of idle pings lost): download 49.0 against 52.4 (-6.4 %), upload
+    35.6 against 44.9 (-20.8 %); retransmissions were not read then.
+  - Both runs: check #14 bad (latency under upload 94-237 ms), server HKG, 40-47 live points per
+    direction.
+- Seen in the runs: the live upload rate is uneven second by second (e.g. 113, 64, 126, 26 Mbit/s
+  while the counters read 39-91), because upload bytes are counted as they are handed to the socket
+  and Windows fills large send buffers. The steady figure is not affected; the live chart is. As on
+  Apple; a smoother live upload rate is a possible follow-up.
