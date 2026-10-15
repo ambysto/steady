@@ -2,13 +2,13 @@
   "fill-specializations": [
     {
       "value": {
-        "automatic-gradient": "srgb:0.96000,0.96000,0.97000,1.00000"
+        "automatic-gradient": "srgb:0.96078,0.96078,0.96863,1.00000"
       }
     },
     {
       "appearance": "dark",
       "value": {
-        "automatic-gradient": "srgb:0.16863,0.16863,0.18039,1.00000"
+        "automatic-gradient": "srgb:0.04314,0.04314,0.04706,1.00000"
       }
     }
   ],
@@ -21,13 +21,13 @@
           "fill-specializations": [
             {
               "value": {
-                "solid": "srgb:0.16863,0.16863,0.18039,1.00000"
+                "solid": "srgb:0.00000,0.48627,0.66667,1.00000"
               }
             },
             {
               "appearance": "dark",
               "value": {
-                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+                "solid": "srgb:0.38431,0.76863,0.96078,1.00000"
               }
             },
             {
@@ -44,13 +44,13 @@
           "fill-specializations": [
             {
               "value": {
-                "solid": "srgb:0.16863,0.16863,0.18039,1.00000"
+                "solid": "srgb:0.00000,0.48627,0.66667,1.00000"
               }
             },
             {
               "appearance": "dark",
               "value": {
-                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+                "solid": "srgb:0.38431,0.76863,0.96078,1.00000"
               }
             },
             {
@@ -74,18 +74,64 @@
     {
       "layers": [
         {
-          "image-name": "letters.svg",
-          "name": "letters",
+          "image-name": "caption-ink.svg",
+          "name": "caption-ink",
           "fill-specializations": [
             {
               "value": {
-                "solid": "srgb:0.16863,0.16863,0.18039,1.00000"
+                "solid": "srgb:0.04314,0.04314,0.04706,1.00000"
               }
             },
             {
               "appearance": "dark",
               "value": {
+                "solid": "srgb:0.90980,0.90980,0.90196,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
                 "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "image-name": "caption-dim.svg",
+          "name": "caption-dim",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.78039,0.78039,0.80000,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.22745,0.22745,0.23529,1.00000"
+              }
+            },
+            {
+              "appearance": "tinted",
+              "value": {
+                "solid": "srgb:1.00000,1.00000,1.00000,1.00000"
+              }
+            }
+          ]
+        },
+        {
+          "image-name": "caption-tone.svg",
+          "name": "caption-tone",
+          "fill-specializations": [
+            {
+              "value": {
+                "solid": "srgb:0.00000,0.48627,0.66667,1.00000"
+              }
+            },
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "srgb:0.38431,0.76863,0.96078,1.00000"
               }
             },
             {
