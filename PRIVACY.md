@@ -39,7 +39,7 @@ address.
 | Always, while monitoring | HTTP request expecting an empty reply (status 204), every 10 s, identified as `AmbystoSteady/<version>` | `http://cp.cloudflare.com/generate_204` |
 | Backup connection switching, only if you turn it on | TCP connection without data from each network adapter | `1.1.1.1:443`, `8.8.8.8:443` |
 | When you run diagnostics | DNS lookups of `google.com`, `cloudflare.com`, `microsoft.com`, `youtube.com`, `facebook.com` | The DNS servers your PC uses, your router, `1.1.1.1`, `8.8.8.8`, `9.9.9.9` (Quad9) |
-| When you start the load test and confirm it | Download and upload of test data (about 25 MB per request) | `speed.cloudflare.com` |
+| When you start the speed test (on mobile data, after you confirm it) | Download and upload of test data (about 25 MB per request) | `speed.cloudflare.com` |
 
 You can change the monitored targets in the settings file.
 

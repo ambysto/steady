@@ -55,7 +55,10 @@ export async function runSpeedTest() {
     if (!ok) return false;
     body = { confirmed: true };
   }
-  return follow(body);
+  const ran = await follow(body);
+  // The route moved to mobile data since the page last looked: ask now rather than ignore the click.
+  if (!ran && speed.ask && !body.confirmed) return runSpeedTest();
+  return ran;
 }
 
 /** `{ join: true }` follows the run going now and never starts one (it may have just ended). */
@@ -67,7 +70,8 @@ async function follow(body = {}, jobId = null) {
     // The line lock can hold a run back behind a measured tweak, hence the long wait.
     const result = await runJob("/api/speedtest", body, { interval: 250, timeout: 300000,
       onProgress: live => { if (live) { speed.live = live; changed(); } } });
-    if (result.speed) speed.last = result.speed;
+    if (result.needs_confirmation) speed.ask = true;   // on mobile data now: runSpeedTest asks
+    else if (result.speed) speed.last = result.speed;
     else toast(t("ui.speed.failed"), { bad: true });   // check #14 could not run: nothing was measured
     speed.bufferbloat = result.results?.[0] || speed.bufferbloat;
     ok = Boolean(result.speed);

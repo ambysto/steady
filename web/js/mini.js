@@ -262,15 +262,20 @@ async function loadSpeed() {
 async function followSpeed(jobId = null) {
   Object.assign(speedTest, { running: true, live: null });
   renderSpeed();
+  let askNow = false;
   try {
-    await runJob("/api/speedtest", jobId ? { join: true } : {}, { interval: 500, timeout: 300000,
+    const result = await runJob("/api/speedtest", jobId ? { join: true } : {}, { interval: 500, timeout: 300000,
       onProgress: live => { if (live) { speedTest.live = live; renderSpeed(); } } });
+    askNow = Boolean(result?.needs_confirmation);
   } catch (err) {   // the button goes back to the gauge; the main window says why
     if (jobId && err?.status === 0) speedTest.givenUp = jobId;
+    askNow = !jobId && err?.status === 409;
   }
   Object.assign(speedTest, { running: false, live: null });
   await loadSpeed().catch(() => {});
   renderSpeed();
+  // The route moved to mobile data since the bar last looked: the main window asks.
+  if (askNow && speedTest.ask) window.pywebview?.api?.open_speed?.(true);
 }
 
 function runSpeed() {
