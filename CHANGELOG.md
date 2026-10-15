@@ -15,6 +15,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Removed
 - `ui.diag.measure` from all 7 catalogs: the Bufferbloat card's question is now the speed test's (`ui.speed.confirm_run`).
 
+### Fixed
+- **The floating bar's rounded edges are smooth in every look.** With Off, Low or High the bulb's ring and the tube's ends showed stair steps, because the window is cut to its outline with a window region, which has no soft edge. Now the bar is drawn just inside the cut, as with Glass, and the thin sliver around it shows what is behind the window: the app copies that area when the bar is shown or moved and at most every 10 seconds, leaving the window out of screen captures for that one frame ([ADR-0021](docs/adr/0021-floating-monitor-glass.md), amended; `PRIVACY.md` says so).
+
 ## [0.8.1] - 2026-10-09
 
 Apple app only; Windows stays at 0.8.0. The Mac gets a floating monitor, and the Mac, iPhone and iPad get a speed test on the Overview that shows download, upload, latency, jitter and packet loss as it runs. The Apple app's version now follows this changelog (it was 0.1.0).

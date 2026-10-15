@@ -265,7 +265,30 @@ class MiniWindowTests(unittest.TestCase):
             self.shell.set_mini_transparency("glass")
             self.shell.set_mini_transparency("off")
         self.assertEqual(calls, [(77, True), (77, False)])
-        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setRim(null)",       # Glass on: no rim
+                                   "window.steadyMini && window.steadyMini.setBackdrop(null)"])  # off: no backdrop
+
+    def test_the_solid_bar_gets_a_rim_of_what_is_behind_it(self):
+        from PIL import Image
+        scripts, calls = [], []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state.update(open=True, mode="bar", transparency="off")
+        picture = Image.new("RGB", desktop.BAR_SIZE, (200, 120, 40))
+        exclude = lambda hwnd, on: calls.append(on) or True       # noqa: E731
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", exclude),                 mock.patch.object(desktop.ctypes, "windll", mock.MagicMock()),                 mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, *desktop.BAR_SIZE)),                 mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+            self.assertTrue(self.shell.rim_on())
+            self.assertTrue(self.shell.update_rim())
+            self.assertFalse(self.shell.update_rim())           # nothing changed behind it: not sent again
+        self.assertEqual(calls, [True, False, True, False])     # out of captures for the copy only, then back
+        self.assertEqual(len(scripts), 1)
+        self.assertRegex(scripts[0], r"^window\.steadyMini && window\.steadyMini\.setRim\('data:image/jpeg;base64,[A-Za-z0-9+/=]+'\)$")
+        for state in ({"transparency": "glass"}, {"mode": "full", "transparency": "off"}, {"open": False, "mode": "bar"}):
+            self.shell.mini_state.update(state)
+            self.assertFalse(self.shell.rim_on())
+
+    def test_no_rim_where_windows_cannot_leave_the_window_out_of_captures(self):
+        with mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False),                 mock.patch.object(desktop, "grab_screen", lambda *box: self.fail("captured the window itself")):
+            self.assertIsNone(desktop.grab_behind(77))
 
     def test_no_glass_where_windows_cannot_leave_the_window_out_of_captures(self):
         scripts = []
