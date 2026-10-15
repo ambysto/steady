@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **The app icon follows the Ambysto brand's v3 app logo** on Windows, the Apple app and the website: three Wi‑Fi arcs and a dot in Steady Sky with a small pixel "A" and "S" top left, on the brand's dark tile. Windows (`app.ico`: the window and taskbar, shortcuts, Apps & features) uses the dark look and leaves the caption out at 48 px and below, where it cannot be read. The Apple icon keeps its light, dark and tinted appearances: light is a darker Sky and ink on an off-white tile. The website's logo follows the visitor's light or dark scheme. `scripts/make_app_icon.py` draws all of them from the logo's geometry. The tray icon, which shows the connection's state in colour, is unchanged.
+
 ## [0.8.1] - 2026-10-09
 
 Apple app only; Windows stays at 0.8.0. The Mac gets a floating monitor, and the Mac, iPhone and iPad get a speed test on the Overview that shows download, upload, latency, jitter and packet loss as it runs. The Apple app's version now follows this changelog (it was 0.1.0).
