@@ -40,7 +40,11 @@ per-address limit sooner.
    250 MB (500 MB in all, as on Apple, so a line above 200 Mbit/s reads as incomplete). The server
    enforces it: on mobile data a run without `{"confirmed": true}` is refused (409), so no page can
    start traffic the user has not agreed to. While the test server's `Retry-After` from the last run
-   lasts, it answers 409 too. The texts do not name the test server; `PRIVACY.md` does.
+   lasts, it answers 409 too. Whether the route is mobile data is read when the run is asked for
+   and again once it has the line (it may wait behind a measured tweak): a run the user did not
+   confirm does not start on a route that has become mobile data. The speed test's texts do not name
+   the test server; `PRIVACY.md` does, and so does check #14's advice when the server cannot be
+   reached (a firewall or proxy may need it).
 5. **The latest result persists** in `speedtest.json` in the data folder: the figures, the run's
    measurement, and check #14's result as stored messages (ADR-0006). The server reads it at start,
    so the Diagnostics Bufferbloat card and its suggestions come back with the speed test's, with
@@ -58,6 +62,8 @@ per-address limit sooner.
   network (`tests/test_speedtest.py`).
 - ⚠️ Off mobile data the buttons run straight away, so repeated runs reach the server's limit
   sooner; the card and the bar then say when to try again.
-- ⚠️ A phone's hotspot over Wi-Fi, or a USB tether, looks like Wi-Fi or Ethernet to Windows: the test
-  runs there without asking and can use up to 2 GB. Reading Windows' connection cost is a later
-  piece of work.
+- ⚠️ Mobile data is read from the adapter the Internet route leaves by, so it is missed when that is
+  not a mobile broadband adapter: a phone's hotspot over Wi-Fi or a USB tether (Wi-Fi or Ethernet to
+  Windows), a full-tunnel VPN over mobile data (the route leaves by the VPN), or an IPv6-only mobile
+  network (no IPv4 route to read). There the test runs without asking and can use up to 2 GB.
+  Reading Windows' connection cost (`INetworkCostManager`) is a later piece of work.

@@ -151,7 +151,7 @@ class Api:
                  elevate: Callable[[str, str], Any] | None = None,
                  actions: Any = None,
                  run_diagnostics: Callable[..., dict] | None = None,
-                 run_speedtest: Callable[[Callable[[dict], None]], dict] | None = None,
+                 run_speedtest: Callable[[Callable[[dict], None], int], dict] | None = None,
                  speedtest_store: Any = None,
                  on_cellular: Callable[[], bool] | None = None,
                  clock: Callable[[], float] = time.time,
@@ -294,11 +294,10 @@ class Api:
         return {"run_id": run_id, "ts": report.ts, "worst": report.worst,
                 "results": [r.to_dict() for r in report.results]}
 
-    def _default_speedtest(self, progress: Callable[[dict], None]) -> dict:
-        """Check #14's run with the live view as the job's progress; returns the speed test's result and
-        check #14's, which the caller keeps (ADR-0024)."""
+    def _default_speedtest(self, progress: Callable[[dict], None], limit: int) -> dict:
+        """Check #14's run with the live view as the job's progress, each direction stopping at `limit`
+        bytes; returns the speed test's result and check #14's, which the caller keeps (ADR-0024)."""
         from . import bufferbloat, diagnostics, speedtest
-        limit = bufferbloat.METERED_MAX_BYTES if self._on_cellular() else bufferbloat.MAX_BYTES
         live = speedtest.Live()
         measured: list[Any] = []
 
@@ -554,9 +553,10 @@ class Api:
         return self.jobs.submit("diagnostics", self._run_diagnostics, single="diagnostics", sync=self._sync,
                                 progress=True)
 
-    def start_bufferbloat(self, **_: Any) -> dict:
-        """Check #14 is the speed test's run (ADR-0024): the same job, never a second load."""
-        return self.start_speedtest(body={})
+    def start_bufferbloat(self, body: Any = None, **_: Any) -> dict:
+        """Check #14 is the speed test's run (ADR-0024): the same job, never a second load, and the same
+        body (on mobile data it needs {"confirmed": true})."""
+        return self.start_speedtest(body=body if isinstance(body, dict) else {})
 
     def speedtest(self, **_: Any) -> dict:
         """The latest speed test (kept across restarts), whether starting one asks first (on mobile data), the
@@ -575,14 +575,15 @@ class Api:
         from the last run lasts, it refuses (409). {"join": true} only follows the
         run going now and never starts one (409 when none is): a page that saw a run elsewhere must not
         start a new one because it ended in the meantime."""
-        from . import speedtest
+        from . import bufferbloat, speedtest
         if isinstance(body, dict) and body.get("join") is True:
             job = self.jobs.get(self._speed_job) if self._speed_job else None
             if job is None or job["status"] != "running":
                 raise ApiError(409, "no speed test is running")
             return job
         confirmed = isinstance(body, dict) and body.get("confirmed") is True
-        if speedtest.needs_confirmation(self._on_cellular()) and not confirmed:
+        cellular = self._on_cellular()
+        if speedtest.needs_confirmation(cellular) and not confirmed:
             raise ApiError(409, "confirmation needed")
         last, _m = self._speed_store.last()
         if last and (last.get("retry_until") or 0) > self._clock():
@@ -590,7 +591,13 @@ class Api:
 
         def work(progress: Callable[[dict], None]) -> dict:
             with self._line_lock:
-                out = self._run_speedtest(progress)
+                # The run may have waited behind a measured tweak: if the route has moved to mobile data
+                # since, a run the user did not confirm there does not start.
+                now_cellular = cellular or self._on_cellular()
+                if speedtest.needs_confirmation(now_cellular) and not confirmed:
+                    return {"needs_confirmation": True, "results": [], "speed": None}
+                limit = bufferbloat.METERED_MAX_BYTES if now_cellular else bufferbloat.MAX_BYTES
+                out = self._run_speedtest(progress, limit)
             measurement = out.pop("measurement", None)
             self._last_bufferbloat = out.get("results") or []
             self._last_bufferbloat_ts = out.get("ts") or self._clock()
