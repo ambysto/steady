@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **The Windows speed test asks first on every metered connection** ([ADR-0024](docs/adr/0024-windows-speed-test.md), amended). It asked only when the Internet route left by a mobile broadband adapter; it now reads Windows' connection cost (what "Set as metered connection" sets, and what a phone's hotspot can tell Windows) on both the IPv4 and the IPv6 route, so an IPv6-only mobile network counts too, and recognises a phone's USB tether by its adapter. Behind a VPN it asks once for each metered network underneath and remembers the answer. As before, a metered run stops each direction at 250 MB, and the server refuses it without the user's yes. New `app/netcost.py`; read-only, no Admin, nothing new leaves the PC.
+- **The speed test's live chart no longer saw-tooths during upload.** The upload is counted as bytes are handed to the network stack, which takes them in bursts, so the live rate over 1 s jumped (118 to 261 Mbit/s on a line that sent a steady 190). The live rate is now read over the last 3 s and the charts are drawn as a smooth curve on a scale that moves in steps. The figures do not change.
+
 ## [1.0.1] - 2026-10-15
 
 Windows gets the speed test the Apple app has: download, upload, latency, jitter and packet loss on the Overview and the floating bar, from the same run as the bufferbloat check, without a question on Wi‑Fi or Ethernet. The app icon follows the Ambysto brand's v3 logo, and the floating bar's rounded edges are smooth in every look.

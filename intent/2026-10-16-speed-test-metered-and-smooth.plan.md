@@ -81,15 +81,19 @@ monitor's steps (`niceScale`). `steady_mbps`, `Phase.mbps` and the figures never
    replayed candidates in the intent's Findings). Docstrings and ADR-0024 decision 1
    ("the rate over the last second") follow.
 8. `web/js/speed.js` `chart`: the top of the scale is `niceScale` over the points (imported from
-   `ecg.js`, already tested) and never shrinks during a run (kept per direction until the result
-   arrives); the path is a monotone cubic through the points (no overshoot below zero or above the
-   peak). Nothing else on the card changes.
+   `ecg.js`, already tested) with finer steps than the floating monitor's (`CHART_STEPS`: 1, 1.5, 2,
+   3, 5, 7.5 per decade; with 1-2-5 an upload of 180 drew under 40 % of the chart's height). The
+   series is cumulative while a run goes, so the top only grows without kept state. The path is a
+   monotone cubic through the points (no overshoot below zero or above the peak), in a new pure
+   module `web/js/curve.js` so node can test it (`speed.js` needs the DOM). Nothing else on the
+   card changes.
 9. Tests: `tests/test_bufferbloat.py`: `LiveRate` on a steady total read in bursts (the trace
    pattern) stays within 5 %, on a step it reaches 90 % within 2.5 s, None before two readings,
-   never negative; replaying `speed_trace.json` through `measure` with a fake clock gives the
-   same `mbps`, `steady_mbps`, `capped` and `speedtest.result` figures as before the change
-   (expected values written down from the old code in the same commit). `tests/js/speed.test.mjs`
-   (new): the scale only grows, the curve stays inside `[0, top]`.
+   never negative; replaying `speed_trace.json` through `run_meter` (where the live rate is read)
+   with a fake clock gives the same ramp reading and steady figure with the new live rate and with
+   1.0.1's (kept in the test as `EndsRate`), and the mean step stays at 5 % or less.
+   `tests/js/speed.test.mjs` (new): the scale only grows, the curve stays between its points.
+   (The fixture lives in `tests/fixtures/`: `.gitignore` ignores every `data/` folder.)
 
 ### C. Docs
 

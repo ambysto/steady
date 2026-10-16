@@ -85,5 +85,5 @@ pnputil /enum-drivers /class Net
 ## Open
 
 - TestFlight: waits for the organization's Apple Developer Program enrollment; the owner then runs `apple/scripts/release.sh --upload` (`apple/RELEASE.md`) and the `apple-v0.8.1-<build>` tag follows. Before that upload, `apple/Steady/PrivacyInfo.xcprivacy` must declare the required-reason API the app uses (UserDefaults in `AppModel.swift`), or App Store Connect refuses the build (ITMS-91053).
-- The Windows speed test asks only when the IPv4 Internet route leaves by a mobile broadband adapter; a phone's hotspot, a USB tether, a VPN over mobile data and IPv6-only mobile networks are not detected yet (ADR-0024).
+- The Windows speed test asks on a metered connection, from Windows' connection cost (ADR-0024, amended 2026-10-16). A phone's hotspot is caught only when it tells Windows it is metered; the hotspot, USB tether and VPN-over-phone cases still wait for a check by hand with a real phone.
 - `docs/DIAGNOSTICS.md` and `docs/TRANSLATING.md` carry their own open tickets; iPad Split View and the floating-bar handover are unverified (the speed-test intent).
