@@ -117,3 +117,17 @@ amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
   4.0 % / 35 % / 1.75 s; 3 s 2.2 % / 21 % / 2.5 s; 4 s 1.2 % / 17 % / 3.5 s; an exponential average
   over 1 s 3.7 % / 28 % / 2.75 s. Download (calm already): 7.3 % / 36 % now, 1.3 % / 19 % with the
   3 s slope. Chosen: the least-squares slope over 3 s.
+
+**Real run after the change** (2026-10-16, owner's go-ahead, home Wi‑Fi read as unmetered, through
+an isolated dev server driven from the page)
+
+- Download 292.0, upload 178.4 Mbit/s (the 3 s slope's live line moved by 1.8 % and 2.8 % of the
+  figure between readings; the recorded run before the change: 6.4 % and 10.1 %).
+- Against the route interface's byte counters over the same 2-10 s: download -5.4 % (308.7),
+  upload -7.2 % (192.3). The run recorded before the change, read the same way: -5.2 % and -7.7 %.
+  The meter's own bytes over that window give the figure to within 0.5 %, so the gap is what the
+  counters add (TCP/IP headers, about 3 %, and retransmissions on the upload, which were not read
+  this time) and the change does not move the figures. Proof 6's 5 % is not met on the raw
+  counters, as in the 1.0.1 runs (-5.1 % and -11.9 %).
+- The page's screenshots of this run failed (the card re-rendered under the capture); the chart is
+  shown by the replay screenshots (proof 3).
