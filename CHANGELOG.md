@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-16
+
+The Windows speed test works on a fresh Windows install or virtual machine, where it said "Could not measure" in both directions: the app's HTTPS is now verified by Windows itself. The figures are unchanged.
+
 ### Fixed
 - **The Windows speed test works on a fresh Windows** ([ADR-0025](docs/adr/0025-https-verified-by-windows.md)). On a new install or virtual machine both directions failed with "Could not measure" while ping worked: Python checked speed.cloudflare.com's certificate only against the root certificates already in Windows' store, and a fresh Windows carries few. The app's HTTPS requests are now verified by Windows itself (the `truststore` library, now in `requirements.txt` and the packaged app), which fetches a missing root as it does for its own programs and honours one a company or an antivirus installed. When Windows still cannot verify the certificate (automatic root updates turned off, Windows Update out of reach), the card says so (`ui.speed.untrusted`, in all 7 catalogs) instead of asking to check the connection. New `app/tls.py`; without `truststore` installed the app checks certificates as before.
 
