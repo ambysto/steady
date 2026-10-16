@@ -1,5 +1,5 @@
 ---
-status: building   # draft → approved → planned → building → verified → shipped (PR #n)
+status: shipped (PR #85)   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # A solid floating monitor on Windows that screenshots can see
 
