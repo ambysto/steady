@@ -25,19 +25,100 @@ class LiveRateTests(unittest.TestCase):
         self.assertIsNone(rate.add(0, 0))
         self.assertIsNone(rate.add(0, 10))     # no time has passed
 
-    def test_the_rate_covers_about_the_last_second(self):
+    def test_a_steady_rate_reads_as_itself(self):
         rate = bb.LiveRate()
-        rate.add(0, 0)
-        # 12.5 MB/s = 100 Mbit/s for the first second, then 25 MB/s = 200 Mbit/s.
-        self.assertEqual(rate.add(0.5, 6_250_000), 100)
-        rate.add(1.0, 12_500_000)
-        rate.add(1.5, 25_000_000)
-        self.assertEqual(rate.add(2.0, 37_500_000), 200)
+        got = [rate.add(k * 0.25, k * 3_125_000) for k in range(20)]      # 100 Mbit/s
+        self.assertIsNone(got[0])
+        self.assertTrue(all(abs(v - 100) < 1e-6 for v in got[1:]))
+
+    def test_bursts_on_a_steady_line_stay_within_5_percent(self):
+        # 100 Mbit/s on average, counted as 150 then 50 Mbit/s by turns of 0.5 s (the socket taking bytes in
+        # bursts): the ends of a 1 s window read anywhere from about 75 to 125.
+        rate, total, got = bb.LiveRate(), 0.0, []
+        for k in range(1, 61):
+            total += (150 if (k * 0.25) % 1.0 in (0.25, 0.5) else 50) * 1e6 / 8 * 0.25
+            got.append((k * 0.25, rate.add(k * 0.25, int(total))))
+        after = [v for t, v in got if t >= 3.0]
+        self.assertLess(max(abs(v - 100) for v in after), 5)
+
+    def test_a_real_change_shows_within_2_5_seconds(self):
+        rate, total, reached = bb.LiveRate(), 0, None
+        for k in range(1, 61):
+            t = k * 0.25
+            total += (100 if t <= 5 else 200) * 1_000_000 // 8 // 4
+            v = rate.add(t, total)
+            if reached is None and t > 5 and v >= 190:
+                reached = t - 5
+        self.assertIsNotNone(reached)
+        self.assertLessEqual(reached, 2.5)
 
     def test_a_total_that_goes_back_reads_as_zero(self):
         rate = bb.LiveRate()
         rate.add(0, 1000)
         self.assertEqual(rate.add(1, 0), 0)
+
+
+class TraceTests(unittest.TestCase):
+    """tests/fixtures/speed_trace.json: a real run's meter readings, replayed through `run_meter` at its 0.25 s
+    beat. The upload saw-tooths in the count while the interface counter is steady (ADR-0024)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import json
+        cls.trace = json.loads((Path(__file__).parent / "fixtures" / "speed_trace.json").read_text(encoding="utf-8"))
+
+    def replay(self, direction, live_rate=None):
+        import bisect
+        from unittest import mock
+        rows = self.trace[direction]
+        times = [r[0] for r in rows]
+        t = [0.0]
+
+        class TraceMeter:
+            @property
+            def bytes(self):
+                return rows[max(0, bisect.bisect_right(times, t[0]) - 1)][1]
+
+        def wait(seconds):
+            t[0] += seconds
+            return t[0] > times[-1]
+        with mock.patch.object(bb, "LiveRate", live_rate or bb.LiveRate):
+            at_ramp, series = bb.run_meter(TraceMeter(), 0.0, threading.Event(), lambda s, v: None,
+                                           clock=lambda: t[0], wait=wait)
+        return at_ramp, series, bb.steady_mbps(at_ramp, rows[-1][1], times[-1])
+
+    @staticmethod
+    def mean_step(series, figure):
+        after = [v for s, v in series if s >= 2.0]
+        return sum(abs(b - a) for a, b in zip(after, after[1:])) / (len(after) - 1) / figure * 100
+
+    def test_the_live_line_is_smooth_on_both_directions(self):
+        for direction in ("download", "upload"):
+            figure = self.trace["figures"][f"{direction}_mbps"]
+            _, series, _ = self.replay(direction)
+            self.assertLessEqual(self.mean_step(series, figure), 5, direction)
+        _, before, _ = self.replay("upload", lambda: EndsRate(1.0))       # 1.0.1's live rate
+        self.assertGreater(self.mean_step(before, self.trace["figures"]["upload_mbps"]), 9)
+
+    def test_the_figures_do_not_depend_on_the_live_rate(self):
+        for direction in ("download", "upload"):
+            new, old = self.replay(direction), self.replay(direction, lambda: EndsRate(1.0))
+            self.assertEqual((new[0], new[2]), (old[0], old[2]), direction)
+            self.assertIsNotNone(new[2])
+
+
+class EndsRate:
+    """1.0.1's live rate, for comparison: the difference between the ends of the last `window` seconds."""
+
+    def __init__(self, window):
+        self.window, self._points = window, []
+
+    def add(self, seconds, total):
+        self._points.append((seconds, total))
+        while len(self._points) > 2 and self._points[1][0] <= seconds - self.window:
+            self._points.pop(0)
+        base_s, base_bytes = self._points[0]
+        return None if seconds <= base_s else max(0, total - base_bytes) * 8 / (seconds - base_s) / 1e6
 
 
 class FigureTests(unittest.TestCase):

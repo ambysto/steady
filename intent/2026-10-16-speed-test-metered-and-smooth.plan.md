@@ -72,7 +72,7 @@ monitor's steps (`niceScale`). `steady_mbps`, `Phase.mbps` and the figures never
 6. **Record a trace (done 2026-10-16 with the owner's go-ahead; result in the intent's Findings).** A scratch script (not committed)
    runs `bufferbloat.measure(..., events=...)` once and, at each 0.25 s beat, logs the meter's total
    and the route interface's `in_octets` / `out_octets` (`traffic.interface_row`). Committed:
-   `tests/data/speed_trace.json` with only `[seconds, meter_bytes, interface_bytes]` per direction
+   `tests/fixtures/speed_trace.json` with only `[seconds, meter_bytes, interface_bytes]` per direction
    (no server code, address or adapter name). It also says which hypothesis holds: steps in the
    meter total while the interface counter is steady (bytes counted at the socket in bursts, and each
    connection reconnecting every 25 MB) versus a line that really varies.
