@@ -166,7 +166,7 @@ function renderOptimize() {
   $("#optimize-glyph").firstElementChild.setAttribute("href", `#i-${OPTIMIZE_GLYPH[state]}`);
   const percent = state === "busy" && p && p.total ? Math.round((100 * p.done) / p.total) : 0;
   $("#optimize-ring").style.strokeDasharray = `${percent} 100`;
-  // A result shows its count inside the bulb, in place of the icon.
+  // A result shows its count on the button, in place of the icon.
   const count = state === "fix" ? summary.fixable : state === "issues" ? summary.count : null;
   $("#optimize-count").hidden = count === null;
   $("#optimize-glyph").style.display = count === null ? "" : "none";

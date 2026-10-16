@@ -372,18 +372,25 @@ class MiniWindowTests(unittest.TestCase):
         self.assertIsNot(ran[0], threading.current_thread())
         self.assertTrue(ran[0].daemon)
 
-    def test_bar_outline(self):
-        (bx0, by0, bx1, by1, br), (sx0, sy0, sx1, sy1, sr) = desktop.bar_parts(desktop.BAR_SIZE)
-        self.assertEqual((bx0, by0, bx1 - bx0, by1 - by0), (0, 0, desktop.BUTTON + 1, desktop.BUTTON + 1))
-        self.assertEqual(sy1 - sy0, desktop.STRIP + 1)
-        self.assertEqual(sy0, (desktop.BAR_SIZE[1] - desktop.STRIP) // 2)             # centred on the button
-        self.assertEqual(sx0, desktop.BUTTON - desktop.CORNER)      # its left corners hide behind the button
-        self.assertEqual(sx1, desktop.BAR_SIZE[0] + 1)
-        self.assertEqual((br, sr), (desktop.CORNER, desktop.CORNER))
-        big = desktop.bar_parts(desktop.BAR_SIZE, 1.5)                                # follows the DPI
-        self.assertEqual(big[0][2], round(desktop.BUTTON * 1.5) + 1)
-        self.assertEqual(big[1][3] - big[1][1], round(desktop.STRIP * 1.5) + 1)
-        self.assertEqual(big[0][4], round(desktop.CORNER * 1.5))
+    def test_the_bar_is_one_rectangle_that_windows_rounds(self):
+        set_attributes = []
+        self.shell.mini.native = mock.Mock()
+        self.shell.mini.native.Handle.ToInt64.return_value = 4242
+        with mock.patch.object(desktop, "fit_form", lambda form, size: True), \
+                mock.patch.object(desktop, "_dwm_int", lambda hwnd, attribute, value:
+                                  set_attributes.append((hwnd, attribute, value)) or True):
+            self.shell.mini_state["mode"] = "bar"
+            self.shell._fit_mini()
+            self.shell.mini_state["mode"] = "full"
+            self.shell._fit_mini()
+        frame = (desktop.DWMWA_NCRENDERING_POLICY, desktop.DWMNCRP_ENABLED)       # the shadow stays
+        self.assertEqual(set_attributes, [
+            (4242, *frame), (4242, desktop.DWMWA_WINDOW_CORNER_PREFERENCE, desktop.DWMWCP_ROUNDSMALL),
+            (4242, *frame), (4242, desktop.DWMWA_WINDOW_CORNER_PREFERENCE, desktop.DWMWCP_ROUND)])
+        self.assertEqual((desktop.DWMWCP_ROUND, desktop.DWMWCP_ROUNDSMALL), (2, 3))
+        for name in ("bar_parts", "shape_window", "BUTTON", "STRIP", "CORNER"):
+            self.assertFalse(hasattr(desktop, name), name)          # no window region any more
+        self.assertNotIn("SetWindowRgn", Path(desktop.__file__).read_text(encoding="utf-8"))
 
     def test_bar_grows_away_from_the_screen_edge_it_is_near(self):
         screens = [Screen(0, 0, 1920, 1080)]

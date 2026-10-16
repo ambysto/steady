@@ -18,31 +18,40 @@ svg.icon { width: 14px; height: 14px; flex: none; stroke: currentColor; fill: no
 /* --- the one-line bar (default) and the full table: one of them shows --- */
 html[data-mode="bar"] .mini, html:not([data-mode="bar"]) .minibar { display: none !important; }
 
-/* The bar (ADR-0026): app/desktop.py cuts the window to a square button (Optimize) at the left,
-   full height, and a lower strip with the numbers and the arrow, from under the button's right edge
-   (BUTTON, STRIP, CORNER). The page is the bar's one dark colour in either theme, like an overlay,
-   so the cut alone draws the outline: no lighter pixel shows at its corners. */
+/* The bar (ADR-0026): one dark rectangle, the window itself. Windows rounds its corners (app/desktop.py,
+   DWMWCP_ROUNDSMALL), so the page paints edge to edge and the page background is the bar's one colour
+   in either theme, like an overlay. The Optimize button is a lighter rounded square at the left, inside
+   the bar; the numbers and the expand arrow run to its right over the full height. Flat and few
+   colours: one fill for the two square buttons (3 px from either end, the same 6 px corners), dim
+   icons beside the numbers, and colour only where it says something (the dot, Optimize's state). */
 html[data-mode="bar"] { --bar-solid: #161a2a; }
 html[data-mode="bar"] body { background: var(--bar-solid); }
 .minibar {
   --bar-text: #eef1f8; --bar-dim: rgba(238, 241, 248, .6); --bar-accent: #6cb4ff;
+  --bar-fill: #262c45; --bar-fill-hover: #30375a;
   position: relative; height: 100vh; white-space: nowrap; font-size: var(--text-footnote); color: var(--bar-text);
 }
-.minibar .tube { position: absolute; left: 28px; right: 0; top: 50%; height: 24px; transform: translateY(-50%);
-  display: flex; align-items: center; gap: 6px; padding: 0 3px 0 10px; }
-.minibar .optimize { position: absolute; left: 0; top: 50%; width: 32px; height: 32px; transform: translateY(-50%);
-  border-radius: 4px; color: var(--bar-accent); }
-.minibar .optimize .ring { inset: 3px; width: 26px; height: 26px; }
-.minibar .optimize:hover { background: #222842; }
+.minibar .tube { position: absolute; left: 29px; right: 0; top: 0; bottom: 0;
+  display: flex; align-items: center; gap: 5px; padding: 0 3px 0 6px; }
+.minibar .optimize { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px;
+  border-radius: 6px; background: var(--bar-fill); color: var(--bar-accent); }
+.minibar .optimize:hover { background: var(--bar-fill-hover); }
+/* At rest only the glyph shows; the ring is the progress of a running check. */
+.minibar .optimize .ring { display: none; inset: 3px; width: 20px; height: 20px; stroke-width: 3; }
+.minibar .optimize.busy .ring { display: block; }
+.minibar .optimize .glyph { width: 13px; height: 13px; }
+.minibar .optimize .count { font-size: var(--text-footnote); }
+/* Something to fix: a primary button (white on blue), set apart from issues by its fill, not only its hue. */
+.minibar .optimize.fix { background: #2f7bf6; color: #fff; }
+.minibar .optimize.fix:hover { background: #4a8ef8; }
 .minibar .stat { display: inline-flex; align-items: center; gap: 2px; width: 66px; flex: none; font-variant-numeric: tabular-nums;
   font-weight: var(--weight-semibold); letter-spacing: -.1px; }
-.minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; }
-.minibar .dot { width: 6px; height: 6px; margin-right: 2px; }
-.minibar .icon.down { color: #6cb4ff; } .minibar .icon.up { color: #c99bff; } .minibar .icon.ping { color: #5fd68a; }
+.minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; color: var(--bar-dim); }
+.minibar .dot { width: 6px; height: 6px; }
 .minibar .optimize.issues { color: #ffb340; } .minibar .optimize.good { color: #5fd68a; }
 /* The speed test in the tube: a gauge in a ring; the ring fills while it runs; then the download figure. */
 .minibar .speed { position: relative; display: grid; place-items: center; width: 34px; height: 18px; padding: 0; flex: none;
-  border: 0; border-radius: 9px; background: none; color: #6cb4ff; cursor: default; }
+  border: 0; border-radius: 4px; background: none; color: var(--bar-accent); cursor: default; }
 .minibar .speed:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
 .minibar .speed:disabled { opacity: .45; }
 .minibar .speed .ring { position: absolute; left: 8px; top: 0; width: 18px; height: 18px; transform: rotate(-90deg);
@@ -52,7 +61,7 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
   transition: stroke-dasharray var(--duration) linear; }
 .minibar .speed.running .ring .fill { display: inline; }
 .minibar .speed .glyph { width: 11px; height: 11px; stroke-width: 2.2; }
-.minibar .speed .figure { font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+.minibar .speed .figure { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
 .minibar .speed.done .ring, .minibar .speed.done .glyph { display: none; }
 .minibar .speed.problem { color: #ffb340; }
 .minibar .optimize.busy .ring .track { stroke: rgba(255, 255, 255, .14); }
@@ -61,12 +70,12 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .arrow:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
 .arrow .icon { width: 13px; height: 13px; stroke-width: 2.2; }
 .bar .arrow { width: 24px; height: 24px; }
-.tube .arrow { width: 17px; height: 17px; margin-left: auto; background: #2f7bf6; }
-.tube .arrow:hover { background: #4a8ef8; }
-.tube .arrow .icon { width: 10px; height: 10px; }
-/* Optimize: a ring around one icon. idle: bolt; busy: the ring fills with the check's progress and
-   a magnifier drifts in a small loop; fix: the count, a heavier ring; issues: amber ring with the
-   count; good: a green tick. Flat colours, no glow (macOS native). */
+.tube .arrow { width: 26px; height: 26px; margin-left: auto; border-radius: 6px; background: var(--bar-fill); color: var(--bar-text); }
+.tube .arrow:hover { background: var(--bar-fill-hover); }
+.tube .arrow .icon { width: 14px; height: 14px; }
+/* Optimize's states. idle: bolt; busy: the ring fills with the check's progress and a magnifier
+   drifts in a small loop; fix: the count on a filled button; issues: the count in amber; good: a
+   green tick. Flat colours, no glow (macOS native). */
 .optimize { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: none;
   border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: default; }
 .optimize:hover { background: var(--accent-soft); }
@@ -80,7 +89,6 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .optimize.busy .ring .track { stroke: var(--surface-pressed); }
 .optimize.busy .ring .fill { display: inline; }
 .optimize.busy .glyph { animation: seek 1.6s ease-in-out infinite; }
-.optimize.fix .ring .track { stroke-width: 3; }
 .optimize.issues { color: var(--warn); }
 .optimize.good { color: var(--ok); }
 /* The magnifier looks around: a small loop, not a spin. */

@@ -215,16 +215,14 @@ SELFTEST_SIZE = (600, 760)
 
 MINI_SIZE = (340, 500)          # expanded: the full table
 BAR_SIZE = (330, 32)            # collapsed: one line, as long as its numbers and the speed test need
-# The bar (ADR-0026): a square button (Optimize) at the left, full height, and a lower strip with
-# the numbers, both with slightly rounded corners. web/mini.css draws the same shapes edge to edge.
-BUTTON = 32                     # the square's side, the bar's full height
-STRIP = 24                      # the strip's height, centred on the button
-CORNER = 4                      # corner radius: a window region has no soft edge, so it stays small
+# The bar (ADR-0026) is one rectangle, BAR_SIZE: no window region. Windows (DWM) rounds its corners
+# smoothly, and the Optimize button is a rounded square inside it, drawn by web/mini.css.
 SIZES = {"full": MINI_SIZE, "bar": BAR_SIZE}
 MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear of the taskbar)
 MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
-DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND, DWMWCP_ROUND = 33, 1, 2
-DWMWA_NCRENDERING_POLICY, DWMNCRP_DISABLED, DWMNCRP_ENABLED = 2, 1, 2
+DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DWMWCP_ROUNDSMALL = 33, 2, 3
+DWMWA_NCRENDERING_POLICY, DWMNCRP_ENABLED = 2, 2
+CORNER_PREFERENCES = {"full": DWMWCP_ROUND, "bar": DWMWCP_ROUNDSMALL}
 BACKGROUNDS = {"light": "#F5F5F7", "dark": "#1E1E1F"}     # --window of tokens.css
 
 
@@ -318,50 +316,20 @@ def resized_position(x: int, y: int, old: tuple[int, int], new: tuple[int, int],
     return int(nx), int(ny)
 
 
-# --- the bar's shape (ADR-0026) ----------------------------------------------------------------
+# --- the corners (ADR-0026) --------------------------------------------------------------------
 
-def bar_parts(size: tuple[int, int], scale: float = 1.0) -> list[tuple[int, int, int, int, int]]:
-    """The bar's two shapes in device pixels: the square button at the left, full height, and the
-    strip, vertically centred, from under the button's right edge (its left corners hide behind
-    the button) to the window's. (left, top, right, bottom, radius); right and bottom are
-    exclusive, as CreateRoundRectRgn takes them."""
-    width, height = round(size[0] * scale), round(size[1] * scale)
-    button, strip, radius = round(BUTTON * scale), round(STRIP * scale), round(CORNER * scale)
-    top = (height - button) // 2
-    strip_top = (height - strip) // 2
-    return [(0, top, button + 1, top + button + 1, radius),
-            (button - radius, strip_top, width + 1, strip_top + strip + 1, radius)]
-
-
-def _dwm_int(hwnd: int, attribute: int, value: int) -> None:
+def _dwm_int(hwnd: int, attribute: int, value: int) -> bool:
     data = ctypes.c_int(value)
-    ctypes.windll.dwmapi.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), attribute, ctypes.byref(data), ctypes.sizeof(data))
+    return ctypes.windll.dwmapi.DwmSetWindowAttribute(ctypes.c_void_p(hwnd), attribute, ctypes.byref(data),
+                                                      ctypes.sizeof(data)) == 0
 
 
-def shape_window(hwnd: int, size: tuple[int, int] | None) -> bool:
-    """Cut the window to the bar's button and strip (size given), or back to its rectangle (None).
-    DWM's own frame (the shadow pywebview asks for) and rounded corners draw over a window region,
-    so they are off while the window has the shape and back on without it."""
-    user32, gdi32 = ctypes.windll.user32, ctypes.windll.gdi32
-    user32.SetWindowRgn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
-    if size is None:
-        ok = bool(user32.SetWindowRgn(ctypes.c_void_p(hwnd), None, True))
-        _dwm_int(hwnd, DWMWA_NCRENDERING_POLICY, DWMNCRP_ENABLED)
-        _dwm_int(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
-        return ok
-    _dwm_int(hwnd, DWMWA_NCRENDERING_POLICY, DWMNCRP_DISABLED)
-    _dwm_int(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND)
-    gdi32.CreateRoundRectRgn.restype = ctypes.c_void_p
-    gdi32.CombineRgn.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
-    gdi32.DeleteObject.argtypes = [ctypes.c_void_p]
-    user32.GetDpiForWindow.argtypes = [ctypes.c_void_p]
-    scale = (user32.GetDpiForWindow(ctypes.c_void_p(hwnd)) or 96) / 96
-    (bx0, by0, bx1, by1, r), (sx0, sy0, sx1, sy1, _) = bar_parts(size, scale)
-    button = gdi32.CreateRoundRectRgn(bx0, by0, bx1, by1, 2 * r, 2 * r)
-    strip = gdi32.CreateRoundRectRgn(sx0, sy0, sx1, sy1, 2 * r, 2 * r)
-    gdi32.CombineRgn(button, button, strip, 2)          # RGN_OR
-    gdi32.DeleteObject(strip)
-    return bool(user32.SetWindowRgn(ctypes.c_void_p(hwnd), button, True))   # the window owns it now
+def round_corners(hwnd: int, preference: int) -> bool:
+    """Let DWM round the window's corners (Windows 11; older versions ignore it and keep square ones).
+    Its non-client rendering stays on, which is where the frame's shadow comes from. DWM anti-aliases
+    the corners, which a window region cannot."""
+    _dwm_int(hwnd, DWMWA_NCRENDERING_POLICY, DWMNCRP_ENABLED)
+    return _dwm_int(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, preference)
 
 
 def fit_form(form: Any, size: tuple[int, int]) -> bool:
@@ -573,7 +541,7 @@ class Desktop:
             return              # not created yet
         hwnd = self._mini_hwnd()
         if hwnd is not None:
-            shape_window(hwnd, SIZES[mode] if mode == "bar" else None)     # the table keeps rounded corners
+            round_corners(hwnd, CORNER_PREFERENCES[mode])       # small for the bar, the usual ones for the table
 
     def _on_mini_moved(self, x: int, y: int) -> None:
         self.mini_state.update(x=int(x), y=int(y))       # saved on hide and quit
