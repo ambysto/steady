@@ -1007,6 +1007,7 @@
   "ui.speed.refused": "Le serveur de test limite les tests depuis cette adresse. Réessayez dans {minutes} min environ.",
   "ui.speed.refused_later": "Le serveur de test limite les tests depuis cette adresse. Réessayez plus tard.",
   "ui.speed.failed": "Mesure impossible. Vérifiez la connexion et réessayez.",
+  "ui.speed.untrusted": "Windows n'a pas pu vérifier le certificat du serveur de test. Vérifiez la date et l'heure et que Windows Update est accessible, puis réessayez.",
   "ui.speed.mini.hint": "Test de débit : descendant, montant et ping en 30 secondes environ.",
   "ui.speed.mini.result": "Descendant {download} · Montant {upload} · Ping {ping}",
   "ui.speed.mini.open": "Cliquez pour voir le résultat dans la fenêtre principale.",

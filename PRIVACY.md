@@ -47,6 +47,8 @@ address.
 
 You can change the monitored targets in the settings file.
 
+The app's HTTPS connections are verified by Windows, so Windows may download a missing root certificate or a revocation list from Microsoft (Windows Update), as it does for any Windows program. The app sends nothing there itself.
+
 **iPhone, iPad and Mac.** The app measures only while it is open; nothing runs in the background.
 
 | When | What | To |

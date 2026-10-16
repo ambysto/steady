@@ -30222,6 +30222,53 @@
         }
       }
     },
+    "ui.speed.untrusted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Windows konnte das Zertifikat des Testservers nicht prüfen. Prüfe Datum und Uhrzeit und ob Windows Update erreichbar ist, und versuche es dann erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Windows could not verify the test server's certificate. Check the date and time and that Windows Update can be reached, then try again."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Windows no pudo verificar el certificado del servidor de prueba. Comprueba la fecha y la hora y que Windows Update esté accesible, y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Windows n'a pas pu vérifier le certificat du serveur de test. Vérifiez la date et l'heure et que Windows Update est accessible, puis réessayez."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Windows não conseguiu verificar o certificado do servidor de teste. Verifique a data e a hora e se o Windows Update está acessível, e tente de novo."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Windows không xác minh được chứng chỉ của máy chủ đo. Kiểm tra ngày giờ và kết nối tới Windows Update rồi thử lại."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Windows 无法验证测试服务器的证书。请检查日期和时间，并确认可以访问 Windows Update，然后重试。"
+          }
+        }
+      }
+    },
     "ui.speed.upload" : {
       "extractionState" : "manual",
       "localizations" : {

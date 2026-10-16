@@ -13,7 +13,7 @@ import threading
 from pathlib import Path
 from typing import Any, Iterable
 
-from . import config
+from . import config, tls
 from .bufferbloat import LOAD_S, RAMP_S, Measurement, Phase
 from .netcost import Verdict
 
@@ -103,6 +103,8 @@ def result(m: Measurement, at: float) -> dict[str, Any]:
         "server": m.server,
         "refused_status": refusals[0].refused if refusals else None,
         "retry_until": at + max(waits) if waits else None,
+        # A direction without a figure because the system could not verify the server's certificate.
+        "untrusted": any(f is None and tls.untrusted(p.error) for p, f in ((m.download, down), (m.upload, up))),
     }
 
 

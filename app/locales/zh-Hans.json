@@ -1007,6 +1007,7 @@
   "ui.speed.refused": "测试服务器正在限制来自此地址的测试。请约 {minutes} 分钟后再试。",
   "ui.speed.refused_later": "测试服务器正在限制来自此地址的测试。请稍后再试。",
   "ui.speed.failed": "无法测量。请检查网络连接后重试。",
+  "ui.speed.untrusted": "Windows 无法验证测试服务器的证书。请检查日期和时间，并确认可以访问 Windows Update，然后重试。",
   "ui.speed.mini.hint": "测速：约 30 秒内测量下载、上传和延迟。",
   "ui.speed.mini.result": "下载 {download} · 上传 {upload} · 延迟 {ping}",
   "ui.speed.mini.open": "点击在主窗口中查看结果。",
