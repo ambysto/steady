@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Restarting the monitor no longer leaves none running** (SIC-112). When the monitor started while the previous one was still exiting (the task stopped and started back-to-back, an upgrade), it found the previous one's mutex, logged "another monitor instance is already running" and quit; the previous one then exited too and the window showed "offline". A new monitor now keeps trying for up to 10 seconds before it concludes another one is really running; two monitors still never run at once.
+
 ## [1.0.6] - 2026-10-16
 
 The floating monitor opens dark, matching its bar, and the speed test button sits at the bar's right end beside the expand arrow.
