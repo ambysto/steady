@@ -1,5 +1,5 @@
 ---
-status: verified   # draft → approved → planned → building → verified → shipped (PR #n)
+status: shipped (PR #79)   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test: ask on every metered connection, and a smooth live chart
 
