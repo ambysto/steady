@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-16
+
+The floating monitor on Windows is always solid and shows in screenshots and screen sharing, as a square Optimize button beside a strip with the numbers. Closing it with Alt+F4 no longer freezes the app, and the tray icon keeps updating after an install or an update restarts the monitor.
+
 ### Changed
 - **The floating monitor on Windows is solid and shows in screenshots** ([ADR-0026](docs/adr/0026-solid-floating-monitor-on-windows.md), which replaces [ADR-0021](docs/adr/0021-floating-monitor-glass.md) on Windows). Its default Glass look left the window out of every capture, so Lightshot, the Snipping Tool, screen recordings and screen sharing showed what was behind it. That is what a user taking a screenshot to report a problem least wants. The one-line bar is now a square Optimize button and a lower strip with the numbers, both with slightly rounded corners, in one dark colour in either theme; the table is unchanged. The app no longer reads the screen behind the window (`PRIVACY.md` updated), and the background thread that did so is gone. The Mac keeps its Glass look.
 
