@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-10-16
+
+The tray icon is the app's logo, its Wi-Fi arcs in the connection's colour, and an install or an update that restarts the monitor no longer leaves none running.
+
 ### Changed
 - **The tray icon is the app's logo.** It was still the old drawing (a square in the state's colour with white Wi-Fi arcs) after the app icon moved to the v3 logo in 1.0.1. It is now the logo's dark tile, taken from `app.ico`, with its Wi-Fi arcs in the state's colour: Steady Sky when all is well (exactly the logo), red during an outage, grey while the monitor cannot be reached.
 
