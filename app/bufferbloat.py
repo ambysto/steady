@@ -31,14 +31,17 @@ PING_TIMEOUT_MS = 900  # a ping lost under load waited at least this long
 # (It was 100 MB until 2026-10-07: every phase then read 80 Mbps on a line that uploads ~230.)
 MAX_BYTES = 1_000_000_000
 LOAD_S = 10.0
-# On mobile data each direction stops at this instead (500 MB in all), so a line above 200 Mbps reads
-# as capped: the result is then incomplete, never a false ok (as on Apple).
+# On a metered connection (app/netcost.py) each direction stops at this instead (500 MB in all), so a
+# line above 200 Mbps reads as capped: the result is then incomplete, never a false ok (as on Apple).
 METERED_MAX_BYTES = 250_000_000
 # The most a load phase can report: it stops at MAX_BYTES, so a faster line reads as this.
 LOAD_CEILING_MBPS = MAX_BYTES * 8 / LOAD_S / 1e6
 CHUNK = 64 * 1024
 
 METER_INTERVAL = 0.25  # how often the live rate is read while a direction loads
+# The live rate's window. The upload is counted as bytes are handed to the socket, which takes them in
+# bursts and reconnects every 25 MB, so over 1 s it saw-tooths while the line is steady (ADR-0024).
+LIVE_WINDOW_S = 3.0
 
 Ping = Callable[[str], "float | None"]          # address -> RTT in ms, None if lost
 # (seconds, stop) -> bytes moved. With `measure(events=...)` it is also given `meter=`, a Meter it
@@ -94,22 +97,28 @@ class Meter:
 
 
 class LiveRate:
-    """The live figure: the rate over about the last `window` seconds, from readings of a running total."""
+    """The live figure: the rate over about the last `window` seconds, as the least-squares slope of the
+    running total's readings in it. Every reading counts, not only the two ends, so a burst at either end
+    moves it little. Only what is shown while a load runs: the figures never read it."""
 
-    def __init__(self, window: float = 1.0) -> None:
+    def __init__(self, window: float = LIVE_WINDOW_S) -> None:
         self.window = window
         self._points: list[tuple[float, int]] = []
 
     def add(self, seconds: float, total: int) -> float | None:
-        """Mbit/s since the oldest reading still in the window; None until two readings are apart in time."""
+        """Mbit/s over the readings of the last `window` seconds; None until two readings are apart in time.
+        Never negative."""
         self._points.append((seconds, total))
-        # The base is the newest reading at least `window` old, so the span covers the whole window.
-        while len(self._points) > 2 and self._points[1][0] <= seconds - self.window:
+        while self._points[0][0] < seconds - self.window - 1e-9:
             self._points.pop(0)
-        base_s, base_bytes = self._points[0]
-        if seconds <= base_s:
+        count = len(self._points)
+        mean_s = sum(p[0] for p in self._points) / count
+        mean_bytes = sum(p[1] for p in self._points) / count
+        spread = sum((p[0] - mean_s) ** 2 for p in self._points)
+        if spread <= 0:
             return None
-        return max(0, total - base_bytes) * 8 / (seconds - base_s) / 1e6
+        slope = sum((p[0] - mean_s) * (p[1] - mean_bytes) for p in self._points) / spread
+        return max(0.0, slope) * 8 / 1e6
 
 
 def steady_mbps(at_ramp: tuple[float, int] | None, total: int, seconds: float) -> float | None:
@@ -301,7 +310,7 @@ def run_meter(meter: Meter, started: float, done: threading.Event, report: Calla
               interval: float = METER_INTERVAL,
               wait: Callable[[float], bool] | None = None) -> tuple[tuple[float, int] | None, list[tuple[float, float]]]:
     """Read `meter` every `interval` until `done` (the load ended: a frozen total would read as a rate
-    falling to zero), report the rate over the last second, and return the first reading taken once
+    falling to zero), report the live rate (LiveRate), and return the first reading taken once
     the ramp was over with the rates read. On a fixed beat from `started`, so a slow report does not
     stretch the interval."""
     wait = wait or done.wait

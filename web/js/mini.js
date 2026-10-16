@@ -3,7 +3,7 @@
 // the apps that hold connections, and the connection's basic facts.
 // Optimize only runs the regular check (read-only). When it finds what the app can fix, "Fix N"
 // opens the result in the main window, which lists the changes and asks before any (ADR-0020).
-// The speed test (ADR-0024) runs from the bar; on mobile data the main window asks first, and a
+// The speed test (ADR-0024) runs from the bar; on a metered connection the main window asks first, and a
 // result opens there too.
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
 // Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
@@ -274,14 +274,14 @@ async function followSpeed(jobId = null) {
   Object.assign(speedTest, { running: false, live: null });
   await loadSpeed().catch(() => {});
   renderSpeed();
-  // The route moved to mobile data since the bar last looked: the main window asks.
+  // The route moved to a metered connection since the bar last looked: the main window asks.
   if (askNow && speedTest.ask) window.pywebview?.api?.open_speed?.(true);
 }
 
 function runSpeed() {
   const state = speedState();
   if (state === "running") return;
-  // A result, or the question on mobile data, is shown in the main window: the bar has no room to
+  // A result, or the question on a metered connection, is shown in the main window: the bar has no room to
   // explain how much data the test uses.
   if (state === "done" || state === "problem" || speedTest.ask) {
     window.pywebview?.api?.open_speed?.(state === "idle");

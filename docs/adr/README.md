@@ -27,4 +27,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0021](0021-floating-monitor-glass.md) | The floating monitor's glass look comes from a blurred capture of what is behind it | Accepted (amended 2026-10-15) |
 | [0022](0022-mac-floating-monitor.md) | The Mac's floating monitor is a non-activating panel that reads the measurements the app already makes | Accepted |
 | [0023](0023-apple-speed-test.md) | On Apple, the speed test is check #14's run | Accepted |
-| [0024](0024-windows-speed-test.md) | On Windows too, the speed test is check #14's run | Accepted |
+| [0024](0024-windows-speed-test.md) | On Windows too, the speed test is check #14's run | Accepted (amended 2026-10-16) |
