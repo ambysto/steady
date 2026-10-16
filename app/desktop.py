@@ -559,6 +559,10 @@ class Desktop:
         self.messages: dict[str, Any] = {}
         self.live: dict | None = None
         self.reachable = False         # last poll reached the monitor
+        # Which monitor base each window's page was loaded from (None: the offline page). The shell
+        # asks the windows nothing about their URL: pywebview waits 20 s for a page that never loads.
+        self._window_base: str | None = None
+        self._mini_base: str | None = None
         self._caption: str | None = None
         self.quitting = False
         self.stop = threading.Event()
@@ -821,10 +825,15 @@ class Desktop:
         self.mini_state.update(x=int(x), y=int(y))       # saved on hide and quit
         self._glass_wake.set()                           # what is behind it changed
 
+    def _off_ui_thread(self, fn: Callable[[], None]) -> None:
+        threading.Thread(target=fn, name="desktop-ui-off", daemon=True).start()
+
     def _on_mini_closing(self) -> bool:
         if self.quitting:
             return True
-        self.hide_mini()       # Alt+F4 hides it like the close button
+        # pywebview runs closing handlers on the UI thread, where evaluate_js (inside hide_mini) waits
+        # for a callback that only that thread can deliver: it would freeze every window and the tray.
+        self._off_ui_thread(self.hide_mini)       # Alt+F4 hides it like the close button
         return False
 
     def _on_mini_loaded(self) -> None:
@@ -868,19 +877,33 @@ class Desktop:
             self.icon.title = self.title()
             self.icon.update_menu()
         self.paint_title_bar()
-        was, self.reachable = self.reachable, self.live is not None
+        self.reachable = self.live is not None
         # Load the UI only from a monitor that answered: server.json can name a port nothing listens
         # on yet (monitor just restarted), and the browser's error page would never reload by itself.
-        if self.window is not None and self.reachable and (
-                not was or not (self.window.get_current_url() or "").startswith(self.link.base)):
-            self.window.load_url(f"{self.link.base}/")    # the monitor came up (or moved to another port)
-        if self.mini is not None and self.reachable and (
-                not was or not (self.mini.get_current_url() or "").startswith(self.link.base)):
-            self.mini.load_url(self.mini_url())
+        # A window is loaded only when it shows the offline page or a monitor on another port: Edge
+        # does not navigate to the URL it already has, and pywebview would then wait 20 s for a load
+        # that never happens. A monitor back on the same port needs nothing: the page reloads itself
+        # when its token is refused (web/js/api.js).
+        if self.reachable and self.link.base:
+            if self.window is not None and self._window_base != self.link.base:
+                try:
+                    self.window.load_url(f"{self.link.base}/")
+                    self._window_base = self.link.base
+                except Exception as exc:
+                    log.warning("main window could not load the monitor: %r", exc)
+            if self.mini is not None and self._mini_base != self.link.base:
+                try:
+                    self.mini.load_url(self.mini_url())
+                    self._mini_base = self.link.base
+                except Exception as exc:
+                    log.warning("floating window could not load the monitor: %r", exc)
 
     def _poll(self) -> None:
         while not self.stop.is_set():
-            self.refresh()
+            try:
+                self.refresh()
+            except Exception:
+                log.exception("poll failed")      # one bad poll must not stop the tray and the windows
             self.stop.wait(POLL_S)
 
     # -- run ------------------------------------------------------------------------------
@@ -889,6 +912,7 @@ class Desktop:
         self.refresh()
         url = f"{self.link.base}/" if self.reachable else None
         html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline"))
+        self._window_base = self.link.base if url else None
         self.window = webview.create_window(self.text("app.name") if self.messages else "Ambysto Steady",
                                             url=url, html=html, width=1100, height=740, min_size=MIN_SIZE,
                                             hidden=self.minimized and not selftest, background_color="#F5F5F7",
@@ -914,6 +938,7 @@ class Desktop:
         size = SIZES[self.mini_state["mode"]]
         x, y = mini_position(self.mini_state, webview.screens, size)
         url = self.mini_url() if self.reachable else None
+        self._mini_base = self.link.base if url else None
         html = None if url else _OFFLINE_HTML.replace("{text}", self.text("ui.error.offline")).replace(
             "#f5f5f7", BACKGROUNDS[theme])
         self.mini = webview.create_window(
