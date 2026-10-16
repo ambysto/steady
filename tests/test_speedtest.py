@@ -173,6 +173,24 @@ class FigureTests(unittest.TestCase):
         self.assertEqual(r["loss_pct"], 0)
         self.assertEqual((r["refused_status"], r["retry_until"]), (429, AT + 120))
 
+    def test_a_certificate_the_system_could_not_verify_is_said(self):
+        error = ("OSError: SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
+                 "unable to get local issuer certificate (_ssl.c:1006)")
+        down, up = phase([None], mbps=0), phase([None], mbps=0)
+        down.error = up.error = error
+        r = st.result(bb.Measurement(phase([28]), down, up), AT)
+        self.assertEqual((r["download_mbps"], r["upload_mbps"], r["untrusted"]), (None, None, True))
+
+    def test_untrusted_only_for_a_direction_without_a_figure(self):
+        r = st.result(bb.Measurement(phase([10]), phase([30], mbps=100), phase([30], mbps=50)), AT)
+        self.assertFalse(r["untrusted"])
+        up = phase([30], mbps=50)
+        up.error = "OSError: SSLCertVerificationError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed"
+        self.assertFalse(st.result(bb.Measurement(phase([10]), phase([30], mbps=100), up), AT)["untrusted"])
+        down = phase([None], mbps=0)
+        down.error = "OSError: TimeoutError: timed out"
+        self.assertFalse(st.result(bb.Measurement(phase([10]), down, phase([30], mbps=50)), AT)["untrusted"])
+
     def test_a_run_that_moved_nothing_has_no_figures(self):
         m = bb.Measurement(phase([None, None]), phase([None], mbps=0), phase([None], mbps=0))
         r = st.result(m, AT)

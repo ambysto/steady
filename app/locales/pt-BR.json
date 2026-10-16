@@ -1007,6 +1007,7 @@
   "ui.speed.refused": "O servidor de teste está limitando testes deste endereço. Tente de novo em cerca de {minutes} min.",
   "ui.speed.refused_later": "O servidor de teste está limitando testes deste endereço. Tente de novo mais tarde.",
   "ui.speed.failed": "Não foi possível medir. Verifique a conexão e tente de novo.",
+  "ui.speed.untrusted": "O Windows não conseguiu verificar o certificado do servidor de teste. Verifique a data e a hora e se o Windows Update está acessível, e tente de novo.",
   "ui.speed.mini.hint": "Teste de velocidade: download, upload e ping em cerca de 30 segundos.",
   "ui.speed.mini.result": "Download {download} · Upload {upload} · Ping {ping}",
   "ui.speed.mini.open": "Clique para ver o resultado na janela principal.",

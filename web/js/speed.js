@@ -151,7 +151,8 @@ function progressBar(live) {
     el("div", { class: "speed-stage" }, t(`ui.speed.running.${live.stage || "idle"}`)));
 }
 
-/** Why a figure is missing: the server refused (with the wait while it lasts), or nothing moved. */
+/** Why a figure is missing: the server refused (with the wait while it lasts), its certificate could not be
+ *  verified, or nothing moved. */
 export function problemText(last) {
   if (!last) return null;
   if (last.refused_status) {
@@ -159,6 +160,7 @@ export function problemText(last) {
     const left = waitLeft();
     return left > 0 ? t("ui.speed.refused", { minutes: Math.max(1, Math.ceil(left / 60)) }) : null;
   }
+  if (last.untrusted) return t("ui.speed.untrusted");
   return last.download_mbps === null || last.download_mbps === undefined
     || last.upload_mbps === null || last.upload_mbps === undefined ? t("ui.speed.failed") : null;
 }

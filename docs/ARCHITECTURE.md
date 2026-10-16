@@ -38,6 +38,7 @@
 | `diagnostics.py` | Diagnostic checks — see [DIAGNOSTICS.md](DIAGNOSTICS.md) |
 | `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
 | `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
+| `tls.py` | A new TLS context for each HTTPS connection the app opens (the speed test's loads, an `https://` probe), never shared: verified by Windows through truststore when installed, else by the standard library ([ADR-0025](adr/0025-https-verified-by-windows.md)) |
 | `notify.py` | Windows toasts on connection loss (after 30s) / when the watchdog intervenes, disables itself, or hits an error; rate-limited; runs in the background |
 | `singleton.py` | Prevents two monitors running on the same data directory (named mutex) |
 | `autostart.py` | Task Scheduler task that starts the monitor at logon (created from XML) |

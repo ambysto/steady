@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterator
 from urllib.parse import urlsplit
 
-from . import USER_AGENT
+from . import USER_AGENT, tls
 
 # speed.cloudflare.com answers 403 to a single request above ~25 MB (verified 2026-10-04: 25 MB ok,
 # 100 MB refused), so each request asks for 25 MB and the download worker simply asks again.
@@ -158,9 +158,10 @@ def _retry_after(value: str | None) -> float | None:
 
 def _connect(url: str, timeout: float) -> tuple[http.client.HTTPConnection, str]:
     parts = urlsplit(url)
-    cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
     path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
-    return cls(parts.hostname, parts.port, timeout=timeout), path
+    if parts.scheme == "https":
+        return http.client.HTTPSConnection(parts.hostname, parts.port, timeout=timeout, context=tls.context()), path
+    return http.client.HTTPConnection(parts.hostname, parts.port, timeout=timeout), path
 
 
 def http_download(url: str, seconds: float, stop: threading.Event, connections: int = 4,
