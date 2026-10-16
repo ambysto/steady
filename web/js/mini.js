@@ -6,8 +6,8 @@
 // The speed test (ADR-0024) runs from the bar; on a metered connection the main window asks first, and a
 // result opens there too.
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
-// Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
-// shell how see-through the window is (window.pywebview.api, kept in mini.json).
+// Its look is its own: dark by default, like the one-line bar, or light / system (localStorage
+// "mini-theme", also set from Settings).
 
 import { get, onReachability, runJob } from "./api.js";
 import { $, el, fill } from "./dom.js";
@@ -35,11 +35,12 @@ let pollTimer = null;
 let frame = null;
 
 const THEMES = ["system", "light", "dark"];
+const DEFAULT_THEME = "dark";     // the bar is dark in either theme, so the table opens dark too
 
 function currentTheme() {
-  let theme = "system";
-  try { theme = localStorage.getItem("mini-theme") || "system"; } catch { /* storage blocked: follow the system */ }
-  return THEMES.includes(theme) ? theme : "system";
+  let theme = DEFAULT_THEME;
+  try { theme = localStorage.getItem("mini-theme") || DEFAULT_THEME; } catch { /* storage blocked: the default */ }
+  return THEMES.includes(theme) ? theme : DEFAULT_THEME;
 }
 
 function applyTheme() {

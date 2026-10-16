@@ -49,9 +49,11 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; color: var(--bar-dim); }
 .minibar .dot { width: 6px; height: 6px; }
 .minibar .optimize.issues { color: #ffb340; } .minibar .optimize.good { color: #5fd68a; }
-/* The speed test in the tube: a gauge in a ring; the ring fills while it runs; then the download figure. */
+/* The speed test, at the right beside the expand arrow: a gauge in a ring; the ring fills while it
+   runs; then the download figure. */
 .minibar .speed { position: relative; display: grid; place-items: center; width: 34px; height: 18px; padding: 0; flex: none;
   border: 0; border-radius: 4px; background: none; color: var(--bar-accent); cursor: default; }
+.minibar .speed { margin-left: auto; }        /* the speed test sits beside the expand arrow */
 .minibar .speed:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
 .minibar .speed:disabled { opacity: .45; }
 .minibar .speed .ring { position: absolute; left: 8px; top: 0; width: 18px; height: 18px; transform: rotate(-90deg);
@@ -70,7 +72,7 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .arrow:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
 .arrow .icon { width: 13px; height: 13px; stroke-width: 2.2; }
 .bar .arrow { width: 24px; height: 24px; }
-.tube .arrow { width: 26px; height: 26px; margin-left: auto; border-radius: 6px; background: var(--bar-fill); color: var(--bar-text); }
+.tube .arrow { width: 26px; height: 26px; border-radius: 6px; background: var(--bar-fill); color: var(--bar-text); }
 .tube .arrow:hover { background: var(--bar-fill-hover); }
 .tube .arrow .icon { width: 14px; height: 14px; }
 /* Optimize's states. idle: bolt; busy: the ring fills with the check's progress and a magnifier

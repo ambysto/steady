@@ -60,8 +60,8 @@ function themeControl(ctx) {
       t(`ui.settings.theme.${value}`))));
 }
 
-function miniTheme() {
-  try { return localStorage.getItem("mini-theme") || "system"; } catch { return "system"; }
+function miniTheme() {      // dark until the user picks another (web/js/mini.js, DEFAULT_THEME)
+  try { return localStorage.getItem("mini-theme") || "dark"; } catch { return "dark"; }
 }
 
 // The floating monitor keeps its own light / dark / system choice (web/js/mini.js reads it).
