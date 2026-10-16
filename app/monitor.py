@@ -732,11 +732,12 @@ def main(argv: list[str] | None = None) -> int:
 
     guard = SingleInstance(mutex_name())
     started = time.monotonic()
-    if not guard.acquire(wait=args.instance_wait):
+    if not guard.acquire(wait=min(max(args.instance_wait, 0.0), 60.0)):     # bounded, even if given by hand
         log.info("another monitor instance is already running; exiting")
         return 0
-    if time.monotonic() - started >= 0.5:
-        log.info("previous monitor instance exited after %.1f s; starting", time.monotonic() - started)
+    waited = time.monotonic() - started
+    if waited >= 0.2:                 # it retried at least once (SingleInstance polls every 0.25 s)
+        log.info("previous monitor instance exited after %.1f s; starting", waited)
     from .failover import Failover  # idle unless enabled (ADR-0008, off by default)
     from .watchdog import Watchdog  # stays idle unless enabled in settings.json (off by default)
 

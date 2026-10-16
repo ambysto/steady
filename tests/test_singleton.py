@@ -131,6 +131,21 @@ class MutexNameTests(unittest.TestCase):
         self.assertTrue(all(n.startswith(monitor.MUTEX_NAME + ".") for n in names))
 
 
+def wait_for_monitor_start(db: Path, timeout: float = 30.0) -> None:
+    """Until a monitor has taken the mutex and recorded its start (a slow runner may need a while)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if db.exists():
+            try:
+                with Storage(db) as storage:
+                    if any(e["kind"] == "monitor_start" for e in storage.query_events()):
+                        return
+            except Exception:
+                pass                  # the database is still being created
+        time.sleep(0.2)
+    raise AssertionError("the first monitor never started")
+
+
 @unittest.skipUnless(sys.platform == "win32", "needs Windows")
 class MonitorMainSingleInstanceTests(unittest.TestCase):
     def test_second_monitor_exits_after_the_wait(self):
@@ -139,7 +154,7 @@ class MonitorMainSingleInstanceTests(unittest.TestCase):
             run = [sys.executable, "-m", "app.monitor", "--seconds", "8"]
             first = subprocess.Popen(run, cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
-                time.sleep(2.5)
+                wait_for_monitor_start(Path(tmp) / "metrics.db")
                 started = time.monotonic()
                 second = subprocess.run(run + ["--instance-wait", "1"], cwd=ROOT, env=env,
                                         capture_output=True, text=True, timeout=20)
@@ -162,7 +177,7 @@ class MonitorMainSingleInstanceTests(unittest.TestCase):
             first = subprocess.Popen([sys.executable, "-m", "app.monitor", "--seconds", "4"], cwd=ROOT, env=env,
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
-                time.sleep(2.5)  # the first one holds the mutex and exits about 1.5 s later
+                wait_for_monitor_start(Path(tmp) / "metrics.db")   # it holds the mutex and exits a few seconds later
                 second = subprocess.run([sys.executable, "-m", "app.monitor", "--seconds", "2"], cwd=ROOT, env=env,
                                         capture_output=True, text=True, timeout=40)
                 self.assertEqual(second.returncode, 0)
