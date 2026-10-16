@@ -1,6 +1,7 @@
 // A smooth line through chart points that never overshoots them (the speed test's live charts,
-// ADR-0024): a monotone cubic (Fritsch-Carlson, the harmonic-mean tangents d3's monotoneX uses), so
-// between two points the curve stays between their values and never dips below zero or above a peak.
+// ADR-0024): a monotone cubic Hermite curve with Fritsch-Butland tangents (a weighted harmonic mean of
+// the neighbouring slopes, 0 at a turn), so between two points the curve stays between their values
+// and never dips below zero or above a peak.
 
 const f = v => v.toFixed(1);
 

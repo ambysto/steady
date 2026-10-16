@@ -52,7 +52,9 @@ per-address limit sooner.
    mobile-data text, and each direction stops at 250 MB (500 MB in all, as on Apple, so a line above
    200 Mbit/s reads as incomplete). When the route leaves by a VPN or other tunnel and only a
    connected network underneath that reaches the Internet is metered, the verdict is a guess: it
-   asks once per such network (kept in `speedtest.json`), and the cap stays. A cost that cannot be
+   asks once per such network (kept in `speedtest.json` by the network's id; one whose id cannot be
+   read asks every time), and the cap stays. A tunnel counts only when Windows lists it as a
+   connected network, so a Teredo or loopback IPv6 route on an IPv4-only line is no VPN. A cost that cannot be
    read counts as unmetered. The server enforces it: on a metered connection a run without
    `{"confirmed": true}` is refused (409), so no page can start traffic the user has not agreed to. While the test server's `Retry-After` from the last run
    lasts, it answers 409 too. Whether the connection is metered is read when the run is asked for

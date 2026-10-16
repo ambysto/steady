@@ -76,12 +76,20 @@ class VerdictTests(unittest.TestCase):
         self.assertEqual(decide([VPN], conn(VPN, None), conn(TETHER, FREE, network_id="phone")),
                          Verdict(True, ("phone",)))
         self.assertEqual(decide([VPN], conn(VPN, FREE), conn(ETHERNET, FREE)), Verdict(False))
-        unmapped = Connection(None, True, VARIABLE, "hotspot")                # adapter not found: its cost still counts
+        unmapped = Connection(None, True, VARIABLE, "hotspot")       # adapter not found: its cost still counts
         self.assertEqual(decide([VPN], conn(VPN, FREE), unmapped), Verdict(True, ("hotspot",)))
 
     def test_behind_a_vpn_a_metered_network_without_internet_does_not_count(self):
         self.assertEqual(decide([VPN], conn(VPN, FREE), conn(ETHERNET, FREE), conn(WWAN, VARIABLE, internet=False)),
                          Verdict(False))
+
+    def test_a_tunnel_windows_does_not_list_is_no_vpn(self):
+        # IPv6 on without an IPv6 route: the IPv6 route can be a Teredo tunnel or the loopback.
+        teredo = {**INTERFACES, 50: Interface(50, "tunnel", "Teredo Tunneling Pseudo-Interface")}
+        self.assertEqual(nc.verdict([WIFI, 50], teredo, [conn(WIFI, FREE), conn(WWAN, VARIABLE)]), Verdict(False))
+
+    def test_behind_a_vpn_a_network_without_an_id_asks_every_time(self):
+        self.assertEqual(decide([VPN], conn(VPN, FREE), Connection(WIFI, True, FIXED, None)), Verdict(True))
 
     def test_a_vpn_that_is_metered_itself_is_certain(self):
         self.assertEqual(decide([VPN], conn(VPN, FIXED), conn(WIFI, FIXED)), Verdict(True))

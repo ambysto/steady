@@ -596,12 +596,15 @@ class Api:
             with self._line_lock:
                 # The run may have waited behind a measured tweak: if the route has moved to a metered
                 # connection since, a run the user did not confirm there does not start.
-                now = metered if metered.metered else self._metered()
+                now = self._metered()
+                if metered.metered and not now.metered:
+                    now = metered          # metered when asked for: keep the question's terms and the cap
                 if speedtest.needs_confirmation(now, self._speed_store.confirmed_networks()) and not confirmed:
                     return {"needs_confirmation": True, "results": [], "speed": None}
-                if confirmed and now.guessed:
+                seen = metered if metered.metered else now   # what the page asked about
+                if confirmed and seen.guessed:
                     try:   # asked once for these networks: kept before the run, which may be refused
-                        self._speed_store.confirm_networks(now.guessed_from)
+                        self._speed_store.confirm_networks(seen.guessed_from)
                     except OSError as exc:
                         log.warning("could not keep the speed test confirmation: %r", exc)
                 limit = bufferbloat.METERED_MAX_BYTES if now.metered else bufferbloat.MAX_BYTES

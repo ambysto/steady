@@ -72,8 +72,8 @@ monitor's steps (`niceScale`). `steady_mbps`, `Phase.mbps` and the figures never
 6. **Record a trace (done 2026-10-16 with the owner's go-ahead; result in the intent's Findings).** A scratch script (not committed)
    runs `bufferbloat.measure(..., events=...)` once and, at each 0.25 s beat, logs the meter's total
    and the route interface's `in_octets` / `out_octets` (`traffic.interface_row`). Committed:
-   `tests/fixtures/speed_trace.json` with only `[seconds, meter_bytes, interface_bytes]` per direction
-   (no server code, address or adapter name). It also says which hypothesis holds: steps in the
+   `tests/fixtures/speed_trace.json` with `[seconds, meter_bytes, interface_bytes]` per direction,
+   the two figures and a one-line description (no server code, address or adapter name). It also says which hypothesis holds: steps in the
    meter total while the interface counter is steady (bytes counted at the socket in bursts, and each
    connection reconnecting every 25 MB) versus a line that really varies.
 7. `app/bufferbloat.py` `LiveRate`: the slope over the window (3 s) by least squares over the
@@ -105,8 +105,8 @@ monitor's steps (`niceScale`). `steady_mbps`, `Phase.mbps` and the figures never
 11. `CLAUDE.md` "Open": the bullet on mobile data detection is replaced by what is left (the hand
     checks not done, if any). `docs/ARCHITECTURE.md`: `ask` reads "on a metered connection";
     `app/netcost.py` in the module list. `docs/DIAGNOSTICS.md` check #14: when it asks.
-    `CHANGELOG.md` `[Unreleased]`: Fixed (asks on metered connections) and Changed (smooth live
-    chart). `PRIVACY.md` unchanged (it already says "on mobile data, after you confirm it", still
+    `CHANGELOG.md` `[Unreleased]`: two Fixed entries (asks on metered connections; the live chart
+    no longer saw-tooths, which the owner reported as a bug). `PRIVACY.md` unchanged (it already says "on mobile data, after you confirm it", still
     true; no new data leaves).
 12. Intent status lines as the work moves; Plane items moved and commented with commits.
 

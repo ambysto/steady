@@ -91,18 +91,23 @@ def verdict(route_indexes: list[int], interfaces: dict[int, Interface], connecti
     """Metered when an interface the Internet routes leave by (IPv4, IPv6) is mobile broadband, a phone's
     USB tether, or a connection whose cost costs money. When none is but a route leaves by a tunnel (a
     VPN), every other connection that reaches the Internet counts the same way, and the verdict is a
-    guess named by those networks' ids. No route: not metered."""
+    guess named by those networks' ids. A tunnel counts only when Windows lists it as a connected network:
+    with IPv6 on but no IPv6 route, the IPv6 route can be the loopback or a Teredo tunnel, which is no
+    VPN. An underlying network whose id could not be read cannot be remembered, so the verdict is then
+    certain (it asks every time). No route: not metered."""
     routes = list(dict.fromkeys(route_indexes))
     if any(_metered_interface(i, interfaces, connections) for i in routes):
         return Verdict(True)
-    if not any(i in interfaces and interfaces[i].kind in VIRTUAL_KINDS for i in routes):
+    listed = {c.interface_index for c in connections}
+    if not any(i in interfaces and interfaces[i].kind in VIRTUAL_KINDS and i in listed for i in routes):
         return NOT_METERED
     under = [c for c in connections if c.internet and c.interface_index not in routes
              and (costs_money(c.cost) or _metered_interface(c.interface_index, interfaces, []))]
     if not under:
         return NOT_METERED
-    ids = tuple(sorted({c.network_id or f"interface:{c.interface_index}" for c in under}))
-    return Verdict(True, ids)
+    if any(not c.network_id for c in under):
+        return Verdict(True)
+    return Verdict(True, tuple(sorted({c.network_id for c in under if c.network_id})))
 
 
 # --- reading it from Windows ---------------------------------------------------------------------------
@@ -110,7 +115,7 @@ def verdict(route_indexes: list[int], interfaces: dict[int, Interface], connecti
 _CLSID_NETWORK_LIST_MANAGER = "DCB00C01-570F-4A9B-8D69-199FDBA5723B"
 _IID_INETWORK_LIST_MANAGER = "DCB00000-570F-4A9B-8D69-199FDBA5723B"
 _IID_INETWORK_CONNECTION_COST = "DCB0000A-570F-4A9B-8D69-199FDBA5723B"
-_CLSCTX_ALL = 0x1 | 0x4 | 0x10           # inproc server, local server, remote server
+_CLSCTX_SERVER = 0x1 | 0x4 | 0x10        # inproc server, local server, remote server
 _RPC_E_CHANGED_MODE = -2147417850        # 0x80010106: this thread already has another apartment
 _COINIT_MULTITHREADED = 0x0
 
@@ -212,7 +217,7 @@ def read_connections(index_of: Callable[[bytes], int | None] | None = None) -> l
     try:
         clsid, iid = _guid(_CLSID_NETWORK_LIST_MANAGER), _guid(_IID_INETWORK_LIST_MANAGER)
         ole32.CoCreateInstance.restype = ctypes.c_long
-        if ole32.CoCreateInstance(ctypes.byref(clsid), None, _CLSCTX_ALL, ctypes.byref(iid),
+        if ole32.CoCreateInstance(ctypes.byref(clsid), None, _CLSCTX_SERVER, ctypes.byref(iid),
                                   ctypes.byref(manager)) < 0:
             return out
         _call(manager, _LIST_GET_NETWORK_CONNECTIONS, (ctypes.POINTER(ctypes.c_void_p), ctypes.byref(enum)))

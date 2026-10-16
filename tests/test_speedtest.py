@@ -441,6 +441,19 @@ class ApiTests(unittest.TestCase):
             api.handle("POST", "/api/speedtest", {}, {})
         self.assertEqual(self.runs, 2)
 
+    def test_the_yes_is_kept_for_the_networks_the_page_asked_about(self):
+        from app.netcost import Verdict
+        reads = iter([Verdict(True, ("net-a",)), Verdict(True, ("net-a", "net-b"))])   # net-b came up meanwhile
+        api = Api_with(self, lambda: next(reads))
+        api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
+        self.assertEqual((self.store.confirmed_networks(), self.runs), ({"net-a"}, 1))
+
+    def test_metered_when_asked_for_keeps_the_cap_if_the_route_changes_meanwhile(self):
+        from app.netcost import Verdict
+        limits, reads = [], iter([Verdict(True), Verdict(False)])
+        Api_with(self, lambda: next(reads), limits).handle("POST", "/api/speedtest", {}, {"confirmed": True})
+        self.assertEqual(limits, [bb.METERED_MAX_BYTES])
+
     def test_the_limit_stays_metered_after_a_remembered_yes(self):
         from app.netcost import Verdict
         limits = []
