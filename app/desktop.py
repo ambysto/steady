@@ -216,7 +216,7 @@ SELFTEST_SIZE = (600, 760)
 # --- the floating monitor ----------------------------------------------------------------------
 
 MINI_SIZE = (340, 500)          # expanded: the full table
-BAR_SIZE = (290, 32)            # collapsed: one line, as long as its numbers need
+BAR_SIZE = (330, 32)            # collapsed: one line, as long as its numbers and the speed test need
 # The bar is shaped like a thermometer: a round bulb (Optimize) and a lower tube (the numbers).
 BULB = 32                       # diameter of the cut, the bar's full height (web/mini.css draws 1.5 px inside)
 TUBE = (24, 24)                 # where the tube's cut starts (under the bulb's edge) and its height
@@ -233,6 +233,7 @@ TRANSPARENCY = {"off": 1.0, "glass": 1.0, "low": 0.9, "high": 0.78}
 DEFAULT_TRANSPARENCY = "glass"
 GLASS_EVERY_S = 1.0             # refresh of the frosted backdrop while nothing moves
 GLASS_MOVE_S = 0.12             # at most this often while the window is dragged
+RIM_EVERY_S = 10.0              # the bar's rim in the solid levels: what is behind it, this often at most
 GLASS_SCALE = 4                 # the capture is shrunk this much before blurring (cheaper, softer)
 WDA_NONE, WDA_EXCLUDEFROMCAPTURE = 0x0, 0x11
 
@@ -337,6 +338,22 @@ def exclude_from_capture(hwnd: int, exclude: bool) -> bool:
     user32 = ctypes.windll.user32
     user32.SetWindowDisplayAffinity.argtypes = [ctypes.c_void_p, ctypes.c_uint32]
     return bool(user32.SetWindowDisplayAffinity(ctypes.c_void_p(hwnd), WDA_EXCLUDEFROMCAPTURE if exclude else WDA_NONE))
+
+
+def grab_behind(hwnd: int) -> Any:
+    """What is behind a window that captures normally include: it leaves captures until the change is
+    composed (two DwmFlush: one frame may already have started), the area is copied, and it is back in
+    captures at once. On its own screen the window never disappears; a screen recording can miss it
+    for a frame or two. None when Windows cannot leave it out (before Windows 10 2004), since the
+    capture would then show the window itself."""
+    if not exclude_from_capture(hwnd, True):
+        return None
+    try:
+        ctypes.windll.dwmapi.DwmFlush()
+        ctypes.windll.dwmapi.DwmFlush()
+        return grab_screen(*window_rect(hwnd))
+    finally:
+        exclude_from_capture(hwnd, False)
 
 
 def window_rect(hwnd: int) -> tuple[int, int, int, int]:
@@ -507,6 +524,9 @@ class MiniBridge:
     def open_result(self) -> None:
         self._shell.open_check_result()
 
+    def open_speed(self, ask: bool) -> None:
+        self._shell.open_speed_result(bool(ask))
+
 
 class MainBridge:
     """What the main window's page may call: open the floating monitor."""
@@ -529,6 +549,12 @@ class Desktop:
         self._anchor: tuple[bool, bool] | None = None      # edges the bar kept when it expanded
         self._glass_digest: str | None = None
         self._glass_ok = False          # glass is on and the window is left out of captures
+        self._rim_digest: str | None = None
+        # One look change or capture at a time: a rim capture puts the window back in captures, which
+        # must not land after Glass has taken it out, and a picture must not reach the page after the
+        # look it was made for has changed.
+        self._look_lock = threading.RLock()
+        self._rim_at = 0.0              # monotonic time of the last rim capture
         self.icon: Any = None
         self.messages: dict[str, Any] = {}
         self.live: dict | None = None
@@ -659,15 +685,18 @@ class Desktop:
         hwnd = self._mini_hwnd()
         if hwnd is None:
             return
-        on = self.mini_state["transparency"] == "glass"
-        # Without the exclusion (before Windows 10 2004) the capture would show the window itself.
-        excluded = exclude_from_capture(hwnd, on)
-        self._glass_ok = on and excluded
-        if self._glass_ok:
-            self._glass_wake.set()
-        else:
-            self._glass_digest = None
-            self._run_js("window.steadyMini && window.steadyMini.setBackdrop(null)")
+        with self._look_lock:
+            on = self.mini_state["transparency"] == "glass"
+            # Without the exclusion (before Windows 10 2004) the capture would show the window itself.
+            excluded = exclude_from_capture(hwnd, on)
+            self._glass_ok = on and excluded
+            # Shown again or another look: the next picture is sent even if the screen has not changed.
+            self._glass_digest = self._rim_digest = None
+            if self._glass_ok:
+                self._run_js("window.steadyMini && window.steadyMini.setRim(null)")
+            else:
+                self._run_js("window.steadyMini && window.steadyMini.setBackdrop(null)")
+        self._glass_wake.set()          # the rim (solid levels) or the backdrop (Glass) follows
 
     def _run_js(self, script: str) -> None:
         try:
@@ -696,15 +725,43 @@ class Desktop:
                      f"{as_url(sharp) if sharp else 'null'})")
         return True
 
+    def rim_on(self) -> bool:
+        """The bar in a solid level (Off, Low, High): its edges are smooth only over what is behind it."""
+        return (self.mini is not None and bool(self.mini_state["open"]) and self.mini_state["mode"] == "bar"
+                and self.mini_state["transparency"] != "glass")
+
+    def update_rim(self) -> bool:
+        """The bar's shapes sit 1.5 px inside its cut (a window region has no soft edge); the sliver
+        between shows what is behind the window, unblurred, so the edge blends into it."""
+        hwnd = self._mini_hwnd()
+        if hwnd is None:
+            return False
+        self._rim_at = time.monotonic()
+        image = grab_behind(hwnd)
+        if image is None:
+            return False
+        sharp = jpeg(image)
+        digest = hashlib.sha1(sharp).hexdigest()
+        if digest == self._rim_digest:
+            return False
+        self._rim_digest = digest
+        self._run_js("window.steadyMini && window.steadyMini.setRim('data:image/jpeg;base64,"
+                     + base64.b64encode(sharp).decode("ascii") + "')")
+        return True
+
     def _glass_loop(self) -> None:
         while not self.stop.is_set():
-            self._glass_wake.wait(GLASS_EVERY_S)
+            woken = self._glass_wake.wait(GLASS_EVERY_S)
             self._glass_wake.clear()
-            if self.glass_on() and not self.quitting:
-                try:
-                    self.update_backdrop()
-                except Exception as exc:        # never let the look stop the shell
-                    log.debug("glass backdrop failed: %r", exc)
+            try:
+                with self._look_lock:
+                    if self.glass_on() and not self.quitting:
+                        self.update_backdrop()
+                    # The rim leaves captures for a frame or two, so only when something changed or now and then.
+                    elif self.rim_on() and not self.quitting and (woken or time.monotonic() - self._rim_at >= RIM_EVERY_S):
+                        self.update_rim()
+            except Exception as exc:        # never let the look stop the shell
+                log.debug("floating window backdrop failed: %r", exc)
             self.stop.wait(GLASS_MOVE_S)
 
     def mini_hover(self, inside: bool) -> None:
@@ -740,6 +797,16 @@ class Desktop:
             except Exception as exc:
                 log.debug("main window not ready: %r", exc)
 
+    def open_speed_result(self, ask: bool) -> None:
+        """The bar's speed test: the main window shows the result, or asks the question first (the bar
+        has no room for it, and the user reads what the test uses before it moves any data)."""
+        self.show()
+        if self.window is not None:
+            try:
+                self.window.evaluate_js(f"window.steadyApp && window.steadyApp.openSpeed({'true' if ask else 'false'})")
+            except Exception as exc:
+                log.debug("main window not ready: %r", exc)
+
     def _fit_mini(self) -> None:
         mode = self.mini_state["mode"]
         try:
@@ -762,7 +829,7 @@ class Desktop:
 
     def _on_mini_loaded(self) -> None:
         self._mini_active(bool(self.mini_state["open"]))
-        self._glass_digest = None          # a new page has no backdrop yet
+        self._glass_digest = self._rim_digest = None   # a new page has no backdrop or rim yet
         self._glass_wake.set()
 
     # -- tray -----------------------------------------------------------------------------

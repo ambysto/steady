@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
+Windows gets the speed test the Apple app has: download, upload, latency, jitter and packet loss on the Overview and the floating bar, from the same run as the bufferbloat check, without a question on Wi‑Fi or Ethernet. The app icon follows the Ambysto brand's v3 logo, and the floating bar's rounded edges are smooth in every look.
+
+### Added
+- **Speed test on Windows** ([ADR-0024](docs/adr/0024-windows-speed-test.md), as the Apple app has had since 0.8.1). A "Speed test" card on the Overview is laid out like speed.cloudflare.com: download and upload as large figures over live rate charts, latency and jitter while idle and during each direction, packet loss, and a segmented bar for ping, download and upload while it runs. The result keeps the charts, the test server's location (e.g. HKG) and when it was measured, and comes back after a restart. It is check #14's run: the Diagnostics Bufferbloat card starts the same measurement, shows its result from the same run (also after a restart, with when it was measured), and the line is loaded once. The figures are the rate after the 2 s ramp over 4 connections, as on Apple; a direction that hit the 1 GB limit reads "at least", one under 1 Mbit/s or refused has no figure. On Wi‑Fi or Ethernet it runs without a question; on mobile data (a mobile broadband adapter) it asks every time and each direction stops at 250 MB, and the server refuses a run there without that yes. When the test server refuses (HTTP 429/403) the card says when to try again and the buttons wait. On the floating bar a gauge after the state dot starts it, fills a ring while it runs, then shows the download figure for 3 hours; a click opens the result on the Overview, which also asks the question on mobile data. The bar is 330 px wide (was 290). The speed test's texts no longer name the test server (also in the Apple app, which shares them). New `GET`/`POST /api/speedtest` (`app/speedtest.py`); no new network endpoint.
+
+### Changed
+- **The app icon follows the Ambysto brand's v3 app logo** on Windows, the Apple app and the website: three Wi‑Fi arcs and a dot in Steady Sky with a small pixel "A" and "S" top left, on the brand's dark tile. Windows (`app.ico`: the window and taskbar, shortcuts, Apps & features) uses the dark look and leaves the caption out at 48 px and below, where it cannot be read. The Apple icon keeps its light, dark and tinted appearances: light is a darker Sky and ink on an off-white tile. The website's logo follows the visitor's light or dark scheme. `scripts/make_app_icon.py` draws all of them from the logo's geometry. The tray icon, which shows the connection's state in colour, is unchanged.
+
+### Removed
+- `ui.diag.measure` from all 7 catalogs: the Bufferbloat card's question is now the speed test's (`ui.speed.confirm_run`).
+
+### Fixed
+- **The floating bar's rounded edges are smooth in every look.** With Off, Low or High the bulb's ring and the tube's ends showed stair steps, because the window is cut to its outline with a window region, which has no soft edge. Now the bar is drawn just inside the cut, as with Glass, and the thin sliver around it shows what is behind the window: the app copies that area when the bar is shown, moved or its look changes, and every 10 seconds otherwise, leaving the window out of screen captures for a frame or two each time ([ADR-0021](docs/adr/0021-floating-monitor-glass.md), amended; `PRIVACY.md` says so).
+
 ## [0.8.1] - 2026-10-09
 
 Apple app only; Windows stays at 0.8.0. The Mac gets a floating monitor, and the Mac, iPhone and iPad get a speed test on the Overview that shows download, upload, latency, jitter and packet loss as it runs. The Apple app's version now follows this changelog (it was 0.1.0).

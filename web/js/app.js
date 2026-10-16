@@ -68,6 +68,14 @@ window.steadyApp = {
     }
     await overview.showResult(ctx);
   },
+  // The bar's speed test (open_speed_result): the result on the Overview, or the question first.
+  async openSpeed(ask) {
+    if (ctx.screen !== "overview") {
+      history.replaceState(null, "", "#/overview");
+      await show("overview");
+    }
+    await overview.showSpeed(ctx, Boolean(ask));
+  },
 };
 
 let pollTimer;

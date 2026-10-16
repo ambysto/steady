@@ -13,10 +13,14 @@ per-session token. Uninstalling offers to delete this data. The original values 
 optimization changed are kept in the registry, under `HKLM\SOFTWARE\Ambysto\Steady`, so that only an
 Administrator can change them; uninstalling restores those settings and deletes them. One value,
 `LegacyImported`, stays in that key: it only records that an older version's backup was imported.
-The floating monitor's "Glass" look reads the pixels of the screen area behind that small window,
-about once a second while it is open, to show them blurred as its background; they stay in the
-app's memory and are never saved or sent. While Glass is on, Windows leaves that window out of
-screenshots and screen sharing.
+The floating monitor reads the pixels of the screen area behind that small window, only to draw
+it: with the "Glass" look about once a second while it is open, to show them blurred as its
+background; with the other looks, as the one-line bar, when it is shown, moved or its look changes
+(several times a second while it is dragged) and every 10 seconds otherwise, to blend its rounded
+edges into what is behind it. They stay in the app's memory and are never saved or sent. While Glass
+is on, Windows leaves that window out of screenshots and screen sharing; with the other looks the
+bar leaves them only while it reads that area, so a screen recording can miss it for a frame or two
+each time.
 
 **iPhone, iPad and Mac.** Per-minute measurements (latency, packet loss and jitter to each target
 below) are stored only in the app's own storage on the device, kept for 30 days and excluded from
@@ -39,7 +43,7 @@ address.
 | Always, while monitoring | HTTP request expecting an empty reply (status 204), every 10 s, identified as `AmbystoSteady/<version>` | `http://cp.cloudflare.com/generate_204` |
 | Backup connection switching, only if you turn it on | TCP connection without data from each network adapter | `1.1.1.1:443`, `8.8.8.8:443` |
 | When you run diagnostics | DNS lookups of `google.com`, `cloudflare.com`, `microsoft.com`, `youtube.com`, `facebook.com` | The DNS servers your PC uses, your router, `1.1.1.1`, `8.8.8.8`, `9.9.9.9` (Quad9) |
-| When you start the load test and confirm it | Download and upload of test data (about 25 MB per request) | `speed.cloudflare.com` |
+| When you start the speed test (on mobile data, after you confirm it) | Download and upload of test data (about 25 MB per request) | `speed.cloudflare.com` |
 
 You can change the monitored targets in the settings file.
 

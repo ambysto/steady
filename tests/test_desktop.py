@@ -265,7 +265,43 @@ class MiniWindowTests(unittest.TestCase):
             self.shell.set_mini_transparency("glass")
             self.shell.set_mini_transparency("off")
         self.assertEqual(calls, [(77, True), (77, False)])
-        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setBackdrop(null)"])
+        self.assertEqual(scripts, ["window.steadyMini && window.steadyMini.setRim(null)",       # Glass on: no rim
+                                   "window.steadyMini && window.steadyMini.setBackdrop(null)"])  # off: no backdrop
+
+    def test_the_solid_bar_gets_a_rim_of_what_is_behind_it(self):
+        from PIL import Image
+        scripts, calls = [], []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state.update(open=True, mode="bar", transparency="off")
+        picture = Image.new("RGB", desktop.BAR_SIZE, (200, 120, 40))
+        exclude = lambda hwnd, on: calls.append(on) or True       # noqa: E731
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", exclude),                 mock.patch.object(desktop.ctypes, "windll", mock.MagicMock()),                 mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, *desktop.BAR_SIZE)),                 mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+            self.assertTrue(self.shell.rim_on())
+            self.assertTrue(self.shell.update_rim())
+            self.assertFalse(self.shell.update_rim())           # nothing changed behind it: not sent again
+        self.assertEqual(calls, [True, False, True, False])     # out of captures for the copy only, then back
+        self.assertEqual(len(scripts), 1)
+        self.assertRegex(scripts[0], r"^window\.steadyMini && window\.steadyMini\.setRim\('data:image/jpeg;base64,[A-Za-z0-9+/=]+'\)$")
+        for state in ({"transparency": "glass"}, {"mode": "full", "transparency": "off"}, {"open": False, "mode": "bar"}):
+            self.shell.mini_state.update(state)
+            self.assertFalse(self.shell.rim_on())
+
+    def test_another_solid_level_sends_the_rim_again_even_if_nothing_changed_behind(self):
+        from PIL import Image
+        scripts = []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state.update(open=True, mode="bar", transparency="off")
+        picture = Image.new("RGB", desktop.BAR_SIZE, (200, 120, 40))
+        with mock.patch.object(self.shell, "_mini_hwnd", lambda: 77),                 mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: True),                 mock.patch.object(desktop.ctypes, "windll", mock.MagicMock()),                 mock.patch.object(desktop, "set_form_opacity", lambda form, value: True),                 mock.patch.object(desktop, "window_rect", lambda hwnd: (0, 0, *desktop.BAR_SIZE)),                 mock.patch.object(desktop, "grab_screen", lambda *box: picture):
+            self.assertTrue(self.shell.update_rim())
+            self.shell.set_mini_transparency("low")              # the page dropped nothing, but a new look
+            self.assertTrue(self.shell.update_rim())             # sends the same picture again
+        rims = [s for s in scripts if "setRim('data:" in s]
+        self.assertEqual(len(rims), 2)
+
+    def test_no_rim_where_windows_cannot_leave_the_window_out_of_captures(self):
+        with mock.patch.object(desktop, "exclude_from_capture", lambda hwnd, on: False),                 mock.patch.object(desktop, "grab_screen", lambda *box: self.fail("captured the window itself")):
+            self.assertIsNone(desktop.grab_behind(77))
 
     def test_no_glass_where_windows_cannot_leave_the_window_out_of_captures(self):
         scripts = []
@@ -346,10 +382,21 @@ class MiniWindowTests(unittest.TestCase):
         self.assertEqual(scripts, ["window.steadyApp && window.steadyApp.openResult()"])
         self.assertIn("show", self.shell.window.calls)
 
+    def test_the_speed_button_on_the_bar_opens_the_overview_and_asks_only_when_told(self):
+        self.shell.window = FakeWindow()
+        scripts = []
+        self.shell.window.evaluate_js = scripts.append
+        desktop.MiniBridge(self.shell).open_speed(True)
+        desktop.MiniBridge(self.shell).open_speed(0)
+        self.assertEqual(scripts, ["window.steadyApp && window.steadyApp.openSpeed(true)",
+                                   "window.steadyApp && window.steadyApp.openSpeed(false)"])
+        self.assertIn("show", self.shell.window.calls)
+
     def test_what_the_pages_may_call(self):
         bridge = desktop.MiniBridge(self.shell)
         self.assertEqual([n for n in dir(bridge) if not n.startswith("_")],
-                         ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "set_mode", "set_transparency"])
+                         ["get_mode", "get_transparency", "hide_mini", "hover", "open_result", "open_speed", "set_mode",
+                          "set_transparency"])
         self.assertEqual(bridge.get_mode(), "bar")
         self.assertEqual(bridge.get_transparency(), "glass")
         bridge.hide_mini()
