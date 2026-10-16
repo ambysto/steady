@@ -33,7 +33,7 @@ across threads (the same kind of code as a freeze found the same day), and a par
    the numbers is 24 px high, centred on it and starting at its right edge; both have corners
    rounded by 4 px. The window is cut to those two rounded rectangles (`CreateRoundRectRgn`,
    combined), scaled with the window's DPI, and the page fills them edge to edge. The table keeps
-   its rectangle and Windows' own rounded corners.
+   its rectangle and Windows' own rounded corners. *(Replaced by the amendment below.)*
 3. **The Mac is unchanged.** Its Glass (ADR-0022) has no such cost there, and the shared catalog
    keys it uses (`ui.mini.transparency*`) stay.
 
@@ -44,7 +44,26 @@ across threads (the same kind of code as a freeze found the same day), and a par
   scale on the owner's PC this reads as a small rounded corner; a 4 px radius keeps the steps
   short, where the old round bulb showed them along its whole curve. If the steps prove plainly
   visible, the fallback the owner accepted is one rounded rectangle with the button inside, which
-  Windows rounds smoothly without a region.
+  Windows rounds smoothly without a region. *The amendment below replaces this bullet: the steps
+  proved visible, and the fallback is what ships.*
 - Nothing reads the screen any more, so `PRIVACY.md` no longer describes it for Windows, and the
   shell no longer spends 15 to 30 ms of a core each second while the window is open.
 - The Windows and Mac floating monitors no longer look alike in this respect.
+
+## Amendment (2026-10-16): one rectangle
+
+On the owner's screen the region's 4 px corners looked jagged in 1.0.4: a window region has no
+anti-aliasing, and a small radius does not hide the steps. The owner chose the fallback written
+into the Consequences above.
+
+- **The bar is one rectangle with no window region.** It keeps its size (330 × 32). Windows (DWM)
+  rounds its corners with `DWMWA_WINDOW_CORNER_PREFERENCE` set to `DWMWCP_ROUNDSMALL`, which is
+  anti-aliased; the table keeps `DWMWCP_ROUND`. DWM's non-client rendering stays on in both modes,
+  which is where the frame's shadow comes from. `SetWindowRgn` and `CreateRoundRectRgn` are no
+  longer used.
+- **The Optimize button is a rounded square inside the bar.** A 26 × 26 square with 6 px corners
+  and a slightly lighter fill, 3 px from the bar's left and top edges; the numbers, the speed
+  button and the arrow run to its right over the bar's full height. The page paints the bar's one
+  dark colour edge to edge, in either theme.
+- The rest of the decision is unchanged: the monitor is solid, nothing reads the screen, and the
+  Mac keeps its Glass look.

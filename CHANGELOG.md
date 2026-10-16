@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **The floating monitor's bar has smooth corners.** The 1.0.4 bar was cut to a button and a strip with a window region, whose corners looked jagged on screen. The bar is now one rectangle that Windows rounds, with the Optimize button inside it ([ADR-0026](docs/adr/0026-solid-floating-monitor-on-windows.md), amended). The table is unchanged.
+
 ## [1.0.4] - 2026-10-16
 
 The floating monitor on Windows is always solid and shows in screenshots and screen sharing, as a square Optimize button beside a strip with the numbers. Closing it with Alt+F4 no longer freezes the app, and the tray icon keeps updating after an install or an update restarts the monitor.
