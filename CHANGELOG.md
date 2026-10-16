@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **The tray icon is the app's logo.** It was still the old drawing (a square in the state's colour with white Wi-Fi arcs) after the app icon moved to the v3 logo in 1.0.1. It is now the logo's dark tile, taken from `app.ico`, with its Wi-Fi arcs in the state's colour: Steady Sky when all is well (exactly the logo), red during an outage, grey while the monitor cannot be reached.
+
 ## [1.0.6] - 2026-10-16
 
 The floating monitor opens dark, matching its bar, and the speed test button sits at the bar's right end beside the expand arrow.

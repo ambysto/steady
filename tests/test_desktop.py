@@ -88,14 +88,34 @@ class StateTests(unittest.TestCase):
         for key in ("app.name", "ui.tray.open", "ui.tray.quit", "ui.action.reconnect"):
             self.assertIn(key, english)
 
-    def test_icon_is_drawn_in_the_state_color(self):
+    def test_tray_icon_is_the_logo_with_arcs_in_the_state_colour(self):
         try:
-            img = desktop.draw_icon("bad")
+            from PIL import Image
         except ImportError:
             self.skipTest("Pillow not installed")
-        self.assertEqual(img.size, (64, 64))
-        self.assertEqual(img.getpixel((8, 32))[:3], desktop.COLORS["bad"])
-        self.assertEqual(img.getpixel((0, 0))[3], 0)      # transparent corner
+        with Image.open(desktop.APP_ICON) as ico:
+            ico.size = (desktop.TRAY_SIZE, desktop.TRAY_SIZE)
+            logo = ico.convert("RGBA")
+        ok, bad, unknown = (desktop.draw_icon(s) for s in ("ok", "bad", "unknown"))
+        self.assertEqual(ok.size, (desktop.TRAY_SIZE, desktop.TRAY_SIZE))
+        self.assertEqual(list(ok.getdata()), list(logo.getdata()))         # all well: exactly the logo
+        self.assertEqual(ok.getpixel((0, 0))[3], 0)                         # transparent corner
+        arc = max(((x, y) for x in range(logo.width) for y in range(logo.height)),
+                  key=lambda p: logo.getpixel(p)[2] - logo.getpixel(p)[0])   # the most Sky pixel
+        self.assertEqual(logo.getpixel(arc)[:3], desktop.TONE_COLOR)
+        self.assertEqual(bad.getpixel(arc)[:3], desktop.COLORS["bad"])
+        self.assertEqual(unknown.getpixel(arc)[:3], desktop.COLORS["unknown"])
+        tile = (logo.width // 4, logo.height // 4)                          # the dark tile stays dark
+        self.assertEqual(bad.getpixel(tile), logo.getpixel(tile))
+
+    def test_tray_icon_is_drawn_without_the_icon_file(self):
+        try:
+            img = desktop.draw_icon("bad", desktop.APP_ICON.with_name("missing.ico"))
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        self.assertEqual(img.size, (desktop.TRAY_SIZE, desktop.TRAY_SIZE))
+        self.assertIn(desktop.COLORS["bad"], {c[:3] for c in img.getdata()})
+        self.assertEqual(img.getpixel((0, 0))[3], 0)
 
     def test_app_icon_has_every_size_the_shell_asks_for(self):
         try:
