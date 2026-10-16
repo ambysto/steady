@@ -1,13 +1,13 @@
-// The floating monitor, in two forms. The one-line bar (default): Optimize on the left, then
-// download, upload, ping and a small sweep of the ping. Expanded: the three metrics on a sweep chart,
+// The floating monitor, in two forms. The one-line bar (default): Optimize on the left, then the
+// state dot, download, upload and ping, and at the right the speed test and the expand arrow. Expanded: the three metrics on a sweep chart,
 // the apps that hold connections, and the connection's basic facts.
 // Optimize only runs the regular check (read-only). When it finds what the app can fix, "Fix N"
 // opens the result in the main window, which lists the changes and asks before any (ADR-0020).
 // The speed test (ADR-0024) runs from the bar; on a metered connection the main window asks first, and a
 // result opens there too.
 // app/desktop.py pauses it (window.steadyMini.setActive(false)) while the window is hidden.
-// Its look is its own: light / dark / system (localStorage "mini-theme"), and inside the desktop
-// shell how see-through the window is (window.pywebview.api, kept in mini.json).
+// Its look is its own: dark by default, like the one-line bar, or light / system (localStorage
+// "mini-theme", also set from Settings).
 
 import { get, onReachability, runJob } from "./api.js";
 import { $, el, fill } from "./dom.js";
@@ -35,11 +35,12 @@ let pollTimer = null;
 let frame = null;
 
 const THEMES = ["system", "light", "dark"];
+const DEFAULT_THEME = "dark";     // the bar is dark in either theme, so the table opens dark too
 
 function currentTheme() {
-  let theme = "system";
-  try { theme = localStorage.getItem("mini-theme") || "system"; } catch { /* storage blocked: follow the system */ }
-  return THEMES.includes(theme) ? theme : "system";
+  let theme = DEFAULT_THEME;
+  try { theme = localStorage.getItem("mini-theme") || DEFAULT_THEME; } catch { /* storage blocked: the default */ }
+  return THEMES.includes(theme) ? theme : DEFAULT_THEME;
 }
 
 function applyTheme() {
