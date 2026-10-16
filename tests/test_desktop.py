@@ -364,7 +364,8 @@ class MiniWindowTests(unittest.TestCase):
             self.assertFalse(self.shell._on_mini_closing())
         self.assertEqual(scripts, [])
         self.assertEqual(deferred, [self.shell.hide_mini])
-        self.assertTrue(self.shell.mini_state["open"])      # nothing happened yet
+        self.assertFalse(self.shell.mini_state["open"])     # read as closed at once (the tray's toggle)
+        self.assertNotIn("hide", self.shell.mini.calls)     # the window itself is hidden by the other thread
 
     def test_off_ui_thread_runs_the_function_on_another_thread(self):
         ran = []
