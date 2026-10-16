@@ -1,0 +1,96 @@
+---
+status: draft   # draft → approved → planned → building → verified → shipped (PR #n)
+---
+# Speed test: ask on every metered connection, and a smooth live chart
+
+Follows [2026-10-15-windows-speed-test.md](2026-10-15-windows-speed-test.md) (shipped in 1.0.1) and
+amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
+
+**Problem**
+
+1. **The question is missed on some metered connections.** Since 1.0.1 the speed test asks first
+   only when the Internet route leaves by a mobile broadband adapter (interface type WWAN). A phone's
+   hotspot over Wi‑Fi, a USB tether (Ethernet to Windows), a full-tunnel VPN over mobile data (the
+   route leaves by the VPN) and an IPv6-only mobile network (no IPv4 route to read) all run at once,
+   with up to 2 GB of traffic and no 250 MB cap. ADR-0024 lists this as a known gap; reading Windows'
+   connection cost (`INetworkCostManager`) was left for later.
+2. **The upload chart jumps while it runs.** The download line is calm, the upload line saw-tooths
+   and the large upload figure jumps with it, so the live view looks less trustworthy than the
+   result it ends on. The final figures are fine (they agree with the interface byte counters).
+
+**Outcome**
+
+1. The speed test asks first (and caps each direction at 250 MB, as now) whenever Windows says the
+   connection it would use costs money, as well as on a mobile broadband adapter:
+   - the connection cost is *fixed* or *variable*, or roaming, over or near its data limit. This is
+     what "Set as metered connection" in Windows Settings sets for any Wi‑Fi or Ethernet network,
+     what Windows sets for mobile broadband, and what it sets for a phone hotspot that tells Windows
+     it is metered;
+   - the connection is the one the Internet route leaves by, over IPv4 **or IPv6** (an IPv6-only
+     mobile network is read like any other);
+   - when that route leaves by a VPN or other tunnel, the networks underneath it count: if any
+     connected network that reaches the Internet is metered, it asks (erring towards one extra
+     click rather than 2 GB of someone's data plan);
+   - a phone's USB tether reads as mobile data from the adapter it shows up as (Android's "Remote
+     NDIS" tethering device, the iPhone's "Apple Mobile Device Ethernet"), whatever its cost says,
+     since Windows usually reports it as an ordinary unmetered Ethernet.
+2. Off those cases nothing changes: Wi‑Fi and Ethernet run without a question. When the cost
+   cannot be read (the call fails), it reads as not metered, as an unknown route does today.
+3. The live upload and download lines are smooth and the large live figure stops jumping, while it
+   still follows a real change in speed. The result's figures do not change: download, upload,
+   "at least", latency, jitter, loss and check #14's verdict come out the same for the same run.
+   The saved chart shows the same smoothed line the user watched.
+4. Success is measured by:
+   - `python -m unittest discover -s tests -t .` green, with new tests for the metered decision
+     (every case above, from fake cost readings), the IPv6 route, the tunnel case, the USB-tether
+     adapters, and the live rate.
+   - A read-only reading on the dev PC: this Wi‑Fi reads as unmetered, `ask` is false, and the
+     reading takes under 50 ms (it runs on every `GET /api/speedtest`).
+   - With the owner, by hand (setting a network as metered is a change to the machine, so only the
+     owner does it): Wi‑Fi set as metered in Settings → the card and the floating bar ask; set back
+     → they do not. A phone hotspot, a USB tether and a VPN over the phone where the owner can set
+     them up, recorded as checked or not checked.
+   - The live rate replayed over a recorded upload (meter readings every 0.25 s from one real run,
+     taken with the owner's go-ahead): after the ramp, the mean step between consecutive live points
+     drops to 5 % of the direction's figure or less (the "before" value is recorded too), and after a
+     step change in a synthetic trace the live reading reaches 90 % of the new rate within 1.5 s.
+   - The same replay gives bit-identical `mbps`, `steady_mbps`, `capped` and result figures before
+     and after the change, and the shared diagnosis vectors still pass.
+
+**Constraints**
+
+- Python standard library only (ADR-0001): the cost is read through COM with `ctypes`
+  (`INetworkListManager` / `INetworkConnectionCost`), unelevated, read-only. No PowerShell on this
+  path (it runs on every page load of the card and the bar).
+- The figures are ADR-0023's on both platforms; only the live rate and the chart drawing change.
+  The engine's byte counting, `steady_mbps`, `Phase.mbps`, `evaluate_bufferbloat` and
+  `spec/diagnosis` are not touched.
+- No new UI text: the existing question already says "mobile data or a personal hotspot" and is
+  shared with the Apple app, so no catalog key changes and no xcstrings regeneration.
+- No new network endpoint, nothing new leaves the machine. `PRIVACY.md` already says the speed test
+  asks first on mobile data; it does not change.
+- Each real speed test needs the owner's go-ahead first (about 1 GB per direction, and the test
+  server's per-address limit).
+- Nothing is written to the machine by the agent; setting a network as metered is the owner's
+  action.
+
+**Out of scope**
+
+- Counting upload bytes at the wire instead of at the socket (it would change the figures).
+- The Apple app: it reads `NWPath.isExpensive` already; whether its upload chart has the same
+  saw-tooth is a question for a Mac session (a follow-up ticket if the recorded trace says so).
+- A measured tweak's upload (ADR-0016): it runs without the speed test's question today, and stays so.
+- New text for a network the user set as metered themselves (the current text names mobile data and
+  hotspots); a Windows-only key can follow if the owner wants it.
+- The floating bar's ring and the Diagnostics card's layout.
+
+**Open questions** (each has a recommendation; approve as written or change it)
+
+1. USB tether recognised by its adapter's description (Remote NDIS, Apple Mobile Device Ethernet):
+   a development board that also uses RNDIS would then ask too. Recommended: yes, the cost of a
+   miss is someone's data plan.
+2. Behind a VPN, ask when *any* other connected network with Internet access is metered. On a
+   laptop with Ethernet and a mobile modem both up, a VPN over the Ethernet would then ask too.
+   Recommended: yes, for the same reason.
+3. Which of hotspot, USB tether and VPN over the phone can the owner set up for the hand check?
+   Those not checked are recorded as such in the ADR rather than claimed.
