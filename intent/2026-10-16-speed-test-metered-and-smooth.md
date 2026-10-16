@@ -1,5 +1,5 @@
 ---
-status: draft   # draft → approved → planned → building → verified → shipped (PR #n)
+status: building   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test: ask on every metered connection, and a smooth live chart
 
@@ -30,7 +30,10 @@ amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
      mobile network is read like any other);
    - when that route leaves by a VPN or other tunnel, the networks underneath it count: if any
      connected network that reaches the Internet is metered, it asks (erring towards one extra
-     click rather than 2 GB of someone's data plan);
+     click rather than 2 GB of someone's data plan). This case is a guess, so it asks **once per
+     network underneath**: after a yes, a run over the same VPN and the same metered network does
+     not ask again, also after a restart (the 250 MB cap stays). Every other metered case asks every
+     time, as ADR-0024 decided for mobile data;
    - a phone's USB tether reads as mobile data from the adapter it shows up as (Android's "Remote
      NDIS" tethering device, the iPhone's "Apple Mobile Device Ethernet"), whatever its cost says,
      since Windows usually reports it as an ordinary unmetered Ethernet.
@@ -53,7 +56,9 @@ amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
    - The live rate replayed over a recorded upload (meter readings every 0.25 s from one real run,
      taken with the owner's go-ahead): after the ramp, the mean step between consecutive live points
      drops to 5 % of the direction's figure or less (the "before" value is recorded too), and after a
-     step change in a synthetic trace the live reading reaches 90 % of the new rate within 1.5 s.
+     step change in a synthetic trace the live reading reaches 90 % of the new rate within 2.5 s
+     (was 1.5 s in the draft: the trace showed no window that short removes the saw-tooth, see
+     Findings).
    - The same replay gives bit-identical `mbps`, `steady_mbps`, `capped` and result figures before
      and after the change, and the shared diagnosis vectors still pass.
 
@@ -84,13 +89,26 @@ amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
   hotspots); a Windows-only key can follow if the owner wants it.
 - The floating bar's ring and the Diagnostics card's layout.
 
-**Open questions** (each has a recommendation; approve as written or change it)
+**Decisions** (owner, 2026-10-16)
 
-1. USB tether recognised by its adapter's description (Remote NDIS, Apple Mobile Device Ethernet):
-   a development board that also uses RNDIS would then ask too. Recommended: yes, the cost of a
-   miss is someone's data plan.
-2. Behind a VPN, ask when *any* other connected network with Internet access is metered. On a
-   laptop with Ethernet and a mobile modem both up, a VPN over the Ethernet would then ask too.
-   Recommended: yes, for the same reason.
-3. Which of hotspot, USB tether and VPN over the phone can the owner set up for the hand check?
-   Those not checked are recorded as such in the ADR rather than claimed.
+1. USB tether is recognised by its adapter's description (Remote NDIS, Apple Mobile Device
+   Ethernet), even though a development board using RNDIS then asks too.
+2. Behind a VPN, it asks when any other connected network with Internet access is metered, but only
+   once per such network (Outcome 1).
+3. The owner checks a phone hotspot by hand; tether and VPN over the phone are recorded as checked
+   or not.
+4. One real run to record the upload trace: agreed, run on 2026-10-16.
+
+**Findings** (the recorded run, 2026-10-16, Wi‑Fi; download 295, upload 177 Mbit/s)
+
+- The upload line on the wire is steady: the route interface's byte counter, read over 1 s, moves
+  by 1.6 % of the figure between 0.25 s readings (185 to 198 Mbit/s after the ramp). The meter,
+  which counts upload bytes as they are handed to the socket, swings from 118 to 261 Mbit/s with a
+  period of about 4.5 s, the time one of the 4 connections takes to send its 25 MB request before
+  it reconnects: mean step 10.4 %, swing 78 % of the figure. So the saw-tooth is in the counting,
+  not in the line, and the figures (which add up the same bytes over 8 s) are unaffected.
+- Replayed at the 0.25 s beat, mean step / swing / time to 90 % of a step, upload: 1 s ends (now)
+  10.4 % / 78 % / 1.0 s; 2 s ends 4.2 % / 30 % / 2.0 s; least-squares slope over 2 s
+  4.0 % / 35 % / 1.75 s; 3 s 2.2 % / 21 % / 2.5 s; 4 s 1.2 % / 17 % / 3.5 s; an exponential average
+  over 1 s 3.7 % / 28 % / 2.75 s. Download (calm already): 7.3 % / 36 % now, 1.3 % / 19 % with the
+  3 s slope. Chosen: the least-squares slope over 3 s.
