@@ -31,8 +31,8 @@ PING_TIMEOUT_MS = 900  # a ping lost under load waited at least this long
 # (It was 100 MB until 2026-10-07: every phase then read 80 Mbps on a line that uploads ~230.)
 MAX_BYTES = 1_000_000_000
 LOAD_S = 10.0
-# On mobile data each direction stops at this instead (500 MB in all), so a line above 200 Mbps reads
-# as capped: the result is then incomplete, never a false ok (as on Apple).
+# On a metered connection (app/netcost.py) each direction stops at this instead (500 MB in all), so a
+# line above 200 Mbps reads as capped: the result is then incomplete, never a false ok (as on Apple).
 METERED_MAX_BYTES = 250_000_000
 # The most a load phase can report: it stops at MAX_BYTES, so a faster line reads as this.
 LOAD_CEILING_MBPS = MAX_BYTES * 8 / LOAD_S / 1e6

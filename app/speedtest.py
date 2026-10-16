@@ -15,6 +15,7 @@ from typing import Any, Iterable
 
 from . import config
 from .bufferbloat import LOAD_S, RAMP_S, Measurement, Phase
+from .netcost import Verdict
 
 INTERNET = "internet"       # the target whose pings are the figures (the router's are check #14's alone)
 MIN_MBPS = 1.0              # diagnostics.BLOAT_MIN_MBPS: below it the load did not load the line
@@ -68,9 +69,15 @@ def figure(phase: Phase) -> float | None:
     return phase.steady_mbps if phase.steady_mbps is not None else phase.mbps
 
 
-def needs_confirmation(cellular: bool) -> bool:
-    """Ask only on mobile data, every time (intent decision 3): on Wi-Fi or Ethernet the test runs at once."""
-    return cellular
+def needs_confirmation(verdict: Verdict, confirmed_networks: Iterable[str] = ()) -> bool:
+    """Ask only on a metered connection (app/netcost.py): every time when Windows says so, and when the
+    route leaves by a VPN and only a network underneath is metered (a guess), until the user has
+    confirmed a run over each of those networks once. Unmetered Wi-Fi or Ethernet runs at once."""
+    if not verdict.metered:
+        return False
+    if verdict.guessed:
+        return not set(verdict.guessed_from) <= set(confirmed_networks)
+    return True
 
 
 # --- the result -----------------------------------------------------------------------------------
@@ -236,6 +243,18 @@ class Store:
         except (KeyError, TypeError, ValueError):
             m = None
         return last, m
+
+    def confirmed_networks(self) -> set[str]:
+        """The networks a guessed metered verdict was confirmed for (needs_confirmation), as their ids."""
+        got = self.load().get("confirmed_networks")
+        return {x for x in got if isinstance(x, str)} if isinstance(got, list) else set()
+
+    def confirm_networks(self, ids: Iterable[str]) -> None:
+        with self._lock:
+            data = self._read()
+            known = data.get("confirmed_networks")
+            known = [x for x in known if isinstance(x, str)] if isinstance(known, list) else []
+            self._save({**data, "confirmed_networks": sorted({*known, *ids})})
 
     def save(self, r: dict[str, Any], m: Measurement, check: list[dict[str, Any]], check_ts: float | None = None) -> None:
         """`check` is check #14's result of the same run, as stored messages (ADR-0006)."""

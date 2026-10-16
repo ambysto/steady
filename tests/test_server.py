@@ -647,7 +647,7 @@ class MeasuredTweakApiTests(ServerTestCase):
         self.api._measure_tweak = measure
         self.api._run_speedtest = lambda progress, limit: seen.append(self.api._line_lock.locked()) or {"results": []}
         self.req("POST", "/api/tweaks/upload_shaping", {"enable": True})
-        self.api._on_cellular = lambda: False
+        self.api._on_metered = lambda: False
         self.req("POST", "/api/speedtest", {})
         self.assertEqual(seen, [True, True, True])       # before, after, and check #14: each holds the lock
 

@@ -44,7 +44,7 @@ export function waitLeft() {
 
 export const canRun = () => !speed.running && waitLeft() === 0;
 
-/** On mobile data asks every time (the server refuses without the yes); otherwise runs at once. */
+/** On a metered connection asks (the server refuses without the yes); otherwise runs at once. */
 export async function runSpeedTest() {
   if (!canRun()) return false;
   let body = {};
@@ -56,7 +56,7 @@ export async function runSpeedTest() {
     body = { confirmed: true };
   }
   const ran = await follow(body);
-  // The route moved to mobile data since the page last looked: ask now rather than ignore the click.
+  // The route moved to a metered connection since the page last looked: ask now rather than ignore the click.
   if (!ran && speed.ask && !body.confirmed) return runSpeedTest();
   return ran;
 }
@@ -70,7 +70,7 @@ async function follow(body = {}, jobId = null) {
     // The line lock can hold a run back behind a measured tweak, hence the long wait.
     const result = await runJob("/api/speedtest", body, { interval: 250, timeout: 300000,
       onProgress: live => { if (live) { speed.live = live; changed(); } } });
-    if (result.needs_confirmation) speed.ask = true;   // on mobile data now: runSpeedTest asks
+    if (result.needs_confirmation) speed.ask = true;   // on a metered connection now: runSpeedTest asks
     else if (result.speed) speed.last = result.speed;
     else toast(t("ui.speed.failed"), { bad: true });   // check #14 could not run: nothing was measured
     speed.bufferbloat = result.results?.[0] || speed.bufferbloat;

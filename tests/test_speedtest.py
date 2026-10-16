@@ -113,9 +113,26 @@ class FigureTests(unittest.TestCase):
         self.assertEqual((len(thin), thin[0], thin[-1]), (st.MAX_POINTS, series[0], series[-1]))
         self.assertEqual(st.thinned(series[:10]), series[:10])
 
-    def test_only_mobile_data_asks(self):
-        self.assertTrue(st.needs_confirmation(True))
-        self.assertFalse(st.needs_confirmation(False))
+    def test_only_a_metered_connection_asks(self):
+        from app.netcost import Verdict
+        self.assertTrue(st.needs_confirmation(Verdict(True)))
+        self.assertTrue(st.needs_confirmation(Verdict(True), {"net-a"}))      # certain: every time
+        self.assertFalse(st.needs_confirmation(Verdict(False)))
+        guess = Verdict(True, ("net-a", "net-b"))
+        self.assertTrue(st.needs_confirmation(guess, {"net-a"}))
+        self.assertFalse(st.needs_confirmation(guess, {"net-a", "net-b", "net-c"}))
+
+    def test_confirmed_networks_are_kept_with_the_result(self):
+        store = st.Store(Path(self.enterContext(tempfile.TemporaryDirectory())) / "speedtest.json")
+        self.assertEqual(store.confirmed_networks(), set())
+        store.confirm_networks(["net-b"])
+        store.confirm_networks(["net-a", "net-b"])
+        m = bb.Measurement(phase([20.0], name="idle"), phase([20.0], mbps=50, name="download"),
+                           phase([20.0], mbps=10, name="upload"))
+        store.save(st.result(m, AT), m, [])
+        self.assertEqual(store.confirmed_networks(), {"net-a", "net-b"})
+        store.path.write_text('{"confirmed_networks": "net-a"}', encoding="utf-8")
+        self.assertEqual(store.confirmed_networks(), set())            # a broken file asks again
 
 
 class LiveTests(unittest.TestCase):
@@ -254,7 +271,7 @@ class ApiTests(unittest.TestCase):
         self.store = st.Store(Path(tmp.name) / "speedtest.json")
         self.now = [AT]
         self.runs = 0
-        self.cellular = [False]
+        self.metered = [False]
         m = bb.Measurement(phase([20.0] * 20, name="idle"), phase([90.0] * 40, mbps=700, steady=706, name="download"),
                            phase([25.0] * 40, mbps=650, steady=702, name="upload"), "HKG")
         self.measurement = m
@@ -267,7 +284,7 @@ class ApiTests(unittest.TestCase):
             return {"ts": int(self.now[0]), "worst": "bad", "results": [evaluate_bufferbloat(m).to_dict()],
                     "speed": st.result(m, self.now[0]), "measurement": m}
         self.make = lambda: Api(monitor=None, storage=self.db, run_speedtest=run, speedtest_store=self.store,
-                                clock=lambda: self.now[0], on_cellular=lambda: self.cellular[0], sync_jobs=True)
+                                clock=lambda: self.now[0], on_metered=lambda: self.metered[0], sync_jobs=True)
         self.api = self.make()
 
     def test_on_wifi_or_ethernet_it_runs_without_asking(self):
@@ -279,20 +296,20 @@ class ApiTests(unittest.TestCase):
 
     def test_the_limit_follows_the_route(self):
         self.api.handle("POST", "/api/speedtest", {}, {})
-        self.cellular[0] = True
+        self.metered[0] = True
         self.api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
         self.assertEqual(self.limits, [bb.MAX_BYTES, bb.METERED_MAX_BYTES])
 
-    def test_a_run_that_waited_does_not_start_on_a_route_that_became_mobile_data(self):
-        reads = iter([False, True])            # asked on Wi-Fi; mobile data once it has the line
-        self.cellular = None
+    def test_a_run_that_waited_does_not_start_on_a_route_that_became_metered(self):
+        reads = iter([False, True])            # asked on Wi-Fi; metered once it has the line
+        self.metered = None
         api = Api_with(self, lambda: next(reads))
         _, job = api.handle("POST", "/api/speedtest", {}, {})
         self.assertEqual((job["status"], job["result"].get("needs_confirmation"), self.runs), ("done", True, 0))
 
     def test_check_14_passes_the_yes_on(self):
         from app.server import ApiError
-        self.cellular[0] = True
+        self.metered[0] = True
         with self.assertRaises(ApiError):
             self.api.handle("POST", "/api/diagnostics/bufferbloat", {}, {})
         self.api.handle("POST", "/api/diagnostics/bufferbloat", {}, {"confirmed": True})
@@ -316,21 +333,44 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(seen["max_bytes"], bb.METERED_MAX_BYTES)
         self.assertEqual((out["speed"]["download_mbps"], out["results"][0]["id"]), (706, 14))
 
-    def test_a_mobile_broadband_route_reads_as_mobile_data(self):
+    def test_the_route_is_read_by_netcost(self):
         from unittest import mock
-        from app import traffic, winutil
+        from app import netcost
         from app.server import Api
-        self.assertEqual({traffic._KIND_BY_IFTYPE[243], traffic._KIND_BY_IFTYPE[244]}, {"cellular"})
-        for kind, expected in (("cellular", True), ("wifi", False), ("tunnel", False)):
-            with mock.patch.object(winutil, "internet_route_native", lambda dest: {"interface_index": 9}), \
-                    mock.patch.object(traffic, "interface_row", lambda index: {"kind": kind}):
-                self.assertEqual(Api._default_on_cellular(), expected)
-        with mock.patch.object(winutil, "internet_route_native", lambda dest: None):
-            self.assertFalse(Api._default_on_cellular())       # no IPv4 route: reads as no
+        with mock.patch.object(netcost, "read", lambda: netcost.Verdict(True)):
+            self.assertTrue(Api._default_on_metered().metered)
+        api = Api_with(self, lambda: True)           # a plain bool is a certain verdict
+        self.assertEqual(api._metered(), netcost.Verdict(True))
 
-    def test_on_mobile_data_every_run_needs_a_yes(self):
+    def test_behind_a_vpn_it_asks_once_per_network_underneath(self):
+        from app.netcost import Verdict
         from app.server import ApiError
-        self.cellular[0] = True
+        guess = [Verdict(True, ("net-a",))]
+        api = Api_with(self, lambda: guess[0])
+        _, got = api.handle("GET", "/api/speedtest", {}, None)
+        self.assertTrue(got["ask"])
+        with self.assertRaises(ApiError):
+            api.handle("POST", "/api/speedtest", {}, {})
+        api.handle("POST", "/api/speedtest", {}, {"confirmed": True})
+        api.handle("POST", "/api/speedtest", {}, {})                 # remembered: no question
+        _, got = Api_with(self, lambda: guess[0]).handle("GET", "/api/speedtest", {}, None)
+        self.assertFalse(got["ask"])                                  # also after a restart
+        guess[0] = Verdict(True, ("net-a", "net-b"))                  # a new network underneath asks again
+        with self.assertRaises(ApiError):
+            api.handle("POST", "/api/speedtest", {}, {})
+        self.assertEqual(self.runs, 2)
+
+    def test_the_limit_stays_metered_after_a_remembered_yes(self):
+        from app.netcost import Verdict
+        limits = []
+        self.store.confirm_networks(["net-a"])
+        api = Api_with(self, lambda: Verdict(True, ("net-a",)), limits)
+        api.handle("POST", "/api/speedtest", {}, {})
+        self.assertEqual(limits, [bb.METERED_MAX_BYTES])
+
+    def test_on_a_certain_metered_connection_every_run_needs_a_yes(self):
+        from app.server import ApiError
+        self.metered[0] = True
         _, got = self.api.handle("GET", "/api/speedtest", {}, None)
         self.assertTrue(got["ask"])
         with self.assertRaises(ApiError) as cm:
@@ -400,15 +440,17 @@ class ApiTests(unittest.TestCase):
 
 
 
-def Api_with(case, on_cellular):
+def Api_with(case, on_metered, limits=None):
     """An Api like ApiTests' but with its own reading of the route."""
     from app.server import Api
 
     def run(progress, limit):
         case.runs += 1
+        if limits is not None:
+            limits.append(limit)
         return {"ts": int(AT), "worst": "ok", "results": [], "speed": None, "measurement": None}
     return Api(monitor=None, storage=case.db, run_speedtest=run, speedtest_store=case.store, clock=lambda: AT,
-               on_cellular=on_cellular, sync_jobs=True)
+               on_metered=on_metered, sync_jobs=True)
 
 
 if __name__ == "__main__":
