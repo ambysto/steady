@@ -833,6 +833,7 @@ class Desktop:
             return True
         # pywebview runs closing handlers on the UI thread, where evaluate_js (inside hide_mini) waits
         # for a callback that only that thread can deliver: it would freeze every window and the tray.
+        self.mini_state["open"] = False           # at once, so the tray's toggle reads it closed
         self._off_ui_thread(self.hide_mini)       # Alt+F4 hides it like the close button
         return False
 

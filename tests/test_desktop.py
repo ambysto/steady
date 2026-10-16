@@ -258,7 +258,8 @@ class PollingTests(unittest.TestCase):
         def wait(seconds):                  # stop after the second round
             if len(rounds) == 2:
                 self.shell.stop.set()
-        with mock.patch.object(self.shell, "refresh", refresh), mock.patch.object(self.shell.stop, "wait", wait),                 self.assertLogs("stableinternet.desktop", "ERROR"):
+        with mock.patch.object(self.shell, "refresh", refresh), mock.patch.object(self.shell.stop, "wait", wait), \
+                self.assertLogs("stableinternet.desktop", "ERROR"):
             self.shell._poll()
         self.assertEqual(len(rounds), 2)
 
