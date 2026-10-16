@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -165,6 +166,104 @@ class ShellTests(unittest.TestCase):
         self.assertEqual(self.shell.title(), "Ambysto Steady · Đã kết nối")
 
 
+class PollingTests(unittest.TestCase):
+    """What refresh() asks of the windows when the monitor goes away and comes back."""
+
+    BASE = "http://127.0.0.1:47613"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        os.environ["STABLEINTERNET_USERDIR"] = self.tmp.name
+        self.addCleanup(os.environ.pop, "STABLEINTERNET_USERDIR", None)
+        self.port = 47613
+        self.up = True
+        self.shell = desktop.Desktop(desktop.ServerLink(self.serve))
+        self.shell.window, self.shell.mini = FakeWindow(), FakeWindow()
+        self.shell.messages = {"app.name": "Ambysto Steady"}       # the catalog is fetched once, not the subject here
+
+    def serve(self, req, timeout=None):
+        if not self.up:
+            raise urllib.error.URLError("refused")
+        url = req if isinstance(req, str) else req.full_url
+        if url.endswith("/"):
+            return io.BytesIO(PAGE.format("tok").encode())
+        return io.BytesIO(json.dumps({"outages": {}}).encode())
+
+    def write_runtime(self):
+        with open(os.path.join(self.tmp.name, "server.json"), "w", encoding="utf-8") as fh:
+            json.dump({"port": self.port}, fh)
+
+    def loads(self):
+        return [name for name in self.shell.window.calls + self.shell.mini.calls if name == "load_url"]
+
+    def test_same_port_after_a_restart_loads_nothing(self):
+        self.write_runtime()
+        self.shell._window_base = self.shell._mini_base = self.BASE      # both pages came from this monitor
+        self.shell.refresh()
+        self.up = False
+        self.shell.refresh()
+        self.assertFalse(self.shell.reachable)
+        self.up = True
+        self.shell.refresh()
+        self.assertTrue(self.shell.reachable)
+        self.assertEqual(self.shell.window.calls + self.shell.mini.calls, [])     # no load_url, no get_current_url
+
+    def test_the_offline_page_is_replaced_once_the_monitor_answers(self):
+        self.write_runtime()
+        self.up = False
+        self.shell.refresh()
+        self.assertEqual(self.loads(), [])
+        self.up = True
+        self.shell.refresh()
+        self.shell.refresh()
+        self.assertEqual(self.shell.window.calls, ["load_url"])
+        self.assertEqual(self.shell.mini.calls, ["load_url"])
+        self.assertEqual((self.shell._window_base, self.shell._mini_base), (self.BASE, self.BASE))
+
+    def test_a_monitor_on_another_port_is_loaded(self):
+        self.write_runtime()
+        self.shell._window_base = self.shell._mini_base = self.BASE
+        self.shell.refresh()
+        self.port = 47614
+        self.write_runtime()
+        self.shell.refresh()
+        self.assertEqual(self.loads(), ["load_url", "load_url"])
+        self.assertEqual(self.shell._window_base, "http://127.0.0.1:47614")
+
+    def test_a_failed_load_is_tried_again_and_does_not_stop_the_other_window(self):
+        self.write_runtime()
+        failed = []
+
+        def broken(*args):
+            failed.append(args)
+            raise RuntimeError("Main window failed to start")
+        self.shell.window.load_url = broken
+        with self.assertLogs("stableinternet.desktop", "WARNING"):
+            self.shell.refresh()                              # does not raise
+        self.assertEqual(self.shell.mini.calls, ["load_url"])
+        self.assertIsNone(self.shell._window_base)
+        with self.assertLogs("stableinternet.desktop", "WARNING"):
+            self.shell.refresh()
+        self.assertEqual(len(failed), 2)
+
+    def test_polling_goes_on_after_a_failed_poll(self):
+        rounds = []
+
+        def refresh():
+            rounds.append(1)
+            if len(rounds) == 1:
+                raise RuntimeError("boom")
+
+        def wait(seconds):                  # stop after the second round
+            if len(rounds) == 2:
+                self.shell.stop.set()
+        with mock.patch.object(self.shell, "refresh", refresh), mock.patch.object(self.shell.stop, "wait", wait), \
+                self.assertLogs("stableinternet.desktop", "ERROR"):
+            self.shell._poll()
+        self.assertEqual(len(rounds), 2)
+
+
 class Screen:
     def __init__(self, x, y, width, height):
         self.x, self.y, self.width, self.height = x, y, width, height
@@ -247,13 +346,34 @@ class MiniWindowTests(unittest.TestCase):
 
     def test_closing_hides_unless_quitting(self):
         self.shell.mini_state["open"] = True
-        self.assertFalse(self.shell._on_mini_closing())
+        with mock.patch.object(self.shell, "_off_ui_thread", lambda fn: fn()):     # run inline
+            self.assertFalse(self.shell._on_mini_closing())
         self.assertFalse(self.saved()["open"])
         self.shell.mini_state["open"] = True
         self.shell.quit()
         self.assertTrue(self.shell._on_mini_closing())
         self.assertTrue(self.saved()["open"])           # quitting keeps it open for the next start
         self.assertIn("destroy", self.shell.mini.calls)
+
+    def test_closing_does_not_wait_on_the_page_from_the_ui_thread(self):
+        # pywebview runs closing handlers on the UI thread; evaluate_js there never returns.
+        scripts, deferred = [], []
+        self.shell.mini.evaluate_js = scripts.append
+        self.shell.mini_state["open"] = True
+        with mock.patch.object(self.shell, "_off_ui_thread", deferred.append):
+            self.assertFalse(self.shell._on_mini_closing())
+        self.assertEqual(scripts, [])
+        self.assertEqual(deferred, [self.shell.hide_mini])
+        self.assertFalse(self.shell.mini_state["open"])     # read as closed at once (the tray's toggle)
+        self.assertNotIn("hide", self.shell.mini.calls)     # the window itself is hidden by the other thread
+
+    def test_off_ui_thread_runs_the_function_on_another_thread(self):
+        ran = []
+        done = threading.Event()
+        self.shell._off_ui_thread(lambda: (ran.append(threading.current_thread()), done.set()))
+        self.assertTrue(done.wait(5))
+        self.assertIsNot(ran[0], threading.current_thread())
+        self.assertTrue(ran[0].daemon)
 
     def test_glass_leaves_the_window_out_of_captures_only_while_on(self):
         calls, scripts = [], []

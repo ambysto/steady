@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Alt+F4 on the floating monitor no longer freezes the app.** Closing it that way left the main window, the floating monitor and the tray icon unresponsive, and opening the app again showed nothing. The window's close handler waited on the page from the very thread that has to answer; it now hides the monitor from another thread.
+- **The tray icon keeps updating after the monitor restarts.** After an install or an update the tray icon and its tooltip stopped changing, because the app asked a window for its address and that call failed for good once the monitor came back on the same port. The windows are now reloaded only when the monitor comes back on a different port or they still show the offline page, and a failed poll no longer ends polling.
+
 ## [1.0.3] - 2026-10-16
 
 The Windows speed test works on a fresh Windows install or virtual machine, where it said "Could not measure" in both directions: the app's HTTPS is now verified by Windows itself. The figures are unchanged.
