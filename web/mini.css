@@ -41,6 +41,9 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .minibar .optimize.busy .ring { display: block; }
 .minibar .optimize .glyph { width: 13px; height: 13px; }
 .minibar .optimize .count { font-size: var(--text-footnote); }
+/* Something to fix: a primary button (white on blue), set apart from issues by its fill, not only its hue. */
+.minibar .optimize.fix { background: #2f7bf6; color: #fff; }
+.minibar .optimize.fix:hover { background: #4a8ef8; }
 .minibar .stat { display: inline-flex; align-items: center; gap: 2px; width: 66px; flex: none; font-variant-numeric: tabular-nums;
   font-weight: var(--weight-semibold); letter-spacing: -.1px; }
 .minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; color: var(--bar-dim); }
@@ -70,9 +73,9 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .tube .arrow { width: 26px; height: 26px; margin-left: auto; border-radius: 6px; background: var(--bar-fill); color: var(--bar-text); }
 .tube .arrow:hover { background: var(--bar-fill-hover); }
 .tube .arrow .icon { width: 14px; height: 14px; }
-/* Optimize: a ring around one icon. idle: bolt; busy: the ring fills with the check's progress and
-   a magnifier drifts in a small loop; fix: the count, a heavier ring; issues: amber ring with the
-   count; good: a green tick. Flat colours, no glow (macOS native). */
+/* Optimize's states. idle: bolt; busy: the ring fills with the check's progress and a magnifier
+   drifts in a small loop; fix: the count on a filled button; issues: the count in amber; good: a
+   green tick. Flat colours, no glow (macOS native). */
 .optimize { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: none;
   border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: default; }
 .optimize:hover { background: var(--accent-soft); }
@@ -86,7 +89,6 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .optimize.busy .ring .track { stroke: var(--surface-pressed); }
 .optimize.busy .ring .fill { display: inline; }
 .optimize.busy .glyph { animation: seek 1.6s ease-in-out infinite; }
-.optimize.fix .ring .track { stroke-width: 3; }
 .optimize.issues { color: var(--warn); }
 .optimize.good { color: var(--ok); }
 /* The magnifier looks around: a small loop, not a spin. */

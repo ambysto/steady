@@ -65,5 +65,10 @@ into the Consequences above.
   and a slightly lighter fill, 3 px from the bar's left and top edges; the numbers, the speed
   button and the arrow run to its right over the bar's full height. The page paints the bar's one
   dark colour edge to edge, in either theme.
+- **A simpler look, at the owner's request ("simple and professional").** The expand arrow is a
+  rounded square like Optimize, 3 px from the right end; Optimize shows only its icon until a check
+  runs, when its progress ring appears; with something to fix it becomes a filled blue button
+  (white count), so it differs from "issues" (amber count) by more than its colour; the download,
+  upload and ping icons share one dim colour, leaving colour to the status dot and Optimize's state.
 - The rest of the decision is unchanged: the monitor is solid, nothing reads the screen, and the
   Mac keeps its Glass look.

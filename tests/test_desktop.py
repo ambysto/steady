@@ -376,7 +376,8 @@ class MiniWindowTests(unittest.TestCase):
         set_attributes = []
         self.shell.mini.native = mock.Mock()
         self.shell.mini.native.Handle.ToInt64.return_value = 4242
-        with mock.patch.object(desktop, "fit_form", lambda form, size: True),                 mock.patch.object(desktop, "_dwm_int", lambda hwnd, attribute, value:
+        with mock.patch.object(desktop, "fit_form", lambda form, size: True), \
+                mock.patch.object(desktop, "_dwm_int", lambda hwnd, attribute, value:
                                   set_attributes.append((hwnd, attribute, value)) or True):
             self.shell.mini_state["mode"] = "bar"
             self.shell._fit_mini()
