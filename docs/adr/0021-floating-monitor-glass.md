@@ -1,6 +1,6 @@
 # ADR-0021: The floating monitor's glass look comes from a blurred capture of what is behind it
 
-- **Status:** Accepted
+- **Status:** Superseded on Windows by [ADR-0026](0026-solid-floating-monitor-on-windows.md) (2026-10-16)
 - **Date:** 2026-10-08
 
 ## Context

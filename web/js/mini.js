@@ -55,11 +55,6 @@ function setTheme(theme) {
   applyTheme();
 }
 
-function markTransparency(level) {
-  document.querySelectorAll("#transparency-choice button").forEach(b =>
-    b.setAttribute("aria-pressed", String(b.dataset.level === level)));
-}
-
 // --- numbers -----------------------------------------------------------------------------------
 
 function rateText(bps) {
@@ -464,7 +459,6 @@ async function start() {
   $("#optimize").addEventListener("click", runOptimize);
   $("#speed").addEventListener("click", runSpeed);
   $("#appearance").title = t("ui.mini.appearance");
-  $("#transparency-choice [data-level=glass]").title = t("ui.mini.transparency.glass_hint");
   $("#appearance").addEventListener("click", () => {
     const open = $("#options").hidden;
     $("#options").hidden = !open;
@@ -481,13 +475,6 @@ async function start() {
     $("#close").hidden = false;
     $("#close").addEventListener("click", () => api.hide_mini());
     await setMode(await api.get_mode(), { tellShell: false });
-    // Solid while the pointer is on the window, see-through otherwise.
-    document.documentElement.addEventListener("mouseenter", () => api.hover(true));
-    document.documentElement.addEventListener("mouseleave", () => api.hover(false));
-    $("#transparency-row").hidden = false;
-    markTransparency(await api.get_transparency());
-    document.querySelectorAll("#transparency-choice button").forEach(b => b.addEventListener("click", async () =>
-      markTransparency(await api.set_transparency(b.dataset.level))));
   };
   if (window.pywebview?.api) bridge();
   else window.addEventListener("pywebviewready", bridge, { once: true });
@@ -498,38 +485,5 @@ async function start() {
   setActive(true);
 }
 
-const JPEG_URL = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/;
-
-/** Glass (ADR-0021): a blurred picture of what is behind the window, or null to drop it; on the
- *  bar also the same area unblurred, for the sliver around its smooth edges. */
-function setBackdrop(url, sharp = null) {
-  const root = document.documentElement;
-  if (url && JPEG_URL.test(url)) {
-    root.style.setProperty("--backdrop", `url("${url}")`);
-    root.style.setProperty("--bar-w", `${window.innerWidth}px`);
-    if (sharp && JPEG_URL.test(sharp)) root.style.setProperty("--behind", `url("${sharp}")`);
-    else root.style.removeProperty("--behind");
-    root.dataset.glass = "";
-    delete root.dataset.rim;
-  } else if (root.dataset.glass !== undefined) {   // a solid level keeps its rim (setRim)
-    for (const name of ["--backdrop", "--behind", "--bar-w"]) root.style.removeProperty(name);
-    delete root.dataset.glass;
-  }
-}
-
-/** The solid levels (Off, Low, High) on the bar: the screen behind the window, unblurred, for the
- *  sliver between its smooth shapes and its cut (the shell refreshes it now and then), or null. */
-function setRim(sharp) {
-  const root = document.documentElement;
-  if (root.dataset.glass !== undefined) return;
-  if (sharp && JPEG_URL.test(sharp)) {
-    root.style.setProperty("--behind", `url("${sharp}")`);
-    root.dataset.rim = "";
-  } else {
-    root.style.removeProperty("--behind");
-    delete root.dataset.rim;
-  }
-}
-
-window.steadyMini = { setActive, setBackdrop, setRim };
+window.steadyMini = { setActive };
 start();
