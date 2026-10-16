@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **The floating monitor on Windows is solid and shows in screenshots** ([ADR-0026](docs/adr/0026-solid-floating-monitor-on-windows.md), which replaces [ADR-0021](docs/adr/0021-floating-monitor-glass.md) on Windows). Its default Glass look left the window out of every capture, so Lightshot, the Snipping Tool, screen recordings and screen sharing showed what was behind it. That is what a user taking a screenshot to report a problem least wants. The one-line bar is now a square Optimize button and a lower strip with the numbers, both with slightly rounded corners, in one dark colour in either theme; the table is unchanged. The app no longer reads the screen behind the window (`PRIVACY.md` updated), and the background thread that did so is gone. The Mac keeps its Glass look.
+
+### Removed
+- **The floating monitor's transparency levels on Windows** (Glass, Low, High) and the appearance option that chose them. A level saved by an earlier version is ignored.
+
 ### Fixed
 - **Alt+F4 on the floating monitor no longer freezes the app.** Closing it that way left the main window, the floating monitor and the tray icon unresponsive, and opening the app again showed nothing. The window's close handler waited on the page from the very thread that has to answer; it now hides the monitor from another thread.
 - **The tray icon keeps updating after the monitor restarts.** After an install or an update the tray icon and its tooltip stopped changing, because the app asked a window for its address and that call failed for good once the monitor came back on the same port. The windows are now reloaded only when the monitor comes back on a different port or they still show the offline page, and a failed poll no longer ends polling.
