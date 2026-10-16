@@ -116,7 +116,7 @@ def state_key(live: dict | None) -> str:
 # scripts/make_app_icon.py) with the arcs and the dot in the state's colour: Sky when all is well,
 # so the icon is then exactly the logo; red during an outage; grey while the monitor is unreachable.
 TILE_COLOR = (0x0B, 0x0B, 0x0C)          # the logo's dark tile
-TONE_COLOR = (0x66, 0xCC, 0xFF)          # Steady Sky as app.ico has it (#62C4F5 rendered by the browser)
+TONE_COLOR = (0x66, 0xCC, 0xFF)          # Steady Sky (#62C4F5) as the 48 px frame has it after shrinking
 COLORS = {"ok": TONE_COLOR, "bad": (0xFF, 0x45, 0x3A), "unknown": (0x8E, 0x8E, 0x93)}
 TRAY_SIZE = 48      # the largest app.ico frame without the caption; Windows takes the smaller sizes from it
 
@@ -155,7 +155,7 @@ def draw_icon(state: str, ico: Path | None = None, size: int = TRAY_SIZE) -> Any
         for x in range(img.width):
             r, g, b, a = px[x, y]
             share = sum((c - k) * (t - k) for c, k, t in zip((r, g, b), TILE_COLOR, TONE_COLOR)) / span
-            if share > 0.08 and max(r, g, b) - min(r, g, b) > 25:      # Sky, not the grey edge
+            if share > 0.08 and max(r, g, b) - min(r, g, b) > 6:       # Sky, not the grey edge (spread 2)
                 share = min(share, 1.0)
                 px[x, y] = tuple(round(k + share * (c - k)) for k, c in zip(TILE_COLOR, colour)) + (a,)
     return img

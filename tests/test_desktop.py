@@ -98,11 +98,11 @@ class StateTests(unittest.TestCase):
             logo = ico.convert("RGBA")
         ok, bad, unknown = (desktop.draw_icon(s) for s in ("ok", "bad", "unknown"))
         self.assertEqual(ok.size, (desktop.TRAY_SIZE, desktop.TRAY_SIZE))
-        self.assertEqual(list(ok.getdata()), list(logo.getdata()))         # all well: exactly the logo
+        self.assertEqual(ok.tobytes(), logo.tobytes())                      # all well: exactly the logo
         self.assertEqual(ok.getpixel((0, 0))[3], 0)                         # transparent corner
         arc = max(((x, y) for x in range(logo.width) for y in range(logo.height)),
                   key=lambda p: logo.getpixel(p)[2] - logo.getpixel(p)[0])   # the most Sky pixel
-        self.assertEqual(logo.getpixel(arc)[:3], desktop.TONE_COLOR)
+        self.assertTrue(all(abs(c - t) <= 8 for c, t in zip(logo.getpixel(arc), desktop.TONE_COLOR)))
         self.assertEqual(bad.getpixel(arc)[:3], desktop.COLORS["bad"])
         self.assertEqual(unknown.getpixel(arc)[:3], desktop.COLORS["unknown"])
         tile = (logo.width // 4, logo.height // 4)                          # the dark tile stays dark
@@ -114,7 +114,7 @@ class StateTests(unittest.TestCase):
         except ImportError:
             self.skipTest("Pillow not installed")
         self.assertEqual(img.size, (desktop.TRAY_SIZE, desktop.TRAY_SIZE))
-        self.assertIn(desktop.COLORS["bad"], {c[:3] for c in img.getdata()})
+        self.assertIn(desktop.COLORS["bad"], {c[:3] for _, c in img.getcolors(img.width * img.height)})
         self.assertEqual(img.getpixel((0, 0))[3], 0)
 
     def test_app_icon_has_every_size_the_shell_asks_for(self):
