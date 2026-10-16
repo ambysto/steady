@@ -9,6 +9,7 @@ the Network List Manager's COM interfaces and iphlpapi, with ctypes (no third-pa
 from __future__ import annotations
 
 import ctypes
+import ipaddress
 import uuid
 from ctypes import wintypes
 from dataclasses import dataclass, field
@@ -28,6 +29,10 @@ _COSTS_MONEY = COST_FIXED | COST_VARIABLE | COST_OVERDATALIMIT | COST_ROAMING | 
 # A phone's USB tether shows up as one of these adapters, which Windows usually reports as an
 # unmetered Ethernet: Android's RNDIS tethering device, the iPhone's USB networking.
 TETHER_DESCRIPTIONS = ("remote ndis", "apple mobile device ethernet")
+# An iPhone's Personal Hotspot always hands out this network with itself at .1, and does not tell Windows
+# it is metered (checked 2026-10-16: cost unrestricted, source default, no ANDROID_METERED in the lease).
+IPHONE_HOTSPOT_NETWORK = ipaddress.ip_network("172.20.10.0/28")
+IPHONE_HOTSPOT_GATEWAY = ipaddress.ip_address("172.20.10.1")
 # Interface kinds with no physical medium of their own (app/traffic.py): what is underneath counts.
 VIRTUAL_KINDS = ("tunnel", "ppp", "other")
 
@@ -38,6 +43,16 @@ IPV6_TARGET = "2606:4700:4700::1111"
 def costs_money(cost: int | None) -> bool:
     """A fixed or variable cost, roaming, or over or near the data limit. Unknown and unrestricted: no."""
     return bool(cost) and bool(cost & _COSTS_MONEY)
+
+
+def is_iphone_hotspot(gateway: str | None, address: str | None) -> bool:
+    """The IPv4 route's gateway and this PC's address are an iPhone hotspot's."""
+    try:
+        return (gateway is not None and address is not None
+                and ipaddress.ip_address(gateway) == IPHONE_HOTSPOT_GATEWAY
+                and ipaddress.ip_address(address) in IPHONE_HOTSPOT_NETWORK)
+    except ValueError:
+        return False
 
 
 def is_tether(description: str | None) -> bool:
@@ -87,16 +102,18 @@ def _metered_interface(index: int | None, interfaces: dict[int, Interface], conn
     return any(c.interface_index == index and costs_money(c.cost) for c in connections)
 
 
-def verdict(route_indexes: list[int], interfaces: dict[int, Interface], connections: list[Connection]) -> Verdict:
+def verdict(route_indexes: list[int], interfaces: dict[int, Interface], connections: list[Connection],
+            ipv4: tuple[str | None, str | None] = (None, None)) -> Verdict:
     """Metered when an interface the Internet routes leave by (IPv4, IPv6) is mobile broadband, a phone's
-    USB tether, or a connection whose cost costs money. When none is but a route leaves by a tunnel (a
+    USB tether, or a connection whose cost costs money, or when the IPv4 route (`ipv4`: its gateway and
+    this PC's address) is an iPhone's hotspot. When none is but a route leaves by a tunnel (a
     VPN), every other connection that reaches the Internet counts the same way, and the verdict is a
     guess named by those networks' ids. A tunnel counts only when Windows lists it as a connected network:
     with IPv6 on but no IPv6 route, the IPv6 route can be the loopback or a Teredo tunnel, which is no
     VPN. An underlying network whose id could not be read cannot be remembered, so the verdict is then
     certain (it asks every time). No route: not metered."""
     routes = list(dict.fromkeys(route_indexes))
-    if any(_metered_interface(i, interfaces, connections) for i in routes):
+    if is_iphone_hotspot(*ipv4) or any(_metered_interface(i, interfaces, connections) for i in routes):
         return Verdict(True)
     listed = {c.interface_index for c in connections}
     if not any(i in interfaces and interfaces[i].kind in VIRTUAL_KINDS and i in listed for i in routes):
@@ -246,8 +263,8 @@ def read() -> Verdict:
     not metered (as an unknown route did before), so a broken reading never blocks the test."""
     try:
         from . import traffic, winutil
-        routes = [r["interface_index"] for r in (winutil.internet_route_native(IPV4_TARGET),
-                                                 winutil.internet_route6_native(IPV6_TARGET)) if r]
+        route4 = winutil.internet_route_native(IPV4_TARGET)
+        routes = [r["interface_index"] for r in (route4, winutil.internet_route6_native(IPV6_TARGET)) if r]
         if not routes:
             return NOT_METERED
         connections = read_connections()
@@ -256,6 +273,7 @@ def read() -> Verdict:
             row = traffic.interface_row(index)
             if row:
                 interfaces[index] = Interface(index, row["kind"], row.get("description") or "")
-        return verdict(routes, interfaces, connections)
+        ipv4 = (route4.get("gateway"), traffic.local_ipv4(IPV4_TARGET)) if route4 else (None, None)
+        return verdict(routes, interfaces, connections, ipv4)
     except Exception:
         return NOT_METERED

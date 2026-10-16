@@ -46,7 +46,9 @@ per-address limit sooner.
    network counts) and from Windows' cost of each connected network (`INetworkListManager` and
    `INetworkConnectionCost` through COM with ctypes, unelevated, read-only): metered when a route
    interface is mobile broadband (WWAN), a phone's USB tether (an adapter named "Remote NDIS" or
-   "Apple Mobile Device Ethernet", which Windows reports as unmetered Ethernet), or a connection
+   "Apple Mobile Device Ethernet", which Windows reports as unmetered Ethernet), an iPhone's
+   Personal Hotspot (gateway 172.20.10.1, this PC's address in 172.20.10.0/28: checked by hand on
+   2026-10-16, Windows reports it unrestricted and the lease carries no metered hint), or a connection
    whose cost is fixed or variable, roaming, or over or near its data limit (what "Set as metered
    connection" sets, and what a phone's hotspot can tell Windows). Then every run asks, with the
    mobile-data text, and each direction stops at 250 MB (500 MB in all, as on Apple, so a line above
@@ -82,9 +84,10 @@ per-address limit sooner.
   not depend on it.
 - ⚠️ Off a metered connection the buttons run straight away, so repeated runs reach the server's
   limit sooner; the card and the bar then say when to try again.
-- ⚠️ A phone's hotspot over Wi-Fi is caught only when the phone tells Windows it is metered or the
-  user set the network as metered; one that does neither reads as ordinary Wi-Fi and runs without
-  asking (up to 2 GB). A USB tether is caught by its adapter's name, so an unknown tethering adapter
+- ⚠️ An iPhone's hotspot is caught by its fixed network. Another phone's hotspot over Wi-Fi is caught
+  only when the phone tells Windows it is metered or the user set the network as metered; one that
+  does neither (an Android phone picks a random network) reads as ordinary Wi-Fi and runs without
+  asking (up to 2 GB). A home network set up on 172.20.10.0/28 asks needlessly. A USB tether is caught by its adapter's name, so an unknown tethering adapter
   is missed, and a development board using RNDIS asks needlessly. Behind a VPN a metered network
   that is connected but not what the VPN runs over (Ethernet and a mobile modem both up) asks once.
 - ⚠️ The live line trails a real change in speed by up to 2.5 s; at the end of each direction the

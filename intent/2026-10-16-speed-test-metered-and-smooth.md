@@ -98,6 +98,11 @@ amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
 3. The owner checks a phone hotspot by hand; tether and VPN over the phone are recorded as checked
    or not.
 4. One real run to record the upload trace: agreed, run on 2026-10-16.
+5. The hand check on the owner's iPhone hotspot (2026-10-16) found Windows reports it unrestricted
+   (cost source default, no metered hint in the DHCP lease), so the cost alone misses it. The owner
+   agreed to recognise an iPhone's Personal Hotspot by its fixed network (gateway 172.20.10.1, the
+   PC's address in 172.20.10.0/28). Android hotspots pick a random network; they stay caught only
+   when they tell Windows.
 
 **Findings** (the recorded run, 2026-10-16, Wi‑Fi; download 295, upload 177 Mbit/s)
 

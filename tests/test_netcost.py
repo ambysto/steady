@@ -35,6 +35,13 @@ class CostTests(unittest.TestCase):
         for cost in (None, nc.COST_UNKNOWN, FREE, FREE | nc.COST_CONGESTED):
             self.assertFalse(nc.costs_money(cost), cost)
 
+    def test_an_iphone_hotspot(self):
+        self.assertTrue(nc.is_iphone_hotspot("172.20.10.1", "172.20.10.4"))
+        self.assertFalse(nc.is_iphone_hotspot("172.20.10.1", "172.20.10.17"))    # outside its /28
+        self.assertFalse(nc.is_iphone_hotspot("192.168.1.1", "192.168.1.20"))
+        self.assertFalse(nc.is_iphone_hotspot(None, "172.20.10.4"))
+        self.assertFalse(nc.is_iphone_hotspot("172.20.10.1", "not an address"))
+
     def test_tether_adapters(self):
         self.assertTrue(nc.is_tether("Remote NDIS based Internet Sharing Device #2"))
         self.assertTrue(nc.is_tether("Apple Mobile Device Ethernet"))
@@ -61,6 +68,12 @@ class VerdictTests(unittest.TestCase):
         self.assertEqual(decide([WWAN], conn(WWAN, nc.COST_UNKNOWN)), Verdict(True))
         self.assertEqual(decide([TETHER], conn(TETHER, FREE)), Verdict(True))
         self.assertEqual(decide([IPHONE], conn(IPHONE, FREE)), Verdict(True))
+
+    def test_an_iphone_hotspot_is_metered_though_windows_says_unrestricted(self):
+        self.assertEqual(nc.verdict([WIFI], INTERFACES, [conn(WIFI, FREE)], ("172.20.10.1", "172.20.10.2")),
+                         Verdict(True))
+        self.assertEqual(nc.verdict([WIFI], INTERFACES, [conn(WIFI, FREE)], ("192.168.1.1", "192.168.1.2")),
+                         Verdict(False))
 
     def test_the_ipv6_route_counts_too(self):
         self.assertEqual(decide([WWAN]), Verdict(True))                         # IPv6-only mobile network
@@ -103,15 +116,16 @@ class VerdictTests(unittest.TestCase):
 class ReadTests(unittest.TestCase):
     """`read` with the Windows calls replaced: anything missing or failing reads as not metered."""
 
-    def patched(self, v4, v6, connections, rows):
+    def patched(self, v4, v6, connections, rows, address="192.168.1.20"):
         from app import traffic, winutil
-        return [mock.patch.object(winutil, "internet_route_native", lambda dest: v4),
+        return [mock.patch.object(traffic, "local_ipv4", lambda dest: address),
+                mock.patch.object(winutil, "internet_route_native", lambda dest: v4),
                 mock.patch.object(winutil, "internet_route6_native", lambda dest: v6),
                 mock.patch.object(nc, "read_connections", connections),
                 mock.patch.object(traffic, "interface_row", lambda index: rows.get(index))]
 
-    def read(self, v4, v6, connections, rows):
-        patches = self.patched(v4, v6, connections, rows)
+    def read(self, v4, v6, connections, rows, address="192.168.1.20"):
+        patches = self.patched(v4, v6, connections, rows, address)
         for p in patches:
             p.start()
         try:
@@ -127,6 +141,8 @@ class ReadTests(unittest.TestCase):
         self.assertEqual(self.read({"interface_index": WIFI}, None, lambda: [conn(WIFI, FREE)], rows),
                          Verdict(False))
         self.assertEqual(self.read(None, {"interface_index": WWAN}, lambda: [], rows), Verdict(True))
+        hotspot = {"interface_index": WIFI, "gateway": "172.20.10.1"}
+        self.assertEqual(self.read(hotspot, None, lambda: [conn(WIFI, FREE)], rows, "172.20.10.3"), Verdict(True))
 
     def test_no_route_or_a_failing_reading_is_not_metered(self):
         self.assertEqual(self.read(None, None, lambda: [conn(WWAN, FIXED)], {}), Verdict(False))
