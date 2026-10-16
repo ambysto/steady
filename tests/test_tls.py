@@ -2,6 +2,7 @@
 import importlib.util
 import ssl
 import sys
+import threading
 import unittest
 from unittest import mock
 
@@ -12,10 +13,6 @@ HAS_TRUSTSTORE = importlib.util.find_spec("truststore") is not None
 
 
 class ContextTests(unittest.TestCase):
-    def setUp(self):
-        tls.context.cache_clear()
-        self.addCleanup(tls.context.cache_clear)
-
     def test_always_checks_the_hostname_and_the_certificate(self):
         ctx = tls.context()
         self.assertTrue(ctx.check_hostname)
@@ -33,14 +30,23 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(type(ctx).__module__, "ssl")
         self.assertTrue(ctx.check_hostname)
 
-    def test_one_context_for_every_request(self):
-        self.assertIs(tls.context(), tls.context())
+    def test_every_connection_gets_its_own_context(self):
+        # Never shared: truststore 0.10.4 can leave a context shared by concurrent handshakes unchecked.
+        got = []
+        threads = [threading.Thread(target=lambda: got.append(tls.context())) for _ in range(8)]
+        [t.start() for t in threads]
+        [t.join() for t in threads]
+        self.assertEqual(len({id(c) for c in got}), 8)
+        self.assertTrue(all(c.verify_mode == ssl.CERT_REQUIRED and c.check_hostname for c in got))
 
 
 class ConnectTests(unittest.TestCase):
     def test_https_uses_the_context(self):
         conn, path = bb._connect("https://speed.cloudflare.com/__down?bytes=10", 5)
-        self.assertIs(conn._context, tls.context())
+        other, _ = bb._connect("https://speed.cloudflare.com/__down?bytes=10", 5)
+        self.assertEqual(type(conn._context), type(tls.context()))
+        self.assertIsNot(conn._context, other._context)     # one per connection (the 4 workers)
+        self.assertEqual(conn._context.verify_mode, ssl.CERT_REQUIRED)
         self.assertEqual(path, "/__down?bytes=10")
 
     def test_http_has_no_tls(self):

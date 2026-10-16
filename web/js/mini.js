@@ -246,7 +246,7 @@ function renderSpeed() {
     : state === "done" ? `${t("ui.speed.mini.result", { download: mbps(last.download_mbps), upload: mbps(last.upload_mbps),
                                                        ping: ms(last.idle?.median_ms) })}\n${t("ui.speed.mini.open")}`
     : wait > 0 ? t("ui.speed.refused", { minutes: Math.max(1, Math.ceil(wait / 60)) })
-    : state === "problem" ? `${t("ui.speed.failed")}\n${t("ui.speed.mini.open")}`
+    : state === "problem" ? `${t(last?.untrusted ? "ui.speed.untrusted" : "ui.speed.failed")}\n${t("ui.speed.mini.open")}`
     : t("ui.speed.mini.hint");
   button.title = label;
   button.setAttribute("aria-label", label);
