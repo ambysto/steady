@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-10-16
+
+The floating monitor opens dark, matching its bar, and the speed test button sits at the bar's right end beside the expand arrow.
+
 ### Changed
 - **The floating monitor opens dark.** The bar is dark in either theme, so the expanded table now follows it: its theme is Dark until the user picks Auto or Light (in the table's appearance options or in Settings), and a choice already made is kept.
 - **The speed test button sits at the right end of the bar**, beside the expand arrow, after the download, upload and ping figures.
