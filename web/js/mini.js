@@ -1,5 +1,5 @@
-// The floating monitor, in two forms. The one-line bar (default): Optimize on the left, then
-// download, upload, ping and a small sweep of the ping. Expanded: the three metrics on a sweep chart,
+// The floating monitor, in two forms. The one-line bar (default): Optimize on the left, then the
+// state dot, download, upload and ping, and at the right the speed test and the expand arrow. Expanded: the three metrics on a sweep chart,
 // the apps that hold connections, and the connection's basic facts.
 // Optimize only runs the regular check (read-only). When it finds what the app can fix, "Fix N"
 // opens the result in the main window, which lists the changes and asks before any (ADR-0020).

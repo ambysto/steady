@@ -69,7 +69,8 @@ per-address limit sooner.
    measurement, and check #14's result as stored messages (ADR-0006). The server reads it at start,
    so the Diagnostics Bufferbloat card and its suggestions come back with the speed test's, with
    when they were measured. A file that does not decode is ignored.
-6. **On the floating bar** a gauge sits in the tube right after the state dot. Running, a ring fills
+6. **On the floating bar** a gauge sits in the tube right after the state dot (since 2026-10-16 at
+   the bar's right end, beside the expand arrow). Running, a ring fills
    with the run's progress. Done, it shows the download figure until it goes stale (3 h, like the
    check); a click opens the result on the Overview. On a metered connection a click opens the Overview,
    which asks: the bar has no room to say how much data the test uses. The bar is 330 px wide (was
