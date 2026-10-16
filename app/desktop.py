@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import functools
 import json
 import logging
 import re
@@ -111,19 +112,52 @@ def state_key(live: dict | None) -> str:
             else "ui.state.online")
 
 
-COLORS = {"ok": (40, 167, 69), "bad": (229, 53, 43), "unknown": (142, 142, 147)}
+# The tray icon is the app's logo (app.ico, v3: a dark tile with Wi-Fi arcs and a dot in Steady Sky,
+# scripts/make_app_icon.py) with the arcs and the dot in the state's colour: Sky when all is well,
+# so the icon is then exactly the logo; red during an outage; grey while the monitor is unreachable.
+TILE_COLOR = (0x0B, 0x0B, 0x0C)          # the logo's dark tile
+TONE_COLOR = (0x66, 0xCC, 0xFF)          # Steady Sky (#62C4F5) as the 48 px frame has it after shrinking
+COLORS = {"ok": TONE_COLOR, "bad": (0xFF, 0x45, 0x3A), "unknown": (0x8E, 0x8E, 0x93)}
+TRAY_SIZE = 48      # the largest app.ico frame without the caption; Windows takes the smaller sizes from it
 
 
-def draw_icon(state: str, size: int = 64) -> Any:
-    """Tray icon: a rounded square in the state color with white Wi-Fi arcs (Pillow)."""
+def _drawn_icon(state: str, size: int) -> Any:
+    """Without app.ico: the logo's tile and arcs, drawn (Pillow)."""
     from PIL import Image, ImageDraw
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle((2, 2, size - 3, size - 3), radius=size // 4, fill=COLORS.get(state, COLORS["unknown"]))
-    cx, cy, w = size / 2, size * 0.74, max(2, size // 12)
-    for r in (size * 0.42, size * 0.29, size * 0.16):
-        d.arc((cx - r, cy - r, cx + r, cy + r), start=225, end=315, fill="white", width=w)
-    d.ellipse((cx - w, cy - w, cx + w, cy + w), fill="white")
+    d.rounded_rectangle((1, 1, size - 2, size - 2), radius=size // 5, fill=TILE_COLOR)
+    colour = COLORS.get(state, COLORS["unknown"])
+    cx, cy, w = size / 2, size * 0.7, max(2, size // 12)
+    for r in (size * 0.36, size * 0.24, size * 0.12):
+        d.arc((cx - r, cy - r, cx + r, cy + r), start=225, end=315, fill=colour, width=w)
+    d.ellipse((cx - w, cy - w, cx + w, cy + w), fill=colour)
+    return img
+
+
+@functools.lru_cache(maxsize=8)
+def draw_icon(state: str, ico: Path | None = None, size: int = TRAY_SIZE) -> Any:
+    """Tray icon: the logo with its arcs in the state's colour. A pixel's share of Sky over the tile
+    (its anti-aliasing included) is kept and only the colour changes; the grey edge stays."""
+    from PIL import Image
+    colour = COLORS.get(state, COLORS["unknown"])
+    try:
+        with Image.open(ico or APP_ICON) as source:
+            source.size = (size, size)
+            img = source.convert("RGBA")
+    except (OSError, ValueError, KeyError):
+        return _drawn_icon(state, size)
+    if colour == TONE_COLOR:
+        return img
+    span = sum((t - k) ** 2 for t, k in zip(TONE_COLOR, TILE_COLOR))
+    px = img.load()
+    for y in range(img.height):
+        for x in range(img.width):
+            r, g, b, a = px[x, y]
+            share = sum((c - k) * (t - k) for c, k, t in zip((r, g, b), TILE_COLOR, TONE_COLOR)) / span
+            if share > 0.08 and max(r, g, b) - min(r, g, b) > 6:       # Sky, not the grey edge (spread 2)
+                share = min(share, 1.0)
+                px[x, y] = tuple(round(k + share * (c - k)) for k, c in zip(TILE_COLOR, colour)) + (a,)
     return img
 
 
