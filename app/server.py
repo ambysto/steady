@@ -55,7 +55,7 @@ SETTINGS_SCHEMA: dict[str, dict[str, tuple]] = {
                  "verify_s": ((int, float), 10, 3600), "trip_after": (int, 1, 20)},
     "notify": {"enabled": (bool,)},   # re-read every 10 s by the running monitor
     "failover": {"enabled": (bool,), "dry_run": (bool,)},   # ADR-0008; re-read every 10 s
-    "speed": {"enabled": (bool,), "interval_min": (int, 10, 240),   # ADR-0021; re-read every cycle
+    "speed": {"enabled": (bool,), "interval_min": (int, 10, 240),   # ADR-0027; re-read every cycle
               "plan_down_mbps": ((int, float), 0, 100000), "plan_up_mbps": ((int, float), 0, 100000)},
     # (str, allowed-values function): the language must have a catalog, or be "auto".
     "ui": {"language": (str, lambda: [entry["code"] for entry in i18n.available()] + [i18n.AUTO])},
@@ -338,7 +338,7 @@ class Api:
     SLOWDOWN_CHART_DAYS = 14
 
     def slowdowns(self, query: dict, **_: Any) -> dict:
-        """Slowdown history (ADR-0021): the episodes, the ones still going, the latest sample and the samples
+        """Slowdown history (ADR-0027): the episodes, the ones still going, the latest sample and the samples
         of the last two weeks for the chart. Everyone sees the last 30 days; the supporter sees all that is kept."""
         supporter = licensing.is_supporter()
         most = 730 if supporter else self.SLOWDOWN_FREE_DAYS
@@ -357,7 +357,7 @@ class Api:
 
     def make_report(self, query: dict, body: Any, **_: Any) -> dict:
         """Writes the report of a week, month or quarter (HTML to print as PDF, plus CSVs) in the results
-        folder and opens the page. A supporter feature (ADR-0021 point 7)."""
+        folder and opens the page. A supporter feature (ADR-0027 point 7)."""
         from datetime import date, datetime
         if not licensing.is_supporter():
             raise ApiError(402, "reports are a supporter feature")

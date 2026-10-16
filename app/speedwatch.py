@@ -1,4 +1,4 @@
-"""Takes throughput samples on a schedule and keeps the slowdown history (ADR-0021).
+"""Takes throughput samples on a schedule and keeps the slowdown history (ADR-0027).
 
 Off until the user turns `speed.enabled` on; the setting is re-read every cycle, so it takes effect
 without restarting the monitor. One cycle = skip check, one sample (app/speedsample.py), the evidence of

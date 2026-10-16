@@ -31,4 +31,4 @@
 ## Ideas for later
 - Failover to a backup path (USB 4G, phone tethering, a second network)
 - Weekly report (uptime, number of drops, time offline)
-- Slowdown history and weekly/monthly/quarterly ISP reports (Pro) — [ADR-0021](adr/0021-slowdown-history-and-isp-reports.md); includes the CSV export for the ISP
+- Slowdown history and weekly/monthly/quarterly ISP reports (Pro) — [ADR-0027](adr/0027-slowdown-history-and-isp-reports.md); includes the CSV export for the ISP

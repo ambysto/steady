@@ -1,4 +1,4 @@
-"""Reports of outages and slowdowns for a week, month or quarter, to attach to a complaint (ADR-0021).
+"""Reports of outages and slowdowns for a week, month or quarter, to attach to a complaint (ADR-0027).
 
 `build` gathers the numbers from storage into a plain dict; `render_html` turns that into one
 self-contained page that prints well (the user saves it as PDF from the print dialog) and `render_csv`

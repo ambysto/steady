@@ -1,4 +1,4 @@
-"""One throughput sample: a short download and a short upload, timed from the first byte (ADR-0021).
+"""One throughput sample: a short download and a short upload, timed from the first byte (ADR-0027).
 
 The monitor takes one every `speed.interval_min` minutes when the user turned it on. It is not a speed
 test: it moves ~12 MB, just enough to tell a line that delivers its normal speed from one that has

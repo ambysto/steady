@@ -321,7 +321,7 @@ class MonitorTests(unittest.TestCase):
         self.env.run(self.mon, 3)
         self.assertNotIn("monitor_gap", self.events())
 
-    # -- what the throughput samples are told (ADR-0021) --------------------------------
+    # -- what the throughput samples are told (ADR-0027) --------------------------------
 
     def test_speed_evidence_is_the_router_hop_of_the_last_minute(self):
         self.env.run(self.mon, 30)

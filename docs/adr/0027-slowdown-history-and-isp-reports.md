@@ -1,4 +1,4 @@
-# ADR-0021: Slowdown history and periodic ISP reports
+# ADR-0027: Slowdown history and periodic ISP reports
 
 - **Status:** Accepted
 - **Date:** 2026-10-08

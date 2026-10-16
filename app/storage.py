@@ -22,7 +22,7 @@ from typing import Any, Iterable
 from . import i18n
 
 # v2: diagnostic_runs. v3: events.message_key/message_params (ADR-0006). v4: speed_samples, slowdowns
-# (ADR-0021). Every statement in _SCHEMA is IF NOT EXISTS, so upgrading re-runs it; columns added to
+# (ADR-0027). Every statement in _SCHEMA is IF NOT EXISTS, so upgrading re-runs it; columns added to
 # existing tables are listed in _ADDED_COLUMNS.
 SCHEMA_VERSION = 4
 
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS diagnostic_runs (
 );
 CREATE INDEX IF NOT EXISTS diagnostic_runs_ts ON diagnostic_runs (ts);
 
--- Throughput samples (ADR-0021). A sample that was not measured keeps its row, with the reason.
+-- Throughput samples (ADR-0027). A sample that was not measured keeps its row, with the reason.
 CREATE TABLE IF NOT EXISTS speed_samples (
     ts        INTEGER PRIMARY KEY,
     network   TEXT,               -- gateway|ssid: a baseline belongs to one network
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS speed_samples (
     evidence  TEXT                -- JSON: what the monitor knew at that moment
 );
 
--- Slow periods (ADR-0021). end_ts is NULL while the episode is still going.
+-- Slow periods (ADR-0027). end_ts is NULL while the episode is still going.
 CREATE TABLE IF NOT EXISTS slowdowns (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     start_ts      INTEGER NOT NULL,
@@ -104,7 +104,7 @@ _ADDED_COLUMNS = {"events": [("message_key", "TEXT"), ("message_params", "TEXT")
 LEVELS = ("info", "warn", "bad")
 
 # Kept for LONG_RETENTION_DAYS instead of the usual retention_days: they are what a report to the
-# provider is made of, and a quarterly report needs them for 90 days (ADR-0021). The monitor's own
+# provider is made of, and a quarterly report needs them for 90 days (ADR-0027). The monitor's own
 # start, stop and gaps are there so a report can say when nothing was being watched.
 LONG_EVENT_KINDS = ("internet_down", "router_down", "slowdown", "monitor_start", "monitor_stop", "monitor_gap")
 LONG_RETENTION_DAYS = 730
@@ -270,7 +270,7 @@ class Storage:
         params.append(int(limit))
         return [_event_out(r) for r in self._rows(sql, params)]
 
-    # --- throughput samples and slowdowns (ADR-0021) --------------------------
+    # --- throughput samples and slowdowns (ADR-0027) --------------------------
 
     def add_speed_sample(self, ts: int, *, network: str | None = None, down_mbps: float | None = None,
                          up_mbps: float | None = None, skipped: str | None = None,

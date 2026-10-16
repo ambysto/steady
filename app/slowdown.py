@@ -1,4 +1,4 @@
-"""Slowdown episodes from throughput samples (ADR-0021): the rules, with no I/O.
+"""Slowdown episodes from throughput samples (ADR-0027): the rules, with no I/O.
 
 A line can be throttled or congested while ping, loss and probes look perfect (2026-10-07: download
 300 -> 5 Mb/s, upload and latency untouched). The monitor therefore samples throughput now and then
