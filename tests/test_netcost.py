@@ -70,10 +70,15 @@ class VerdictTests(unittest.TestCase):
         self.assertEqual(decide([IPHONE], conn(IPHONE, FREE)), Verdict(True))
 
     def test_an_iphone_hotspot_is_metered_though_windows_says_unrestricted(self):
-        self.assertEqual(nc.verdict([WIFI], INTERFACES, [conn(WIFI, FREE)], ("172.20.10.1", "172.20.10.2")),
+        self.assertEqual(nc.verdict([WIFI], INTERFACES, [conn(WIFI, FREE)], [("172.20.10.1", "172.20.10.2")]),
                          Verdict(True))
-        self.assertEqual(nc.verdict([WIFI], INTERFACES, [conn(WIFI, FREE)], ("192.168.1.1", "192.168.1.2")),
+        self.assertEqual(nc.verdict([WIFI], INTERFACES, [conn(WIFI, FREE)], [("192.168.1.1", "192.168.1.2")]),
                          Verdict(False))
+
+    def test_a_vpn_over_an_iphone_hotspot_is_metered_for_certain(self):
+        # The Internet route is the tunnel's; the physical default route underneath is the hotspot.
+        pairs = [(None, "10.64.0.2"), ("172.20.10.1", "172.20.10.5")]
+        self.assertEqual(nc.verdict([VPN], INTERFACES, [conn(VPN, FREE), conn(WIFI, FREE)], pairs), Verdict(True))
 
     def test_the_ipv6_route_counts_too(self):
         self.assertEqual(decide([WWAN]), Verdict(True))                         # IPv6-only mobile network
@@ -116,16 +121,18 @@ class VerdictTests(unittest.TestCase):
 class ReadTests(unittest.TestCase):
     """`read` with the Windows calls replaced: anything missing or failing reads as not metered."""
 
-    def patched(self, v4, v6, connections, rows, address="192.168.1.20"):
+    def patched(self, v4, v6, connections, rows, address="192.168.1.20", physical=None, addresses=()):
         from app import traffic, winutil
         return [mock.patch.object(traffic, "local_ipv4", lambda dest: address),
+                mock.patch.object(winutil, "default_route_native", lambda: physical),
+                mock.patch.object(winutil, "ipv4_addresses", lambda index: list(addresses)),
                 mock.patch.object(winutil, "internet_route_native", lambda dest: v4),
                 mock.patch.object(winutil, "internet_route6_native", lambda dest: v6),
                 mock.patch.object(nc, "read_connections", connections),
                 mock.patch.object(traffic, "interface_row", lambda index: rows.get(index))]
 
-    def read(self, v4, v6, connections, rows, address="192.168.1.20"):
-        patches = self.patched(v4, v6, connections, rows, address)
+    def read(self, v4, v6, connections, rows, address="192.168.1.20", physical=None, addresses=()):
+        patches = self.patched(v4, v6, connections, rows, address, physical, addresses)
         for p in patches:
             p.start()
         try:
@@ -143,6 +150,14 @@ class ReadTests(unittest.TestCase):
         self.assertEqual(self.read(None, {"interface_index": WWAN}, lambda: [], rows), Verdict(True))
         hotspot = {"interface_index": WIFI, "gateway": "172.20.10.1"}
         self.assertEqual(self.read(hotspot, None, lambda: [conn(WIFI, FREE)], rows, "172.20.10.3"), Verdict(True))
+        rows = {**rows, VPN: {"kind": "tunnel", "description": "WireGuard Tunnel"}}
+        vpn = {"interface_index": VPN, "gateway": None}
+        under = {"interface_index": WIFI, "gateway": "172.20.10.1"}
+        self.assertEqual(self.read(vpn, None, lambda: [conn(VPN, FREE), conn(WIFI, FREE)], rows, "10.64.0.2",
+                                   under, ["172.20.10.3"]), Verdict(True))
+        self.assertEqual(self.read(vpn, None, lambda: [conn(VPN, FREE), conn(WIFI, FREE)], rows, "10.64.0.2",
+                                   {"interface_index": WIFI, "gateway": "192.168.1.1"}, ["192.168.1.20"]),
+                         Verdict(False))
 
     def test_no_route_or_a_failing_reading_is_not_metered(self):
         self.assertEqual(self.read(None, None, lambda: [conn(WWAN, FIXED)], {}), Verdict(False))
@@ -165,7 +180,16 @@ class RouteHelperTests(unittest.TestCase):
         with mock.patch.object(winutil.ctypes, "WinDLL", side_effect=OSError("no iphlpapi")):
             self.assertIsNone(winutil.internet_route6_native())
             self.assertIsNone(winutil.interface_index_of_guid(bytes(16)))
+            self.assertEqual(winutil.ipv4_addresses(6), [])
         self.assertIsNone(winutil.internet_route6_native("not an address"))
+
+    @unittest.skipUnless(sys.platform == "win32", "Windows only")
+    def test_the_route_interface_has_the_address_used_to_reach_the_internet(self):
+        from app import traffic, winutil
+        route, address = winutil.internet_route_native(), traffic.local_ipv4()
+        if route is None or address is None:
+            self.skipTest("no IPv4 route")
+        self.assertIn(address, winutil.ipv4_addresses(route["interface_index"]))
 
     @unittest.skipUnless(sys.platform == "win32", "Windows only")
     def test_an_unknown_adapter_has_no_interface(self):

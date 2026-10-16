@@ -13,7 +13,7 @@ import ipaddress
 import uuid
 from ctypes import wintypes
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 # NLM_CONNECTION_COST (netlistmgr.h)
 COST_UNKNOWN = 0x0
@@ -46,7 +46,7 @@ def costs_money(cost: int | None) -> bool:
 
 
 def is_iphone_hotspot(gateway: str | None, address: str | None) -> bool:
-    """The IPv4 route's gateway and this PC's address are an iPhone hotspot's."""
+    """A route's gateway and this PC's address on that network are an iPhone hotspot's."""
     try:
         return (gateway is not None and address is not None
                 and ipaddress.ip_address(gateway) == IPHONE_HOTSPOT_GATEWAY
@@ -103,17 +103,20 @@ def _metered_interface(index: int | None, interfaces: dict[int, Interface], conn
 
 
 def verdict(route_indexes: list[int], interfaces: dict[int, Interface], connections: list[Connection],
-            ipv4: tuple[str | None, str | None] = (None, None)) -> Verdict:
+            ipv4: Iterable[tuple[str | None, str | None]] = ()) -> Verdict:
     """Metered when an interface the Internet routes leave by (IPv4, IPv6) is mobile broadband, a phone's
-    USB tether, or a connection whose cost costs money, or when the IPv4 route (`ipv4`: its gateway and
-    this PC's address) is an iPhone's hotspot. When none is but a route leaves by a tunnel (a
+    USB tether, or a connection whose cost costs money, or when an IPv4 route (`ipv4`: gateway and this
+    PC's address pairs, for the route to the Internet and the physical default route under a VPN) is an
+    iPhone's hotspot: a VPN over the hotspot is metered for certain. When none is but a route leaves by a tunnel (a
     VPN), every other connection that reaches the Internet counts the same way, and the verdict is a
     guess named by those networks' ids. A tunnel counts only when Windows lists it as a connected network:
     with IPv6 on but no IPv6 route, the IPv6 route can be the loopback or a Teredo tunnel, which is no
     VPN. An underlying network whose id could not be read cannot be remembered, so the verdict is then
     certain (it asks every time). No route: not metered."""
     routes = list(dict.fromkeys(route_indexes))
-    if is_iphone_hotspot(*ipv4) or any(_metered_interface(i, interfaces, connections) for i in routes):
+    if any(is_iphone_hotspot(g, a) for g, a in ipv4):
+        return Verdict(True)
+    if any(_metered_interface(i, interfaces, connections) for i in routes):
         return Verdict(True)
     listed = {c.interface_index for c in connections}
     if not any(i in interfaces and interfaces[i].kind in VIRTUAL_KINDS and i in listed for i in routes):
@@ -273,7 +276,10 @@ def read() -> Verdict:
             row = traffic.interface_row(index)
             if row:
                 interfaces[index] = Interface(index, row["kind"], row.get("description") or "")
-        ipv4 = (route4.get("gateway"), traffic.local_ipv4(IPV4_TARGET)) if route4 else (None, None)
+        ipv4 = [(route4.get("gateway"), traffic.local_ipv4(IPV4_TARGET))] if route4 else []
+        physical = winutil.default_route_native()   # under a VPN: the route the tunnel itself runs over
+        if physical and physical.get("gateway"):
+            ipv4 += [(physical["gateway"], a) for a in winutil.ipv4_addresses(physical["interface_index"])]
         return verdict(routes, interfaces, connections, ipv4)
     except Exception:
         return NOT_METERED

@@ -418,6 +418,32 @@ def internet_route6_native(destination: str = "2606:4700:4700::1111") -> dict[st
     return {"interface_index": int(index.value)}
 
 
+class _MibIpAddrRow(ctypes.Structure):   # MIB_IPADDRROW (ipmib.h), 24 bytes
+    _fields_ = [("dwAddr", wintypes.DWORD), ("dwIndex", wintypes.DWORD), ("dwMask", wintypes.DWORD),
+                ("dwBCastAddr", wintypes.DWORD), ("dwReasmSize", wintypes.DWORD),
+                ("unused1", ctypes.c_ushort), ("wType", ctypes.c_ushort)]
+
+
+def ipv4_addresses(index: int) -> list[str]:
+    """The IPv4 addresses of one interface (GetIpAddrTable). Empty when it has none or the call fails."""
+    try:
+        lib = ctypes.WinDLL("iphlpapi")
+        size = ctypes.c_ulong(0)
+        lib.GetIpAddrTable(None, ctypes.byref(size), False)          # ERROR_INSUFFICIENT_BUFFER: wanted size
+        for _ in range(3):                                            # the table can grow between the calls
+            buffer = ctypes.create_string_buffer(size.value + 1024)
+            size = ctypes.c_ulong(len(buffer))
+            if lib.GetIpAddrTable(buffer, ctypes.byref(size), False) == 0:
+                break
+        else:
+            return []
+    except (AttributeError, OSError):
+        return []
+    count = int.from_bytes(buffer.raw[:4], "little")
+    rows = (_MibIpAddrRow * count).from_buffer_copy(buffer.raw[4:4 + count * ctypes.sizeof(_MibIpAddrRow)])
+    return [socket.inet_ntoa(r.dwAddr.to_bytes(4, "little")) for r in rows if r.dwIndex == index and r.dwAddr]
+
+
 def interface_index_of_guid(guid: bytes) -> int | None:
     """The interface index of an adapter GUID (16 bytes as Windows lays a GUID out in memory), through its
     LUID. None when the adapter is gone or the calls fail."""

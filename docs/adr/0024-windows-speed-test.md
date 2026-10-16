@@ -47,23 +47,24 @@ per-address limit sooner.
    `INetworkConnectionCost` through COM with ctypes, unelevated, read-only): metered when a route
    interface is mobile broadband (WWAN), a phone's USB tether (an adapter named "Remote NDIS" or
    "Apple Mobile Device Ethernet", which Windows reports as unmetered Ethernet), an iPhone's
-   Personal Hotspot (gateway 172.20.10.1, this PC's address in 172.20.10.0/28: checked by hand on
-   2026-10-16, Windows reports it unrestricted and the lease carries no metered hint), or a connection
-   whose cost is fixed or variable, roaming, or over or near its data limit (what "Set as metered
-   connection" sets, and what a phone's hotspot can tell Windows). Then every run asks, with the
-   mobile-data text, and each direction stops at 250 MB (500 MB in all, as on Apple, so a line above
-   200 Mbit/s reads as incomplete). When the route leaves by a VPN or other tunnel and only a
-   connected network underneath that reaches the Internet is metered, the verdict is a guess: it
-   asks once per such network (kept in `speedtest.json` by the network's id; one whose id cannot be
-   read asks every time), and the cap stays. A tunnel counts only when Windows lists it as a
-   connected network, so a Teredo or loopback IPv6 route on an IPv4-only line is no VPN. A cost that cannot be
-   read counts as unmetered. The server enforces it: on a metered connection a run without
-   `{"confirmed": true}` is refused (409), so no page can start traffic the user has not agreed to. While the test server's `Retry-After` from the last run
-   lasts, it answers 409 too. Whether the connection is metered is read when the run is asked for
-   and again once it has the line (it may wait behind a measured tweak): a run the user did not
-   confirm does not start on a route that has become metered. The speed test's texts do not name
-   the test server; `PRIVACY.md` does, and so does check #14's advice when the server cannot be
-   reached (a firewall or proxy may need it).
+   Personal Hotspot (gateway 172.20.10.1, this PC's address in 172.20.10.0/28, on the Internet route
+   or on the physical default route a VPN runs over: checked by hand on 2026-10-16, Windows reports
+   it unrestricted and the lease carries no metered hint), or a connection whose cost is fixed or
+   variable, roaming, or over or near its data limit (what "Set as metered connection" sets, and
+   what a phone's hotspot can tell Windows). Then every run asks, with the mobile-data text, and
+   each direction stops at 250 MB (500 MB in all, as on Apple, so a line above 200 Mbit/s reads as
+   incomplete). When the route leaves by a VPN or other tunnel and only a connected network
+   underneath that reaches the Internet is metered, the verdict is a guess: it asks once per such
+   network (kept in `speedtest.json` by the network's id; one whose id cannot be read asks every
+   time), and the cap stays. A tunnel counts only when Windows lists it as a connected network, so a
+   Teredo or loopback IPv6 route on an IPv4-only line is no VPN. A cost that cannot be read counts
+   as unmetered. The server enforces it: on a metered connection a run without `{"confirmed": true}`
+   is refused (409), so no page can start traffic the user has not agreed to. While the test
+   server's `Retry-After` from the last run lasts, it answers 409 too. Whether the connection is
+   metered is read when the run is asked for and again once it has the line (it may wait behind a
+   measured tweak): a run the user did not confirm does not start on a route that has become
+   metered. The speed test's texts do not name the test server; `PRIVACY.md` does, and so does check
+   #14's advice when the server cannot be reached (a firewall or proxy may need it).
 5. **The latest result persists** in `speedtest.json` in the data folder: the figures, the run's
    measurement, and check #14's result as stored messages (ADR-0006). The server reads it at start,
    so the Diagnostics Bufferbloat card and its suggestions come back with the speed test's, with
@@ -84,11 +85,14 @@ per-address limit sooner.
   not depend on it.
 - ⚠️ Off a metered connection the buttons run straight away, so repeated runs reach the server's
   limit sooner; the card and the bar then say when to try again.
-- ⚠️ An iPhone's hotspot is caught by its fixed network. Another phone's hotspot over Wi-Fi is caught
-  only when the phone tells Windows it is metered or the user set the network as metered; one that
-  does neither (an Android phone picks a random network) reads as ordinary Wi-Fi and runs without
-  asking (up to 2 GB). A home network set up on 172.20.10.0/28 asks needlessly. A USB tether is caught by its adapter's name, so an unknown tethering adapter
-  is missed, and a development board using RNDIS asks needlessly. Behind a VPN a metered network
-  that is connected but not what the VPN runs over (Ethernet and a mobile modem both up) asks once.
+- ⚠️ An iPhone's hotspot is caught by its fixed network. Another phone's hotspot over Wi-Fi is
+  caught only when the phone tells Windows it is metered or the user set the network as metered; one
+  that does neither (an Android phone picks a random network) reads as ordinary Wi-Fi and runs
+  without asking (up to 2 GB). A home network set up on 172.20.10.0/28 asks needlessly. A USB tether
+  is caught by its adapter's name, so an unknown tethering adapter is missed, and a development
+  board using RNDIS asks needlessly. Behind a VPN a metered network that is connected but not what
+  the VPN runs over (Ethernet and a mobile modem both up) asks once. A VPN that replaces the
+  default route with one through a gateway of its own hides an iPhone hotspot underneath (the
+  common clients add 0.0.0.0/1 and 128.0.0.0/1 or an on-link route, which the check sees through).
 - ⚠️ The live line trails a real change in speed by up to 2.5 s; at the end of each direction the
   card shows the result's figure, as before.
