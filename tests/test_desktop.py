@@ -384,6 +384,7 @@ class MiniWindowTests(unittest.TestCase):
         self.assertEqual(big[0][2], round(desktop.BUTTON * 1.5) + 1)
         self.assertEqual(big[1][3] - big[1][1], round(desktop.STRIP * 1.5) + 1)
         self.assertEqual(big[0][4], round(desktop.CORNER * 1.5))
+
     def test_bar_grows_away_from_the_screen_edge_it_is_near(self):
         screens = [Screen(0, 0, 1920, 1080)]
         bar, full = desktop.BAR_SIZE, desktop.MINI_SIZE

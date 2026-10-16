@@ -15,7 +15,7 @@ only: the Apple app keeps its Glass look (ADR-0022), and the shared catalogs do 
    gives the window affinity `0x11` and a GDI capture of its rectangle shows the terminal behind it;
    Off gives `0x0` and the capture shows the bar.
 2. **The looks cost more than they give.** Glass, the Low and High opacities and the bar's smooth
-   rim (ADR-0021 and its 2026-10-15 amendment) take about 215 of the 1003 lines of
+   rim (ADR-0021 and its 2026-10-15 amendment) take about 250 of the 1029 lines of
    `app/desktop.py`, about 70 lines of the page and 7 tests. They run a background thread that
    reads the screen behind the window and holds a lock while it calls `evaluate_js` across threads,
    the same family of code as the freeze fixed on `fix/sic-131-desktop-freeze`. `PRIVACY.md` has to

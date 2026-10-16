@@ -18,7 +18,7 @@ user most wants the bar in the picture. Measured on 2026-10-16: with Glass the w
 affinity is `0x11` and a GDI capture of its rectangle shows the window behind it; with Off it is
 `0x0` and the capture shows the bar.
 
-The looks also cost: about 215 of the 1003 lines of `app/desktop.py`, about 70 lines of the page
+The looks also cost: about 250 of the 1029 lines of `app/desktop.py`, about 70 lines of the page
 and 7 tests, a background thread that reads the screen and holds a lock while it calls the page
 across threads (the same kind of code as a freeze found the same day), and a paragraph in
 `PRIVACY.md` on reading screen pixels.
