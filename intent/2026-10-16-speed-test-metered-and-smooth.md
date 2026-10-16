@@ -1,5 +1,5 @@
 ---
-status: building   # draft → approved → planned → building → verified → shipped (PR #n)
+status: verified   # draft → approved → planned → building → verified → shipped (PR #n)
 ---
 # Speed test: ask on every metered connection, and a smooth live chart
 
@@ -103,6 +103,10 @@ amends [ADR-0024](../docs/adr/0024-windows-speed-test.md). Windows only.
    agreed to recognise an iPhone's Personal Hotspot by its fixed network (gateway 172.20.10.1, the
    PC's address in 172.20.10.0/28). Android hotspots pick a random network; they stay caught only
    when they tell Windows.
+6. The real run's gap to the raw byte counters (-5.4 % and -7.2 %) is accepted as for 1.0.1: the
+   counters add headers and retransmissions, and the figures did not move (2026-10-16).
+7. The Android hotspot, USB tether, VPN over the phone and Settings' metered toggle are not checked
+   by hand: the owner judged it not needed for this change (2026-10-16); ADR-0024 keeps the limits.
 
 **Findings** (the recorded run, 2026-10-16, Wi‑Fi; download 295, upload 177 Mbit/s)
 
