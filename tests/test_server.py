@@ -134,6 +134,12 @@ class GateTests(ServerTestCase):
         self.assertEqual(resp.getheader("X-Content-Type-Options"), "nosniff")
         self.assertIsNone(resp.getheader("Access-Control-Allow-Origin"))
 
+    def test_floating_page_gets_the_token_too(self):
+        status, html, _ = self.req("GET", "/mini.html", token=False)
+        self.assertEqual(status, 200)
+        self.assertIn(self.server.token, html)
+        self.assertNotIn("{{TOKEN}}", html)
+
     def test_dns_rebinding_host_is_refused_even_for_the_page(self):
         for host in ("evil.example:%d" % self.server.port, "127.0.0.1", "127.0.0.1:1", "localhost.evil.com",
                      "LOCALHOST:%d" % self.server.port):
@@ -242,6 +248,14 @@ class GateTests(ServerTestCase):
 
 
 class ReadApiTests(ServerTestCase):
+    def test_traffic_comes_from_the_traffic_source(self):
+        calls = []
+        self.api._traffic = SimpleNamespace(snapshot=lambda: calls.append(1) or {"series": [[1.0, 8000, 800]], "apps": []})
+        status, payload, _ = self.req("GET", "/api/traffic")
+        self.assertEqual((status, payload["series"], calls), (200, [[1.0, 8000, 800]], [1]))
+        self.assertEqual(self.req("GET", "/api/traffic", token=False)[0], 401)
+        self.assertEqual(self.req("POST", "/api/traffic", {})[0], 405)
+
     def test_state_and_live(self):
         state = self.req("GET", "/api/state")[1]
         self.assertFalse(state["is_admin"])
@@ -631,9 +645,10 @@ class MeasuredTweakApiTests(ServerTestCase):
             seen.append(self.api._line_lock.locked())
             return self.measurements.pop(0) if self.measurements else None
         self.api._measure_tweak = measure
-        self.api._run_bufferbloat = lambda: seen.append(self.api._line_lock.locked()) or {"results": []}
+        self.api._run_speedtest = lambda progress, limit: seen.append(self.api._line_lock.locked()) or {"results": []}
         self.req("POST", "/api/tweaks/upload_shaping", {"enable": True})
-        self.req("POST", "/api/diagnostics/bufferbloat", {})
+        self.api._on_metered = lambda: False
+        self.req("POST", "/api/speedtest", {})
         self.assertEqual(seen, [True, True, True])       # before, after, and check #14: each holds the lock
 
     def test_an_enabled_limit_without_its_measurement_is_flagged(self):

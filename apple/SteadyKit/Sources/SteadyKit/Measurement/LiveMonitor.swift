@@ -48,11 +48,20 @@ public final class LiveMonitor {
         didSet {
             if routerAddress != oldValue {
                 samples[Self.router] = nil   // a different router: its old numbers no longer apply
+                timedSamples[Self.router] = nil
             }
         }
     }
 
     public private(set) var samples: [String: [Double?]] = [:]
+    /// One round's reading with the time it was taken; the floating monitor's sweep draws from it.
+    public struct TimedSample: Equatable, Sendable {
+        public let ts: Double
+        public let rttMs: Double?
+    }
+    /// The last two minutes of rounds per target, timed (the sweep is one minute with a gap).
+    public private(set) var timedSamples: [String: [TimedSample]] = [:]
+    static let chartWindow = 120.0
     /// The system refuses to send to the router: the local network permission was declined.
     /// The router is then left out (not counted as lost) until a ping gets through again.
     public private(set) var routerRefused = false
@@ -197,7 +206,9 @@ public final class LiveMonitor {
 
     /// Records one round of results: closes the minute when it has passed, then adds the samples.
     func record(_ results: [(target: String, rttMs: Double?)]) {
-        if let minute = aggregator.roll(at: now()) {
+        // One time for the whole round, so targets measured together stay aligned on the chart.
+        let time = now()
+        if let minute = aggregator.roll(at: time) {
             keep(minute)
         }
         for result in results {
@@ -205,6 +216,9 @@ public final class LiveMonitor {
             var window = samples[result.target] ?? []
             window.append(result.rttMs)
             samples[result.target] = Array(window.suffix(Self.liveWindow))
+            var timed = timedSamples[result.target] ?? []
+            timed.append(TimedSample(ts: time, rttMs: result.rttMs))
+            timedSamples[result.target] = timed.filter { $0.ts > time - Self.chartWindow }
         }
     }
 

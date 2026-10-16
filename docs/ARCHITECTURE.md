@@ -38,13 +38,17 @@
 | `diagnostics.py` | Diagnostic checks — see [DIAGNOSTICS.md](DIAGNOSTICS.md) |
 | `actions.py` | One-off actions: reconnect Wi‑Fi, restart the card, flush DNS, renew DHCP |
 | `probe.py` | TCP:443 / HTTP 204 probes, independent of ICMP — confirm "Internet is up" when ping is restricted |
+| `tls.py` | A new TLS context for each HTTPS connection the app opens (the speed test's loads, an `https://` probe), never shared: verified by Windows through truststore when installed, else by the standard library ([ADR-0025](adr/0025-https-verified-by-windows.md)) |
 | `notify.py` | Windows toasts on connection loss (after 30s) / when the watchdog intervenes, disables itself, or hits an error; rate-limited; runs in the background |
 | `singleton.py` | Prevents two monitors running on the same data directory (named mutex); a new monitor waits up to 10 s for a previous one that is still exiting |
 | `autostart.py` | Task Scheduler task that starts the monitor at logon (created from XML) |
 | `winsys.py` | The only layer allowed to write to the machine (card properties, HKLM, powercfg, binding, the tool's QoS policy) |
 | `elevated.py`, `elevation.py` | Child process running as Admin via UAC for write operations — ADR-0005 |
 | `server.py` | HTTP server, API routing, serves `web/` |
-| `desktop.py` | Desktop shell (ADR-0002): a pywebview window using the native Windows frame (Snap Layouts, resizing, title bar painted the same color as the page background) around the UI + tray icon (pystray). It is only a viewer: closing the window = hiding to the tray, "Quit" only closes the shell, the monitor keeps running. Only this module needs `requirements.txt` |
+| `desktop.py` | Desktop shell (ADR-0002): a pywebview window using the native Windows frame (Snap Layouts, resizing, title bar painted the same color as the page background) around the UI + tray icon (pystray). It is only a viewer: closing the window = hiding to the tray, "Quit" only closes the shell, the monitor keeps running. The tray menu also toggles the floating monitor (`web/mini.html`): a frameless window that stays on top, either a one-line bar (default, 330×32: one rectangle with no window region, whose corners DWM rounds smoothly (`DWMWCP_ROUNDSMALL`), with the Optimize button as a rounded square inside it; the page fills it in one dark colour) or the full table (340×500, DWM's rounded corners), resized through the form because pywebview's `resize()` keeps the 100 px minimum height of a Windows form; it is always solid and shows in screenshots, and nothing reads the screen ([ADR-0026](adr/0026-solid-floating-monitor-on-windows.md), which replaced the Glass look of ADR-0021); whether it is open, where it sits and whether it is the bar or the table are kept in `%LOCALAPPDATA%\StableInternet\mini.json`, whose `seen_version` makes the first start of a new version open it once. Its page may only hide it, switch bar/table and ask the main window to show the latest check's result (`open_result` → `window.steadyApp.openResult()`) or the speed test, asking first when the user has not said yes yet (`open_speed` → `window.steadyApp.openSpeed()`); the main window's page may only open it (`open_mini`). Only this module needs `requirements.txt` |
+| `netcost.py` | Whether the speed test's connection is metered (ADR-0024): the interfaces the IPv4 and IPv6 Internet routes leave by and Windows' cost of each connected network (Network List Manager through COM with ctypes, read-only, no Admin), decided by `verdict` (pure); a phone's USB tether by its adapter, an iPhone hotspot by its network; behind a VPN, the metered networks underneath, as a guess |
+| `speedtest.py` | The speed test (ADR-0024): check #14's run read as download, upload, latency, jitter and loss (`result`), the live view from `bufferbloat.measure`'s events (`Live`), and the latest result with its measurement in `speedtest.json` (`Store`). Pure apart from that file |
+| `traffic.py` | Read-only data for the floating monitor, no Admin: throughput of the interface Internet traffic takes (`GetIfEntry2` counters, sampled every second by a thread that runs only while `/api/traffic` is being asked for and stops 30 s after), apps with open connections (`GetExtendedTcpTable`/`UdpTable` → process, named from the executable's version resource; a count, since speed per app needs Admin), local IPv4 and DNS servers |
 | `failover.py` | Switching to a backup network path ([ADR-0008](adr/0008-failover.md)): discovers paths (physical cards with a default route), measures each path with TCP bound to its IP, a pure policy with safety limits, changes InterfaceMetric with a backup in the backup store (`backupstore.py`). Off by default |
 | `runtime.py` | How each part (monitor, desktop, elevated) is launched, from source or from the packaged build — the task, UAC and shortcuts all ask here |
 | `installer.py`, `entry.py` | Packaged build `Ambysto Steady.exe` (PyInstaller, bundles Python): subcommands `monitor`/`desktop`/`elevated`/`install`/`uninstall`/`diagnostics`; install for all users under `Program Files` ([ADR-0019](adr/0019-per-machine-install.md): one UAC prompt for the all-users part, the monitor task and tray shortcut stay per user, an earlier per-user copy in `%LOCALAPPDATA%\Programs` is removed), uninstall first restores every tweak + metric. A packaged copy outside `Program Files` never runs elevated. Data of the packaged build lives in `%LOCALAPPDATA%\StableInternet\data` |
@@ -96,6 +100,9 @@ Plain HTML/CSS/JS, no libraries, no build step (ES modules). The server serves `
 | `js/chart.js` | SVG charts: router/Internet, packet loss, incident regions, change markers (tweak, manual step) |
 | `js/widgets.js` | "Impact" block, suggestion rows, tweak toggles (sheet for experimental tweaks, UAC when not Admin) |
 | `js/screens/*.js` | Overview, Optimize, Diagnostics, Log, Settings |
+| `js/speed.js` | The speed test card (Overview) and its run, shared with the Diagnostics Bufferbloat card: confirmation, `POST /api/speedtest`, the live view from the job's progress, the charts as inline SVG |
+| `mini.html`, `mini.css`, `js/mini.js` | The floating monitor: the one-line bar (Optimize → `POST /api/diagnostics`, then "Fix N" hands over to the Overview's result view; the speed test's gauge → `POST /api/speedtest`) and the full table (download / upload / ping tiles, the sweep chart, the Apps and Network tabs); polls every second, paused by the shell while hidden |
+| `js/ecg.js` | Sweep chart on a canvas in the style of a heart monitor: the trace wraps every 60 s, a gap runs ahead of the pen, older trace fades |
 
 Text generated by the backend (diagnostics, events, tweaks) comes already translated from the API; JS only translates the UI's own labels (`ui.*`).
 
@@ -112,12 +119,15 @@ Text generated by the backend (diagnostics, events, tweaks) comes already transl
 | GET | `/api/impact` | Changes in the last 14 days (tweaks enabled, steps done) with before/after data |
 | GET | `/api/autostart` | Whether the monitor starts with Windows (read-only, cached 60s) |
 | GET | `/api/live?window=300` | Latest ping samples (≤ 900s), Wi‑Fi state, ongoing incident |
+| GET | `/api/traffic` | Throughput of the Internet path (last 120 s, bits/s), the interface, apps with open connections, local IPv4 and DNS (read-only; starts the sampler) |
 | GET | `/api/history?hours=24&bucket=1` | Per-minute statistics + Wi‑Fi + events (≤ 30 days); `bucket=N` aggregates N minutes (7-day chart) |
 | GET | `/api/events?limit=200` | Log |
 | GET | `/api/tweaks` | Tweak state from a 60s cache; re-reading runs in the background (~11s); `impact` for enabled tweaks |
 | POST | `/api/tweaks/{id}` | `{ "enable": true/false }` → job; via UAC when not Admin |
 | POST | `/api/diagnostics` | Run all diagnostics → job (one run at a time) |
 | GET | `/api/diagnostics/runs[/{id}]` | Saved diagnostic runs |
+| GET | `/api/speedtest` | The latest speed test (kept across restarts), whether starting one asks first (`ask`: on a metered connection, `app/netcost.py`), check #14's result from the same run, the running job |
+| POST | `/api/speedtest` | → job whose progress is the live view; on a metered connection it needs `{ "confirmed": true }` every time (behind a VPN, once per metered network underneath) and stops each direction at 250 MB; 409 without that yes or while the test server asks to wait. `POST /api/diagnostics/bufferbloat` starts the same job |
 | GET | `/api/jobs/{id}` | Job status/result |
 | POST | `/api/actions/{name}` | `reconnect`, `restart_adapter` (UAC), `flush_dns`, `renew_dhcp` → job |
 | POST | `/api/settings` | Only keys in `SETTINGS_SCHEMA` (`watchdog.*`, `notify.enabled`, `ui.language`), type-checked, value ranges / allowed lists |

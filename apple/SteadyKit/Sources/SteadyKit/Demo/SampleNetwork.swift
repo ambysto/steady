@@ -15,11 +15,11 @@ public enum SampleNetwork {
     }
 
     /// The Mac's Wi‑Fi reading: a good signal on 5 GHz.
-    public static let wifi = WiFiSignal.State(state: "connected", channel: 44, radioType: "802.11ax",
+    public static let wifi = WiFiSignal.State(state: "connected", channel: 44, band: "5 GHz", radioType: "802.11ax",
                                               signal: WiFiSignal.State.quality(rssi: -52), rssi: -52, txMbps: 864)
 
     /// `-SampleProblems`: the same network from a room further away, a fair signal.
-    public static let fairWiFi = WiFiSignal.State(state: "connected", channel: 44, radioType: "802.11ax",
+    public static let fairWiFi = WiFiSignal.State(state: "connected", channel: 44, band: "5 GHz", radioType: "802.11ax",
                                                   signal: WiFiSignal.State.quality(rssi: -67), rssi: -67, txMbps: 288)
 
     /// A monitor holding the hour before `now` and live samples, measured nowhere. With

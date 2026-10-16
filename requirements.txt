@@ -1,5 +1,7 @@
-# Only the desktop shell (app/desktop.py: window + tray icon) needs these - ADR-0002.
-# The monitor, server, diagnostics and tweaks use the standard library only (ADR-0001).
+# The desktop shell (app/desktop.py: window + tray icon) needs the first three - ADR-0002.
+# The monitor, server, diagnostics and tweaks use the standard library only (ADR-0001), except that
+# HTTPS is verified by Windows through truststore when it is installed (app/tls.py, ADR-0025).
 pywebview==6.2.1     # window around the local UI (WebView2 on Windows)
 pystray==0.19.5      # notification-area (tray) icon
 Pillow>=10           # draws the tray icon (also required by pystray)
+truststore==0.10.4   # HTTPS certificates checked by Windows, which fetches a missing root (speed test)

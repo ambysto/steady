@@ -4,7 +4,7 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 
 | ADR | Title | Status |
 |---|---|---|
-| [0001](0001-python-stdlib-web-ui.md) | Python backend and a locally served web UI | Accepted (amended by 0002) |
+| [0001](0001-python-stdlib-web-ui.md) | Python backend and a locally served web UI | Accepted (amended by 0002, 0025) |
 | [0002](0002-macos-style-ui-pywebview.md) | macOS-style UI in a pywebview window | Accepted |
 | [0003](0003-tweak-framework.md) | Tweak framework: back up first, verify afterwards, roll back on failure | Accepted |
 | [0004](0004-watchdog-safety.md) | Watchdog: pure decisions, persistent limits, self-disabling circuit breaker | Accepted |
@@ -24,3 +24,9 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0018](0018-backups-in-hklm.md) | Backups live in HKLM, where only the elevated side can write (amends 0017) | Accepted |
 | [0019](0019-per-machine-install.md) | Install for all users under Program Files; elevated code only runs from there | Accepted |
 | [0020](0020-check-fix-result-flow.md) | One "Check → Fix → Result" flow on the Overview, and a value card from the log | Accepted |
+| [0021](0021-floating-monitor-glass.md) | The floating monitor's glass look comes from a blurred capture of what is behind it | Superseded on Windows by 0026 |
+| [0022](0022-mac-floating-monitor.md) | The Mac's floating monitor is a non-activating panel that reads the measurements the app already makes | Accepted |
+| [0023](0023-apple-speed-test.md) | On Apple, the speed test is check #14's run | Accepted |
+| [0024](0024-windows-speed-test.md) | On Windows too, the speed test is check #14's run | Accepted (amended 2026-10-16) |
+| [0025](0025-https-verified-by-windows.md) | The app's HTTPS is verified by Windows, through truststore | Accepted |
+| [0026](0026-solid-floating-monitor-on-windows.md) | On Windows the floating monitor is solid, and screenshots see it | Accepted |

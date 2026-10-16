@@ -29,13 +29,25 @@ final class AppModel {
     private(set) var dns: CheckResult?
     private(set) var dnsRunning = false
     private(set) var bufferbloat: CheckResult?
-    private(set) var bufferbloatStage: BufferbloatTest.Stage?
+    /// The speed test (ADR-0023), which is check #14's run: the run as it goes, and the latest
+    /// result, kept across launches.
+    private(set) var speedLive: SpeedTest.Live?
+    private(set) var speedResult: SpeedTest.Result? = AppModel.savedSpeedResult()
+    /// Set by the floating bar when the test needs a confirmation: the main window's Overview asks.
+    var speedConfirmRequested = false
+
+    /// Hands the floating bar's request to one Overview: true only for the first that asks, so two
+    /// open windows do not both put the question.
+    func takeSpeedConfirmRequest() -> Bool {
+        defer { speedConfirmRequested = false }
+        return speedConfirmRequested
+    }
 
     /// Only the latest DNS run may show its result: the router can change while one is running.
     private var dnsRun = 0
     private var dnsTask: Task<Void, Never>?
     private var dnsTrigger: String?
-    private var bufferbloatTask: Task<Void, Never>?
+    private var speedTask: Task<Void, Never>?
     /// The Mac and the iPad may open several windows: measuring goes on while any of them is open.
     private var windows = 0
     private var measuring: Task<Void, Never>?
@@ -44,8 +56,32 @@ final class AppModel {
     private(set) var checkRun: CheckRun?
     private var checkTask: Task<Void, Never>?
 
+    #if os(macOS)
+    /// The floating monitor (ADR-0022): a window of its own on top of the others. Closed by default,
+    /// and it starts as the bar each time it opens.
+    private(set) var floatingShown = false
+    var floatingExpanded = false {
+        didSet { floatingController?.setExpanded(floatingExpanded) }
+    }
+    var floatingLook = FloatingLook(rawValue: UserDefaults.standard.string(forKey: "floating.look") ?? "") ?? .glass {
+        didSet {
+            UserDefaults.standard.set(floatingLook.rawValue, forKey: "floating.look")
+            floatingController?.applyLook(floatingLook)
+        }
+    }
+    var floatingTheme = FloatingTheme(rawValue: UserDefaults.standard.string(forKey: "floating.theme") ?? "") ?? .system {
+        didSet { UserDefaults.standard.set(floatingTheme.rawValue, forKey: "floating.theme") }
+    }
+    /// Download and upload over the last two minutes, sampled while the monitor is open.
+    private(set) var throughput = Throughput()
+    /// The Mac's address on the path's interface and its DNS servers, refreshed every 10 s while open.
+    private(set) var localIPv4: String?
+    private(set) var dnsServers: [String] = []
+    private var floatingController: FloatingMonitorController?
+    #endif
+
     /// The checks the run goes through on this platform, in the order of docs/DIAGNOSTICS.md.
-    /// Bufferbloat (#14) loads the line, so it stays on the Diagnostics tab.
+    /// Bufferbloat (#14) loads the line, so it is not part of the run: the speed test measures it.
     static var checkSteps: [CheckRun.Step] {
         #if os(macOS)
         [.init(id: 2, key: "signal"), .init(id: 3, key: "interference"), .init(id: 5, key: "ping"),
@@ -96,6 +132,8 @@ final class AppModel {
         #endif
         isStoreScreenshots = false
         monitor = LiveMonitor(store: Self.history)
+        // Check #14 comes back with the speed test it was measured by (one run, two results).
+        bufferbloat = speedResult?.measurement.map(Bufferbloat.evaluate)
     }
 
     /// Called by each window for as long as it is open; measures while at least one is.
@@ -121,26 +159,118 @@ final class AppModel {
             group.addTask { await self.monitor.run() }
             #if os(macOS)
             group.addTask { await self.readSignal() }
+            group.addTask { await self.readThroughput() }
             #endif
         }
     }
+
+    #if os(macOS)
+    /// Opens the floating monitor (ADR-0022). Its view keeps the measuring going while it is shown.
+    func showFloatingMonitor() {
+        floatingShown = true
+        let controller = floatingController ?? FloatingMonitorController(model: self)
+        floatingController = controller
+        controller.show(expanded: floatingExpanded, look: floatingLook)
+    }
+
+    /// Closes it: its view goes, so the measuring it kept going stops with it.
+    func hideFloatingMonitor() {
+        floatingController?.hide()
+        floatingShown = false
+        floatingExpanded = false
+    }
+
+    func toggleFloatingMonitor() {
+        if floatingShown {
+            hideFloatingMonitor()
+        } else {
+            showFloatingMonitor()
+        }
+    }
+
+    /// Solid while the pointer is on the floating monitor, see-through otherwise for Low and High.
+    func floatingPointer(over: Bool) {
+        floatingController?.pointerOver(over)
+    }
+
+    /// Samples the download and upload once a second while the floating monitor is open, and the
+    /// Mac's address and DNS servers every 10 s. Nothing is read while it is closed.
+    private func readThroughput() async {
+        var lastFacts: ContinuousClock.Instant?
+        while !Task.isCancelled {
+            if floatingShown, let interface = path?.interfaces.first {
+                if let counters = Throughput.counters(of: interface) {
+                    throughput.add(ts: Date().timeIntervalSince1970, interface: interface,
+                                   rx: counters.rx, tx: counters.tx)
+                }
+                if lastFacts.map({ $0.duration(to: .now) >= .seconds(10) }) ?? true {
+                    lastFacts = .now
+                    localIPv4 = Throughput.ipv4(of: interface)
+                    dnsServers = DNSProbe.systemServers()
+                }
+            }
+            try? await Task.sleep(for: .seconds(1))
+        }
+    }
+    #endif
 
     func runDNS() {
         dnsTask?.cancel()
         dnsTask = Task { await measureDNS() }
     }
 
-    func runBufferbloat() {
-        guard bufferbloatTask == nil else { return }
-        bufferbloatTask = Task {
-            bufferbloatStage = .idle
-            let measurement = await BufferbloatTest.run(router: path?.routerIPv4) { stage in
-                await MainActor.run { self.bufferbloatStage = stage }
-            }
-            bufferbloat = Bufferbloat.evaluate(measurement)
-            bufferbloatStage = nil
-            bufferbloatTask = nil
+    /// The byte limit the speed test (check #14) would use on the current path; nil in Low Data Mode.
+    var speedLimit: Int64? {
+        BufferbloatTest.byteLimit(expensive: path?.isExpensive ?? false, constrained: path?.isConstrained ?? false)
+    }
+
+    /// The current path is metered (mobile data, a personal hotspot): the test uses a lower limit.
+    var speedMetered: Bool { path?.isExpensive ?? false }
+
+    var speedRunning: Bool { speedTask != nil }
+
+    /// Ask first: every time on a metered path, otherwise until the user has said yes once.
+    var speedNeedsConfirmation: Bool {
+        SpeedTest.needsConfirmation(metered: speedMetered,
+                                    confirmedBefore: UserDefaults.standard.bool(forKey: Self.speedConfirmedKey))
+    }
+
+    /// Until when the test server asked not to be loaded again, if that is still ahead of `date`.
+    func speedBlockedUntil(at date: Date = .now) -> Date? {
+        speedResult?.retryUntil.flatMap { $0 > date ? $0 : nil }
+    }
+
+    func canRunSpeedTest(at date: Date = .now) -> Bool {
+        isConnected && speedLimit != nil && !speedRunning && speedBlockedUntil(at: date) == nil
+    }
+
+    /// Runs the speed test, which also gives check #14's result. `confirmed`: the user has just said
+    /// yes to the confirmation, so an unmetered path does not ask again.
+    func runSpeedTest(confirmed: Bool = false) {
+        if confirmed && !speedMetered {
+            UserDefaults.standard.set(true, forKey: Self.speedConfirmedKey)
         }
+        guard !isStoreScreenshots, canRunSpeedTest(), let limit = speedLimit else { return }
+        speedTask = Task {
+            speedLive = SpeedTest.Live()
+            let run = await BufferbloatTest.run(router: path?.routerIPv4, maxBytes: limit) { event in
+                await MainActor.run { self.speedLive?.apply(event) }
+            }
+            bufferbloat = Bufferbloat.evaluate(run.measurement)
+            let result = SpeedTest.result(from: run, at: .now)
+            speedResult = result
+            UserDefaults.standard.set(try? JSONEncoder().encode(result), forKey: Self.speedResultKey)
+            speedLive = nil
+            speedTask = nil
+        }
+    }
+
+    private static let speedResultKey = "speedtest.last"
+    private static let speedConfirmedKey = "speedtest.confirmed"
+
+    /// The latest result from an earlier launch; nil when there is none or it no longer decodes.
+    private static func savedSpeedResult() -> SpeedTest.Result? {
+        UserDefaults.standard.data(forKey: speedResultKey).flatMap { try? JSONDecoder().decode(SpeedTest.Result.self, from: $0) }
     }
 
     /// Runs the checks one after another and records each as it really starts and finishes: no

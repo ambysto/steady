@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-from . import USER_AGENT
+from . import USER_AGENT, tls
 
 
 @dataclass(frozen=True)
@@ -45,12 +45,14 @@ def http_204(url: str, timeout_s: float = 3.0) -> ProbeResult:
     parts = urlsplit(url)
     if parts.scheme not in ("http", "https") or not parts.hostname:
         return ProbeResult(False, None, f"bad url {url!r}")
-    cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
     path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
     started = time.perf_counter()
     conn = None
     try:
-        conn = cls(parts.hostname, parts.port, timeout=timeout_s)
+        if parts.scheme == "https":
+            conn = http.client.HTTPSConnection(parts.hostname, parts.port, timeout=timeout_s, context=tls.context())
+        else:
+            conn = http.client.HTTPConnection(parts.hostname, parts.port, timeout=timeout_s)
         conn.request("GET", path, headers={"User-Agent": USER_AGENT, "Connection": "close"})
         resp = conn.getresponse()
         resp.read(1024)

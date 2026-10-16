@@ -1,6 +1,6 @@
 # ADR-0001: Python backend and a locally served web UI
 
-- **Status:** Accepted — amended by [ADR-0002](0002-macos-style-ui-pywebview.md) (allows adding pywebview and small libraries)
+- **Status:** Accepted — amended by [ADR-0002](0002-macos-style-ui-pywebview.md) (allows adding pywebview and small libraries) and [ADR-0025](0025-https-verified-by-windows.md) (truststore verifies HTTPS, optional at run time)
 - **Date:** 2026-10-03
 
 ## Context

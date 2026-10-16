@@ -12,6 +12,7 @@ from app.server import bucket_minute_stats, bucket_wifi_stats
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 JS = sorted(WEB.rglob("*.js"))
+PAGES = sorted(WEB.glob("*.html"))
 
 
 class WebTextTests(unittest.TestCase):
@@ -22,7 +23,8 @@ class WebTextTests(unittest.TestCase):
         used = set()
         for path in JS:
             used |= set(re.findall(r"""\bt\(\s*["']([a-z0-9_.]+)["']""", path.read_text(encoding="utf-8")))
-        used |= set(re.findall(r'data-t="([a-z0-9_.]+)"', (WEB / "index.html").read_text(encoding="utf-8")))
+        for page in PAGES:
+            used |= set(re.findall(r'data-t="([a-z0-9_.]+)"', page.read_text(encoding="utf-8")))
         self.assertGreater(len(used), 50)
         self.assertEqual(sorted(used - set(self.english)), [])
 
@@ -45,15 +47,26 @@ class WebTextTests(unittest.TestCase):
             self.assertIn(f"ui.risk.{key}", self.english)
         for key in ("system", "light", "dark"):
             self.assertIn(f"ui.settings.theme.{key}", self.english)
+        for unit in ("kbps", "mbps"):                                      # web/js/mini.js rateText
+            self.assertIn(f"ui.mini.unit.{unit}", self.english)
+        from app.traffic import _KIND_BY_IFTYPE
+        for kind in {*_KIND_BY_IFTYPE.values(), "other"}:                 # the interface kinds traffic.py reports
+            self.assertIn(f"ui.mini.net.kind.{kind}", self.english)
 
 
 class WebSecurityTests(unittest.TestCase):
     def test_no_inline_script_so_the_csp_can_stay_strict(self):
-        html = (WEB / "index.html").read_text(encoding="utf-8")
-        for tag in re.findall(r"<script\b[^>]*>", html):
-            self.assertIn("src=", tag)
-        self.assertNotRegex(html, r"\son[a-z]+=")       # no inline event handlers either
-        self.assertIn('content="{{TOKEN}}"', html)
+        self.assertEqual([p.name for p in PAGES], ["index.html", "mini.html"])
+        for page in PAGES:
+            html = page.read_text(encoding="utf-8")
+            for tag in re.findall(r"<script\b[^>]*>", html):
+                self.assertIn("src=", tag)
+            self.assertNotRegex(html, r"\son[a-z]+=")       # no inline event handlers either
+            self.assertIn('content="{{TOKEN}}"', html)
+
+    def test_every_page_is_served_with_its_token(self):
+        from app.server import PAGES as SERVED
+        self.assertEqual(sorted(set(SERVED.values())), [p.name for p in PAGES])
 
     def test_scripts_never_inject_markup(self):
         for path in JS:

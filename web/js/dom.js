@@ -24,6 +24,14 @@ export function fill(node, ...children) {
   return node;
 }
 
+/** Shown only inside the desktop shell, whose bridge (window.pywebview.api) can open the floating
+ *  monitor; app.js shows them again when the bridge arrives after the screen was drawn. */
+export function desktopOnly(node) {
+  node.dataset.desktopOnly = "";
+  node.hidden = !window.pywebview?.api?.open_mini;
+  return node;
+}
+
 const SVG = "http://www.w3.org/2000/svg";
 
 export function icon(name, cls = "icon") {

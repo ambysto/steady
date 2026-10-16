@@ -57,7 +57,7 @@ def build() -> None:
     ])
 
 
-BUNDLED = ("pywebview", "pystray", "pillow")      # requirements.txt; their dependencies are followed
+BUNDLED = ("pywebview", "pystray", "pillow", "truststore")   # requirements.txt; their dependencies are followed
 EXTRA_NOTICES = (
     "PyInstaller bootloader - GPL-2.0-or-later with the bootloader exception, which allows any program "
     "built with it to be distributed under its own license. https://pyinstaller.org/en/stable/license.html",

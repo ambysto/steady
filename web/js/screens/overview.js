@@ -1,14 +1,15 @@
-// Overview: connection state, the connection check (ADR-0020), latency chart (live 15 min / 24 h /
-// 7 days), numbers, recent incidents, quick actions, watchdog state.
+// Overview: connection state, the connection check (ADR-0020), the speed test (ADR-0024), latency
+// chart (live 15 min / 24 h / 7 days), numbers, recent incidents, quick actions, watchdog state.
 
 import { get, runJob } from "../api.js";
 import { latencyChart } from "../chart.js";
-import { $, el, fill, icon, svgEl, toast } from "../dom.js";
+import { $, desktopOnly, el, fill, icon, svgEl, toast } from "../dom.js";
 import { duration, number, t, timeOf } from "../i18n.js";
 import { bucketLoss, historySeries, liveLatency, liveNumbers, liveTicks, lossVerdict, probesOk } from "../metrics.js";
 import { failoverKey, failoverRows, suggestionAction } from "../widgets.js";
 import { loadBadge } from "./diagnostics.js";
 import { showGroup } from "./log.js";
+import { loadSpeed, onSpeedChange, runSpeedTest, speedCard } from "../speed.js";
 
 const RANGES = { live: { label: "ui.range.live" }, day: { label: "ui.range.day", hours: 24, bucket: 5 },
                  week: { label: "ui.range.week", hours: 168, bucket: 30 } };
@@ -363,6 +364,13 @@ function openResult(ctx) {
   root().scrollIntoView?.({ block: "start" });
 }
 
+/** The result view for the latest stored run, when it found problems (the floating bar's "Fix N"). */
+export async function showResult(ctx) {
+  await loadSuggestions(ctx);
+  if (suggestions?.check?.count && !check.running && !fix.phase) openResult(ctx);
+  else drawCheck(ctx);
+}
+
 function closeResult(ctx) {
   result.open = false;
   drawCheck(ctx);
@@ -590,6 +598,19 @@ function drawCheck(ctx) {
   root().classList.toggle("result-open", result.open && Boolean(suggestions?.check?.count) && !check.running && !fix.phase);
   slots.check && fill(slots.check, checkCard(ctx));
   slots.value && fill(slots.value, valueCard(ctx));
+  drawSpeed();
+}
+
+function drawSpeed() {
+  slots.speed && fill(slots.speed, speedCard());
+}
+onSpeedChange(drawSpeed);
+
+/** The floating bar's speed button (app/desktop.py open_speed_result): the result, or the question. */
+export async function showSpeed(ctx, ask) {
+  await loadSpeed().catch(() => {});
+  slots.speed?.scrollIntoView({ block: "center", behavior: "smooth" });
+  if (ask) await runSpeedTest();
 }
 
 /** Resolves true when a new run was saved and loaded. */
@@ -651,13 +672,15 @@ async function loadFailover() {
 }
 
 function draw(ctx) {
-  for (const name of ["hero", "check", "value", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
+  for (const name of ["hero", "check", "speed", "value", "chart", "stats", "recent", "watchdog", "failover"]) slots[name] = el("div");
   slots.check.className = "check-slot";
   slots.stats.style.marginTop = "var(--space-3)";
   fill(root(), 
-    el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview"))),
+    el("header", { class: "content-header" }, el("h1", {}, t("ui.nav.overview")),
+      el("div", { class: "actions" },
+        desktopOnly(el("button", { class: "button", onclick: () => ctx.openMini() }, icon("pulse"), t("ui.tray.mini"))))),
     slots.hero,
-    slots.check, slots.value,
+    slots.check, slots.speed, slots.value,
     el("div", { class: "section-title" }, t("ui.overview.latency")), slots.chart, slots.stats,
     el("div", { class: "two-col" },
       el("div", {}, el("div", { class: "section-title" }, t("ui.overview.recent")), slots.recent),
@@ -673,7 +696,7 @@ function draw(ctx) {
 
 export async function render(ctx) {
   const [live, ev] = await Promise.all([get("/api/live?window=900"), get("/api/events?limit=300"), loadSuggestions(ctx),
-                                       loadFailover()]);
+                                       loadFailover(), loadSpeed().catch(() => {})]);
   ctx.live = live;
   events = ev.events;
   if (range !== "live") {
@@ -691,8 +714,8 @@ export async function refresh(ctx) {
   ctx.updateConnection();
   if (++tick % 15 === 0) {     // every ~30 s: events, suggestions and settings change slowly
     if (range === "live") events = (await get("/api/events?limit=300")).events;
-    await Promise.all([loadSuggestions(ctx), loadFailover()]);
-    if (!result.open && !root().querySelector(".group button:disabled")) drawSlow(ctx);
+    await Promise.all([loadSuggestions(ctx), loadFailover(), loadSpeed().catch(() => {})]);
+    if (!result.open && !root().querySelector(".group:not(.speed-card) button:disabled")) drawSlow(ctx);
   } else if (tick % 2 === 0) { // every ~4 s: which connection carries the traffic can change any moment
     const before = failoverKey(failover);
     await loadFailover();

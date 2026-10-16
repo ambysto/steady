@@ -1,0 +1,173 @@
+/* Ambysto Steady - the floating monitor (web/mini.html). Built only from web/tokens.css.
+   A small fixed-size window: title bar, three metric tiles, the sweep chart, a list. */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  font: var(--weight-regular) var(--text-body)/var(--leading) var(--font-ui);
+  color: var(--text);
+  background: var(--window);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+button { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+svg.icon { width: 14px; height: 14px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8;
+  stroke-linecap: round; stroke-linejoin: round; }
+
+/* --- the one-line bar (default) and the full table: one of them shows --- */
+html[data-mode="bar"] .mini, html:not([data-mode="bar"]) .minibar { display: none !important; }
+
+/* The bar (ADR-0026): one dark rectangle, the window itself. Windows rounds its corners (app/desktop.py,
+   DWMWCP_ROUNDSMALL), so the page paints edge to edge and the page background is the bar's one colour
+   in either theme, like an overlay. The Optimize button is a lighter rounded square at the left, inside
+   the bar; the numbers and the expand arrow run to its right over the full height. Flat and few
+   colours: one fill for the two square buttons (3 px from either end, the same 6 px corners), dim
+   icons beside the numbers, and colour only where it says something (the dot, Optimize's state). */
+html[data-mode="bar"] { --bar-solid: #161a2a; }
+html[data-mode="bar"] body { background: var(--bar-solid); }
+.minibar {
+  --bar-text: #eef1f8; --bar-dim: rgba(238, 241, 248, .6); --bar-accent: #6cb4ff;
+  --bar-fill: #262c45; --bar-fill-hover: #30375a;
+  position: relative; height: 100vh; white-space: nowrap; font-size: var(--text-footnote); color: var(--bar-text);
+}
+.minibar .tube { position: absolute; left: 29px; right: 0; top: 0; bottom: 0;
+  display: flex; align-items: center; gap: 5px; padding: 0 3px 0 6px; }
+.minibar .optimize { position: absolute; left: 3px; top: 3px; width: 26px; height: 26px;
+  border-radius: 6px; background: var(--bar-fill); color: var(--bar-accent); }
+.minibar .optimize:hover { background: var(--bar-fill-hover); }
+/* At rest only the glyph shows; the ring is the progress of a running check. */
+.minibar .optimize .ring { display: none; inset: 3px; width: 20px; height: 20px; stroke-width: 3; }
+.minibar .optimize.busy .ring { display: block; }
+.minibar .optimize .glyph { width: 13px; height: 13px; }
+.minibar .optimize .count { font-size: var(--text-footnote); }
+/* Something to fix: a primary button (white on blue), set apart from issues by its fill, not only its hue. */
+.minibar .optimize.fix { background: #2f7bf6; color: #fff; }
+.minibar .optimize.fix:hover { background: #4a8ef8; }
+.minibar .stat { display: inline-flex; align-items: center; gap: 2px; width: 66px; flex: none; font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold); letter-spacing: -.1px; }
+.minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; color: var(--bar-dim); }
+.minibar .dot { width: 6px; height: 6px; }
+.minibar .optimize.issues { color: #ffb340; } .minibar .optimize.good { color: #5fd68a; }
+/* The speed test, at the right beside the expand arrow: a gauge in a ring; the ring fills while it
+   runs; then the download figure. */
+.minibar .speed { position: relative; display: grid; place-items: center; width: 34px; height: 18px; padding: 0; flex: none;
+  border: 0; border-radius: 4px; background: none; color: var(--bar-accent); cursor: default; }
+.minibar .speed { margin-left: auto; }        /* the speed test sits beside the expand arrow */
+.minibar .speed:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
+.minibar .speed:disabled { opacity: .45; }
+.minibar .speed .ring { position: absolute; left: 8px; top: 0; width: 18px; height: 18px; transform: rotate(-90deg);
+  fill: none; stroke-width: 1.5; }
+.minibar .speed .ring .track { stroke: rgba(255, 255, 255, .22); }
+.minibar .speed .ring .fill { stroke: currentColor; stroke-dasharray: 0 100; stroke-linecap: round; display: none;
+  transition: stroke-dasharray var(--duration) linear; }
+.minibar .speed.running .ring .fill { display: inline; }
+.minibar .speed .glyph { width: 11px; height: 11px; stroke-width: 2.2; }
+.minibar .speed .figure { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+.minibar .speed.done .ring, .minibar .speed.done .glyph { display: none; }
+.minibar .speed.problem { color: #ffb340; }
+.minibar .optimize.busy .ring .track { stroke: rgba(255, 255, 255, .14); }
+.arrow { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; flex: none; border: 0; border-radius: 50%;
+  background: var(--accent); color: var(--accent-text); cursor: default; }
+.arrow:hover { background: color-mix(in srgb, var(--accent) 88%, black); }
+.arrow .icon { width: 13px; height: 13px; stroke-width: 2.2; }
+.bar .arrow { width: 24px; height: 24px; }
+.tube .arrow { width: 26px; height: 26px; border-radius: 6px; background: var(--bar-fill); color: var(--bar-text); }
+.tube .arrow:hover { background: var(--bar-fill-hover); }
+.tube .arrow .icon { width: 14px; height: 14px; }
+/* Optimize's states. idle: bolt; busy: the ring fills with the check's progress and a magnifier
+   drifts in a small loop; fix: the count on a filled button; issues: the count in amber; good: a
+   green tick. Flat colours, no glow (macOS native). */
+.optimize { position: relative; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; flex: none;
+  border: 0; border-radius: 50%; background: none; color: var(--accent); cursor: default; }
+.optimize:hover { background: var(--accent-soft); }
+.optimize .ring { position: absolute; inset: 0; width: 32px; height: 32px; transform: rotate(-90deg); fill: none; stroke-width: 2.5; }
+.optimize .ring .track { stroke: currentColor; }
+.optimize .ring .fill { stroke: currentColor; stroke-dasharray: 0 100; stroke-linecap: round; display: none;
+  transition: stroke-dasharray var(--duration) var(--ease-out); }
+.optimize .glyph { width: 15px; height: 15px; }
+.optimize .count { font-size: var(--text-body); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+.optimize.busy { color: var(--accent); }
+.optimize.busy .ring .track { stroke: var(--surface-pressed); }
+.optimize.busy .ring .fill { display: inline; }
+.optimize.busy .glyph { animation: seek 1.6s ease-in-out infinite; }
+.optimize.issues { color: var(--warn); }
+.optimize.good { color: var(--ok); }
+/* The magnifier looks around: a small loop, not a spin. */
+@keyframes seek {
+  0% { transform: translate(-2px, -1px); } 25% { transform: translate(1.5px, -2px); }
+  50% { transform: translate(2px, 1px); } 75% { transform: translate(-1px, 2px); } 100% { transform: translate(-2px, -1px); }
+}
+/* It shows that the check is running, like a spinner, so it keeps moving when Windows asks for less
+   motion, only smaller and slower. */
+@keyframes seek-small {
+  0%, 100% { transform: translate(-1.5px, -.5px); } 25% { transform: translate(1px, -1.5px); }
+  50% { transform: translate(1.5px, .5px); } 75% { transform: translate(-.5px, 1.5px); }
+}
+@media (prefers-reduced-motion: reduce) { .optimize.busy .glyph { animation: seek-small 2.2s ease-in-out infinite; } }
+
+.mini { display: flex; flex-direction: column; height: 100vh; padding: 0 var(--space-3) var(--space-3); gap: var(--space-2); }
+
+/* --- title bar (drag to move) --- */
+.bar { display: flex; align-items: center; gap: var(--space-2); height: 36px; flex: none; }
+.bar .name { font-weight: var(--weight-semibold); white-space: nowrap; }
+.bar .state { flex: 1; min-width: 0; color: var(--text-secondary); font-size: var(--text-footnote);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ok); }
+.dot.bad { background: var(--bad); } .dot.info { background: var(--info); }
+.close { display: grid; place-items: center; width: 24px; height: 24px; margin-right: -4px; border: 0;
+  border-radius: var(--radius-control); background: none; color: var(--text-secondary); }
+.close:hover, .close[aria-expanded="true"] { background: var(--surface-hover); color: var(--text); }
+
+/* --- appearance options (sun button) --- */
+.options { display: flex; flex-direction: column; gap: var(--space-2); flex: none; padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-group); background: var(--surface); box-shadow: var(--shadow-control); }
+.option { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.option .label { color: var(--text-secondary); font-size: var(--text-footnote); }
+.option .segmented button { padding: 0 var(--space-2); }
+
+/* --- metric tiles: each one picks what the chart shows --- */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); flex: none; }
+.tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: var(--space-2) var(--space-3);
+  border: 0; border-radius: var(--radius-group); background: var(--surface); box-shadow: var(--shadow-control);
+  text-align: left; cursor: default; }
+.tile:hover { background: var(--surface-raised); }
+.tile .label { display: flex; align-items: center; gap: 4px; color: var(--text-secondary); font-size: var(--text-caption); }
+.tile .value { font-size: var(--text-headline); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums;
+  white-space: nowrap; }
+.tile[aria-selected="true"] { box-shadow: inset 0 0 0 1.5px var(--accent), var(--shadow-control); }
+.tile[data-metric="down"] .label .icon { color: var(--accent); }
+.tile[data-metric="up"] .label .icon { color: var(--chart-internet); }
+.tile[data-metric="ping"] .label .icon { color: var(--ok); }
+
+/* --- the sweep chart --- */
+.scope { position: relative; flex: none; height: 108px; border-radius: var(--radius-group); background: var(--surface);
+  box-shadow: var(--shadow-control); overflow: hidden; }
+.scope canvas { display: block; width: 100%; height: 100%; }
+.scope .scale { position: absolute; top: 4px; right: 8px; color: var(--text-tertiary); font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums; }
+
+/* --- apps / network --- */
+.switcher { display: flex; justify-content: center; flex: none; }
+.segmented { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--radius-control); background: var(--surface-pressed); }
+.segmented button { height: 22px; padding: 0 var(--space-4); border: 0; border-radius: 5px; background: none; cursor: default; }
+.segmented button[aria-pressed="true"] { background: var(--surface-raised); box-shadow: var(--shadow-control); }
+
+.panel { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: var(--space-1); }
+.list { flex: 1; min-height: 0; overflow-y: auto; border-radius: var(--radius-group); background: var(--surface);
+  box-shadow: var(--shadow-control); }
+.row { display: flex; align-items: center; gap: var(--space-2); min-height: 34px; padding: 4px var(--space-3); }
+.row + .row { border-top: .5px solid var(--separator); }
+.row .main { flex: 1; min-width: 0; }
+.row .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .secondary { color: var(--text-secondary); font-size: var(--text-caption); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.row .end { color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.row .end.strong { color: var(--text); }
+.row.fact .label { color: var(--text-secondary); flex: none; }
+.row.fact .end { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; user-select: text; }
+.avatar { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 6px;
+  background: var(--surface-pressed); color: var(--text-secondary); font-size: var(--text-caption); font-weight: var(--weight-semibold); }
+.empty { padding: var(--space-4) var(--space-3); color: var(--text-secondary); text-align: center; }
+.note { margin: 0; padding: 0 var(--space-1); color: var(--text-tertiary); font-size: var(--text-caption); }
+.ok { color: var(--ok) !important; } .warn { color: var(--warn) !important; } .bad { color: var(--bad) !important; }

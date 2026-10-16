@@ -10,11 +10,21 @@ struct SteadyApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environment(model)
         }
         .defaultSize(width: 760, height: 820)
+        #if os(macOS)
+        .commands {
+            CommandGroup(after: .windowArrangement) {
+                Toggle(isOn: Binding(get: { model.floatingShown }, set: { _ in model.toggleFloatingMonitor() })) {
+                    Text(Localizer(choice: UserDefaults.standard.string(forKey: AppLanguage.storageKey) ?? AppLanguage.automatic)("ui.tray.mini"))
+                }
+                .keyboardShortcut("m", modifiers: [.command, .option])
+            }
+        }
+        #endif
     }
 }
 

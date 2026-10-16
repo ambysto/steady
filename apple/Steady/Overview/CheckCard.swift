@@ -24,7 +24,7 @@ struct CheckCard: View {
             Section {
                 CheckHero(title: text("ui.check.idle_title"),
                           message: text("ui.check.idle_body", ["count": .number(Double(AppModel.checkSteps.count))])) {
-                    BigButton(label: text("ui.check.start"), action: model.runCheck)
+                    BigButton(label: text("ui.check.start"), icon: "magnifyingglass", action: model.runCheck)
                 }
             }
         }
@@ -183,11 +183,14 @@ nonisolated private struct Segments: Shape {
 }
 
 /// The big round button. Flat like a macOS control: the system accent, the standard control
-/// shadow, darker on hover and press. On a Mac, with the pointer on it, the ring turns once
-/// every 8 s and the label gives way to a magnifier; with Reduce Motion the ring stays still.
-/// iPhone and iPad have no hover, so the label stays.
+/// shadow, darker on hover and press. With the pointer on it, the ring turns once every 8 s;
+/// a touch (iPhone, iPad) turns it 60° clockwise and it stops there. With Reduce Motion the
+/// ring stays still. With an `icon` the button shows it above
+/// a short label; without one the label gives way to a magnifier on hover (iPhone and iPad have
+/// no hover, so the label stays).
 private struct BigButton: View {
     let label: String
+    var icon: String? = nil
     let action: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovering = false
@@ -202,25 +205,43 @@ private struct BigButton: View {
                     Segments()
                         .stroke(Color.accentColor.opacity(0.35), lineWidth: 12)
                         .rotationEffect(.degrees(angle(at: context.date)))
-                    ZStack {
-                        Text(label)
-                            .font(.headline)
-                            .multilineTextAlignment(.center)
-                            .minimumScaleFactor(0.7)
-                            .padding(.horizontal, 16)
-                            .opacity(hovering ? 0 : 1)
-                            .scaleEffect(hovering ? 0.9 : 1)
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 40, weight: .medium))
-                            .opacity(hovering ? 1 : 0)
-                            .scaleEffect(hovering ? 1 : 0.8)
+                    if let icon {
+                        VStack(spacing: 6) {
+                            Image(systemName: icon)
+                                .font(.system(size: 40, weight: .medium))
+                            Text(label)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .minimumScaleFactor(0.7)
+                                .padding(.horizontal, 16)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: Dial.size - 2 * Dial.discInset, height: Dial.size - 2 * Dial.discInset)
+                    } else {
+                        ZStack {
+                            Text(label)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .minimumScaleFactor(0.7)
+                                .padding(.horizontal, 16)
+                                .opacity(hovering ? 0 : 1)
+                                .scaleEffect(hovering ? 0.9 : 1)
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40, weight: .medium))
+                                .opacity(hovering ? 1 : 0)
+                                .scaleEffect(hovering ? 1 : 0.8)
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: Dial.size - 2 * Dial.discInset, height: Dial.size - 2 * Dial.discInset)
                     }
-                    .foregroundStyle(.white)
-                    .frame(width: Dial.size - 2 * Dial.discInset, height: Dial.size - 2 * Dial.discInset)
                 }
             }
         }
-        .buttonStyle(DiscStyle(hovering: hovering))
+        .buttonStyle(DiscStyle(hovering: hovering) { pressed in
+            // A finger has no hover: touching the button nudges the ring instead.
+            guard pressed, turningSince == nil, !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 0.6)) { restAngle += 60 }
+        })
         .frame(width: Dial.size, height: Dial.size)
         .contentShape(Circle())
         .onHover { inside in
@@ -247,6 +268,8 @@ private struct BigButton: View {
 /// The accent disc behind the label: darker on hover (12% black) and press (22%), no bounce.
 private struct DiscStyle: ButtonStyle {
     let hovering: Bool
+    /// Called as a press starts (true) and ends (false).
+    var pressChanged: (Bool) -> Void = { _ in }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -258,6 +281,7 @@ private struct DiscStyle: ButtonStyle {
                     .padding(Dial.discInset)
                     .animation(.easeOut(duration: 0.15), value: hovering)
             }
+            .onChange(of: configuration.isPressed) { _, pressed in pressChanged(pressed) }
     }
 }
 

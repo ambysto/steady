@@ -12,8 +12,9 @@ public enum WiFiReader {
             return WiFiSignal.State(state: "disconnected")
         }
         let transmit = interface.transmitRate()
+        let band = band(channel.channelBand)
         return WiFiSignal.State(state: "connected", ssid: interface.ssid(), channel: channel.channelNumber,
-                                radioType: radioType(interface.activePHYMode()),
+                                band: band.isEmpty ? nil : band, radioType: radioType(interface.activePHYMode()),
                                 signal: WiFiSignal.State.quality(rssi: rssi), rssi: rssi,
                                 rxMbps: nil,   // CoreWLAN reports only the transmit rate
                                 txMbps: transmit > 0 ? Int(transmit.rounded()) : nil)
