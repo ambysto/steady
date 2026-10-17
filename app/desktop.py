@@ -377,7 +377,9 @@ GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = -20, 0x80, 0x40000
 def hide_from_taskbar(hwnd: int) -> bool:
     """Keep the floating window off the taskbar (and Alt+Tab): closing the main window then leaves only
     the bar and the tray icon. Set while the window is hidden, where the taskbar picks it up on the next
-    show. ShowInTaskbar would recreate the form's handle under WebView2, so the style is set directly."""
+    show; the form resets it whenever its opacity changes (pywebview's hidden start does), so it goes
+    on again before every show. ShowInTaskbar would recreate the form's handle under WebView2, so the
+    style is set directly."""
     user32 = ctypes.windll.user32
     style = user32.GetWindowLongW(ctypes.c_void_p(hwnd), GWL_EXSTYLE)
     wanted = (style | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
@@ -726,7 +728,7 @@ class Desktop:
             width=size[0], height=size[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
             on_top=True, hidden=not self.mini_state["open"], background_color=BACKGROUNDS[theme],
             js_api=MiniBridge(self))
-        self.mini.events.before_show += self._mini_off_taskbar      # on the UI thread, before the first show
+        self.mini.events.before_show += self._mini_off_taskbar      # for a bar that starts open; show_mini covers the rest
         self.mini.events.closing += self._on_mini_closing
         self.mini.events.moved += self._on_mini_moved
         self.mini.events.shown += self._fit_mini

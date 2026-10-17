@@ -370,6 +370,12 @@ class MiniWindowTests(unittest.TestCase):
                 self.shell.show_mini()
         self.assertEqual(styles[4242], desktop.WS_EX_TOOLWINDOW | 0x8)
 
+    def test_a_bar_that_starts_open_is_off_the_taskbar_before_it_shows(self):
+        webview = mock.MagicMock(screens=[Screen(0, 0, 1920, 1080)])
+        before_show = webview.create_window.return_value.events.before_show     # += replaces the attribute
+        self.shell.create_mini(webview)
+        before_show.__iadd__.assert_called_once_with(self.shell._mini_off_taskbar)
+
     def test_toggle_shows_and_hides_and_remembers(self):
         self.shell.toggle_mini()
         self.assertEqual(self.shell.mini.calls[:1], ["show"])
