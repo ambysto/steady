@@ -349,6 +349,32 @@ class MiniWindowTests(unittest.TestCase):
         self.assertEqual(desktop.mini_position({"x": 5000, "y": 300}, screens), default)       # monitor unplugged
         self.assertEqual(desktop.mini_position({"x": 100, "y": 1070}, screens), default)       # only a sliver visible
         self.assertEqual(desktop.mini_position({"x": 1, "y": 1}, []), (100, 100))
+        # the main screen, at (0, 0), even when Windows lists another monitor first
+        self.assertEqual(desktop.mini_position({"x": None, "y": None}, screens[::-1]), default)
+
+    def test_the_floating_window_stays_off_the_taskbar(self):
+        styles = {4242: 0x40000 | 0x8}                  # WS_EX_APPWINDOW, as a form sets it, plus TOPMOST
+        user32 = mock.Mock()
+        user32.GetWindowLongW.side_effect = lambda hwnd, index: styles[hwnd.value]
+        user32.SetWindowLongW.side_effect = lambda hwnd, index, value: styles.__setitem__(hwnd.value, value)
+        with mock.patch.object(desktop.ctypes, "windll", mock.Mock(user32=user32), create=True):
+            self.assertTrue(desktop.hide_from_taskbar(4242))
+            self.assertEqual(styles[4242], desktop.WS_EX_TOOLWINDOW | 0x8)
+            self.assertFalse(desktop.hide_from_taskbar(4242))         # already off: nothing written
+            self.assertEqual(user32.SetWindowLongW.call_count, 1)
+            styles[4242] |= desktop.WS_EX_APPWINDOW                 # the form reset its styles while hidden
+            self.shell.mini.native = mock.Mock()
+            self.shell.mini.native.Handle.ToInt64.return_value = 4242
+            with mock.patch.object(desktop, "fit_form", lambda form, size: True), \
+                    mock.patch.object(desktop, "round_corners", lambda hwnd, preference: True):
+                self.shell.show_mini()
+        self.assertEqual(styles[4242], desktop.WS_EX_TOOLWINDOW | 0x8)
+
+    def test_a_bar_that_starts_open_is_off_the_taskbar_before_it_shows(self):
+        webview = mock.MagicMock(screens=[Screen(0, 0, 1920, 1080)])
+        before_show = webview.create_window.return_value.events.before_show     # += replaces the attribute
+        self.shell.create_mini(webview)
+        before_show.__iadd__.assert_called_once_with(self.shell._mini_off_taskbar)
 
     def test_toggle_shows_and_hides_and_remembers(self):
         self.shell.toggle_mini()
