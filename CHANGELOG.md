@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-10-17
+
+Closing the window leaves no taskbar button, only the floating monitor and the tray icon, and the floating monitor first opens on the main screen.
+
 ### Fixed
 - **Closing the window leaves no taskbar button.** The floating monitor had a taskbar button of its own, so one stayed after the main window was closed; now only the floating monitor and the tray icon remain. The floating monitor is no longer listed in Alt+Tab either.
 - **The floating monitor first opens at the top right of the main screen** on a PC with several monitors, not of whichever monitor Windows lists first.
