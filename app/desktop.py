@@ -304,7 +304,7 @@ def save_mini_state(state: dict[str, Any]) -> None:
 
 def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, int] = MINI_SIZE) -> tuple[int, int]:
     """Where the window opens: the saved spot if it is still on a screen (a monitor may have been
-    unplugged), else the top-right corner of the first screen."""
+    unplugged), else the top-right corner of the main screen."""
     x, y = state.get("x"), state.get("y")
     if x is not None and y is not None:
         for scr in screens:
@@ -313,8 +313,13 @@ def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, in
                 return x, y
     if not screens:
         return 100, 100
-    scr = screens[0]
+    scr = primary_screen(screens)
     return (scr.x + scr.width - size[0] - MINI_MARGIN[0], scr.y + MINI_MARGIN[1])
+
+
+def primary_screen(screens: list[Any]) -> Any:
+    """Windows' main screen is the one at (0, 0); the list's order follows the monitors, not that."""
+    return next((scr for scr in screens if scr.x == 0 and scr.y == 0), screens[0])
 
 
 def screen_of(x: int, y: int, size: tuple[int, int], screens: list[Any]) -> Any:
@@ -364,6 +369,22 @@ def round_corners(hwnd: int, preference: int) -> bool:
     the corners, which a window region cannot."""
     _dwm_int(hwnd, DWMWA_NCRENDERING_POLICY, DWMNCRP_ENABLED)
     return _dwm_int(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, preference)
+
+
+GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_APPWINDOW = -20, 0x80, 0x40000
+
+
+def hide_from_taskbar(hwnd: int) -> bool:
+    """Keep the floating window off the taskbar (and Alt+Tab): closing the main window then leaves only
+    the bar and the tray icon. Set while the window is hidden, where the taskbar picks it up on the next
+    show. ShowInTaskbar would recreate the form's handle under WebView2, so the style is set directly."""
+    user32 = ctypes.windll.user32
+    style = user32.GetWindowLongW(ctypes.c_void_p(hwnd), GWL_EXSTYLE)
+    wanted = (style | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW
+    if style == wanted:
+        return False
+    user32.SetWindowLongW(ctypes.c_void_p(hwnd), GWL_EXSTYLE, wanted)
+    return True
 
 
 def fit_form(form: Any, size: tuple[int, int]) -> bool:
@@ -502,6 +523,7 @@ class Desktop:
     def show_mini(self) -> None:
         if self.mini is None:
             return
+        self._mini_off_taskbar()         # again: the form resets its styles when its opacity changes
         self.mini.show()
         self._fit_mini()
         self._mini_active(True)
@@ -527,6 +549,11 @@ class Desktop:
             return int(self.mini.native.Handle.ToInt64())
         except Exception:
             return None                 # not created yet
+
+    def _mini_off_taskbar(self) -> None:
+        hwnd = self._mini_hwnd()
+        if hwnd is not None:
+            hide_from_taskbar(hwnd)
 
     def set_mini_mode(self, mode: str, screens: list[Any] | None = None) -> str:
         """One-line bar or full table: resize the window, growing away from the nearest screen edge."""
@@ -699,6 +726,7 @@ class Desktop:
             width=size[0], height=size[1], x=x, y=y, resizable=False, frameless=True, easy_drag=False,
             on_top=True, hidden=not self.mini_state["open"], background_color=BACKGROUNDS[theme],
             js_api=MiniBridge(self))
+        self.mini.events.before_show += self._mini_off_taskbar      # on the UI thread, before the first show
         self.mini.events.closing += self._on_mini_closing
         self.mini.events.moved += self._on_mini_moved
         self.mini.events.shown += self._fit_mini
