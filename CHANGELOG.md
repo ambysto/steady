@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **The floating bar has a light look.** It was dark in either theme; it now follows the floating monitor's theme choice like the table (sun button or Settings: Auto, Light, Dark). It stays dark by default; Light gives a light bar with the same layout, and Auto follows Windows.
+- **The floating monitor first opens at the top right of the screen**, below a maximised window's caption buttons, instead of the bottom right above the taskbar. A position the user dragged it to is kept.
+
 ## [1.0.7] - 2026-10-16
 
 The tray icon is the app's logo, its Wi-Fi arcs in the connection's colour, and an install or an update that restarts the monitor no longer leaves none running.
