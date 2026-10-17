@@ -32,18 +32,19 @@ html[data-mode="bar"] {
   --bar-track: rgba(255, 255, 255, .22); --bar-track-busy: rgba(255, 255, 255, .14);
   --bar-fix: #2f7bf6; --bar-fix-hover: #4a8ef8; --bar-warn: #ffb340; --bar-ok: #5fd68a;
 }
+/* The light set, twice: under Light, and under Auto when Windows is light. Keep the two the same. */
 html[data-mode="bar"][data-theme="light"] {
   --bar-solid: #f6f7fa; --bar-text: #1b1f2b; --bar-dim: rgba(27, 31, 43, .5); --bar-accent: #0a6fe0;
   --bar-fill: #e5e8f0; --bar-fill-hover: #d9dde8; --bar-hover: rgba(0, 0, 0, .06);
   --bar-track: rgba(0, 0, 0, .16); --bar-track-busy: rgba(0, 0, 0, .1);
-  --bar-fix: #2f7bf6; --bar-fix-hover: #1f6ae6; --bar-warn: #c46a00; --bar-ok: #1e9a4b;
+  --bar-fix: #2f7bf6; --bar-fix-hover: #1f6ae6; --bar-warn: #a65800; --bar-ok: #16803c;
 }
 @media (prefers-color-scheme: light) {
   html[data-mode="bar"]:not([data-theme]) {
     --bar-solid: #f6f7fa; --bar-text: #1b1f2b; --bar-dim: rgba(27, 31, 43, .5); --bar-accent: #0a6fe0;
     --bar-fill: #e5e8f0; --bar-fill-hover: #d9dde8; --bar-hover: rgba(0, 0, 0, .06);
     --bar-track: rgba(0, 0, 0, .16); --bar-track-busy: rgba(0, 0, 0, .1);
-    --bar-fix: #2f7bf6; --bar-fix-hover: #1f6ae6; --bar-warn: #c46a00; --bar-ok: #1e9a4b;
+    --bar-fix: #2f7bf6; --bar-fix-hover: #1f6ae6; --bar-warn: #a65800; --bar-ok: #16803c;
   }
 }
 html[data-mode="bar"] body { background: var(--bar-solid); }
