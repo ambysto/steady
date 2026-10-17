@@ -334,10 +334,16 @@ class MiniWindowTests(unittest.TestCase):
         self.assertTrue(desktop.open_for_new_version(state, "0.8.1"))    # upgrade
         self.assertTrue(state["open"])
 
-    def test_opens_bottom_right_or_where_it_was_left(self):
+    def test_opens_top_right_or_where_it_was_left(self):
         screens = [Screen(0, 0, 1920, 1080), Screen(-1280, 0, 1280, 1024)]
-        w, h = desktop.MINI_SIZE
-        default = (1920 - w - desktop.MINI_MARGIN[0], 1080 - h - desktop.MINI_MARGIN[1])
+        w = desktop.MINI_SIZE[0]
+        default = (1920 - w - desktop.MINI_MARGIN[0], desktop.MINI_MARGIN[1])
+        bar = desktop.mini_position({"x": None, "y": None}, screens, desktop.BAR_SIZE)
+        self.assertEqual(bar, (1920 - desktop.BAR_SIZE[0] - desktop.MINI_MARGIN[0], desktop.MINI_MARGIN[1]))
+        # expanding from there keeps the right and top edges: the table grows down and to the left
+        self.assertEqual(desktop.anchor_of(*bar, desktop.BAR_SIZE, screens), (True, False))
+        self.assertEqual(desktop.resized_position(*bar, desktop.BAR_SIZE, desktop.MINI_SIZE, screens),
+                         (1920 - w - desktop.MINI_MARGIN[0], desktop.MINI_MARGIN[1]))
         self.assertEqual(desktop.mini_position({"x": None, "y": None}, screens), default)
         self.assertEqual(desktop.mini_position({"x": -900, "y": 300}, screens), (-900, 300))   # second monitor
         self.assertEqual(desktop.mini_position({"x": 5000, "y": 300}, screens), default)       # monitor unplugged

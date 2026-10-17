@@ -252,7 +252,7 @@ BAR_SIZE = (330, 32)            # collapsed: one line, as long as its numbers an
 # The bar (ADR-0026) is one rectangle, BAR_SIZE: no window region. Windows (DWM) rounds its corners
 # smoothly, and the Optimize button is a rounded square inside it, drawn by web/mini.css.
 SIZES = {"full": MINI_SIZE, "bar": BAR_SIZE}
-MINI_MARGIN = (16, 64)          # from the right and bottom of the screen (clear of the taskbar)
+MINI_MARGIN = (16, 56)          # from the right and top of the screen (below a maximised window's caption buttons)
 MINI_VISIBLE = 48               # a saved position must keep this much of the window on a screen
 DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DWMWCP_ROUNDSMALL = 33, 2, 3
 DWMWA_NCRENDERING_POLICY, DWMNCRP_ENABLED = 2, 2
@@ -304,7 +304,7 @@ def save_mini_state(state: dict[str, Any]) -> None:
 
 def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, int] = MINI_SIZE) -> tuple[int, int]:
     """Where the window opens: the saved spot if it is still on a screen (a monitor may have been
-    unplugged), else the bottom-right corner of the first screen."""
+    unplugged), else the top-right corner of the first screen."""
     x, y = state.get("x"), state.get("y")
     if x is not None and y is not None:
         for scr in screens:
@@ -314,7 +314,7 @@ def mini_position(state: dict[str, Any], screens: list[Any], size: tuple[int, in
     if not screens:
         return 100, 100
     scr = screens[0]
-    return (scr.x + scr.width - size[0] - MINI_MARGIN[0], scr.y + scr.height - size[1] - MINI_MARGIN[1])
+    return (scr.x + scr.width - size[0] - MINI_MARGIN[0], scr.y + MINI_MARGIN[1])
 
 
 def screen_of(x: int, y: int, size: tuple[int, int], screens: list[Any]) -> Any:

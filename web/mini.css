@@ -18,17 +18,37 @@ svg.icon { width: 14px; height: 14px; flex: none; stroke: currentColor; fill: no
 /* --- the one-line bar (default) and the full table: one of them shows --- */
 html[data-mode="bar"] .mini, html:not([data-mode="bar"]) .minibar { display: none !important; }
 
-/* The bar (ADR-0026): one dark rectangle, the window itself. Windows rounds its corners (app/desktop.py,
-   DWMWCP_ROUNDSMALL), so the page paints edge to edge and the page background is the bar's one colour
-   in either theme, like an overlay. The Optimize button is a lighter rounded square at the left, inside
-   the bar; the numbers and the expand arrow run to its right over the full height. Flat and few
-   colours: one fill for the two square buttons (3 px from either end, the same 6 px corners), dim
-   icons beside the numbers, and colour only where it says something (the dot, Optimize's state). */
-html[data-mode="bar"] { --bar-solid: #161a2a; }
+/* The bar (ADR-0026): one rectangle, the window itself. Windows rounds its corners (app/desktop.py,
+   DWMWCP_ROUNDSMALL), so the page paints edge to edge in the bar's one colour. It follows the
+   window's theme choice (web/js/mini.js, dark by default): a dark bar, or a light one under the
+   light theme (or Auto with Windows in light mode). The Optimize button is a rounded square at the
+   left, inside the bar; the numbers and the expand arrow run to its right over the full height.
+   Flat and few colours: one fill for the two square buttons (3 px from either end, the same 6 px
+   corners), dim icons beside the numbers, and colour only where it says something (the dot,
+   Optimize's state). */
+html[data-mode="bar"] {
+  --bar-solid: #161a2a; --bar-text: #eef1f8; --bar-dim: rgba(238, 241, 248, .6); --bar-accent: #6cb4ff;
+  --bar-fill: #262c45; --bar-fill-hover: #30375a; --bar-hover: rgba(255, 255, 255, .1);
+  --bar-track: rgba(255, 255, 255, .22); --bar-track-busy: rgba(255, 255, 255, .14);
+  --bar-fix: #2f7bf6; --bar-fix-hover: #4a8ef8; --bar-warn: #ffb340; --bar-ok: #5fd68a;
+}
+/* The light set, twice: under Light, and under Auto when Windows is light. Keep the two the same. */
+html[data-mode="bar"][data-theme="light"] {
+  --bar-solid: #f6f7fa; --bar-text: #1b1f2b; --bar-dim: rgba(27, 31, 43, .5); --bar-accent: #0a6fe0;
+  --bar-fill: #e5e8f0; --bar-fill-hover: #d9dde8; --bar-hover: rgba(0, 0, 0, .06);
+  --bar-track: rgba(0, 0, 0, .16); --bar-track-busy: rgba(0, 0, 0, .1);
+  --bar-fix: #2f7bf6; --bar-fix-hover: #1f6ae6; --bar-warn: #a65800; --bar-ok: #16803c;
+}
+@media (prefers-color-scheme: light) {
+  html[data-mode="bar"]:not([data-theme]) {
+    --bar-solid: #f6f7fa; --bar-text: #1b1f2b; --bar-dim: rgba(27, 31, 43, .5); --bar-accent: #0a6fe0;
+    --bar-fill: #e5e8f0; --bar-fill-hover: #d9dde8; --bar-hover: rgba(0, 0, 0, .06);
+    --bar-track: rgba(0, 0, 0, .16); --bar-track-busy: rgba(0, 0, 0, .1);
+    --bar-fix: #2f7bf6; --bar-fix-hover: #1f6ae6; --bar-warn: #a65800; --bar-ok: #16803c;
+  }
+}
 html[data-mode="bar"] body { background: var(--bar-solid); }
 .minibar {
-  --bar-text: #eef1f8; --bar-dim: rgba(238, 241, 248, .6); --bar-accent: #6cb4ff;
-  --bar-fill: #262c45; --bar-fill-hover: #30375a;
   position: relative; height: 100vh; white-space: nowrap; font-size: var(--text-footnote); color: var(--bar-text);
 }
 .minibar .tube { position: absolute; left: 29px; right: 0; top: 0; bottom: 0;
@@ -42,31 +62,31 @@ html[data-mode="bar"] body { background: var(--bar-solid); }
 .minibar .optimize .glyph { width: 13px; height: 13px; }
 .minibar .optimize .count { font-size: var(--text-footnote); }
 /* Something to fix: a primary button (white on blue), set apart from issues by its fill, not only its hue. */
-.minibar .optimize.fix { background: #2f7bf6; color: #fff; }
-.minibar .optimize.fix:hover { background: #4a8ef8; }
+.minibar .optimize.fix { background: var(--bar-fix); color: #fff; }
+.minibar .optimize.fix:hover { background: var(--bar-fix-hover); }
 .minibar .stat { display: inline-flex; align-items: center; gap: 2px; width: 66px; flex: none; font-variant-numeric: tabular-nums;
   font-weight: var(--weight-semibold); letter-spacing: -.1px; }
 .minibar .stat .icon { width: 11px; height: 11px; stroke-width: 2.2; color: var(--bar-dim); }
 .minibar .dot { width: 6px; height: 6px; }
-.minibar .optimize.issues { color: #ffb340; } .minibar .optimize.good { color: #5fd68a; }
+.minibar .optimize.issues { color: var(--bar-warn); } .minibar .optimize.good { color: var(--bar-ok); }
 /* The speed test, at the right beside the expand arrow: a gauge in a ring; the ring fills while it
    runs; then the download figure. */
 .minibar .speed { position: relative; display: grid; place-items: center; width: 34px; height: 18px; padding: 0; flex: none;
   border: 0; border-radius: 4px; background: none; color: var(--bar-accent); cursor: default; }
 .minibar .speed { margin-left: auto; }        /* the speed test sits beside the expand arrow */
-.minibar .speed:hover:not(:disabled) { background: rgba(255, 255, 255, .1); }
+.minibar .speed:hover:not(:disabled) { background: var(--bar-hover); }
 .minibar .speed:disabled { opacity: .45; }
 .minibar .speed .ring { position: absolute; left: 8px; top: 0; width: 18px; height: 18px; transform: rotate(-90deg);
   fill: none; stroke-width: 1.5; }
-.minibar .speed .ring .track { stroke: rgba(255, 255, 255, .22); }
+.minibar .speed .ring .track { stroke: var(--bar-track); }
 .minibar .speed .ring .fill { stroke: currentColor; stroke-dasharray: 0 100; stroke-linecap: round; display: none;
   transition: stroke-dasharray var(--duration) linear; }
 .minibar .speed.running .ring .fill { display: inline; }
 .minibar .speed .glyph { width: 11px; height: 11px; stroke-width: 2.2; }
 .minibar .speed .figure { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
 .minibar .speed.done .ring, .minibar .speed.done .glyph { display: none; }
-.minibar .speed.problem { color: #ffb340; }
-.minibar .optimize.busy .ring .track { stroke: rgba(255, 255, 255, .14); }
+.minibar .speed.problem { color: var(--bar-warn); }
+.minibar .optimize.busy .ring .track { stroke: var(--bar-track-busy); }
 .arrow { display: grid; place-items: center; width: 22px; height: 22px; padding: 0; flex: none; border: 0; border-radius: 50%;
   background: var(--accent); color: var(--accent-text); cursor: default; }
 .arrow:hover { background: color-mix(in srgb, var(--accent) 88%, black); }

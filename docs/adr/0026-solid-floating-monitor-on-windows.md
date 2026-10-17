@@ -72,3 +72,16 @@ into the Consequences above.
   upload and ping icons share one dim colour, leaving colour to the status dot and Optimize's state.
 - The rest of the decision is unchanged: the monitor is solid, nothing reads the screen, and the
   Mac keeps its Glass look.
+
+## Amendment (2026-10-17): a light bar, and the top-right corner
+
+At the owner's request the bar is no longer dark in either theme. It follows the floating
+monitor's own theme choice, which the table already used (Auto / Light / Dark, `mini-theme`, from
+the sun button or Settings): dark by default, light under Light, and under Auto whatever Windows
+uses. The light bar keeps the dark one's layout and flat look; only its colours change (a light
+fill, darker text, the two square buttons a shade darker than the bar, and amber, green and blue
+dark enough to read on it).
+
+With no saved position (the first start, or the saved spot is no longer on a screen), the window
+opens at the top right of the first screen: 16 px from the right edge and 56 px from the top, below
+a maximised window's caption buttons. A spot the user dragged it to is kept as before.
