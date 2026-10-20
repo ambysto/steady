@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Privacy manifest (PRIVACY.md): no tracking, no data collected, and none of the APIs that need
-     a stated reason (no UserDefaults, file timestamps, boot time, disk space or keyboards). -->
+<!-- Privacy manifest (PRIVACY.md): no tracking, no data collected. The one API that needs a stated reason is
+     UserDefaults (the app's own settings), reason CA92.1; no file timestamps, boot time, disk space or keyboards. -->
 <plist version="1.0">
 <dict>
 	<key>NSPrivacyTracking</key>
@@ -11,6 +11,15 @@
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

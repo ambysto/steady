@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **Apple: the privacy manifest declares UserDefaults** (reason CA92.1, the app's own settings), which App Store Connect requires for a build that uses it (ITMS-91053).
+
 ## [1.0.9] - 2026-10-17
 
 Closing the window leaves no taskbar button, only the floating monitor and the tray icon, and the floating monitor first opens on the main screen.
