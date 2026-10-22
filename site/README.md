@@ -21,7 +21,7 @@ Each animation shows what the app does: the hero chart scrolls like a live graph
 python3 -m http.server 8799 --bind 127.0.0.1 --directory site
 ```
 
-Then open `http://127.0.0.1:8799/`. The `/privacy` link only works on the deployed site.
+Then open `http://127.0.0.1:8799/`. The footer's `/privacy` (Steady's own policy), `/terms` and `/refund-policy` (Ambysto's, the same as on ambysto.com) are served by the company site on `steady.ambysto.com`, so they only work there.
 
 ## Content rules
 
