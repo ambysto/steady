@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Changed
+- **The landing page footer links Ambysto's Terms and Refund policy** next to Steady's own privacy policy, as on ambysto.com, and names Ambysto Technologies LLC (SIC-145).
+
 ### Fixed
 - **Apple: the privacy manifest declares UserDefaults** (reason CA92.1, the app's own settings), which App Store Connect requires for a build that uses it (ITMS-91053).
 
