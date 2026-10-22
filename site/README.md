@@ -25,7 +25,7 @@ Then open `http://127.0.0.1:8799/`. The footer's `/privacy` (Steady's own policy
 
 ## Content rules
 
-- State only what the released app does (check `README.md` and `CHANGELOG.md`). No claim that releases are signed while they are not, and no prices.
+- State only what the released app does (check `README.md` and `CHANGELOG.md`). No claim that releases are signed while they are not. The only price on the page is the optional Pro price, $19.99 (owner decision 2026-10-22, SIC-146).
 - The page must stay honest about limits: Ambysto Steady cannot make a provider faster.
 - The numbers in the "Real data" section come from the development machine (`docs/EXPERIMENT-LOG.md`). They carry no network identifiers and are labelled as a single case. Show them rounded (35%, 0.4%) so they are easy to remember; the exact values stay in the log.
 - No personal names, SSIDs, MAC or IP addresses; use placeholders if an example needs one.

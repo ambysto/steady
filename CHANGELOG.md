@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
+- **The landing page offers direct downloads for Windows and macOS** and names the optional Pro price, $19.99 (owner decision 2026-10-22, SIC-146). The macOS button needs `AmbystoSteady-1.0.9-macOS.zip` on the release, which is built on the Mac.
 - **The landing page footer links Ambysto's Terms and Refund policy** next to Steady's own privacy policy, as on ambysto.com, and names Ambysto Technologies LLC (SIC-145).
 
 ### Fixed
