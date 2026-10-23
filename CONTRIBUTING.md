@@ -40,4 +40,4 @@ Run `python -m unittest discover -s tests -t .` before opening a pull request. T
 
 ## License and CLA
 
-The source code is released under [GPL-3.0](LICENSE). Contributors sign the [CLA](CLA.md) once via CLA Assistant on their first pull request: you keep your copyright, and you allow Ambysto to manage the project's licensing in the future. Third-party libraries and their licenses are listed in `THIRD-PARTY-NOTICES.txt`, generated at build time.
+The source code is released under the [Apache License 2.0](LICENSE) (see also [NOTICE](NOTICE)). Contributors sign the [CLA](CLA.md) once via CLA Assistant on their first pull request: you keep your copyright, and you allow Ambysto to manage the project's licensing in the future. Third-party libraries and their licenses are listed in `THIRD-PARTY-NOTICES.txt`, generated at build time.

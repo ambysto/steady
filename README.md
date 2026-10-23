@@ -13,7 +13,7 @@ Your Internet drops or lags, and you cannot tell whether the fault is the PC, th
 - **Self-recovery** — detect a hung driver or a lost connection and handle it within seconds, instead of waiting for Windows or acting by hand.
 - **Controlled optimization** — each tweak is an on/off toggle; the original value is saved before it is applied, and turning it off puts everything back as it was.
 
-A Windows 10/11 app (Python 3.11+, web UI on `127.0.0.1`) plus a native SwiftUI app for iPhone, iPad and Mac in `apple/`. GNU General Public License v3.0.
+A Windows 10/11 app (Python 3.11+, web UI on `127.0.0.1`) plus a native SwiftUI app for iPhone, iPad and Mac in `apple/`. Apache License 2.0.
 
 ## Is it for you?
 
@@ -86,4 +86,4 @@ python -m unittest discover -s tests -t .
 
 ## Licence
 
-Copyright (C) 2026 Ambysto. Released under the **GNU General Public License v3.0**, see [LICENSE](LICENSE). Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md).
+Copyright (C) 2026 Ambysto. Released under the **Apache License 2.0**, see [LICENSE](LICENSE) and [NOTICE](NOTICE). Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md) and [CLA.md](CLA.md).
