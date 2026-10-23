@@ -2,7 +2,7 @@
 
 Thank you for contributing to Ambysto Steady ("the Project"), maintained by Ambysto ("we", "us").
 This agreement makes clear the rights you give us in your contributions, so the Project can keep
-being distributed under the GNU General Public License v3.0 and its licensing can be managed in
+being distributed under the Apache License, Version 2.0 and its licensing can be managed in
 the future. You keep the copyright in your contributions.
 
 By submitting a Contribution (any original work, including code, documentation and translations,
@@ -13,7 +13,7 @@ you agree to the following:
    worldwide, non-exclusive, no-charge, royalty-free, irrevocable license to reproduce, prepare
    derivative works of, publicly display, publicly perform, sublicense and distribute your
    Contributions and such derivative works, under any license terms we choose, including licenses
-   other than the GNU General Public License.
+   other than the Apache License.
 
 2. **Patent license.** You grant us and recipients of software distributed by us a perpetual,
    worldwide, non-exclusive, no-charge, royalty-free, irrevocable patent license to make, have made,
@@ -29,7 +29,7 @@ you agree to the following:
 4. **No obligation.** We are not required to use your Contribution. Contributions are provided "as
    is", without warranties of any kind, except as stated in section 3.
 
-5. **Our commitment.** The Project's public source code remains available under the GNU General
-   Public License v3.0 or a later version of it.
+5. **Our commitment.** The Project's public source code remains available under the Apache License,
+   Version 2.0.
 
 To agree, sign through the CLA Assistant check on your first pull request.

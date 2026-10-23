@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Changed
+- **Steady is now licensed under the Apache License 2.0** instead of GPL-3.0 (owner decision 2026-10-23): anyone may use and fork it, and the `NOTICE` file must travel with every copy. Releases already published stay under GPL-3.0. `CLA.md`, `CONTRIBUTING.md`, the README and the landing page say so.
 - **The landing page offers direct downloads for Windows and macOS** and names the optional Pro price, $19.99 (owner decision 2026-10-22, SIC-146). The macOS button downloads the tester build `AmbystoSteady-0.8.1-macOS.dmg` (not signed yet), attached to the v1.0.9 release (SIC-146).
 - **The landing page footer links Ambysto's Terms and Refund policy** next to Steady's own privacy policy, as on ambysto.com, and names Ambysto Technologies LLC (SIC-145).
 
