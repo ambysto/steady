@@ -112,6 +112,7 @@ def third_party_notices() -> str:
 
 def write_notices() -> None:
     shutil.copyfile(ROOT / "LICENSE", APP_DIR / "LICENSE.txt")
+    shutil.copyfile(ROOT / "NOTICE", APP_DIR / "NOTICE.txt")  # Apache-2.0 §4(d): the NOTICE travels with every copy
     (APP_DIR / "THIRD-PARTY-NOTICES.txt").write_text(third_party_notices(), encoding="utf-8")
 
 
