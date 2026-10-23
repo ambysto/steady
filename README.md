@@ -72,6 +72,7 @@ The Apple app builds and runs from Xcode on a Mac; see [apple/README.md](apple/R
 ## Limits
 
 - Releases are **not code-signed**, so Windows SmartScreen may warn on the first launch: choose **More info** → **Run anyway**.
+- Do not run the monitor in parallel with the legacy `scripts/monitor/ping-logger.ps1` for long: that would double the pings.
 - Optimizations need Administrator rights; without them the app can only monitor.
 
 ## Privacy
