@@ -26,7 +26,7 @@
     "name": "Ambysto Steady",
     "alternateName": "Stable Internet Connection",
     "applicationCategory": "UtilitiesApplication",
-    "operatingSystem": "Windows 10, Windows 11",
+    "operatingSystem": "Windows 10, Windows 11, macOS 26",
     "license": "https://www.apache.org/licenses/LICENSE-2.0",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "publisher": { "@type": "Organization", "name": "Ambysto", "url": "https://ambysto.com" },
@@ -66,7 +66,7 @@
           <p class="lead">Signal bars show how strong your Wi‑Fi is, not whether data gets through. Ambysto Steady measures what actually matters: packet loss, silent stalls and slow DNS. It finds the cause and recovers on its own when your connection hangs.</p>
           <div class="cta-row">
             <a class="btn" href="https://github.com/ambysto/steady/releases/download/v1.0.10/AmbystoSteady-1.0.10-win64.zip">Download for Windows <span aria-hidden="true">&darr;</span></a>
-            <a class="btn btn-ghost" href="https://github.com/ambysto/steady/releases/download/v1.0.9/AmbystoSteady-0.8.1-macOS.dmg">Download for macOS <span aria-hidden="true">&darr;</span></a>
+            <a class="btn btn-ghost" href="https://github.com/ambysto/steady/releases/download/v1.0.10/AmbystoSteady-0.8.2-macOS.dmg">Download for macOS <span aria-hidden="true">&darr;</span></a>
           </div>
           <ul class="chips" aria-label="Highlights">
             <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 3.2 7 2.3V7.6H1zM8 2.2 15 1.2V7.6H8zM1 8.4H7v5.3L1 12.8zM8 8.4h7v6.4l-7-1z"/></svg>Windows 10 &amp; 11</li>
@@ -256,6 +256,7 @@
           <details><summary>Is it safe to change these settings?</summary><p>Every switch saves the original value first, verifies the result and rolls back on failure. You can restore everything in one go, and riskier tweaks are labelled experimental.</p></details>
           <details><summary>Does it send my data anywhere?</summary><p>No. To measure your connection it contacts a few public services (your router, Cloudflare, Google DNS) and nothing else. Every connection is listed in the <a class="link" href="/privacy">privacy policy</a>.</p></details>
           <details><summary>Why does Windows show a warning when I open it?</summary><p>Releases are not code-signed: it is a free project and a certificate is a paid service. Windows SmartScreen may therefore show &ldquo;unknown publisher&rdquo; on first launch. Choose <b>More info</b>, then <b>Run anyway</b>. The release is built from the public source by an open workflow, and you can read or build the code yourself.</p></details>
+          <details><summary>Why does macOS block it the first time?</summary><p>The Mac download is a tester build. It is not notarized by Apple yet, so the first launch is blocked with &ldquo;Apple could not verify&rdquo;. Open the disk image, drag Ambysto Steady to Applications and open it once. Then go to System Settings &rarr; Privacy &amp; Security and choose <b>Open Anyway</b> next to Ambysto Steady. After that it opens normally.</p></details>
           <details><summary>Is it really free?</summary><p>Yes. The app is fully functional with no ads and is released under the Apache License 2.0. We only charge when you are happy to pay: optional Pro extras exist to support ongoing development, with no subscriptions, no snake-oil speed claims, and no nag screens.</p></details>
           <details><summary>What about Mac, iPhone and Android?</summary><p>Ambysto Steady is available natively for both Windows and macOS today. Native iOS/iPadOS and Android builds are in progress.</p></details>
           <details><summary>Which languages does it speak?</summary><p>The app has nine interface languages, and English is the default. Some translations are machine-generated and still need review by native speakers. This website is English only for now.</p></details>
@@ -272,7 +273,7 @@
           <p class="lead">Unzip and double-click. It installs for all users of the PC with one Administrator approval and starts with Windows. Uninstall from Apps &amp; features: it restores every optimization first.</p>
           <div class="cta-row">
             <a class="btn" href="https://github.com/ambysto/steady/releases/download/v1.0.10/AmbystoSteady-1.0.10-win64.zip">Download Windows (x64) <span aria-hidden="true">&darr;</span></a>
-            <a class="btn" href="https://github.com/ambysto/steady/releases/download/v1.0.9/AmbystoSteady-0.8.1-macOS.dmg">Download macOS <span aria-hidden="true">&darr;</span></a>
+            <a class="btn" href="https://github.com/ambysto/steady/releases/download/v1.0.10/AmbystoSteady-0.8.2-macOS.dmg">Download macOS <span aria-hidden="true">&darr;</span></a>
             <a class="btn btn-dark" href="https://github.com/ambysto/steady">View source</a>
           </div>
         </div>
@@ -281,7 +282,8 @@
           <li><span>Runtime</span><b>None, no Python needed</b></li>
           <li><span>Licence</span><b>Apache-2.0</b></li>
           <li><span>Price</span><b>Free (Apache-2.0) · Pro $19.99 optional</b></li>
-          <li class="warn"><span>Note</span><b>Not code-signed. SmartScreen may warn on first launch: choose More info, then Run anyway.</b></li>
+          <li class="warn"><span>Windows</span><b>Not code-signed. SmartScreen may warn on first launch: choose More info, then Run anyway.</b></li>
+          <li class="warn"><span>macOS</span><b>Tester build. Not notarized by Apple yet, so the first launch is blocked with &ldquo;Apple could not verify&rdquo;. To open it once: System Settings &rarr; Privacy &amp; Security, then Open Anyway next to Ambysto Steady.</b></li>
         </ul>
       </div>
     </section>
