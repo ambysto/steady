@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ## [Unreleased]
 
 ### Fixed
+- **The landing page's macOS buttons download the 0.8.2 tester build** (`AmbystoSteady-0.8.2-macOS.dmg` on the v1.0.10 release; they downloaded 0.8.1 from v1.0.9). The download notes and a new question say how to open it the first time (Open Anyway in System Settings > Privacy & Security), since it is not notarized, and the page's structured data lists macOS 26.
 - **The landing page's Windows buttons download 1.0.10.** They asked the latest release for the 1.0.9 zip, which it no longer has; they now link the v1.0.10 release's `AmbystoSteady-1.0.10-win64.zip` directly. The page names the Mac app's real requirement, macOS 26 or later (it said macOS 14+).
 
 ## [0.8.2] - 2026-10-24
