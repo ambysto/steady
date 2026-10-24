@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+- **The landing page's Windows buttons download 1.0.10.** They asked the latest release for the 1.0.9 zip, which it no longer has; they now link the v1.0.10 release's `AmbystoSteady-1.0.10-win64.zip` directly. The page names the Mac app's real requirement, macOS 26 or later (it said macOS 14+).
+
 ## [1.0.10] - 2026-10-24
 
 Steady is now licensed under the Apache License 2.0, and the packaged app ships the NOTICE file beside the licence. The Apple app stays at 0.8.1.
