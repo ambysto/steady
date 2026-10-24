@@ -9,6 +9,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Fixed
 - **The landing page's Windows buttons download 1.0.10.** They asked the latest release for the 1.0.9 zip, which it no longer has; they now link the v1.0.10 release's `AmbystoSteady-1.0.10-win64.zip` directly. The page names the Mac app's real requirement, macOS 26 or later (it said macOS 14+).
 
+## [0.8.2] - 2026-10-24
+
+Apple app only; Windows is at 1.0.10. The Mac tester build, `AmbystoSteady-0.8.2-macOS.dmg`, is attached to the v1.0.10 release. It is not signed with a Developer ID or notarized, so macOS blocks the first launch until **Open Anyway** is chosen in System Settings > Privacy & Security.
+
+### Changed
+- **Apple app: under the Apache License 2.0**, with the app icon on the Ambysto brand's v3 logo and the speed test's texts without the test server's name, as listed under 1.0.10 and 1.0.1.
+
+### Fixed
+- **Apple app: the privacy manifest declares UserDefaults** (reason CA92.1), as listed under 1.0.10.
+
 ## [1.0.10] - 2026-10-24
 
 Steady is now licensed under the Apache License 2.0, and the packaged app ships the NOTICE file beside the licence. The Apple app stays at 0.8.1.
