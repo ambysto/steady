@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code signing policy · Ambysto Steady</title>
+  <meta name="description" content="How Windows releases of Ambysto Steady are built, signed through SignPath Foundation, and verified.">
+  <meta name="theme-color" content="#0B1020">
+  <link rel="canonical" href="https://steady.ambysto.com/codesigningpolicy">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambysto Steady">
+  <meta property="og:url" content="https://steady.ambysto.com/codesigningpolicy">
+  <meta property="og:title" content="Code signing policy · Ambysto Steady">
+  <meta property="og:description" content="How Windows releases of Ambysto Steady are built, signed through SignPath Foundation, and verified.">
+  <link rel="icon" href="/assets/img/logo.svg?v=2" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/legal.css">
+</head>
+<body>
+  <header class="legal-nav">
+    <a class="brand" href="/">
+      <img src="/assets/img/logo.svg?v=2" alt="" width="28" height="28">
+      <span>Ambysto <small>Steady</small></span>
+    </a>
+    <nav class="legal-links" aria-label="Policies">
+      <a href="/codesigningpolicy" aria-current="page">Code signing</a>
+      <a href="/privacy">Privacy</a>
+      <a href="https://github.com/ambysto/steady">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="legal">
+    <h1>Code signing policy</h1>
+    <p>Free code signing provided by <a href="https://about.signpath.io/">SignPath.io</a>, certificate by
+    <a href="https://signpath.org/">SignPath Foundation</a>.</p>
+
+    <blockquote>
+      <p>Status: application to SignPath Foundation pending. Until it is accepted, releases are not yet
+      signed and Windows SmartScreen may warn when the app is opened for the first time.</p>
+    </blockquote>
+
+    <h2>What is signed</h2>
+    <p>The Windows build of <strong>Ambysto Steady</strong> (<code>Ambysto Steady.exe</code> and the files of the release zip)
+    published on <a href="https://github.com/ambysto/steady/releases">GitHub Releases</a> and on
+    <a href="https://ambysto.com">ambysto.com</a>. Only binaries built from this repository by its
+    <a href="https://github.com/ambysto/steady/blob/main/.github/workflows/release.yml">release workflow</a> on GitHub Actions are submitted for signing; the
+    build runs from the tagged source with no manual step in between.</p>
+
+    <h2>Team roles</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Role</th><th>Who</th></tr></thead>
+        <tbody>
+          <tr><td>Committers and reviewers</td><td>Members of the <a href="https://github.com/ambysto">ambysto</a> GitHub account with write access to this repository</td></tr>
+          <tr><td>Approvers</td><td>Owner of the <a href="https://github.com/ambysto">ambysto</a> GitHub account</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Every signing request is approved manually by an approver for each release.</p>
+
+    <h2>Privacy policy</h2>
+    <p>See the <a href="/privacy">privacy policy</a>: the program sends no personal data and has no telemetry,
+    analytics or advertising.</p>
+
+    <h2>Verify a download</h2>
+    <p>Right-click <code>Ambysto Steady.exe</code> → <strong>Properties</strong> → <strong>Digital Signatures</strong>: the signer is
+    SignPath Foundation. In PowerShell:</p>
+    <pre><code>Get-AuthenticodeSignature "Ambysto Steady.exe"</code></pre>
+
+    <h2>Reporting</h2>
+    <p>Report a suspicious or tampered binary to <a href="mailto:contact@ambysto.com">contact@ambysto.com</a> or open an issue on
+    <a href="https://github.com/ambysto/steady/issues">GitHub</a>.</p>
+
+    <p class="meta">Source: <a href="https://github.com/ambysto/steady/blob/main/CODE_SIGNING.md">CODE_SIGNING.md</a> in the Ambysto Steady repository.</p>
+  </main>
+
+  <footer class="legal-foot">
+    <p>© 2026 Ambysto LLC</p>
+    <p><a href="https://ambysto.com">ambysto.com</a></p>
+    <p><a href="mailto:contact@ambysto.com">contact@ambysto.com</a></p>
+  </footer>
+</body>
+</html>

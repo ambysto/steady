@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy policy · Ambysto Steady</title>
+  <meta name="description" content="Ambysto Steady has no account, telemetry, analytics or advertising, and never sends your measurements or personal data anywhere.">
+  <meta name="theme-color" content="#0B1020">
+  <link rel="canonical" href="https://steady.ambysto.com/privacy">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Ambysto Steady">
+  <meta property="og:url" content="https://steady.ambysto.com/privacy">
+  <meta property="og:title" content="Privacy policy · Ambysto Steady">
+  <meta property="og:description" content="Ambysto Steady has no account, telemetry, analytics or advertising, and never sends your measurements or personal data anywhere.">
+  <link rel="icon" href="/assets/img/logo.svg?v=2" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/legal.css">
+</head>
+<body>
+  <header class="legal-nav">
+    <a class="brand" href="/">
+      <img src="/assets/img/logo.svg?v=2" alt="" width="28" height="28">
+      <span>Ambysto <small>Steady</small></span>
+    </a>
+    <nav class="legal-links" aria-label="Policies">
+      <a href="/codesigningpolicy">Code signing</a>
+      <a href="/privacy" aria-current="page">Privacy</a>
+      <a href="https://github.com/ambysto/steady">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="legal">
+    <h1>Privacy policy</h1>
+    <p>Ambysto Steady runs on your PC. <strong>It has no account, no telemetry, no analytics and no
+    advertising, and it never sends your measurements, settings or any personal data anywhere.</strong></p>
+
+    <h2>What stays on your PC</h2>
+    <p>Measurements (latency, packet loss, Wi‑Fi signal, outages), diagnostics results, settings and logs
+    are stored only in <code>%LOCALAPPDATA%\StableInternet</code>. The app's window talks to its own local
+    server at <code>127.0.0.1</code>, which is not reachable from other computers and requires a per-session
+    token. Uninstalling offers to delete this data.</p>
+
+    <h2>Network connections the app makes</h2>
+    <p>The app's purpose is to check your connection, so it contacts a few well-known public services.
+    These connections carry no personal data; like any connection, the service sees your public IP
+    address.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>When</th><th>What</th><th>To</th></tr></thead>
+        <tbody>
+          <tr><td>Always, while monitoring</td><td>ICMP ping, about once a second</td><td>Your router, <code>1.1.1.1</code> (Cloudflare), <code>8.8.8.8</code> (Google)</td></tr>
+          <tr><td>Always, while monitoring</td><td>TCP connection without data, every 10 s</td><td><code>1.1.1.1:443</code>, <code>8.8.8.8:443</code></td></tr>
+          <tr><td>Always, while monitoring</td><td>HTTP request expecting an empty reply (status 204), every 10 s, identified as <code>AmbystoSteady/&lt;version&gt;</code></td><td><code>http://cp.cloudflare.com/generate_204</code></td></tr>
+          <tr><td>Backup connection switching, only if you turn it on</td><td>TCP connection without data from each network adapter</td><td><code>1.1.1.1:443</code>, <code>8.8.8.8:443</code></td></tr>
+          <tr><td>When you run diagnostics</td><td>DNS lookups of <code>google.com</code>, <code>cloudflare.com</code>, <code>microsoft.com</code>, <code>youtube.com</code>, <code>facebook.com</code></td><td>The DNS servers your PC uses, your router, <code>1.1.1.1</code>, <code>8.8.8.8</code>, <code>9.9.9.9</code> (Quad9)</td></tr>
+          <tr><td>When you start the load test and confirm it</td><td>Download and upload of test data (about 25 MB per request)</td><td><code>speed.cloudflare.com</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>You can change the monitored targets in the settings file. The privacy policies of these
+    services apply to the connections they receive:
+    <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare</a>,
+    <a href="https://developers.google.com/speed/public-dns/privacy">Google Public DNS</a>,
+    <a href="https://quad9.net/privacy/policy/">Quad9</a>.</p>
+
+    <h2>Components from Microsoft</h2>
+    <p>The app's window uses Microsoft Edge WebView2 and Windows notifications, which are part of
+    Windows and follow the <a href="https://privacy.microsoft.com/privacystatement">Microsoft Privacy Statement</a>
+    and your Windows privacy settings.</p>
+
+    <h2>Changes and contact</h2>
+    <p>Changes to this policy are published with the app's source at
+    <a href="https://github.com/ambysto/steady">github.com/ambysto/steady</a>. Questions: <a href="mailto:contact@ambysto.com">contact@ambysto.com</a>.</p>
+
+    <p class="meta">Source: <a href="https://github.com/ambysto/steady/blob/main/PRIVACY.md">PRIVACY.md</a> in the Ambysto Steady repository.</p>
+  </main>
+
+  <footer class="legal-foot">
+    <p>© 2026 Ambysto LLC</p>
+    <p><a href="https://ambysto.com">ambysto.com</a></p>
+    <p><a href="mailto:contact@ambysto.com">contact@ambysto.com</a></p>
+  </footer>
+</body>
+</html>

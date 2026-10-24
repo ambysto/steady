@@ -7,6 +7,9 @@ A static, English-only page for **Ambysto Steady**. It has no build step and nee
 | `index.html` | The page: hero, connection path, problem, features, evidence, safety, FAQ, download |
 | `assets/css/steady.css` | All styles, light and dark, and the motion |
 | `assets/js/steady.js` | Mobile menu, scrolled nav style, scroll reveals and number count-ups |
+| `privacy.html`, `codesigningpolicy.html` | Steady's privacy policy and code signing policy at `/privacy` and `/codesigningpolicy` (the App Store privacy URL, the app's Settings and the release workflow link them); moved from the company site on 2026-10-24 |
+| `assets/css/style.css`, `legal.css` | Styles of the two policy pages only |
+| `vercel.json` | Clean URLs, the `/terms` and `/refund-policy` redirects to ambysto.com, asset caching. The Vercel project's Root Directory must be `site` |
 | `assets/img/logo.svg`, `apple-touch-icon.png` | The app icon, the brand's v3 logo (`scripts/make_app_icon.py`): Sky Wi‑Fi arcs and dot, the pixel "AS" caption; light or dark with the visitor's colour scheme. The touch icon is the dark look, full-bleed, 180 px |
 
 The page is self-contained: it needs no stylesheet from another site. The only third-party request is Google Fonts (DM Sans, JetBrains Mono); without it the system fonts are used.
@@ -21,7 +24,7 @@ Each animation shows what the app does: the hero chart scrolls like a live graph
 python3 -m http.server 8799 --bind 127.0.0.1 --directory site
 ```
 
-Then open `http://127.0.0.1:8799/`. The footer's `/privacy` (Steady's own policy), `/terms` and `/refund-policy` (Ambysto's, the same as on ambysto.com) are served by the company site on `steady.ambysto.com`, so they only work there.
+Then open `http://127.0.0.1:8799/`. `/privacy` and `/codesigningpolicy` are pages of this site (`privacy.html`, `codesigningpolicy.html`; the local server needs the `.html` suffix, Vercel's `cleanUrls` drops it). `/terms` and `/refund-policy` redirect to Ambysto's pages on ambysto.com (`vercel.json`), so they only work when deployed.
 
 ## Content rules
 
