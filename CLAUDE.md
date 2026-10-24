@@ -27,7 +27,7 @@ Since ADR-0009 there is also a native Apple app (iPhone, iPad, macOS; SwiftUI, `
 - A version bump is `CHANGELOG.md` plus `app/__init__.py` (Windows) or `apple/Config/Base.xcconfig` (Apple). Tags: `v<version>` fires the Windows release workflow; the Apple tag is `apple-v<version>-<build>` (ADR-0013) and is never a `v*`. Tags are the owner's call. The next ADR number comes from `docs/adr/README.md` (update the index) after checking the remote branches, which may already use one.
 - `site/` follows `site/README.md`: only what the released app does, no signed-release claims, no prices, no identifiers, no em dashes, nothing third-party beyond Google Fonts.
 - Intent work: `intent/<date>-<slug>.md` plus `.plan.md`, status `draft → approved → planned → building → verified → shipped (PR #n)`; building starts after the owner approves the intent and accepts the plan.
-- Tickets live in the owner's Plane project **SIC** (ticket names in Vietnamese). This repo is public, so the tracker's host, workspace and project id are in the gitignored `CLAUDE.local.md` on the owner's machines, never here. Cross-link GitHub and Plane both ways.
+- Tickets live in the owner's Plane project **SIC** (written in English). This repo is public, so the tracker's host, workspace and project id are in the gitignored `CLAUDE.local.md` on the owner's machines, never here. Cross-link GitHub and Plane both ways.
 
 ## Platforms
 
