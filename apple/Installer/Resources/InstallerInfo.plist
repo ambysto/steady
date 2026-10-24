@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>Install Ambysto Steady</string>
+	<key>CFBundleExecutable</key>
+	<string>AmbystoInstaller</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ambysto.steady.installer</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Install Ambysto Steady</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.8.2</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2026 Ambysto</string>
+	<key>InstallerProductKey</key>
+	<string>steady</string>
+	<key>InstallerProductName</key>
+	<string>Ambysto Steady</string>
+	<key>InstallerAppBundleName</key>
+	<string>Ambysto Steady.app</string>
+</dict>
+</plist>

@@ -29,10 +29,11 @@ LOCALES = ROOT / "app" / "locales"
 RESOURCES = ROOT / "apple" / "Steady" / "Resources"
 XCCONFIG = ROOT / "apple" / "Config" / "Generated.xcconfig"
 SWIFT_CATALOG = ROOT / "apple" / "SteadyKit" / "Sources" / "SteadyKit" / "Localization" / "MessageCatalog.swift"
+INSTALLER_RESOURCES = ROOT / "apple" / "Installer" / "Sources" / "AmbystoInstaller" / "Resources"
 
 SOURCE_LANGUAGE = "en"
 # Windows-only groups (tweaks, installer, watchdog, failover...) are left out until the Apple app needs them.
-PREFIXES = ("app.", "time.", "ui.", "diag.", "apple.")
+PREFIXES = ("app.", "time.", "ui.", "diag.", "apple.", "installer.apple.")
 # "apple.<key>" is the Apple platforms' wording of <key> (no "PC", no background monitor); the
 # Swift Localizer picks it instead of <key>. It must take exactly the same parameters.
 APPLE_VARIANT = "apple."
@@ -166,6 +167,14 @@ def swift_catalog(catalogs: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
+def installer_strings(catalog: dict) -> str:
+    """SwiftPM Localizable.strings for the standalone installer, sourced from app/locales."""
+    rows = []
+    for key in sorted(k for k in catalog if k.startswith("installer.apple.")):
+        rows.append(f"{json.dumps(key, ensure_ascii=False)} = {json.dumps(catalog[key], ensure_ascii=False)};")
+    return "\n".join(rows) + "\n"
+
+
 def dump(document: dict) -> str:
     # Xcode's own formatting, so opening the catalog in Xcode does not rewrite it.
     return json.dumps(document, ensure_ascii=False, indent=2, separators=(",", " : "), sort_keys=True) + "\n"
@@ -173,10 +182,14 @@ def dump(document: dict) -> str:
 
 def outputs() -> dict[Path, str]:
     catalogs = load_catalogs()
-    return {RESOURCES / "Localizable.xcstrings": dump(localizable(catalogs)),
+    generated = {RESOURCES / "Localizable.xcstrings": dump(localizable(catalogs)),
             RESOURCES / "InfoPlist.xcstrings": dump(info_plist(catalogs)),
             XCCONFIG: xcconfig(catalogs),
             SWIFT_CATALOG: swift_catalog(catalogs)}
+    for lang, catalog in catalogs.items():
+        if any(key.startswith("installer.apple.") for key in catalog):
+            generated[INSTALLER_RESOURCES / f"{lang}.lproj" / "Localizable.strings"] = installer_strings(catalog)
+    return generated
 
 
 def main(argv: list[str] | None = None) -> int:
