@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-10-24
+
+Steady is now licensed under the Apache License 2.0, and the packaged app ships the NOTICE file beside the licence. The Apple app stays at 0.8.1.
+
 ### Changed
 - **Steady is now licensed under the Apache License 2.0** instead of GPL-3.0 (owner decision 2026-10-23): anyone may use and fork it, and the `NOTICE` file must travel with every copy. Releases already published stay under GPL-3.0. `CLA.md`, `CONTRIBUTING.md`, the README and the landing page say so.
 - **The landing page offers direct downloads for Windows and macOS** and names the optional Pro price, $19.99 (owner decision 2026-10-22, SIC-146). The macOS button downloads the tester build `AmbystoSteady-0.8.1-macOS.dmg` (not signed yet), attached to the v1.0.9 release (SIC-146).
