@@ -12766,7 +12766,7 @@
         }
       }
     },
-    "installer.mac.badge.macOS" : {
+    "installer.apple.badge.macOS" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12777,7 +12777,7 @@
         }
       }
     },
-    "installer.mac.badge.noAccount" : {
+    "installer.apple.badge.noAccount" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12788,7 +12788,7 @@
         }
       }
     },
-    "installer.mac.explore" : {
+    "installer.apple.explore" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12799,7 +12799,7 @@
         }
       }
     },
-    "installer.mac.footer" : {
+    "installer.apple.footer" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12810,7 +12810,7 @@
         }
       }
     },
-    "installer.mac.install" : {
+    "installer.apple.install" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12821,7 +12821,7 @@
         }
       }
     },
-    "installer.mac.macLabel" : {
+    "installer.apple.macLabel" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12832,7 +12832,7 @@
         }
       }
     },
-    "installer.mac.more" : {
+    "installer.apple.more" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12843,7 +12843,7 @@
         }
       }
     },
-    "installer.mac.motto" : {
+    "installer.apple.motto" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12854,7 +12854,7 @@
         }
       }
     },
-    "installer.mac.open" : {
+    "installer.apple.open" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12865,7 +12865,7 @@
         }
       }
     },
-    "installer.mac.openApplications" : {
+    "installer.apple.openApplications" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12876,7 +12876,7 @@
         }
       }
     },
-    "installer.mac.promo.devbox" : {
+    "installer.apple.promo.devbox" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12887,7 +12887,7 @@
         }
       }
     },
-    "installer.mac.promo.gate" : {
+    "installer.apple.promo.gate" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12898,7 +12898,7 @@
         }
       }
     },
-    "installer.mac.promo.lean" : {
+    "installer.apple.promo.lean" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12909,7 +12909,7 @@
         }
       }
     },
-    "installer.mac.promo.optimer" : {
+    "installer.apple.promo.optimer" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12920,7 +12920,7 @@
         }
       }
     },
-    "installer.mac.promo.power" : {
+    "installer.apple.promo.power" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12931,7 +12931,7 @@
         }
       }
     },
-    "installer.mac.promo.steady" : {
+    "installer.apple.promo.steady" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12942,7 +12942,7 @@
         }
       }
     },
-    "installer.mac.promo.tune" : {
+    "installer.apple.promo.tune" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12953,7 +12953,7 @@
         }
       }
     },
-    "installer.mac.status.alreadyInstalled" : {
+    "installer.apple.status.alreadyInstalled" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12964,7 +12964,7 @@
         }
       }
     },
-    "installer.mac.status.failed" : {
+    "installer.apple.status.failed" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12975,7 +12975,7 @@
         }
       }
     },
-    "installer.mac.status.installed" : {
+    "installer.apple.status.installed" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12986,7 +12986,7 @@
         }
       }
     },
-    "installer.mac.status.missing" : {
+    "installer.apple.status.missing" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -12997,7 +12997,7 @@
         }
       }
     },
-    "installer.mac.status.prepareFailed" : {
+    "installer.apple.status.prepareFailed" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -13008,7 +13008,7 @@
         }
       }
     },
-    "installer.mac.status.ready" : {
+    "installer.apple.status.ready" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -13019,7 +13019,7 @@
         }
       }
     },
-    "installer.mac.summary.steady" : {
+    "installer.apple.summary.steady" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -13030,7 +13030,7 @@
         }
       }
     },
-    "installer.mac.tagline.steady" : {
+    "installer.apple.tagline.steady" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -13041,7 +13041,7 @@
         }
       }
     },
-    "installer.mac.version" : {
+    "installer.apple.version" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {

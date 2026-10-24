@@ -33,7 +33,7 @@ INSTALLER_RESOURCES = ROOT / "apple" / "Installer" / "Sources" / "AmbystoInstall
 
 SOURCE_LANGUAGE = "en"
 # Windows-only groups (tweaks, installer, watchdog, failover...) are left out until the Apple app needs them.
-PREFIXES = ("app.", "time.", "ui.", "diag.", "apple.", "installer.mac.")
+PREFIXES = ("app.", "time.", "ui.", "diag.", "apple.", "installer.apple.")
 # "apple.<key>" is the Apple platforms' wording of <key> (no "PC", no background monitor); the
 # Swift Localizer picks it instead of <key>. It must take exactly the same parameters.
 APPLE_VARIANT = "apple."
@@ -170,7 +170,7 @@ def swift_catalog(catalogs: dict[str, dict]) -> str:
 def installer_strings(catalog: dict) -> str:
     """SwiftPM Localizable.strings for the standalone installer, sourced from app/locales."""
     rows = []
-    for key in sorted(k for k in catalog if k.startswith("installer.mac.")):
+    for key in sorted(k for k in catalog if k.startswith("installer.apple.")):
         rows.append(f"{json.dumps(key, ensure_ascii=False)} = {json.dumps(catalog[key], ensure_ascii=False)};")
     return "\n".join(rows) + "\n"
 
@@ -187,7 +187,7 @@ def outputs() -> dict[Path, str]:
             XCCONFIG: xcconfig(catalogs),
             SWIFT_CATALOG: swift_catalog(catalogs)}
     for lang, catalog in catalogs.items():
-        if any(key.startswith("installer.mac.") for key in catalog):
+        if any(key.startswith("installer.apple.") for key in catalog):
             generated[INSTALLER_RESOURCES / f"{lang}.lproj" / "Localizable.strings"] = installer_strings(catalog)
     return generated
 
