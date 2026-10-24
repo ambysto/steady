@@ -30,9 +30,5 @@
 	<string>Ambysto Steady</string>
 	<key>InstallerAppBundleName</key>
 	<string>Ambysto Steady.app</string>
-	<key>InstallerTagline</key>
-	<string>Stay on a steady connection.</string>
-	<key>InstallerSummary</key>
-	<string>Monitor your network, diagnose connection problems, and restore a stable connection from your Mac.</string>
 </dict>
 </plist>

@@ -21,11 +21,19 @@ private struct InstallerConfig {
     var productName: String { value("InstallerProductName") }
     var installerName: String { value("CFBundleDisplayName") }
     var appBundleName: String { value("InstallerAppBundleName") }
-    var tagline: String { value("InstallerTagline") }
-    var summary: String { value("InstallerSummary") }
+    var tagline: String { L10n.string("installer.mac.tagline.\(productKey)") }
+    var summary: String { L10n.string("installer.mac.summary.\(productKey)") }
     var version: String { value("CFBundleShortVersionString") }
 
     private func value(_ key: String) -> String { info[key] as? String ?? "" }
+}
+
+private enum L10n {
+    static func string(_ key: String, _ values: [String: String] = [:]) -> String {
+        values.reduce(Bundle.module.localizedString(forKey: key, value: key, table: nil)) {
+            $0.replacingOccurrences(of: "{\($1.key)}", with: $1.value)
+        }
+    }
 }
 
 private struct PromoApp: Identifiable {
@@ -38,18 +46,18 @@ private struct PromoApp: Identifiable {
 
 private struct InstallerView: View {
     let config: InstallerConfig
-    @State private var status = "Ready to install"
+    @State private var status = L10n.string("installer.mac.status.ready")
     @State private var installedURL: URL?
 
     private var promos: [PromoApp] {
         [
-            PromoApp(id: "steady", name: "Steady", line: "Monitor and restore your connection.", url: URL(string: "https://steady.ambysto.com")!, tone: Color(red: 0.38, green: 0.77, blue: 0.96)),
-            PromoApp(id: "lean", name: "Lean", line: "Map the disk and put back what you remove.", url: URL(string: "https://ambysto-space.vercel.app")!, tone: Color(red: 0.98, green: 0.60, blue: 0.56)),
-            PromoApp(id: "optimer", name: "Optimer", line: "See what uses memory, CPU and disk.", url: URL(string: "https://ambysto-optimer.vercel.app")!, tone: Color(red: 0.42, green: 0.36, blue: 0.91)),
-            PromoApp(id: "devbox", name: "DevBox", line: "Ports, containers and coding agents.", url: URL(string: "https://ambysto-devbox.vercel.app")!, tone: Color(red: 0.31, green: 0.81, blue: 0.74)),
-            PromoApp(id: "power", name: "Power", line: "Battery, heat and app energy use.", url: URL(string: "https://ambysto-power.vercel.app")!, tone: Color(red: 0.62, green: 0.78, blue: 0.46)),
-            PromoApp(id: "tune", name: "Tune", line: "Reversible switches for Mac settings.", url: URL(string: "https://ambysto-tune.vercel.app")!, tone: Color(red: 0.87, green: 0.68, blue: 0.36)),
-            PromoApp(id: "gate", name: "Gate", line: "See which apps connect where.", url: URL(string: "https://gate.ambysto.com")!, tone: Color(red: 0.90, green: 0.60, blue: 0.83)),
+            PromoApp(id: "steady", name: "Steady", line: L10n.string("installer.mac.promo.steady"), url: URL(string: "https://steady.ambysto.com")!, tone: Color(red: 0.38, green: 0.77, blue: 0.96)),
+            PromoApp(id: "lean", name: "Lean", line: L10n.string("installer.mac.promo.lean"), url: URL(string: "https://ambysto-space.vercel.app")!, tone: Color(red: 0.98, green: 0.60, blue: 0.56)),
+            PromoApp(id: "optimer", name: "Optimer", line: L10n.string("installer.mac.promo.optimer"), url: URL(string: "https://ambysto-optimer.vercel.app")!, tone: Color(red: 0.42, green: 0.36, blue: 0.91)),
+            PromoApp(id: "devbox", name: "DevBox", line: L10n.string("installer.mac.promo.devbox"), url: URL(string: "https://ambysto-devbox.vercel.app")!, tone: Color(red: 0.31, green: 0.81, blue: 0.74)),
+            PromoApp(id: "power", name: "Power", line: L10n.string("installer.mac.promo.power"), url: URL(string: "https://ambysto-power.vercel.app")!, tone: Color(red: 0.62, green: 0.78, blue: 0.46)),
+            PromoApp(id: "tune", name: "Tune", line: L10n.string("installer.mac.promo.tune"), url: URL(string: "https://ambysto-tune.vercel.app")!, tone: Color(red: 0.87, green: 0.68, blue: 0.36)),
+            PromoApp(id: "gate", name: "Gate", line: L10n.string("installer.mac.promo.gate"), url: URL(string: "https://gate.ambysto.com")!, tone: Color(red: 0.90, green: 0.60, blue: 0.83)),
         ].filter { $0.id != config.productKey }
     }
 
@@ -76,12 +84,12 @@ private struct InstallerView: View {
                 .frame(width: 42, height: 42)
             VStack(alignment: .leading, spacing: 4) {
                 Text(config.productName).font(.system(size: 17, weight: .semibold))
-                Text("INSTALLATION · MAC")
+                Text(L10n.string("installer.mac.macLabel"))
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Text("v\(config.version)")
+            Text(L10n.string("installer.mac.version", ["version": config.version]))
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.secondary)
         }
@@ -97,8 +105,8 @@ private struct InstallerView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
-                badge("macOS")
-                badge("No account")
+                badge(L10n.string("installer.mac.badge.macOS"))
+                badge(L10n.string("installer.mac.badge.noAccount"))
             }
             HStack(spacing: 14) {
                 Circle().fill(installedURL == nil ? Color(red: 0.42, green: 0.36, blue: 0.91) : .green).frame(width: 8, height: 8)
@@ -107,11 +115,11 @@ private struct InstallerView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 if let installedURL {
-                    Button("Open \(config.productName)") { openInstalledApp(at: installedURL) }
+                    Button(L10n.string("installer.mac.open", ["product": config.productName])) { openInstalledApp(at: installedURL) }
                         .buttonStyle(.borderedProminent)
                         .tint(Color(red: 0.42, green: 0.36, blue: 0.91))
                 } else {
-                    Button("Install to Applications") { install() }
+                    Button(L10n.string("installer.mac.install")) { install() }
                         .buttonStyle(.borderedProminent)
                         .tint(Color(red: 0.42, green: 0.36, blue: 0.91))
                 }
@@ -125,9 +133,9 @@ private struct InstallerView: View {
     private var promoSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("More from Ambysto").font(.system(size: 14, weight: .semibold))
+                Text(L10n.string("installer.mac.more")).font(.system(size: 14, weight: .semibold))
                 Spacer()
-                Text("Measure first. Change safely.")
+                Text(L10n.string("installer.mac.motto"))
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
@@ -139,7 +147,7 @@ private struct InstallerView: View {
                             Text(app.name).font(.system(size: 13, weight: .semibold))
                             Text(app.line).font(.system(size: 12)).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
-                            Link("Explore \(app.name)", destination: app.url)
+                            Link(L10n.string("installer.mac.explore", ["product": app.name]), destination: app.url)
                                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                                 .foregroundStyle(Color(red: 0.42, green: 0.36, blue: 0.91))
                         }
@@ -155,10 +163,10 @@ private struct InstallerView: View {
 
     private var footer: some View {
         HStack {
-            Text("The installer copies \(config.productName) locally. Nothing is sent off this Mac.")
+            Text(L10n.string("installer.mac.footer", ["product": config.productName]))
                 .font(.system(size: 11)).foregroundStyle(.secondary)
             Spacer()
-            Button("Open Applications") {
+            Button(L10n.string("installer.mac.openApplications")) {
                 NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications", isDirectory: true))
             }
             .buttonStyle(.link)
@@ -181,7 +189,7 @@ private struct InstallerView: View {
         let source = Bundle.main.bundleURL.deletingLastPathComponent()
             .appendingPathComponent(config.appBundleName, isDirectory: true)
         guard FileManager.default.fileExists(atPath: source.path) else {
-            status = "\(config.productName).app is missing from this disk image"
+            status = L10n.string("installer.mac.status.missing", ["product": config.productName])
             return
         }
 
@@ -195,7 +203,7 @@ private struct InstallerView: View {
             do {
                 try manager.createDirectory(at: userApplications, withIntermediateDirectories: true)
             } catch {
-                status = "Could not prepare the Applications folder"
+                status = L10n.string("installer.mac.status.prepareFailed")
                 return
             }
             destinationDirectory = userApplications
@@ -204,15 +212,15 @@ private struct InstallerView: View {
         let destination = destinationDirectory.appendingPathComponent(config.appBundleName, isDirectory: true)
         if manager.fileExists(atPath: destination.path) {
             installedURL = destination
-            status = "Already installed at \(destinationDirectory.lastPathComponent)"
+            status = L10n.string("installer.mac.status.alreadyInstalled", ["folder": destinationDirectory.lastPathComponent])
             return
         }
         do {
             try manager.copyItem(at: source, to: destination)
             installedURL = destination
-            status = "Installed in \(destinationDirectory.path)"
+            status = L10n.string("installer.mac.status.installed", ["path": destinationDirectory.path])
         } catch {
-            status = "Install failed: \(error.localizedDescription)"
+            status = L10n.string("installer.mac.status.failed", ["error": error.localizedDescription])
         }
     }
 

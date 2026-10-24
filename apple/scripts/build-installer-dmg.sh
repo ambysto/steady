@@ -14,7 +14,13 @@ DMG="$DIST/AmbystoSteady-$VERSION-installer.dmg"
 mkdir -p "$DIST"
 INSTALLER_FLAGS=(--package-path "$APPLE/Installer" -c release --arch arm64 --arch x86_64)
 swift build "${INSTALLER_FLAGS[@]}"
-INSTALLER_BIN="$(swift build "${INSTALLER_FLAGS[@]}" --show-bin-path)/AmbystoInstaller"
+INSTALLER_BIN_DIR="$(swift build "${INSTALLER_FLAGS[@]}" --show-bin-path)"
+INSTALLER_BIN="$INSTALLER_BIN_DIR/AmbystoInstaller"
+INSTALLER_RESOURCES="$INSTALLER_BIN_DIR/AmbystoSteadyInstaller_AmbystoInstaller.bundle"
+if [[ ! -d "$INSTALLER_RESOURCES" ]]; then
+  echo "error: SwiftPM did not produce $INSTALLER_RESOURCES" >&2
+  exit 1
+fi
 
 xcodebuild -quiet -project "$APPLE/Steady.xcodeproj" -scheme Steady -configuration Release \
   -destination 'generic/platform=macOS' -derivedDataPath "$BUILD" \
@@ -30,6 +36,7 @@ cp -R "$BUILT_APP" "$APP"
 mkdir -p "$INSTALLER_APP/Contents/MacOS" "$INSTALLER_APP/Contents/Resources"
 cp "$INSTALLER_BIN" "$INSTALLER_APP/Contents/MacOS/AmbystoInstaller"
 cp "$APPLE/Installer/Resources/InstallerInfo.plist" "$INSTALLER_APP/Contents/Info.plist"
+cp -R "$INSTALLER_RESOURCES" "$INSTALLER_APP/Contents/Resources/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$INSTALLER_APP/Contents/Info.plist"
 
 codesign --verify --deep --strict "$APP"

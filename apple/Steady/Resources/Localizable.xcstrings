@@ -12766,6 +12766,292 @@
         }
       }
     },
+    "installer.mac.badge.macOS" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "macOS"
+          }
+        }
+      }
+    },
+    "installer.mac.badge.noAccount" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No account"
+          }
+        }
+      }
+    },
+    "installer.mac.explore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explore %1$@"
+          }
+        }
+      }
+    },
+    "installer.mac.footer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The installer copies %1$@ locally. Nothing is sent off this Mac."
+          }
+        }
+      }
+    },
+    "installer.mac.install" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install to Applications"
+          }
+        }
+      }
+    },
+    "installer.mac.macLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "INSTALLATION · MAC"
+          }
+        }
+      }
+    },
+    "installer.mac.more" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More from Ambysto"
+          }
+        }
+      }
+    },
+    "installer.mac.motto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Measure first. Change safely."
+          }
+        }
+      }
+    },
+    "installer.mac.open" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open %1$@"
+          }
+        }
+      }
+    },
+    "installer.mac.openApplications" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Applications"
+          }
+        }
+      }
+    },
+    "installer.mac.promo.devbox" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ports, containers and coding agents."
+          }
+        }
+      }
+    },
+    "installer.mac.promo.gate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See which apps connect where."
+          }
+        }
+      }
+    },
+    "installer.mac.promo.lean" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Map the disk and put back what you remove."
+          }
+        }
+      }
+    },
+    "installer.mac.promo.optimer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See what uses memory, CPU and disk."
+          }
+        }
+      }
+    },
+    "installer.mac.promo.power" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battery, heat and app energy use."
+          }
+        }
+      }
+    },
+    "installer.mac.promo.steady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitor and restore your connection."
+          }
+        }
+      }
+    },
+    "installer.mac.promo.tune" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reversible switches for Mac settings."
+          }
+        }
+      }
+    },
+    "installer.mac.status.alreadyInstalled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Already installed at %1$@"
+          }
+        }
+      }
+    },
+    "installer.mac.status.failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed: %1$@"
+          }
+        }
+      }
+    },
+    "installer.mac.status.installed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Installed in %1$@"
+          }
+        }
+      }
+    },
+    "installer.mac.status.missing" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@.app is missing from this disk image"
+          }
+        }
+      }
+    },
+    "installer.mac.status.prepareFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not prepare the Applications folder"
+          }
+        }
+      }
+    },
+    "installer.mac.status.ready" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ready to install"
+          }
+        }
+      }
+    },
+    "installer.mac.summary.steady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monitor your network, diagnose connection problems, and restore a stable connection from your Mac."
+          }
+        }
+      }
+    },
+    "installer.mac.tagline.steady" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stay on a steady connection."
+          }
+        }
+      }
+    },
+    "installer.mac.version" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "v%1$@"
+          }
+        }
+      }
+    },
     "time.hours" : {
       "extractionState" : "manual",
       "localizations" : {
