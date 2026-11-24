@@ -105,6 +105,7 @@ public enum MessageCatalog {
         "time.minutes": [MessageArgument("count", nil)],
         "time.minutes_seconds": [MessageArgument("minutes", nil), MessageArgument("seconds", nil)],
         "time.seconds": [MessageArgument("count", nil)],
+        "ui.about.version": [MessageArgument("version", nil)],
         "ui.check.also_count": [MessageArgument("count", nil)],
         "ui.check.applying": [MessageArgument("count", nil)],
         "ui.check.clear_body": [MessageArgument("total", nil), MessageArgument("time", nil)],

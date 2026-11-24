@@ -99,6 +99,7 @@ a.group.row:hover { background: var(--surface-hover); }
   border: 0; border-radius: var(--radius-control); background: var(--surface-raised); box-shadow: var(--shadow-control);
   cursor: default; white-space: nowrap;
 }
+a.button { color: inherit; text-decoration: none; }
 .button:hover { background: color-mix(in srgb, var(--surface-raised) 90%, var(--text)); }
 .button:active { background: var(--surface-pressed); }
 .button.primary { background: var(--accent); color: var(--accent-text); box-shadow: none; }
