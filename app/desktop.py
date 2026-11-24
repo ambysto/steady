@@ -29,6 +29,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+import webbrowser
 from pathlib import Path
 from typing import Any, Callable
 
@@ -39,6 +40,7 @@ log = logging.getLogger("stableinternet.desktop")
 INSTANCE_NAME = "StableInternet.Desktop"
 SHOW_EVENT = "Local\\StableInternet.Desktop.Show"
 POLL_S = 5
+PROJECT_URL = "https://github.com/ambysto/steady"      # what the About section's "Star us on GitHub" opens
 _TOKEN_RE = re.compile(r'<meta name="si-token" content="([A-Za-z0-9_\-]+)"')
 
 
@@ -431,13 +433,17 @@ class MiniBridge:
 
 
 class MainBridge:
-    """What the main window's page may call: open the floating monitor."""
+    """What the main window's page may call: open the floating monitor, open the project page in the
+    default browser. Neither takes an argument: a page never chooses an address."""
 
     def __init__(self, shell: "Desktop") -> None:
         self._shell = shell
 
     def open_mini(self) -> None:
         self._shell.show_mini()
+
+    def open_github(self) -> bool:
+        return self._shell.open_github()
 
 
 class Desktop:
@@ -531,6 +537,14 @@ class Desktop:
         self._mini_active(True)
         self.mini_state["open"] = True
         save_mini_state(self.mini_state)
+
+    def open_github(self) -> bool:
+        """Open the project page in the default browser (the app window must not load it)."""
+        try:
+            return bool(webbrowser.open(PROJECT_URL))
+        except Exception as exc:
+            log.debug("could not open the project page: %r", exc)
+            return False
 
     def hide_mini(self) -> None:
         if self.mini is None:

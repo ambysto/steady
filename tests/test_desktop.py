@@ -1,3 +1,4 @@
+import inspect
 import io
 import json
 import os
@@ -503,10 +504,26 @@ class MiniWindowTests(unittest.TestCase):
         bridge.hide_mini()
         self.assertIn("hide", self.shell.mini.calls)
         main = desktop.MainBridge(self.shell)
-        self.assertEqual([n for n in dir(main) if not n.startswith("_")], ["open_mini"])
+        self.assertEqual([n for n in dir(main) if not n.startswith("_")], ["open_github", "open_mini"])
         main.open_mini()
         self.assertIn("show", self.shell.mini.calls)
         self.assertTrue(self.saved()["open"])
+
+    def test_open_github_opens_the_project_page_in_the_default_browser(self):
+        with mock.patch.object(desktop.webbrowser, "open", return_value=True) as opened:
+            self.assertIs(desktop.MainBridge(self.shell).open_github(), True)
+        opened.assert_called_once_with(desktop.PROJECT_URL)
+        self.assertEqual(desktop.PROJECT_URL, "https://github.com/ambysto/steady")
+
+    def test_open_github_reports_a_browser_that_did_not_open(self):
+        with mock.patch.object(desktop.webbrowser, "open", return_value=False):
+            self.assertIs(self.shell.open_github(), False)
+        with mock.patch.object(desktop.webbrowser, "open", side_effect=OSError("no browser")):
+            self.assertIs(self.shell.open_github(), False)
+            self.assertIs(desktop.MainBridge(self.shell).open_github(), False)
+
+    def test_the_bridge_lets_a_page_choose_no_address(self):
+        self.assertEqual(list(inspect.signature(desktop.MainBridge.open_github).parameters), ["self"])
 
     def test_mini_page_follows_the_monitor(self):
         self.assertIsNone(self.shell.mini_url())

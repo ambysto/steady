@@ -77,6 +77,22 @@ function miniControls(ctx) {
     el("button", { class: "button", onclick: () => ctx.openMini() }, t("ui.settings.mini_open")));
 }
 
+const PROJECT_URL = "https://github.com/ambysto/steady";     // the desktop shell opens the same address (app/desktop.py)
+
+// The desktop window must not load GitHub itself, so its bridge opens the default browser; a plain
+// browser tab (debugging) gets an ordinary link.
+function starControl() {
+  const label = t("ui.about.star_github");
+  if (!window.pywebview?.api?.open_github) {
+    return el("a", { class: "button", href: PROJECT_URL, target: "_blank", rel: "noopener noreferrer" }, icon("github"), label);
+  }
+  return el("button", { class: "button", onclick: async () => {
+    let opened = false;
+    try { opened = await window.pywebview.api.open_github(); } catch { /* reported below */ }
+    if (!opened) toast(t("ui.about.open_failed"), { bad: true });
+  } }, icon("github"), label);
+}
+
 function draw(ctx) {
   const wd = ctx.state?.settings?.watchdog || {};
   const startup = autostart === null ? el("span", { class: "pill" }, "…")
@@ -107,7 +123,10 @@ function draw(ctx) {
         : `${t("ui.failover.description")} ${t("ui.failover.admin_hint")}`,
         settingSwitch(ctx, "failover", "enabled", t("ui.failover.enabled"))),
       row("", "flask", t("ui.failover.dry_run"), null, settingSwitch(ctx, "failover", "dry_run", t("ui.failover.dry_run"))),
-      failoverRows(failoverState, { onChange: () => loadFailover(ctx) })));
+      failoverRows(failoverState, { onChange: () => loadFailover(ctx) })),
+    el("div", { class: "section-title" }, t("ui.settings.about")),
+    el("div", { class: "group" },
+      row("", "info", t("ui.about.version", { version: ctx.state?.version ?? "" }), null, starControl())));
 }
 
 async function loadFailover(ctx) {

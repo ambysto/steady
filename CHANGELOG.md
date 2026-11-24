@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- **The Windows Settings screen has an About section.** It shows the app version and a "Star us on GitHub" button that opens the project page in the default browser.
+
 ### Fixed
 - **`steady.ambysto.com/privacy` is served by the landing page itself.** The domain moved from the company site to the landing page's Vercel project, which did not have the page, so the App Store privacy URL and the app's Settings link returned 404. The page and its styles are copied over unchanged except for the title separator and the brand link, which now opens the landing page; `/terms` and `/refund-policy` redirect to ambysto.com.
 - **The landing page's macOS buttons download the 0.8.2 tester build** (`AmbystoSteady-0.8.2-macOS.dmg` on the v1.0.10 release; they downloaded 0.8.1 from v1.0.9). The download notes and a new question say how to open it the first time (Open Anyway in System Settings > Privacy & Security), since it is not notarized, and the page's structured data lists macOS 26.
