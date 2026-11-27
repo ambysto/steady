@@ -24,7 +24,7 @@ from types import SimpleNamespace
 from typing import Any, Callable
 from urllib.parse import parse_qs, unquote, urlsplit
 
-from . import __version__, config, i18n, report, winutil
+from . import __version__, config, i18n, linebusy, report, winutil
 from . import license as licensing
 from .i18n import msg
 
@@ -185,6 +185,9 @@ class Api:
         # Measurements that load the line (check #14, a measured tweak) must never overlap: each would
         # see about half the bandwidth, and a measured tweak would derive half the cap it should.
         self._line_lock = threading.Lock()
+        # The monitor's background sampler consults the same lock (app/linebusy.py): it skips while a manual
+        # test or a measured tweak is loading the line.
+        linebusy.register(self._line_lock)
         self._tweak_cache: dict[str, Any] = {"states": None, "refreshed_at": None}
         # Check #14 is not saved as a run; its latest result comes from the speed test that measured it
         # (ADR-0024), which is kept in the data folder, so it is there again after a restart.
@@ -490,7 +493,11 @@ class Api:
                 "events": self.storage.query_events(since=start, limit=5000)}
 
     def events(self, query: dict, **_: Any) -> dict:
-        return {"events": self.storage.query_events(limit=self._int(query, "limit", 200, 1, 2000))}
+        """The Log. Slowdowns and outages are kept for 2 years for the reports, but the Log itself shows the
+        last 30 days in the free build; a supporter sees all that is kept (ADR-0027 point 7)."""
+        most = 730 if licensing.is_supporter() else 30
+        since = int(self._clock()) - most * 86400
+        return {"events": self.storage.query_events(since=since, limit=self._int(query, "limit", 200, 1, 2000))}
 
     def tweaks(self, **_: Any) -> dict:
         cache = self._tweak_cache

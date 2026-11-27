@@ -1,6 +1,7 @@
+import threading
 import unittest
 
-from app import slowdown, speedwatch
+from app import i18n, linebusy, slowdown, speedwatch
 from app.speedsample import Sample
 from app.speedwatch import SpeedWatch
 from app.storage import Storage
@@ -218,6 +219,17 @@ class LifecycleTests(unittest.TestCase):
         (event,) = h.slowdown_events()
         self.assertEqual((event["ts"], event["duration"]), (sampled, 3600))
 
+    def test_a_closed_episode_writes_its_real_average_and_baseline(self):
+        h = Harness()
+        h.storage.add_slowdown(h.clock.now - 3600, "download", 300.0, 5.0, verdict="outside",
+                               avg_mbps=4.2, samples=3)
+        h.watch._close_left_open(h.clock.now)
+        (event,) = h.slowdown_events()
+        text = i18n.render(event["message"], "en")
+        self.assertIn("4.2", text)                              # the episode's own average, one decimal
+        self.assertIn("300", text)                              # the baseline, rounded
+        self.assertNotIn("–", text)                             # never the old placeholder
+
     def test_a_disabled_watch_takes_no_sample(self):
         h = Harness(enabled=False)
         h.watch.start()
@@ -234,6 +246,20 @@ class LifecycleTests(unittest.TestCase):
             self.assertEqual(h.watch._next_at, h.clock.now + speedwatch.FIRST_SAMPLE_DELAY_S)
         finally:
             h.watch.stop()
+
+
+class LineBusyTests(unittest.TestCase):
+    def test_a_background_sample_skips_while_another_measurement_holds_the_line(self):
+        lock = threading.Lock()
+        linebusy.register(lock)
+        self.addCleanup(linebusy.register, threading.Lock())   # leave the line free for the tests after this one
+        h = Harness()
+        h.clock.advance()
+        with lock:
+            self.assertEqual(h.watch.run_once(), speedwatch.SKIP_LINE_BUSY)
+        self.assertEqual(h.calls, 0)                           # the sampler never touched the line
+        self.assertIsNone(h.cycle())                           # with the line free, it samples again
+        self.assertEqual(h.calls, 1)
 
 
 if __name__ == "__main__":

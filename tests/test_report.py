@@ -73,6 +73,16 @@ class IntervalTests(unittest.TestCase):
         events = [{"kind": "monitor_start", "ts": 0}, {"kind": "monitor_stop", "ts": 800}]
         self.assertEqual(report.union_seconds(report.unmonitored(events, 0, 1000), 0, 1000), 200)
 
+    def test_a_period_with_no_recorded_start_was_never_watched(self):
+        self.assertEqual(report.unmonitored([], 0, 1000), [(0, 1000)])
+        self.assertEqual(report.unmonitored([{"kind": "monitor_stop", "ts": 100}], 0, 1000), [(0, 1000)])
+        self.assertEqual(report.unmonitored([{"kind": "internet_down", "ts": 100, "duration": 10}], 0, 1000),
+                         [(0, 1000)])
+
+    def test_a_stop_in_the_same_second_as_the_start_leaves_the_rest_unwatched(self):
+        events = [{"kind": "monitor_start", "ts": 100}, {"kind": "monitor_stop", "ts": 100}]
+        self.assertEqual(report.unmonitored(events, 100, 1000), [(100, 1000)])
+
 
 class BuildTests(unittest.TestCase):
     def setUp(self):
@@ -151,6 +161,11 @@ class BuildTests(unittest.TestCase):
         data = self.build()
         self.assertEqual((data["outages"], data["slowdowns"], data["speed"]), ([], [], {}))
         self.assertEqual(data["totals"]["outage_count"], 0)
+
+    def test_an_empty_period_does_not_claim_availability(self):
+        availability = self.build()["totals"]["availability_pct"]
+        self.assertNotEqual(availability, 100)      # nothing was watched, so 100% would be a claim
+        self.assertIsNone(availability)
 
     def test_digest_changes_when_a_row_changes(self):
         self.add_slowdown(self.start + 100, 1000)

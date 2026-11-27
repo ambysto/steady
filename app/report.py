@@ -71,15 +71,20 @@ def union_seconds(intervals: list[tuple[float, float]], low: float, high: float)
 
 
 def unmonitored(events: list[dict], low: float, high: float) -> list[tuple[float, float]]:
-    """When nothing was watching, inside [low, high]: before the first start the app ever recorded, between
-    a stop and the next start, and the gaps the monitor noticed itself (sleep, hang)."""
+    """When nothing was watching, inside [low, high]: the whole span when the app never recorded a start,
+    before the first start it recorded, between a stop and the next start, and the gaps the monitor noticed
+    itself (sleep, hang)."""
     starts = sorted(e["ts"] for e in events if e["kind"] == "monitor_start")
     stops = sorted(e["ts"] for e in events if e["kind"] == "monitor_stop")
     out: list[tuple[float, float]] = []
-    if starts and starts[0] > low:
+    if not starts:
+        # Nothing was ever watched in this period: reporting 100% availability would be a claim the app
+        # cannot make (a fresh install, or a database whose old start events were already purged).
+        return [(low, high)] if high > low else []
+    if starts[0] > low:
         out.append((low, starts[0]))
     for stop in stops:
-        later = [s for s in starts if s >= stop]
+        later = [s for s in starts if s > stop]
         out.append((stop, later[0] if later else high))
     for e in events:
         if e["kind"] == "monitor_gap" and e.get("duration"):

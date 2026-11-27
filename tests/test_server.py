@@ -8,7 +8,7 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from app import config, elevated, elevation, i18n
+from app import config, elevated, elevation, i18n, linebusy
 from app import license as licensing
 from app.i18n import msg
 from app.server import Api, Jobs, Server
@@ -127,6 +127,14 @@ class ServerTestCase(unittest.TestCase):
         except ValueError:
             payload = raw.decode("utf-8", "replace")
         return resp.status, payload, resp
+
+
+class LineBusyRegistrationTests(ServerTestCase):
+    def test_the_api_publishes_the_lock_that_holds_the_line(self):
+        self.assertFalse(linebusy.busy())
+        with self.api._line_lock:
+            self.assertTrue(linebusy.busy())    # the background sampler must see a manual measurement
+        self.assertFalse(linebusy.busy())
 
 
 class GateTests(ServerTestCase):
@@ -364,6 +372,16 @@ class ReadApiTests(ServerTestCase):
         hist = self.req("GET", "/api/history?hours=1")[1]
         self.assertEqual(hist["events"][0]["kind"], "router_down")
         self.assertEqual(len(self.req("GET", "/api/events?limit=5")[1]["events"]), 1)
+
+    def test_the_log_shows_the_last_30_days_but_reports_keep_the_old_events(self):
+        now = int(time.time())
+        recent = self.storage.add_event(now - 5 * 86400, "router_down", "recent", level="bad")
+        old = self.storage.add_event(now - 45 * 86400, "router_down", "old", level="bad")
+        with mock.patch.object(licensing, "is_supporter", return_value=False):
+            ids = [e["id"] for e in self.req("GET", "/api/events")[1]["events"]]
+        self.assertIn(recent, ids)
+        self.assertNotIn(old, ids)                     # kept for the reports, not shown in the Log
+        self.assertIn(old, [e["id"] for e in self.storage.query_events(limit=10)])
 
     def test_diagnostics_job_and_runs(self):
         job = self.req("POST", "/api/diagnostics", {})[1]

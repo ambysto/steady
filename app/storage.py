@@ -335,8 +335,8 @@ class Storage:
         before their own start; `end_ts` None means nothing reliable was seen, so each closes at its start.
         Returns the closed rows so the caller can write the events a normal close writes."""
         with self._lock:
-            rows = self._rows("SELECT id, start_ts, end_ts, direction, verdict FROM slowdowns "
-                              "WHERE end_ts IS NULL ORDER BY start_ts", ())
+            rows = self._rows("SELECT id, start_ts, end_ts, direction, verdict, avg_mbps, baseline_mbps "
+                              "FROM slowdowns WHERE end_ts IS NULL ORDER BY start_ts", ())
             for row in rows:
                 end = int(row["start_ts"]) if end_ts is None else max(int(end_ts), int(row["start_ts"]))
                 self._db.execute("UPDATE slowdowns SET end_ts=? WHERE id=?", (end, row["id"]))

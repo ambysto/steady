@@ -25,6 +25,7 @@ FIRST_SAMPLE_DELAY_S = 60.0   # after the monitor starts: let the route and Wi-F
 TICK_S = 5.0
 SKIP_OUTAGE, SKIP_NETWORK_CHANGE, SKIP_METERED = "outage", "network_change", "metered"
 SKIP_OWN_TRAFFIC, SKIP_REFUSED, SKIP_ERROR = "own_traffic", "refused", "error"
+SKIP_LINE_BUSY = "line_busy"
 
 
 class SpeedWatch:
@@ -77,7 +78,7 @@ class SpeedWatch:
             self.storage.add_event(
                 int(row["end_ts"]), "slowdown",
                 msg(f"event.slowdown.{row['verdict']}", direction=msg(f"event.slowdown.{row['direction']}"),
-                    avg="–", baseline="–"),
+                    avg=round(float(row["avg_mbps"]), 1), baseline=round(float(row["baseline_mbps"]))),
                 duration=span)
 
     def _loop(self) -> None:
@@ -114,6 +115,10 @@ class SpeedWatch:
 
         reason = self._skip_reason()
         sample = Sample()
+        if reason is None:
+            from . import linebusy
+            if linebusy.busy():
+                reason = SKIP_LINE_BUSY   # a manual speed test or a measured tweak is loading the line
         if reason is None:
             sample = self._sample_fn(octets=self._octets)
             if sample.refused is not None:
