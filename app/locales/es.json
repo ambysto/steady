@@ -1083,7 +1083,7 @@
   "report.digest.note": "SHA-256 de las caídas, lentitudes y mediciones que aparecen aquí. Si alguna se modifica después, la huella deja de coincidir.",
   "report.footer": "Generado en el ordenador del usuario por {app} {version}. No se subió nada.",
   "ui.log.filter.slowdowns": "Lentitudes",
-  "ui.speed.title": "Historial de velocidad",
+  "ui.slowdown.title": "Historial de velocidad",
   "ui.speed.enabled": "Registrar lentitudes",
   "ui.speed.enabled_hint": "Mide la velocidad de vez en cuando para detectar una línea lenta aunque el ping sea bueno. Unos {mb} MB cada vez, aproximadamente {gb} GB al mes.",
   "ui.speed.interval": "Con qué frecuencia",

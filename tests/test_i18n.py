@@ -197,6 +197,24 @@ class CatalogHygieneTests(unittest.TestCase):
         self.catalogs = {path.stem: json.loads(path.read_text(encoding="utf-8"))
                          for path in sorted(i18n.LOCALES_DIR.glob("*.json"))}
 
+    def test_no_catalog_repeats_a_key_and_the_two_speed_titles_differ(self):
+        for path in sorted(i18n.LOCALES_DIR.glob("*.json")):
+            duplicates = []
+
+            def collect(pairs):
+                seen = set()
+                for key, _ in pairs:
+                    if key in seen:
+                        duplicates.append(key)
+                    seen.add(key)
+                return dict(pairs)
+
+            catalog = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=collect)
+            self.assertEqual(duplicates, [], f"{path.name} repeats {duplicates}")
+            self.assertIn("ui.speed.title", catalog, path.name)
+            self.assertIn("ui.slowdown.title", catalog, path.name)
+            self.assertNotEqual(catalog["ui.speed.title"], catalog["ui.slowdown.title"], path.name)
+
     @staticmethod
     def placeholders(value):
         texts = value.values() if isinstance(value, dict) else [value]

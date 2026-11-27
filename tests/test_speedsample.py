@@ -1,6 +1,9 @@
+import http.client
+import ssl
 import unittest
+from unittest import mock
 
-from app import speedsample
+from app import speedsample, tls
 from app.bufferbloat import ServerRefused
 from app.speedsample import Sample, take_sample, traffic_delta
 
@@ -20,6 +23,20 @@ def fake_download(mbps, nbytes=speedsample.DOWN_BYTES):
 
 def fake_upload(mbps, nbytes=speedsample.UP_BYTES):
     return lambda n, t: (nbytes, nbytes * 8 / mbps / 1e6)
+
+
+class ConnectTests(unittest.TestCase):
+    def test_an_https_connection_uses_the_apps_tls_context(self):
+        sentinel = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        with mock.patch.object(tls, "context", return_value=sentinel) as context:
+            conn, path = speedsample._connect("https://speed.cloudflare.com/__down?bytes=1", 5)
+        try:
+            self.assertIsInstance(conn, http.client.HTTPSConnection)
+            self.assertIs(conn._context, sentinel)
+            self.assertEqual(path, "/__down?bytes=1")
+        finally:
+            conn.close()
+        context.assert_called_once_with()
 
 
 class TakeSampleTests(unittest.TestCase):

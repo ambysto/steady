@@ -28,7 +28,7 @@ from .i18n import msg, render, t
 from .notify import Notifier, OutageNotifier
 from .probe import run_probe
 from .singleton import SingleInstance
-from .speedwatch import SKIP_NETWORK_CHANGE, SKIP_OUTAGE, SpeedWatch
+from .speedwatch import SKIP_METERED, SKIP_NETWORK_CHANGE, SKIP_OUTAGE, SpeedWatch
 from .storage import Storage
 
 log = logging.getLogger("stableinternet.monitor")
@@ -529,13 +529,20 @@ class Monitor:
     # -- what the throughput samples need to know (app/speedwatch.py) ---------------------
 
     def _speed_skip_reason(self) -> str | None:
-        """A sample taken during an outage, or right after the route moved, would say nothing about the line."""
+        """A sample taken during an outage, right after the route moved, or on a metered link would say nothing
+        about the line (or would cost the user money): samples skip, the same way the manual test asks first."""
         with self._lock:
             if self._tracker.active():
                 return SKIP_OUTAGE
             changed = self._route_changed_at
         if changed is not None and self._clock() - changed < NETWORK_CHANGE_QUIET_S:
             return SKIP_NETWORK_CHANGE
+        try:
+            from . import netcost
+            if netcost.read().metered:
+                return SKIP_METERED
+        except Exception:
+            log.debug("metered check failed", exc_info=True)   # unknown reads as not metered
         return None
 
     def _speed_network(self) -> str:

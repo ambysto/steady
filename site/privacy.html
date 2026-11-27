@@ -41,7 +41,9 @@
     <p>Measurements (latency, packet loss, Wi‑Fi signal, outages), diagnostics results, settings and logs
     are stored only in <code>%LOCALAPPDATA%\StableInternet</code>. The app's window talks to its own local
     server at <code>127.0.0.1</code>, which is not reachable from other computers and requires a per-session
-    token. Uninstalling offers to delete this data.</p>
+    token. Measurements are kept for 30 days; outages, slowdowns and the speed measurements behind them are
+    kept for 2 years, so a report for your provider can cover a quarter. Uninstalling offers to delete this
+    data.</p>
 
     <h2>Network connections the app makes</h2>
     <p>The app's purpose is to check your connection, so it contacts a few well-known public services.
@@ -57,6 +59,7 @@
           <tr><td>Backup connection switching, only if you turn it on</td><td>TCP connection without data from each network adapter</td><td><code>1.1.1.1:443</code>, <code>8.8.8.8:443</code></td></tr>
           <tr><td>When you run diagnostics</td><td>DNS lookups of <code>google.com</code>, <code>cloudflare.com</code>, <code>microsoft.com</code>, <code>youtube.com</code>, <code>facebook.com</code></td><td>The DNS servers your PC uses, your router, <code>1.1.1.1</code>, <code>8.8.8.8</code>, <code>9.9.9.9</code> (Quad9)</td></tr>
           <tr><td>When you start the load test and confirm it</td><td>Download and upload of test data (about 25 MB per request)</td><td><code>speed.cloudflare.com</code></td></tr>
+          <tr><td>Only if you turn on "Record slowdowns", every 15 to 120 minutes (30 by default)</td><td>Download of about 10 MB and upload of about 2 MB of test data, about 17 GB a month at the default; skipped on a metered connection</td><td><code>speed.cloudflare.com</code></td></tr>
         </tbody>
       </table>
     </div>

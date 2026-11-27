@@ -23,7 +23,7 @@ log = logging.getLogger("stableinternet.speedwatch")
 
 FIRST_SAMPLE_DELAY_S = 60.0   # after the monitor starts: let the route and Wi-Fi state settle
 TICK_S = 5.0
-SKIP_OUTAGE, SKIP_NETWORK_CHANGE = "outage", "network_change"
+SKIP_OUTAGE, SKIP_NETWORK_CHANGE, SKIP_METERED = "outage", "network_change", "metered"
 SKIP_OWN_TRAFFIC, SKIP_REFUSED, SKIP_ERROR = "own_traffic", "refused", "error"
 
 
@@ -67,9 +67,18 @@ class SpeedWatch:
                       "close slowdowns")
 
     def _close_left_open(self, now: float) -> None:
-        """Episodes a previous run left open end at the last sample that run took."""
+        """Episodes a previous run left open end at the last sample that run took; with no sample in the window
+        they end at their own start, never stretched over the time the PC was off. Closing writes the same
+        `slowdown` event a normal close writes."""
         rows = self.storage.query_speed_samples(int(now) - 7 * 86400, int(now) + 1)
-        self.storage.close_open_slowdowns(rows[-1]["ts"] if rows else int(now))
+        closed = self.storage.close_open_slowdowns(rows[-1]["ts"] if rows else None)
+        for row in closed:
+            span = max(0, int(row["end_ts"]) - int(row["start_ts"]))
+            self.storage.add_event(
+                int(row["end_ts"]), "slowdown",
+                msg(f"event.slowdown.{row['verdict']}", direction=msg(f"event.slowdown.{row['direction']}"),
+                    avg="–", baseline="–"),
+                duration=span)
 
     def _loop(self) -> None:
         while not self._stop.is_set():
@@ -156,7 +165,8 @@ class SpeedWatch:
         evidence = {"open": ep.evidence_open, "close": ep.evidence_close}
         if transition.kind == "open":
             ep.id = self.storage.add_slowdown(ep.start_ts, ep.direction, ep.baseline_mbps, ep.min_mbps,
-                                              network=network, verdict=ep.verdict, evidence=evidence)
+                                              network=network, verdict=ep.verdict, evidence=evidence,
+                                              avg_mbps=ep.avg_mbps, samples=ep.samples)
             return
         if ep.id is None:   # opened while storage failed: nothing to update
             return

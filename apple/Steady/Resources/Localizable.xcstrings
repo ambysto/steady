@@ -30367,6 +30367,53 @@
         }
       }
     },
+    "ui.slowdown.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschwindigkeitsverlauf"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed history"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historial de velocidad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Historique du débit"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Histórico de velocidade"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch sử tốc độ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "速度历史"
+          }
+        }
+      }
+    },
     "ui.speed.active" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -32112,43 +32159,43 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Geschwindigkeitsverlauf"
+            "value" : "Geschwindigkeitstest"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Speed history"
+            "value" : "Speed test"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Historial de velocidad"
+            "value" : "Test de velocidad"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Historique du débit"
+            "value" : "Test de débit"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Histórico de velocidade"
+            "value" : "Teste de velocidade"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lịch sử tốc độ"
+            "value" : "Đo tốc độ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "速度历史"
+            "value" : "测速"
           }
         }
       }

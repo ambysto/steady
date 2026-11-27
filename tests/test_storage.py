@@ -171,6 +171,17 @@ class EventTests(StorageTestCase):
         self.assertEqual(len(self.db.query_events()), 1)
 
 
+class SlowdownTests(StorageTestCase):
+    def test_an_episode_keeps_the_average_and_sample_count_of_the_trackers_measurements(self):
+        sid = self.db.add_slowdown(1000, "download", 300.0, 5.0, avg_mbps=4.2, samples=2)
+        row = next(r for r in self.db.query_slowdowns() if r["id"] == sid)
+        self.assertEqual((row["avg_mbps"], row["samples"]), (4.2, 2))
+
+        default = self.db.add_slowdown(2000, "upload", 300.0, 5.3)
+        row = next(r for r in self.db.query_slowdowns() if r["id"] == default)
+        self.assertEqual((row["avg_mbps"], row["samples"]), (5.3, 1))
+
+
 class DiagnosticRunTests(StorageTestCase):
     def test_save_list_get_roundtrip_with_unicode(self):
         r1 = self.db.save_diagnostic_run(100, "warn", [{"key": "signal", "summary": "Tín hiệu yếu"}])

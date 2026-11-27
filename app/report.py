@@ -121,8 +121,11 @@ def build(storage: Storage, start: int, end: int, *, now: float, kind: str = "cu
     reported up to this moment, never promised beyond it."""
     end_seen = int(min(end, now))
     events = storage.query_events(since=start, until=end_seen, kinds=OUTAGE_KINDS, limit=100_000)
+    # A router_down message names the gateway ("PC could not reach router 192.168.1.1"); the report promises
+    # no local address, so that kind keeps only its label and a router_down detail is never rendered.
     outages = sorted(({"kind": e["kind"], "start_ts": int(e["ts"] - (e["duration"] or 0)), "end_ts": int(e["ts"]),
-                       "duration_s": int(e["duration"] or 0), "text": render(e["message"], lang)} for e in events),
+                       "duration_s": int(e["duration"] or 0),
+                       "text": "" if e["kind"] == "router_down" else render(e["message"], lang)} for e in events),
                      key=lambda o: o["start_ts"])
     monitor_events = storage.query_events(kinds=MONITOR_KINDS, limit=100_000)
     off = unmonitored(monitor_events, start, end_seen)

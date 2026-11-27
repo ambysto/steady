@@ -1083,7 +1083,7 @@
   "report.digest.note": "此处列出的中断、变慢和测量数据的 SHA-256。事后若修改其中任何一项，指纹将不再匹配。",
   "report.footer": "由 {app} {version} 在用户的电脑上生成。没有上传任何内容。",
   "ui.log.filter.slowdowns": "变慢",
-  "ui.speed.title": "速度历史",
+  "ui.slowdown.title": "速度历史",
   "ui.speed.enabled": "记录变慢",
   "ui.speed.enabled_hint": "不定时测量速度，以发现 ping 正常但线路很慢的情况。每次约 {mb} MB，每月大约 {gb} GB。",
   "ui.speed.interval": "频率",

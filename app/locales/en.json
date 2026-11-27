@@ -1111,7 +1111,7 @@
   "report.digest.note": "SHA-256 of the outages, slowdowns and measurements listed here. If any of them is changed afterwards, it no longer matches.",
   "report.footer": "Made on the user's computer by {app} {version}. Nothing was uploaded.",
   "ui.log.filter.slowdowns": "Slowdowns",
-  "ui.speed.title": "Speed history",
+  "ui.slowdown.title": "Speed history",
   "ui.speed.enabled": "Record slowdowns",
   "ui.speed.enabled_hint": "Measures the speed now and then to catch a line that is slow while ping is fine. About {mb} MB each time, roughly {gb} GB a month.",
   "ui.speed.interval": "How often",

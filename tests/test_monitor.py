@@ -3,8 +3,9 @@ import sqlite3
 import time
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
-from app import config, i18n, winutil
+from app import config, i18n, netcost, speedwatch, winutil
 from app.monitor import MERGE_WINDOW_S, MinuteAggregator, Monitor, OutageTracker
 from app.storage import Storage
 
@@ -354,6 +355,12 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(self.mon._speed_skip_reason(), "network_change")
         self.env.t += 121
         self.assertIsNone(self.mon._speed_skip_reason())
+
+    def test_no_sample_on_a_metered_link(self):
+        with mock.patch.object(netcost, "read", return_value=netcost.Verdict(True)):
+            self.assertEqual(self.mon._speed_skip_reason(), speedwatch.SKIP_METERED)
+        with mock.patch.object(netcost, "read", return_value=netcost.NOT_METERED):
+            self.assertIsNone(self.mon._speed_skip_reason())
 
     def test_the_network_is_the_gateway_and_the_wifi_name(self):
         self.assertEqual(self.mon._speed_network(), "192.168.3.1|Home")

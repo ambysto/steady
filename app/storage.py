@@ -295,13 +295,16 @@ class Storage:
 
     def add_slowdown(self, start_ts: int, direction: str, baseline_mbps: float, mbps: float, *,
                      network: str | None = None, verdict: str = "unknown",
-                     evidence: dict[str, Any] | None = None) -> int:
-        """Opens an episode (end_ts NULL) and returns its id."""
+                     evidence: dict[str, Any] | None = None,
+                     avg_mbps: float | None = None, samples: int = 1) -> int:
+        """Opens an episode (end_ts NULL) and returns its id. `avg_mbps`/`samples` describe the two
+        measurements that opened it (the tracker's own numbers), defaulting to the first one alone."""
         with self._lock:
             cur = self._db.execute(
                 "INSERT INTO slowdowns (start_ts, direction, network, baseline_mbps, min_mbps, avg_mbps, samples, "
                 "verdict, evidence) VALUES (?,?,?,?,?,?,?,?,?)",
-                (int(start_ts), direction, network, baseline_mbps, mbps, mbps, 1, verdict,
+                (int(start_ts), direction, network, baseline_mbps, mbps, mbps if avg_mbps is None else avg_mbps,
+                 max(1, int(samples)), verdict,
                  json.dumps(evidence, ensure_ascii=False) if evidence is not None else None))
             return int(cur.lastrowid)
 
@@ -327,11 +330,18 @@ class Storage:
             row["evidence"] = _json_or_none(row["evidence"])
         return rows
 
-    def close_open_slowdowns(self, end_ts: int) -> int:
-        """Closes episodes left open by a monitor that stopped, at `end_ts` (the last sample it saw)."""
+    def close_open_slowdowns(self, end_ts: int | None) -> list[dict[str, Any]]:
+        """Closes episodes left open by a monitor that stopped, at `end_ts` (the last sample it saw) and never
+        before their own start; `end_ts` None means nothing reliable was seen, so each closes at its start.
+        Returns the closed rows so the caller can write the events a normal close writes."""
         with self._lock:
-            return self._db.execute("UPDATE slowdowns SET end_ts=? WHERE end_ts IS NULL",
-                                    (int(end_ts),)).rowcount
+            rows = self._rows("SELECT id, start_ts, end_ts, direction, verdict FROM slowdowns "
+                              "WHERE end_ts IS NULL ORDER BY start_ts", ())
+            for row in rows:
+                end = int(row["start_ts"]) if end_ts is None else max(int(end_ts), int(row["start_ts"]))
+                self._db.execute("UPDATE slowdowns SET end_ts=? WHERE id=?", (end, row["id"]))
+                row["end_ts"] = end
+            return rows
 
     # --- diagnostic runs ------------------------------------------------------
 

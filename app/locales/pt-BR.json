@@ -1083,7 +1083,7 @@
   "report.digest.note": "SHA-256 das quedas, lentidões e medições listadas aqui. Se qualquer uma for alterada depois, ela deixa de corresponder.",
   "report.footer": "Gerado no computador do usuário por {app} {version}. Nada foi enviado.",
   "ui.log.filter.slowdowns": "Lentidões",
-  "ui.speed.title": "Histórico de velocidade",
+  "ui.slowdown.title": "Histórico de velocidade",
   "ui.speed.enabled": "Registrar lentidões",
   "ui.speed.enabled_hint": "Mede a velocidade de vez em quando para pegar uma linha lenta mesmo com o ping bom. Cerca de {mb} MB por vez, aproximadamente {gb} GB por mês.",
   "ui.speed.interval": "Com que frequência",

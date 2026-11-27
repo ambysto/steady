@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Callable
 from urllib.parse import urlsplit
 
-from . import USER_AGENT
+from . import USER_AGENT, tls
 from .bufferbloat import ServerRefused, _retry_after
 
 DOWN_URL = "https://speed.cloudflare.com/__down?bytes={bytes}"
@@ -42,9 +42,10 @@ def mbps(nbytes: int, seconds: float) -> float:
 
 def _connect(url: str, timeout: float) -> tuple[http.client.HTTPConnection, str]:
     parts = urlsplit(url)
-    cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
     path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
-    return cls(parts.hostname or "", parts.port, timeout=timeout), path
+    if parts.scheme == "https":
+        return http.client.HTTPSConnection(parts.hostname or "", parts.port, timeout=timeout, context=tls.context()), path
+    return http.client.HTTPConnection(parts.hostname or "", parts.port, timeout=timeout), path
 
 
 def timed_download(nbytes: int, timeout_s: float = TIMEOUT_S, url: str = DOWN_URL) -> tuple[int, float]:

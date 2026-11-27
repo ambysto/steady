@@ -1083,7 +1083,7 @@
   "report.digest.note": "SHA-256 des coupures, ralentissements et mesures listés ici. Si l’un d’eux est modifié par la suite, l’empreinte ne correspond plus.",
   "report.footer": "Généré sur l’ordinateur de l’utilisateur par {app} {version}. Rien n’a été envoyé.",
   "ui.log.filter.slowdowns": "Ralentissements",
-  "ui.speed.title": "Historique du débit",
+  "ui.slowdown.title": "Historique du débit",
   "ui.speed.enabled": "Enregistrer les ralentissements",
   "ui.speed.enabled_hint": "Mesure le débit de temps en temps pour repérer une ligne lente alors que le ping est bon. Environ {mb} Mo à chaque fois, soit à peu près {gb} Go par mois.",
   "ui.speed.interval": "Fréquence",

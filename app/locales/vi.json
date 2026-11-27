@@ -1083,7 +1083,7 @@
   "report.digest.note": "SHA-256 của các lần mất mạng, đợt chậm và lần đo liệt kê ở đây. Nếu sau này sửa bất kỳ mục nào thì dấu vân tay sẽ không còn khớp.",
   "report.footer": "Lập trên máy tính của người dùng bởi {app} {version}. Không có gì được tải lên.",
   "ui.log.filter.slowdowns": "Đợt chậm",
-  "ui.speed.title": "Lịch sử tốc độ",
+  "ui.slowdown.title": "Lịch sử tốc độ",
   "ui.speed.enabled": "Ghi lại đợt chậm",
   "ui.speed.enabled_hint": "Thỉnh thoảng đo tốc độ để bắt đường truyền chậm khi ping vẫn tốt. Mỗi lần khoảng {mb} MB, tầm {gb} GB mỗi tháng.",
   "ui.speed.interval": "Tần suất",

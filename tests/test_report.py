@@ -210,6 +210,15 @@ class RenderTests(unittest.TestCase):
         for private in ("192.168.", "02:5e:00", "aa:bb:cc"):
             self.assertNotIn(private, everything)
 
+    def test_a_router_down_message_never_puts_the_gateway_in_the_report(self):
+        self.db.add_event(self.data["start_ts"] + 20_000, "router_down",
+                          msg("event.router_down", router="192.168.1.1"), duration=60)
+        data = report.build(self.db, self.data["start_ts"], self.data["end_ts"], now=self.data["end_ts"] + 1,
+                            kind="month", tz=UTC, lang="en")
+        everything = report.render_html(data, "en", UTC) + report.render_csv(data)
+        self.assertNotIn("192.168.1.1", everything)
+        self.assertIn("ISP/router WAN side", everything)   # the internet_down text is still there
+
     def test_episodes_csv(self):
         rows = list(csv.DictReader(io.StringIO(report.render_csv(self.data))))
         self.assertEqual([r["type"] for r in rows], ["internet_down", "slowdown"])

@@ -195,6 +195,29 @@ class LifecycleTests(unittest.TestCase):
         h.watch._close_left_open(h.clock.now)
         self.assertEqual(h.slowdowns()[0]["end_ts"], h.clock.now - 600)
 
+    def test_no_recent_sample_closes_an_episode_where_it_started_and_writes_its_event(self):
+        h = Harness()
+        start = h.clock.now - 30 * 86400
+        h.storage.add_slowdown(start, "download", 300.0, 5.0, verdict="outside")
+        h.watch._close_left_open(h.clock.now)
+        (row,) = h.slowdowns()
+        self.assertEqual(row["end_ts"], start)        # never stretched over the time the PC was off
+        (event,) = h.slowdown_events()
+        self.assertEqual((event["ts"], event["duration"]), (start, 0))
+        self.assertEqual(event["message"]["key"], "event.slowdown.outside")
+
+    def test_the_last_sample_of_the_previous_run_closes_an_episode(self):
+        h = Harness()
+        sampled = h.clock.now - 3 * 3600
+        start = sampled - 3600
+        h.storage.add_speed_sample(sampled, network=NET, down_mbps=5.0)
+        h.storage.add_slowdown(start, "download", 300.0, 5.0, verdict="outside")
+        h.watch._close_left_open(h.clock.now)
+        (row,) = h.slowdowns()
+        self.assertEqual(row["end_ts"], sampled)
+        (event,) = h.slowdown_events()
+        self.assertEqual((event["ts"], event["duration"]), (sampled, 3600))
+
     def test_a_disabled_watch_takes_no_sample(self):
         h = Harness(enabled=False)
         h.watch.start()

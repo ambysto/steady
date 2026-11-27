@@ -99,7 +99,7 @@ function speedRows() {
     el("div", { class: "main" }, el("div", { class: "label" }, t("ui.isp_report.title")),
       el("div", { class: "secondary" }, t("ui.isp_report.hint"))),
     el("button", { class: "button primary", onclick: createReport }, t("ui.isp_report.create"))));
-  return [el("div", { class: "section-title" }, t("ui.speed.title")), el("div", { class: "group" }, rows)];
+  return [el("div", { class: "section-title" }, t("ui.slowdown.title")), el("div", { class: "group" }, rows)];
 }
 
 function draw() {

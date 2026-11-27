@@ -139,7 +139,7 @@ function draw(ctx) {
       row("bad", "bell", t("ui.settings.notify_outages"),
         t("ui.settings.notify_after", { duration: duration(ctx.state?.notify_after_s ?? 30) }),
         settingSwitch(ctx, "notify", "enabled", t("ui.settings.notify_outages")))),
-    el("div", { class: "section-title" }, t("ui.speed.title")),
+    el("div", { class: "section-title" }, t("ui.slowdown.title")),
     el("div", { class: "group" },
       row("accent", "gauge", t("ui.speed.enabled"),
         t("ui.speed.enabled_hint", { mb: SAMPLE_MB, gb: number(SAMPLE_MB * (43200 / (ctx.state?.settings?.speed?.interval_min ?? 30)) / 1000, 0) }),

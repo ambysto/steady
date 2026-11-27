@@ -1083,7 +1083,7 @@
   "report.digest.note": "SHA-256 der hier aufgeführten Ausfälle, Verlangsamungen und Messungen. Wird eines davon nachträglich geändert, stimmt er nicht mehr überein.",
   "report.footer": "Auf dem Computer des Nutzers erstellt mit {app} {version}. Es wurde nichts hochgeladen.",
   "ui.log.filter.slowdowns": "Verlangsamungen",
-  "ui.speed.title": "Geschwindigkeitsverlauf",
+  "ui.slowdown.title": "Geschwindigkeitsverlauf",
   "ui.speed.enabled": "Verlangsamungen aufzeichnen",
   "ui.speed.enabled_hint": "Misst zwischendurch die Geschwindigkeit, um eine langsame Leitung zu erkennen, obwohl der Ping gut ist. Etwa {mb} MB pro Messung, ungefähr {gb} GB im Monat.",
   "ui.speed.interval": "Wie oft",

@@ -56,7 +56,7 @@ SETTINGS_SCHEMA: dict[str, dict[str, tuple]] = {
                  "verify_s": ((int, float), 10, 3600), "trip_after": (int, 1, 20)},
     "notify": {"enabled": (bool,)},   # re-read every 10 s by the running monitor
     "failover": {"enabled": (bool,), "dry_run": (bool,)},   # ADR-0008; re-read every 10 s
-    "speed": {"enabled": (bool,), "interval_min": (int, 10, 240),   # ADR-0027; re-read every cycle
+    "speed": {"enabled": (bool,), "interval_min": (int, 15, 120),   # ADR-0027; PRIVACY.md's 15-120; re-read every cycle
               "plan_down_mbps": ((int, float), 0, 100000), "plan_up_mbps": ((int, float), 0, 100000)},
     # (str, allowed-values function): the language must have a catalog, or be "auto".
     "ui": {"language": (str, lambda: [entry["code"] for entry in i18n.available()] + [i18n.AUTO])},
