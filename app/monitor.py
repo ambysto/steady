@@ -22,12 +22,13 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from . import config, dnswatch, icmp, winutil
+from . import config, dnswatch, icmp, slowdown, speedsample, winutil
 from .dnswatch import KINDS as DNS_EVENT_KINDS, DnsWatch, network_key
 from .i18n import msg, render, t
 from .notify import Notifier, OutageNotifier
 from .probe import run_probe
 from .singleton import SingleInstance
+from .speedwatch import SKIP_NETWORK_CHANGE, SKIP_OUTAGE, SpeedWatch
 from .storage import Storage
 
 log = logging.getLogger("stableinternet.monitor")
@@ -39,6 +40,9 @@ GAP_MIN_S = 30              # a pause between ticks longer than this is a monito
 RAW_WINDOW_S = 15 * 60      # raw ping samples kept in RAM
 PURGE_EVERY_S = 3600
 ROUTER = "router"
+NETWORK_CHANGE_QUIET_S = 120  # no throughput sample this soon after the route changed (as in diagnostic #5)
+EVIDENCE_WINDOW_S = 60       # the router's loss and latency kept as evidence are those of the last minute
+EVIDENCE_MIN_PINGS = 20
 
 
 @dataclass(frozen=True)
@@ -293,6 +297,7 @@ class Monitor:
         self._notify = notify
         self._route_fn, self._dns_fn, self._path_fn = route_fn, dns_fn, path_fn
         self._last_route: tuple[int, str] | None = None   # (interface index, gateway) of the last default route seen
+        self._route_changed_at: float | None = None       # when it last changed (throughput samples keep clear of it)
         self._dns_watch = DnsWatch()
         self.settings = settings if settings is not None else config.load_settings()
         after_s = float(self.settings.get("notify", {}).get("outage_after_s", 30))
@@ -327,6 +332,10 @@ class Monitor:
         self._threads: list[threading.Thread] = []
         self._last_purge = 0.0
         self._last_tick: float | None = None
+        self._speed = SpeedWatch(
+            storage, load_settings=(config.load_settings if settings is None else (lambda: self.settings)),
+            skip_reason=self._speed_skip_reason, evidence=self._speed_evidence, network=self._speed_network,
+            octets=self._speed_octets, clock=clock)
         self._gap_s = max(GAP_MIN_S, 10 * float(self.settings["ping_interval_s"]))
         self._logged_errors: set[str] = set()
         self.write_errors = 0
@@ -343,6 +352,7 @@ class Monitor:
         self._seed_dns()
         self._record(MonitorEvent(int(self._clock()), "monitor_start",
                                   msg("event.monitor_start", gateway=self._targets[ROUTER] or "?", pid=os.getpid())))
+        self._speed.start()
         loops = [("ping-loop", self._ping_loop), ("slow-loop", self._slow_loop)]
         if self._probes:
             loops.append(("probe-loop", self._probe_loop))
@@ -356,6 +366,7 @@ class Monitor:
         for t in self._threads:
             t.join(timeout)
         self._threads.clear()
+        self._speed.stop()
         self._pool.shutdown(wait=False, cancel_futures=True)
         if self._probe_pool is not None:
             self._probe_pool.shutdown(wait=False, cancel_futures=True)
@@ -509,9 +520,58 @@ class Monitor:
             before, self._last_route = self._last_route, current
         if baseline or before is None or before == current:
             return
+        with self._lock:
+            self._route_changed_at = self._clock()
         if before[0] != current[0]:
             self._record(MonitorEvent(int(self._clock()), "route_change", f"if{before[0]} -> if{current[0]}"))
         self.refresh_gateway()   # a new gateway is picked up now, not up to gateway_refresh_s later
+
+    # -- what the throughput samples need to know (app/speedwatch.py) ---------------------
+
+    def _speed_skip_reason(self) -> str | None:
+        """A sample taken during an outage, or right after the route moved, would say nothing about the line."""
+        with self._lock:
+            if self._tracker.active():
+                return SKIP_OUTAGE
+            changed = self._route_changed_at
+        if changed is not None and self._clock() - changed < NETWORK_CHANGE_QUIET_S:
+            return SKIP_NETWORK_CHANGE
+        return None
+
+    def _speed_network(self) -> str:
+        with self._lock:
+            wifi, gateway = self._wifi, self._targets[ROUTER]
+        return slowdown.network_id(gateway, wifi.ssid if wifi is not None and wifi.connected else None)
+
+    def _speed_octets(self) -> int | None:
+        try:
+            route = self._route_fn()
+        except Exception:
+            return None
+        return speedsample.interface_octets(route["interface_index"]) if route else None
+
+    def _speed_evidence(self) -> dict[str, Any]:
+        """What this monitor knew when a throughput sample was taken: the router hop (loss, latency,
+        Wi-Fi link) and whether a tunnel carries the traffic. These decide the verdict of a slowdown."""
+        now = self._clock()
+        with self._lock:
+            pings = [rtt for ts, name, rtt in self._samples if name == ROUTER and ts >= now - EVIDENCE_WINDOW_S]
+            wifi = self._wifi
+        answered = [r for r in pings if r is not None]
+        link = wifi if wifi is not None and wifi.connected else None
+        return {"router_loss_pct": (round(100 * (len(pings) - len(answered)) / len(pings), 1)
+                                    if len(pings) >= EVIDENCE_MIN_PINGS else None),
+                "router_ms": round(sum(answered) / len(answered), 1) if answered else None,
+                "rx_mbps": link.rx_mbps if link else None, "tx_mbps": link.tx_mbps if link else None,
+                "rssi": link.rssi if link else None, "vpn": self._tunnel_up()}
+
+    def _tunnel_up(self) -> bool:
+        """Internet traffic leaves by another interface than the default route's: a VPN or tunnel carries it."""
+        try:
+            path, default = self._path_fn(), self._route_fn()
+        except Exception:
+            return False
+        return bool(path and default and path["interface_index"] != default["interface_index"])
 
     def _seed_dns(self) -> None:
         try:

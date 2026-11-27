@@ -30,3 +30,4 @@ Each architecture decision is a file `NNNN-short-title.md` with the sections: **
 | [0024](0024-windows-speed-test.md) | On Windows too, the speed test is check #14's run | Accepted (amended 2026-10-16) |
 | [0025](0025-https-verified-by-windows.md) | The app's HTTPS is verified by Windows, through truststore | Accepted |
 | [0026](0026-solid-floating-monitor-on-windows.md) | On Windows the floating monitor is solid, and screenshots see it | Accepted |
+| [0027](0027-slowdown-history-and-isp-reports.md) | Slowdown history from throughput samples, and weekly/monthly/quarterly ISP reports (Pro) | Accepted |
