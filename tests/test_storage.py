@@ -197,13 +197,54 @@ class PurgeTests(StorageTestCase):
             table_add(now - 31 * DAY)
             table_add(now - 29 * DAY)
         deleted = self.db.purge(30, now=now)
-        self.assertEqual(deleted, {"minute_stats": 1, "wifi_stats": 1, "events": 1})
+        self.assertEqual(deleted, {"minute_stats": 1, "wifi_stats": 1, "events": 1,
+                                   "speed_samples": 0, "slowdowns": 0})
         self.assertEqual(len(self.db.query_minute_stats(0, now)), 1)
         self.assertEqual(len(self.db.query_wifi_stats(0, now)), 1)
         self.assertEqual(len(self.db.query_events()), 1)
 
     def test_purge_empty_db(self):
-        self.assertEqual(self.db.purge(30, now=DAY * 50), {"minute_stats": 0, "wifi_stats": 0, "events": 0})
+        self.assertEqual(self.db.purge(30, now=DAY * 50), {"minute_stats": 0, "wifi_stats": 0, "events": 0,
+                                                           "speed_samples": 0, "slowdowns": 0})
+
+    def test_what_a_report_is_made_of_is_kept_for_two_years(self):
+        now = 1000 * DAY
+        old, older = now - 90 * DAY, now - 800 * DAY
+        for kind in ("internet_down", "router_down", "slowdown", "wifi_state"):
+            self.db.add_event(old, kind)
+            self.db.add_event(older, kind)
+        self.db.add_speed_sample(old, down_mbps=300.0)
+        self.db.add_speed_sample(older, down_mbps=300.0)
+        for start in (old, older):
+            sid = self.db.add_slowdown(start, "download", 300.0, 5.0)
+            self.db.update_slowdown(sid, end_ts=start + 600, min_mbps=5.0, avg_mbps=5.0, samples=2,
+                                    verdict="outside", evidence=None)
+        open_id = self.db.add_slowdown(older, "download", 300.0, 5.0)   # still open: never purged
+        deleted = self.db.purge(30, now=now)
+        self.assertEqual(deleted["events"], 1 + 4)       # wifi_state at 90 days, and the four 800-day events
+        self.assertEqual(deleted["speed_samples"], 1)
+        self.assertEqual(deleted["slowdowns"], 1)
+        kinds = sorted(e["kind"] for e in self.db.query_events(limit=50))
+        self.assertEqual(kinds, ["internet_down", "router_down", "slowdown"])
+        self.assertIn(open_id, [r["id"] for r in self.db.query_slowdowns()])
+
+    def test_speed_samples_and_slowdowns_round_trip(self):
+        self.db.add_speed_sample(1000, network="gw|net", down_mbps=5.3, up_mbps=122.0, evidence={"a": 1})
+        self.db.add_speed_sample(2000, network="gw|net", skipped="own_traffic")
+        rows = self.db.query_speed_samples(0, 3000)
+        self.assertEqual([r["ts"] for r in rows], [1000, 2000])
+        self.assertEqual(rows[0]["evidence"], {"a": 1})
+        self.assertEqual(rows[1]["skipped"], "own_traffic")
+        self.assertEqual(self.db.query_speed_samples(0, 3000, network="other"), [])
+        sid = self.db.add_slowdown(1000, "download", 300.0, 5.0, network="gw|net", evidence={"open": {}})
+        self.assertIsNone(self.db.query_slowdowns()[0]["end_ts"])
+        self.assertEqual(self.db.query_slowdowns(since=5000), [self.db.query_slowdowns()[0]])   # open: overlaps
+        self.db.update_slowdown(sid, end_ts=1900, min_mbps=4.0, avg_mbps=4.5, samples=3, verdict="outside",
+                                evidence={"open": {}, "close": {}})
+        row = self.db.query_slowdowns()[0]
+        self.assertEqual((row["end_ts"], row["samples"], row["verdict"]), (1900, 3, "outside"))
+        self.assertEqual(self.db.query_slowdowns(since=2000), [])
+        self.assertEqual(self.db.query_slowdowns(until=1000), [])
 
 
 class ConcurrencyTests(unittest.TestCase):
